@@ -97,6 +97,15 @@ class SQL {
       return false;
     }
 
+    while (($success = $this->connection->next_result())) {
+      if (!$this->connection->more_results()) break;
+    }
+
+    if(!$success) {
+      $this->lastError = mysqli_error($this->connection);
+      return false;
+    }
+
     return true;
   }
 

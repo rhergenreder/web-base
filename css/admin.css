@@ -1,0 +1,229 @@
+.loginContainer {
+  border-radius: 5px;
+  width: 600px;
+  position: relative;
+}
+
+.loginForm {
+  padding: 25px;
+  border: 1px solid #bbb;
+  border-radius: 5px;
+  background-color: #bbb;
+  color: black;
+}
+
+.loginForm input {
+  margin-bottom: 10px;
+}
+
+.loginForm button, .loginForm div {
+  margin-top: 15px;
+  margin-bottom: 0;
+}
+
+.loginForm input[type="checkbox"] {
+  padding: 0;
+  margin-bottom: 0;
+  vertical-align: bottom;
+}
+
+.device-table > tbody > tr:hover {
+  cursor: pointer;
+  background-color: grey;
+}
+
+.device-table > tbody > tr > td:nth-child(3) {
+  text-align: center;
+}
+
+.apikey-table > tbody > tr > td:last-child {
+  float: right;
+}
+
+.apikey-table > tbody > tr > td:first-child {
+  word-break: break-all;
+}
+
+.apikey-table > tbody > tr:hover {
+  background-color: grey;
+  cursor: pointer;
+}
+
+.sidebar {
+  margin: 0;
+  padding: 0;
+  color: white;
+  text-align: center;
+}
+
+.sidebar a {
+  color: white;
+}
+
+.status { font-size: 12px; }
+.status-ok { color: #38e40d; }
+.status-error { color: red; }
+.status-offline { color: gray; }
+
+.sidebar .nav-item {
+  line-height: 30px;
+  border-bottom: 1px solid gray;
+}
+
+.nav-link {
+  grid-template-columns: 20px auto 20px;
+}
+
+.nav-link-center {
+  grid-column-start: 2;
+  grid-column-end: 2;
+}
+
+.sidebar-title {
+  font-size: 18px;
+  margin-bottom: 0.5em;
+  font-weight: bold;
+}
+
+.sidebar-top {
+  height: 100px;
+  padding: 10px;
+  border-bottom: 5px solid gray;
+  background-color: #555;
+}
+
+.sidebar-bottom {
+  height: 100px;
+  padding: 10px;
+  position: absolute;
+  bottom: 0;
+  border-top: 5px solid gray;
+  width: 100%;
+  grid-template-rows: 50% 50%;
+}
+
+.grid {
+  display: grid;
+}
+
+.grid > span {
+  align-self: center;
+}
+
+.sidebar-bottom > a {
+  grid-template-columns: 20px auto;
+  align-self: center;
+}
+
+.sidebar-bottom > a:hover {
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.sidebar .active .nav-link-center {
+  text-decoration: underline;
+  font-weight: bold;
+}
+
+.sidebar .nav-item:hover {
+  background-color: gray;
+}
+
+.nav-device {
+  background-color: #5a5a5a;
+}
+
+.service {
+  margin: 10px;
+}
+
+.service > .card-header {
+  color: black;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 20px auto;
+}
+
+.service-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.fs-listview > tbody > tr:hover {
+  cursor: pointer;
+}
+
+.fs-listview > tbody > tr.downloading > td, .fs-gridview > div.downloading > span {
+  font-style: italic;
+  color: gray;
+}
+
+.fs-toolbar {
+  display: grid;
+  grid-template-columns: 1px 40px 40px 1px auto 1px 40px 1px 40px 40px 1px;
+}
+
+.fs-toolbar > i {
+  align-self: center;
+  cursor: pointer;
+}
+
+.fs-toolbar > span {
+  text-align: left;
+  align-self: center;
+}
+
+.fs-gridview {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+}
+
+.fs-gridview div {
+  align-self: center;
+  text-align: center;
+}
+
+.fs-gridview > div {
+  padding: 5px;
+  display: grid;
+  grid-template-rows: 48px auto;
+}
+
+.fs-gridview > div:hover {
+  background: #ddd;
+  cursor: pointer;
+}
+
+.vr {
+  border-left: 1px solid #dee2e6;
+  height: 100%;
+}
+
+.camera-stream {
+  cursor: pointer;
+}
+
+.temperature-controls {
+  display: grid;
+  grid-template-columns: auto 30px;
+}
+
+.temperature-controls > div {
+  align-self: center;
+  text-align: left;
+}
+
+.shell-tabs > li > a {
+  color: black;
+  line-height: inherit;
+  outline: none;
+}
+
+.shell {
+  text-align: left
+}
+
+.speaker-controls {
+  display:grid;
+  grid-template-columns: auto auto auto;
+}

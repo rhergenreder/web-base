@@ -11,7 +11,7 @@ var Core = function() {
     callback = typeof callback !== 'undefined' ? callback : function(data) { };
     onerror  = typeof onerror  !== 'undefined' ? onerror  : function(msg) { bootbox.alert("Ein Fehler ist aufgetreten: " + msg); };
 
-    $.post('/php/api/' + func + '.php', aParams, function(data) {
+    $.post('/api/' + func, aParams, function(data) {
       console.log(func + "(): success=" + data.success + " msg=" + data.msg);
       if(data.hasOwnProperty('logoutIn') && $("#logoutTimer").length > 0) {
         $("#logoutTimer").attr("data-time", data.logoutIn);
@@ -24,7 +24,7 @@ var Core = function() {
       }
     }, "json").fail(function(jqXHR, textStatus, errorThrown) {
       console.log("API-Function Error: " + func + " Status: " + textStatus + " error thrown: " + errorThrown);
-      onerror.call(this, "Ein Fehler ist aufgetreten. API-Funktion: " + func + " Status: " + textStatus + " - " + errorThrown);
+      onerror.call(this, "An error occurred. API-Function: " + func + " Status: " + textStatus + " - " + errorThrown);
     });
   };
 
@@ -32,7 +32,7 @@ var Core = function() {
     var name = cname + "=";
     var decodedCookie = decodeURIComponent(document.cookie);
     var ca = decodedCookie.split(";");
-    for(var i = 0; i <ca.length; i++) {
+    for(var i = 0; i < ca.length; i++) {
       var c = ca[i];
       while (c.charAt(0) == ' ') {
         c = c.substring(1);

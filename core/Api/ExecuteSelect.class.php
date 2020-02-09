@@ -16,21 +16,19 @@ class ExecuteSelect extends Request {
     $this->variableParamCount = true;
   }
 
-  public function getDescription() { return 'Führt ein SELECT Statement aus.'; }
-  public function getSection() { return "Internal"; }
-
-  public function execute($aValues = array()) {
-    if(!parent::execute($aValues)) {
+  public function execute($values = array()) {
+    if(!parent::execute($values)) {
       return false;
     }
 
+    $sql = $this->user->getSQL();
     $this->success = false;
     $this->result['rows'] = array();
 
     if(count($this->params) === 1) {
-      $res = $this->user->getSQL()->query($this->getParam('query'));
+      $res = $sql->query($this->getParam('query'));
       if(!$res) {
-        $this->lastError = 'Database Error: query() failed with ' . $this->user->getSQL()->getLastError();
+        $this->lastError = 'Database Error: query() failed with ' . $sql->getLastError();
         return false;
       }
 
@@ -77,7 +75,7 @@ class ExecuteSelect extends Request {
 
       $tmp = array();
       foreach($aSqlParams as $key => $value) $tmp[$key] = &$aSqlParams[$key];
-      if($stmt = $this->user->getSQL()->connection->prepare($this->getParam('query'))) {
+      if($stmt = $sql->connection->prepare($this->getParam('query'))) {
         if(call_user_func_array(array($stmt, "bind_param"), $tmp))
         {
           if($stmt->execute()) {
@@ -89,18 +87,18 @@ class ExecuteSelect extends Request {
               $res->close();
               $this->success = true;
             } else {
-              $this->lastError = 'Database Error: execute() failed with ' . $this->user->getSQL()->getLastError();
+              $this->lastError = 'Database Error: execute() failed with ' . $sql->getLastError();
             }
           } else {
-            $this->lastError = 'Database Error: get_result() failed with ' . $this->user->getSQL()->getLastError();
+            $this->lastError = 'Database Error: get_result() failed with ' . $sql->getLastError();
           }
         } else {
-          $this->lastError = 'Database Error: bind_param() failed with ' . $this->user->getSQL()->getLastError();
+          $this->lastError = 'Database Error: bind_param() failed with ' . $sql->getLastError();
         }
 
         $stmt->close();
       } else {
-        $this->lastError = 'Database Error: prepare failed with() ' . $this->user->getSQL()->getLastError();
+        $this->lastError = 'Database Error: prepare failed with() ' . $sql->getLastError();
       }
     }
 

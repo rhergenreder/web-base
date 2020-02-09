@@ -80,8 +80,10 @@ class User extends ApiObject {
   }
 
   public function updateLanguage($lang) {
-    $request = new CSetLanguage($this);
-    return $request->execute(array("langCode" => $lang));
+    if($this->sql) {
+      $request = new \Api\SetLanguage($this);
+      return $request->execute(array("langCode" => $lang));
+    }
   }
 
   public function sendCookies() {
@@ -93,12 +95,12 @@ class User extends ApiObject {
   }
 
   public function readData($userId, $sessionId, $sessionUpdate = true) {
-    $query = 'SELECT User.name as userName, Language.uid as langId, Language.code as langCode
+    $query = 'SELECT User.name as userName, Language.uid as langId, Language.code as langCode, Language.name as langName
               FROM User
               INNER JOIN Session ON User.uid=Session.uidUser
               LEFT JOIN Language ON User.uidLanguage=Language.uid
               WHERE User.uid=? AND Session.uid=? AND Session.expires>now()';
-    $request = new CExecuteSelect($this);
+    $request = new \Api\ExecuteSelect($this);
     $success = $request->execute(array('query' => $query, $userId, $sessionId));
 
     if($success) {
@@ -108,12 +110,12 @@ class User extends ApiObject {
         $row = $request->getResult()['rows'][0];
         $this->username = $row['userName'];
         $this->uid = $userId;
-        $this->session = new CSession($this, $sessionId);
+        $this->session = new Session($this, $sessionId);
         if($sessionUpdate) $this->session->update();
         $this->loggedIn = true;
 
         if(!is_null($row['langId'])) {
-          $this->setLangauge(CLanguage::newInstance($row['langId'], $row['langCode']));
+          $this->setLangauge(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
         }
       }
     }
@@ -128,7 +130,7 @@ class User extends ApiObject {
       && ($jwt = $this->configuration->getJWT())) {
       try {
         $token = $_COOKIE['session'];
-        $decoded = (array)External\JWT::decode($token, $jwt->getKey());
+        $decoded = (array)\External\JWT::decode($token, $jwt->getKey());
         if(!is_null($decoded)) {
           $userId = (isset($decoded['userId']) ? $decoded['userId'] : NULL);
           $sessionId = (isset($decoded['sessionId']) ? $decoded['sessionId'] : NULL);
@@ -143,9 +145,9 @@ class User extends ApiObject {
 
     if(isset($_GET['lang']) && is_string($_GET["lang"]) && !empty($_GET["lang"])) {
       $this->updateLanguage($_GET['lang']);
-    } else if(isset($_COOKIE['lang']) && is_string($_COOKIE["lang"]) && !empty($_COOKIE["lang"])) {
+    }/* else if(isset($_COOKIE['lang']) && is_string($_COOKIE["lang"]) && !empty($_COOKIE["lang"])) {
       $this->updateLanguage($_COOKIE['lang']);
-    }
+    }*/
   }
 
   public function createSession($userId) {
@@ -164,7 +166,7 @@ class User extends ApiObject {
               LEFT JOIN Language ON User.uidLanguage=Language.uid
               WHERE api_key=? AND valid_until > now() AND User.uid = ApiKey.uidUser';
 
-    $request = new CExecuteSelect($this);
+    $request = new \Api\ExecuteSelect($this);
     $success = $request->execute(array('query' => $query, $apiKey));
 
     if($success) {

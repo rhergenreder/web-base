@@ -24,6 +24,10 @@
     return $result;
   }
 
+  function getProtocol() {
+    return stripos($_SERVER['SERVER_PROTOCOL'],'https') === 0 ? 'https://' : 'http://';
+  }
+
   function includeDir($dir, $aIgnore = array(), $recursive = false) {
     $aIgnore[] = '.';
     $aIgnore[] = '..';

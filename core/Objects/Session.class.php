@@ -19,18 +19,27 @@ class Session extends ApiObject {
   }
 
   private function updateMetaData() {
-    $userAgent = get_browser($_SERVER['HTTP_USER_AGENT'], true);
     $this->expires = time() + Session::DURATION * 60;
     $this->ipAddress = $_SERVER['REMOTE_ADDR'];
-    $this->os = $userAgent['platform'];
-    $this->browser = $userAgent['parent'];
+    try {
+      $userAgent = @get_browser($_SERVER['HTTP_USER_AGENT'], true);
+      $this->os = $userAgent['platform'] ?? "Unknown";
+      $this->browser = $userAgent['parent'] ?? "Unknown";
+    } catch(\Exception $ex) {
+      $this->os = "Unknown";
+      $this->browser = "Unknown";
+    }
   }
 
   public function sendCookie() {
     $this->updateMetaData();
-    $token = array('userId' => $this->user->getId(), 'sessionId' => $this->sessionId);
-    $sessionCookie = JWT::encode($token, getJwtKey());
-    setcookie('session', $sessionCookie, $this->expires, "/", "", true);
+    $jwt = $this->user->getConfiguration()->getJwt();
+    if($jwt) {
+      $token = array('userId' => $this->user->getId(), 'sessionId' => $this->sessionId);
+      $sessionCookie = \External\JWT::encode($token, $jwt->getKey());
+      $secure = strcmp(getProtocol(), "https") === 0;
+      setcookie('session', $sessionCookie, $this->expires, "/", "", $secure);
+    }
   }
 
   public function getExpiresTime() {
@@ -56,7 +65,7 @@ class Session extends ApiObject {
     $this->updateMetaData();
     $query = 'INSERT INTO Session (expires, uidUser, ipAddress, os, browser)
               VALUES (DATE_ADD(NOW(), INTERVAL ? MINUTE),?,?,?,?)';
-    $request = new CExecuteStatement($this->user);
+    $request = new \Api\ExecuteStatement($this->user);
 
     $success = $request->execute(array(
       'query' => $query,
@@ -77,7 +86,7 @@ class Session extends ApiObject {
 
   public function destroy() {
     $query = 'DELETE FROM Session WHERE Session.uid=? OR Session.expires<=NOW()';
-    $request = new CExecuteStatement($this->user);
+    $request = new \Api\ExecuteStatement($this->user);
     $success = $request->execute(array('query' => $query, $this->sessionId));
     return $success;
   }
@@ -88,7 +97,7 @@ class Session extends ApiObject {
               SET Session.expires=DATE_ADD(NOW(), INTERVAL ? MINUTE), Session.ipAddress=?,
                   Session.os=?, Session.browser=?
               WHERE Session.uid=?';
-    $request = new CExecuteStatement($this->user);
+    $request = new \Api\ExecuteStatement($this->user);
     $success = $request->execute(array(
       'query' => $query,
       Session::DURATION,

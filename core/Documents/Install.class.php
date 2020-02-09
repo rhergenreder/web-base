@@ -97,24 +97,23 @@ namespace Documents\Install {
         return self::DATABASE_CONFIGURATION;
       }
 
-      $query = "SELECT * FROM User";
-      $sql = $user->getSQL();
-      if(!is_null($sql) && $sql->isConnected()) {
-        $res = $sql->query($query);
-        if($res) {
-          if($res->num_rows === 0) {
-            $step = self::CREATE_USER;
-          } else {
-            $step = self::ADD_MAIL_SERVICE;
-          }
+      $request = new \Api\ExecuteSelect($user);
+      $success = $request->execute(array("query" => "SELECT COUNT(*) AS count FROM User"));
+      $this->errorString = $request->getLastError();
+
+      if($success) {
+        if($request->getResult()['rows'][0]["count"] > 0) {
+          $step = self::ADD_MAIL_SERVICE;
+        } else {
+          return self::CREATE_USER;
         }
       } else {
-        $step = self::DATABASE_CONFIGURATION;
+        return self::DATABASE_CONFIGURATION;
       }
 
-      if($step == self::ADD_MAIL_SERVICE && $config->isFilePresent("Mail")) {
+      if($step === self::ADD_MAIL_SERVICE && $config->isFilePresent("Mail")) {
         $step = self::FINISH_INSTALLATION;
-        if(!$config->isFilePresent("JWT") && $config->create("JWT", generateRandomString(32))) {
+        if(!$config->isFilePresent("JWT") && !$config->create("JWT", generateRandomString(32))) {
           $this->errorString = "Unable to create jwt file";
         }
       }
@@ -532,7 +531,8 @@ namespace Documents\Install {
             array("title" => "Username", "name"  => "username", "type"  => "text", "required" => true),
             array("title" => "Password", "name"  => "password", "type"  => "password", "required" => true),
             array("title" => "Confirm Password", "name"  => "confirmPassword", "type"  => "password", "required" => true),
-          )
+          ),
+          "previousButton" => true
         ),
         self::ADD_MAIL_SERVICE => array(
           "title" => "Optional: Add Mail Service",
@@ -550,7 +550,8 @@ namespace Documents\Install {
               )
             )),
           ),
-          "skip" => true
+          "skip" => true,
+          "previousButton" => true
         ),
         self::FINISH_INSTALLATION => array(
           "title" => "Finish Installation",
@@ -562,8 +563,8 @@ namespace Documents\Install {
         return "";
       }
 
-      $prevDisabled = ($this->currentStep <= self::DATABASE_CONFIGURATION);
       $currentView = $views[$this->currentStep];
+      $prevDisabled = !isset($currentView["previousButton"]) || !$currentView["previousButton"];
       $spinnerIcon = $this->createIcon("spinner");
       $title = $currentView["title"];
 
@@ -695,6 +696,7 @@ namespace Documents\Install {
       $progressSidebar = $this->createProgressSidebar();
       $progressMainview = $this->createProgessMainview();
       $errorStyle = ($this->errorString ? '' : ' style="display:none"');
+      $errorClass = ($this->errorString ? ' alert-danger' : '');
 
       $html .= "
         <body class=\"bg-light\">
@@ -718,7 +720,7 @@ namespace Documents\Install {
             </div>
             <div class=\"col-md-8 order-md-1\">
               $progressMainview
-              <div class=\"alert margin-top-m\" id=\"status\"$errorStyle>$this->errorString</div>
+              <div class=\"alert$errorClass margin-top-m\" id=\"status\"$errorStyle>$this->errorString</div>
             </div>
           </div>
         </div>

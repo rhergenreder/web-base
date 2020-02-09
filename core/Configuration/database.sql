@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS UserGroup (
   UNIQUE(`uid`, `gid`)
 );
 
-CREATE TABLE Session IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS Session (
   `uid`  int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `expires` timestamp NOT NULL,
   `uidUser` int(11) NOT NULL,
@@ -52,8 +52,13 @@ CREATE TABLE IF NOT EXISTS Language (
   `name` VARCHAR(32) UNIQUE NOT NULL
 );
 
+INSERT INTO Language (`uid`, `code`, `name`) VALUES
+  (1, 'en_US', 'American English'),
+  (2, 'de_DE', 'Deutsch Standard')
+  ON DUPLICATE KEY UPDATE name=name;
+
 CREATE TABLE IF NOT EXISTS ExternalSiteCache (
   `url` VARCHAR(256) PRIMARY KEY,
   `data` TEXT NOT NULL,
-  `expires` TIMESTAMP DEFAULT NULL
+  `expires` DATETIME DEFAULT NULL
 );

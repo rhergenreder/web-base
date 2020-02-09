@@ -53,9 +53,9 @@ class Request {
     return "($str)";
   }
 
-  public function parseParams($aValues) {
+  public function parseParams($values) {
     foreach($this->params as $name => $param) {
-      $value = (isset($aValues[$name]) ? $aValues[$name] : NULL);
+      $value = (isset($values[$name]) ? $values[$name] : NULL);
 
       if(!$param->optional && is_null($value)) {
         $this->lastError = 'Missing parameter: ' . $name;
@@ -73,8 +73,8 @@ class Request {
     return true;
   }
 
-  public function parseVariableParams($aValues) {
-    foreach($aValues as $name => $value) {
+  public function parseVariableParams($values) {
+    foreach($values as $name => $value) {
       if(isset($this->params[$name])) continue;
       $type = Parameter\Parameter::parseType($value);
       $param = new Parameter\Parameter($name, $type, true);
@@ -83,7 +83,7 @@ class Request {
     }
   }
 
-  public function execute($aValues = array()) {
+  public function execute($values = array()) {
     $this->params = $this->aDefaultParams;
     $this->success = false;
     $this->result = array();
@@ -94,10 +94,10 @@ class Request {
     }
 
     if($this->externCall) {
-      $aValues = $_REQUEST;
+      $values = $_REQUEST;
       if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER["CONTENT_TYPE"]) && in_array("application/json", explode(";", $_SERVER["CONTENT_TYPE"]))) {
         $jsonData = json_decode(file_get_contents('php://input'), true);
-        $aValues = array_merge($aValues, $jsonData);
+        $values = array_merge($values, $jsonData);
       }
     }
 
@@ -121,8 +121,8 @@ class Request {
 
     if($this->loginRequired) {
       $authorized = false;
-      if(isset($aValues['api_key']) && $this->apiKeyAllowed) {
-        $apiKey = $aValues['api_key'];
+      if(isset($values['api_key']) && $this->apiKeyAllowed) {
+        $apiKey = $values['api_key'];
         $authorized = $this->user->authorize($apiKey);
       }
 
@@ -133,11 +133,11 @@ class Request {
       }
     }
 
-    if(!$this->parseParams($aValues))
+    if(!$this->parseParams($values))
       return false;
 
     if($this->variableParamCount)
-      $this->parseVariableParams($aValues);
+      $this->parseVariableParams($values);
 
     if(!$this->user->getSQL()->isConnected()) {
       $this->lastError = $this->user->getSQL()->getLastError();

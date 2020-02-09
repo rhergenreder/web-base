@@ -16,8 +16,8 @@ class ExecuteStatement extends Request {
     $this->variableParamCount = true;
   }
 
-  public function execute($aValues = array()) {
-    if(!parent::execute($aValues)) {
+  public function execute($values = array()) {
+    if(!parent::execute($values)) {
       return false;
     }
 

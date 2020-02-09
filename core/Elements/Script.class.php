@@ -8,7 +8,7 @@ class Script extends Source {
 
   const CORE                    = "/js/script.js";
   // const HOME                    = "/js/home.js";
-  // const ADMIN                   = "/js/admin.js";
+  const ADMIN                   = "/js/admin.js";
   // const SORTTABLE               = "/js/sorttable.js";
   const JQUERY                  = "/js/jquery.min.js";
   // const JQUERY_UI               = "/js/jquery-ui.js";

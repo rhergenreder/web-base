@@ -17,7 +17,7 @@ class Link extends Source {
   // const HIGHLIGHT                 = '/css/highlight.css';
   // const HIGHLIGHT_THEME           = '/css/theme.css';
   const CORE                      = "/css/style.css";
-  // const ADMIN                     = "/css/admin.css";
+  const ADMIN                     = "/css/admin.css";
   // const HOME                      = "/css/home.css";
   // const REVEALJS                  = "/css/reveal.css";
   // const REVEALJS_THEME_MOON       = "/css/reveal_moon.css";

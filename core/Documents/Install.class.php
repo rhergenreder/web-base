@@ -59,11 +59,12 @@ namespace Documents\Install {
     const DATABASE_CONFIGURATION = 2;
     const CREATE_USER = 3;
     const ADD_MAIL_SERVICE = 4;
-    const ADD_GOOGLE_SERVICE = 5;
+    const FINISH_INSTALLATION = 5;
 
     //
     private $configDirectory;
     private $databaseScript;
+    private $errorString;
 
     function __construct($document) {
       parent::__construct($document);
@@ -71,6 +72,7 @@ namespace Documents\Install {
       // TODO: make better
       $this->configDirectory = getWebRoot() . '/core/Configuration';
       $this->databaseScript  = getWebRoot() . '/core/Configuration/database.sql';
+      $this->errorString = "";
     }
 
     private function getParameter($name) {
@@ -98,7 +100,6 @@ namespace Documents\Install {
       $query = "SELECT * FROM User";
       $sql = $user->getSQL();
       if(!is_null($sql) && $sql->isConnected()) {
-        $this->getDocument()->getUser()->setSql($sql);
         $res = $sql->query($query);
         if($res) {
           if($res->num_rows === 0) {
@@ -112,7 +113,10 @@ namespace Documents\Install {
       }
 
       if($step == self::ADD_MAIL_SERVICE && $config->isFilePresent("Mail")) {
-        $step = self::ADD_GOOGLE_SERVICE;
+        $step = self::FINISH_INSTALLATION;
+        if(!$config->isFilePresent("JWT") && $config->create("JWT", generateRandomString(32))) {
+          $this->errorString = "Unable to create jwt file";
+        }
       }
 
       return $step;
@@ -120,7 +124,7 @@ namespace Documents\Install {
 
     private function checkRequirements() {
 
-      $msg = "";
+      $msg = $this->errorString;
       $success = true;
       $failedRequirements = array();
 
@@ -243,7 +247,7 @@ namespace Documents\Install {
       $password = $this->getParameter("password");
       $confirmPassword = $this->getParameter("confirmPassword");
 
-      $msg = "";
+      $msg = $this->errorString;
       $success = true;
       $missingInputs = array();
 
@@ -297,7 +301,7 @@ namespace Documents\Install {
       }
 
       $success = true;
-      $msg = "";
+      $msg = $this->errorString;
       if($this->getParameter("skip") === "true") {
         if(!$user->getConfiguration()->create("Mail", null)) {
           $success = false;
@@ -378,10 +382,6 @@ namespace Documents\Install {
       return array("success" => $success, "msg" => $msg);
     }
 
-    private function addGoogleService() {
-        // return array("success" => $success, "msg" => $msg);
-    }
-
     private function performStep() {
 
       switch($this->currentStep) {
@@ -397,9 +397,6 @@ namespace Documents\Install {
 
         case self::ADD_MAIL_SERVICE:
           return $this->addMailService();
-
-        case self::ADD_GOOGLE_SERVICE:
-          return $this->addGoogleService();
 
         default:
           return array(
@@ -555,8 +552,9 @@ namespace Documents\Install {
           ),
           "skip" => true
         ),
-        self::ADD_GOOGLE_SERVICE => array(
-          "title" => "Optional: Add Google Services",
+        self::FINISH_INSTALLATION => array(
+          "title" => "Finish Installation",
+          "text" => "Installation finished, you can now customize your own website, check the source code and stuff."
         )
       );
 
@@ -570,6 +568,11 @@ namespace Documents\Install {
       $title = $currentView["title"];
 
       $html = "<h4 class=\"mb-3\">$title</h4><hr class=\"mb-4\">";
+
+      if(isset($currentView["text"])) {
+        $text = $currentView["text"];
+        $html .= "<div class=\"my-3\">$text</i></div>";
+      }
 
       if(isset($currentView["progressText"])) {
         $progressText = $currentView["progressText"];
@@ -597,9 +600,14 @@ namespace Documents\Install {
       }
 
       $buttons = array(
-        array("title" => "Go Back", "type" => "info", "id" => "btnPrev", "float" => "left", "disabled" => $prevDisabled),
-        array("title" => "Submit", "type" => "success", "id" => "btnSubmit", "float" => "right")
+        array("title" => "Go Back", "type" => "info", "id" => "btnPrev", "float" => "left", "disabled" => $prevDisabled)
       );
+
+      if($this->currentStep != self::FINISH_INSTALLATION) {
+        $buttons[] = array("title" => "Submit", "type" => "success", "id" => "btnSubmit", "float" => "right");
+      } else {
+        $buttons[] = array("title" => "Finish", "type" => "success", "id" => "btnFinish", "float" => "right");
+      }
 
       if(isset($currentView["skip"])) {
         $buttons[] = array("title" => "Skip", "type" => "secondary", "id" => "btnSkip", "float" => "right");
@@ -653,8 +661,8 @@ namespace Documents\Install {
           "title" => "Add Mail Service",
           "status" => self::NOT_STARTED
         ),
-        self::ADD_GOOGLE_SERVICE => array(
-          "title" => "Add Google Services",
+        self::FINISH_INSTALLATION => array(
+          "title" => "Finish Installation",
           "status" => self::NOT_STARTED
         ),
       );
@@ -664,6 +672,10 @@ namespace Documents\Install {
       // set status
       for($step = self::CHECKING_REQUIRMENTS; $step < $this->currentStep; $step++) {
         $this->steps[$step]["status"] = self::SUCCESFULL;
+      }
+
+      if($this->currentStep == self::FINISH_INSTALLATION) {
+        $this->steps[$this->currentStep]["status"] = self::SUCCESFULL;
       }
 
       // POST
@@ -682,6 +694,7 @@ namespace Documents\Install {
 
       $progressSidebar = $this->createProgressSidebar();
       $progressMainview = $this->createProgessMainview();
+      $errorStyle = ($this->errorString ? '' : ' style="display:none"');
 
       $html .= "
         <body class=\"bg-light\">
@@ -705,7 +718,7 @@ namespace Documents\Install {
             </div>
             <div class=\"col-md-8 order-md-1\">
               $progressMainview
-              <div class=\"alert margin-top-m\" id=\"status\" style=\"display:none\"></div>
+              <div class=\"alert margin-top-m\" id=\"status\"$errorStyle>$this->errorString</div>
             </div>
           </div>
         </div>

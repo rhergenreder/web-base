@@ -1,12 +1,5 @@
 <?php
 
-// Autoload function
-// function __autoload($class) {
-//   $parts = explode('\\', $class);
-//   $path = implode(DIRECTORY_SEPERATOR, $parts);
-//   require "$path.php";
-// }
-
 function getClassPath($class, $suffix=true) {
   $path = str_replace('\\', '/', $class);
   $suffix = ($suffix ? ".class" : "");
@@ -41,22 +34,4 @@ if ($installation) {
 }
 
 die($document->getCode());
-
-// if(!file_exists($configPath)) {
-//   require_once 'core/objects/User.php';
-//   require_once 'core/documents/install.php';
-//
-//   // $user = new CUser(null);
-//   // $installPage = new CDocumentInstall($user);
-//   // die($installPage->getCode());
-// } else {
-//   $perms = fileperms($configPath);
-//   if($perms != 0x8600) {
-//     die("<b>Invalid conf file permissions</b>. expected permissions: 8600, got: $perms");
-//   }
-//
-//   require_once $configPath;
-//   // require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/pages/home.php';
-//   // CDocument::createDocument(CDocumentHome::class);
-// }
 ?>

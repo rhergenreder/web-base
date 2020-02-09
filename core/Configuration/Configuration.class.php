@@ -7,7 +7,6 @@ class Configuration {
   private $database;
   private $mail;
   private $jwt;
-  private $google;
 
   function __construct() {
   }
@@ -18,8 +17,7 @@ class Configuration {
       $classes = array(
         \Configuration\Database::class => &$this->database,
         \Configuration\Mail::class => &$this->mail,
-        \Configuration\JWT::class => &$this->jwt,
-        \Configuration\Google::class => &$this->google,
+        \Configuration\JWT::class => &$this->jwt
       );
 
       $success = true;
@@ -54,35 +52,57 @@ class Configuration {
     $path = getClassPath("\\Configuration\\$className");
 
     if($data) {
+      if(is_string($data)) {
+        $key = addslashes($data);
+        $code = intendCode(
+          "<?php
 
-      // TODO: Generalize this...
-      $superClass = get_class($data);
-      $host = addslashes($data->getHost());
-      $port = intval($data->getPort());
-      $login = addslashes($data->getLogin());
-      $password = addslashes($data->getPassword());
+          namespace Configuration;
 
-      $properties = "";
-      foreach($data->getProperties() as $key => $val) {
-        $key = addslashes($key);
-        $val = is_string($val) ? "'" . addslashes($val) . "'" : $val;
-        $properties .= "\n\$this->setProperty('$key', $val);";
-      }
+          class $className {
 
-      $code = intendCode(
-        "<?php
+            private \$key;
 
-        namespace Configuration;
-
-        class $className extends \\$superClass {
-
-          public function __construct() {
-            parent::__construct('$host', $port, '$login', '$password');$properties
+            public function __construct() {
+              \$this->key = '$key';
+            }
+            
+            public function getKey() {
+              return \$this->key;
+            }
           }
+
+          ?>", false
+        );
+      } else {
+        $superClass = get_class($data);
+        $host = addslashes($data->getHost());
+        $port = intval($data->getPort());
+        $login = addslashes($data->getLogin());
+        $password = addslashes($data->getPassword());
+
+        $properties = "";
+        foreach($data->getProperties() as $key => $val) {
+          $key = addslashes($key);
+          $val = is_string($val) ? "'" . addslashes($val) . "'" : $val;
+          $properties .= "\n\$this->setProperty('$key', $val);";
         }
 
-        ?>", false
-      );
+        $code = intendCode(
+          "<?php
+
+          namespace Configuration;
+
+          class $className extends \\$superClass {
+
+            public function __construct() {
+              parent::__construct('$host', $port, '$login', '$password');$properties
+            }
+          }
+
+          ?>", false
+        );
+      }
     } else {
       $code = intendCode(
         "<?php

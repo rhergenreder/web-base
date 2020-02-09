@@ -33,7 +33,6 @@ class User extends ApiObject {
     }
   }
 
-  public function setSql($sql) { $this->sql = $sql; }
   public function getId() { return $this->uid; }
   public function isLoggedIn() { return $this->loggedIn; }
   public function getUsername() { return $this->username; }

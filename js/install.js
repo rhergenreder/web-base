@@ -120,6 +120,10 @@ $(document).ready(function() {
     });
   });
 
+  $("#btnFinish").click(function() {
+    window.location.reload();
+  });
+
   $("#btnRetry").click(function() {
     retry();
   });

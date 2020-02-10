@@ -41,14 +41,19 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       header("403 Forbidden");
       $response = "";
     } else if(!preg_match("/[a-zA-Z]+(\/[a-zA-Z]+)*/", $apiFunction)) {
+      header("400 Bad Request");
       $response = createError("Invalid Method");
     } else {
       $apiFunction = strtoupper($apiFunction[0]) . substr($apiFunction, 1);
+      $apiFunction = str_replace("/", "\\", $apiFunction);
       $class = "\\Api\\$apiFunction";
       $file = getClassPath($class);
       if(!file_exists($file)) {
         header("404 Not Found");
         $response = createError("Not found");
+      } else if(!is_subclass_of($class, \Api\Request::class)) {
+        header("400 Bad Request");
+        $response = createError("Inalid Method");
       } else {
         $request = new $class($user, true);
         $success = $request->execute();

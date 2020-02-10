@@ -685,13 +685,13 @@ namespace Documents\Install {
         die(json_encode($response));
       }
 
-      if($this->currentStep == self::CHECKING_REQUIRMENTS) {
+      /*if($this->currentStep == self::CHECKING_REQUIRMENTS) {
         $this->getDocument()->getHead()->addJSCode("
           $(document).ready(function() {
             retry();
           });
         ");
-      }
+      }*/
 
       $progressSidebar = $this->createProgressSidebar();
       $progressMainview = $this->createProgessMainview();

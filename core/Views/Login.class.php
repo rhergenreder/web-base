@@ -43,7 +43,7 @@ class Login extends \View {
             <div class=\"alert alert-danger hidden\" role=\"alert\" id=\"loginError\"></div>
           </form>
           <span class=\"subtitle flags-container\"><span class=\"flags\">$flags</span></span>
-          <span class=\"subtitle\"><a class=\"link\" href=\"$protocol://$domain\">$iconBack$backToStartPage</a></span>
+          <span class=\"subtitle\"><a class=\"link\" href=\"$protocol://$domain\">$iconBack&nbsp;$backToStartPage</a></span>
           $accountCreated
         </div>
       </div>";

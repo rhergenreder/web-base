@@ -59,7 +59,7 @@ abstract class Document {
       $sql = $this->user->getSQL();
       if (is_null($sql)) {
         die("Database is not configured yet.");
-      } else {
+      } else if(!$sql->isConnected()) {
         die("Database is not connected: " . $sql->getLastError());
       }
     }

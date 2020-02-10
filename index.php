@@ -66,7 +66,22 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
   if ($installation) {
     $document = new Documents\Install($user);
   } else {
-    $document = new Documents\Admin($user);
+    $documentName = $_GET["site"];
+    if(empty($documentName) || strcasecmp($documentName, "install") === 0) {
+      $documentName = "home";
+    } else if(!preg_match("/[a-zA-Z]+(\/[a-zA-Z]+)*/", $documentName)) {
+      $documentName = "Document404";
+    }
+
+    $documentName = strtoupper($documentName[0]) . substr($documentName, 1);
+    $documentName = str_replace("/", "\\", $documentName);
+    $class = "\\Documents\\$documentName";
+    $file = getClassPath($class);
+    if(!file_exists($file) || !is_subclass_of($class, \Elements\Document::class)) {
+      $document = new \Documents\Document404($user);
+    } else {
+      $document = new $class($user);
+    }
   }
 
   $response = $document->getCode();

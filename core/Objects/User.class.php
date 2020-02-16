@@ -13,6 +13,7 @@ class User extends ApiObject {
   private $language;
 
   public function __construct($configuration) {
+    session_start();
     $this->configuration = $configuration;
     $this->setLangauge(Language::DEFAULT_LANGUAGE());
     $this->reset();
@@ -95,13 +96,19 @@ class User extends ApiObject {
   }
 
   public function readData($userId, $sessionId, $sessionUpdate = true) {
-    $query = 'SELECT User.name as userName, Language.uid as langId, Language.code as langCode, Language.name as langName
+    $query = 'SELECT User.name as userName, Language.uid as langId, Language.code as langCode,
+                Language.name as langName, Session.data as sessionData, Session.stay_logged_in as stayLoggedIn
               FROM User
-              INNER JOIN Session ON User.uid=Session.uidUser
-              LEFT JOIN Language ON User.uidLanguage=Language.uid
-              WHERE User.uid=? AND Session.uid=? AND Session.expires>now()';
+              INNER JOIN Session ON User.uid=Session.user_id
+              LEFT JOIN Language ON User.language_id=Language.uid
+              WHERE User.uid=? AND Session.uid=?
+              AND (Session.stay_logged_in OR Session.expires>now())';
     $request = new \Api\ExecuteSelect($this);
     $success = $request->execute(array('query' => $query, $userId, $sessionId));
+
+    // var_dump($userId);
+    // var_dump($sessionId);
+    // var_dump($request->getResult());
 
     if($success) {
       if(count($request->getResult()['rows']) === 0) {
@@ -111,6 +118,8 @@ class User extends ApiObject {
         $this->username = $row['userName'];
         $this->uid = $userId;
         $this->session = new Session($this, $sessionId);
+        $this->session->setData(json_decode($row["sessionData"]));
+        $this->session->stayLoggedIn($row["stayLoggedIn"]);
         if($sessionUpdate) $this->session->update();
         $this->loggedIn = true;
 
@@ -145,26 +154,30 @@ class User extends ApiObject {
 
     if(isset($_GET['lang']) && is_string($_GET["lang"]) && !empty($_GET["lang"])) {
       $this->updateLanguage($_GET['lang']);
-    }/* else if(isset($_COOKIE['lang']) && is_string($_COOKIE["lang"]) && !empty($_COOKIE["lang"])) {
+    } else if(isset($_COOKIE['lang']) && is_string($_COOKIE["lang"]) && !empty($_COOKIE["lang"])) {
       $this->updateLanguage($_COOKIE['lang']);
-    }*/
+    }
   }
 
-  public function createSession($userId) {
+  public function createSession($userId, $stayLoggedIn) {
     $this->uid = $userId;
-    $this->session = new Session($this);
-    $this->loggedIn = $this->session->insert();
-    return $this->loggedIn;
+    $this->session = Session::create($this, $stayLoggedIn);
+    if($this->session) {
+      $this->loggedIn = true;
+      return true;
+    }
+
+    return false;
   }
 
   public function authorize($apiKey) {
     if($this->loggedIn)
       return true;
 
-    $query = 'SELECT ApiKey.uidUser as uid, User.name as username, Language.uid as langId, Language.code as langCode
+    $query = 'SELECT ApiKey.user_id as uid, User.name as username, Language.uid as langId, Language.code as langCode
               FROM ApiKey, User
-              LEFT JOIN Language ON User.uidLanguage=Language.uid
-              WHERE api_key=? AND valid_until > now() AND User.uid = ApiKey.uidUser';
+              LEFT JOIN Language ON User.language_id=Language.uid
+              WHERE api_key=? AND valid_until > now() AND User.uid = ApiKey.user_id';
 
     $request = new \Api\ExecuteSelect($this);
     $success = $request->execute(array('query' => $query, $apiKey));

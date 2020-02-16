@@ -12,10 +12,21 @@ class Session extends ApiObject {
   private $ipAddress;
   private $os;
   private $browser;
+  private $stayLoggedIn;
 
-  public function __construct($user, $sessionId = NULL) {
+  public function __construct($user, $sessionId) {
     $this->user = $user;
     $this->sessionId = $sessionId;
+    $this->stayLoggedIn = true;
+  }
+
+  public static function create($user, $stayLoggedIn) {
+    $session = new Session($user, null);
+    if($session->insert($stayLoggedIn)) {
+      return $session;
+    }
+
+    return null;
   }
 
   private function updateMetaData() {
@@ -31,6 +42,16 @@ class Session extends ApiObject {
     }
   }
 
+  public function setData($data) {
+    foreach($data as $key => $value) {
+      $_SESSION[$key] = $value;
+    }
+  }
+
+  public function stayLoggedIn($val) {
+    $this->stayLoggedIn = $val;
+  }
+
   public function sendCookie() {
     $this->updateMetaData();
     $jwt = $this->user->getConfiguration()->getJwt();
@@ -38,22 +59,22 @@ class Session extends ApiObject {
       $token = array('userId' => $this->user->getId(), 'sessionId' => $this->sessionId);
       $sessionCookie = \External\JWT::encode($token, $jwt->getKey());
       $secure = strcmp(getProtocol(), "https") === 0;
-      setcookie('session', $sessionCookie, $this->expires, "/", "", $secure);
+      setcookie('session', $sessionCookie, $this->getExpiresTime(), "/", "", $secure);
     }
   }
 
   public function getExpiresTime() {
-    return $this->expires;
+    return ($this->stayLoggedIn == 0 ? 0 : $this->expires);
   }
 
   public function getExpiresSeconds() {
-    return ($this->expires - time());
+    return ($this->stayLoggedIn == 0 ? -1 : $this->expires - time());
   }
 
   public function jsonSerialize() {
     return array(
       'uid' => $this->sessionId,
-      'uidUser' => $this->user->getId(),
+      'user_id' => $this->user->getId(),
       'expires' => $this->expires,
       'ipAddress' => $this->ipAddress,
       'os' => $this->os,
@@ -61,10 +82,10 @@ class Session extends ApiObject {
     );
   }
 
-  public function insert() {
+  public function insert($stayLoggedIn) {
     $this->updateMetaData();
-    $query = 'INSERT INTO Session (expires, uidUser, ipAddress, os, browser)
-              VALUES (DATE_ADD(NOW(), INTERVAL ? MINUTE),?,?,?,?)';
+    $query = "INSERT INTO Session (expires, user_id, ipAddress, os, browser, data, stay_logged_in)
+              VALUES (DATE_ADD(NOW(), INTERVAL ? MINUTE),?,?,?,?,?,?)";
     $request = new \Api\ExecuteStatement($this->user);
 
     $success = $request->execute(array(
@@ -74,6 +95,8 @@ class Session extends ApiObject {
       $this->ipAddress,
       $this->os,
       $this->browser,
+      json_encode($_SESSION),
+      $stayLoggedIn
     ));
 
     if($success) {
@@ -85,7 +108,7 @@ class Session extends ApiObject {
   }
 
   public function destroy() {
-    $query = 'DELETE FROM Session WHERE Session.uid=? OR Session.expires<=NOW()';
+    $query = 'DELETE FROM Session WHERE Session.uid=? OR (Session.stay_logged_in = 0 AND Session.expires<=NOW())';
     $request = new \Api\ExecuteStatement($this->user);
     $success = $request->execute(array('query' => $query, $this->sessionId));
     return $success;
@@ -93,10 +116,12 @@ class Session extends ApiObject {
 
   public function update() {
     $this->updateMetaData();
+
     $query = 'UPDATE Session
-              SET Session.expires=DATE_ADD(NOW(), INTERVAL ? MINUTE), Session.ipAddress=?,
-                  Session.os=?, Session.browser=?
-              WHERE Session.uid=?';
+            SET Session.expires=DATE_ADD(NOW(), INTERVAL ? MINUTE),
+                Session.ipAddress=?, Session.os=?, Session.browser=?, Session.data=?
+            WHERE Session.uid=?';
+
     $request = new \Api\ExecuteStatement($this->user);
     $success = $request->execute(array(
       'query' => $query,
@@ -104,9 +129,9 @@ class Session extends ApiObject {
       $this->ipAddress,
       $this->os,
       $this->browser,
+      json_encode($_SESSION),
       $this->sessionId,
     ));
-
     return $success;
   }
 }

@@ -17,7 +17,7 @@ class CreateApiKey extends Request {
     }
 
     $apiKey = generateRandomString(64);
-    $query = "INSERT INTO ApiKey (uidUser, api_key, valid_until) VALUES (?,?,(SELECT DATE_ADD(now(), INTERVAL 30 DAY)))";
+    $query = "INSERT INTO ApiKey (user_id, api_key, valid_until) VALUES (?,?,(SELECT DATE_ADD(now(), INTERVAL 30 DAY)))";
     $request = new ExecuteStatement($this->user);
     $this->success = $request->execute(array("query" => $query, $this->user->getId(), $apiKey));
     $this->lastError = $request->getLastError();

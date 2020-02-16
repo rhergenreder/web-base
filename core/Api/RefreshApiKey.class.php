@@ -14,7 +14,7 @@ class RefreshApiKey extends Request {
 
   private function apiKeyExists() {
     $id = $this->getParam("id");
-    $query = "SELECT * FROM ApiKey WHERE uid = ? AND uidUser = ? AND valid_until > now()";
+    $query = "SELECT * FROM ApiKey WHERE uid = ? AND user_id = ? AND valid_until > now()";
     $request = new ExecuteSelect($this->user);
     $this->success = $request->execute(array("query" => $query, $id, $this->user->getId()));
     $this->lastError = $request->getLastError();
@@ -36,7 +36,7 @@ class RefreshApiKey extends Request {
     if(!$this->apiKeyExists())
       return false;
 
-    $query = "UPDATE ApiKey SET valid_until = (SELECT DATE_ADD(now(), INTERVAL 30 DAY)) WHERE uid = ? AND uidUser = ? AND valid_until > now()";
+    $query = "UPDATE ApiKey SET valid_until = (SELECT DATE_ADD(now(), INTERVAL 30 DAY)) WHERE uid = ? AND user_id = ? AND valid_until > now()";
     $request = new ExecuteStatement($this->user);
     $this->success = $request->execute(array("query" => $query, $id, $this->user->getId()));
     $this->lastError = $request->getLastError();

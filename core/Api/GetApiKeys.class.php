@@ -16,7 +16,7 @@ class GetApiKeys extends Request {
 
     $query = "SELECT ApiKey.uid, ApiKey.api_key, ApiKey.valid_until
               FROM ApiKey
-              WHERE ApiKey.uidUser = ?
+              WHERE ApiKey.user_id = ?
               AND ApiKey.valid_until > now()";
     $request = new ExecuteSelect($this->user);
     $this->success = $request->execute(array("query" => $query, $this->user->getId()));

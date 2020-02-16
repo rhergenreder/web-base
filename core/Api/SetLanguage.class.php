@@ -48,7 +48,7 @@ class SetLanguage extends Request {
     $languageId = $this->language->getId();
     $userId = $this->user->getId();
 
-    $query = "UPDATE User SET uidLanguage = ? WHERE uid = ?";
+    $query = "UPDATE User SET language_id = ? WHERE uid = ?";
     $request = new ExecuteStatement($this->user);
     $this->success = $request->execute(array("query" => $query, $languageId, $userId));
     $this->lastError = $request->getLastError();

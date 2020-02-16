@@ -13,6 +13,7 @@ class Login extends Request {
     parent::__construct($user, $externCall, array(
       'username' => new StringType('username', 32),
       'password' => new StringType('password'),
+      'stayLoggedIn' => new Parameter('stayLoggedIn', Parameter::TYPE_BOOLEAN, true, true)
     ));
     $this->forbidMethod("GET");
   }
@@ -39,6 +40,7 @@ class Login extends Request {
     $this->success = false;
     $username = $this->getParam('username');
     $password = $this->getParam('password');
+    $stayLoggedIn = $this->getParam('stayLoggedIn');
 
     $query = 'SELECT User.uid, User.password, User.salt FROM User WHERE User.name=?';
     $request = new ExecuteSelect($this->user);
@@ -56,7 +58,7 @@ class Login extends Request {
         $uid = $row['uid'];
         $hash = hash('sha256', $password . $salt);
         if($hash === $row['password']) {
-            if(!($this->success = $this->user->createSession($uid))) {
+            if(!($this->success = $this->user->createSession($uid, $stayLoggedIn))) {
               return $this->createError("Error creating Session");
             } else {
               $this->result['logoutIn'] = $this->user->getSession()->getExpiresSeconds();

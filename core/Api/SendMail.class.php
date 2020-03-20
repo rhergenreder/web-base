@@ -23,18 +23,18 @@ class SendMail extends Request {
       return false;
     }
 
-    $mailData = getMailData();
+    $mailConfig = $this->user->getConfiguration()->getMail();
     $mail = new \External\PHPMailer\PHPMailer;
     $mail->IsSMTP();
     $mail->setFrom($this->getParam('from'), $this->getParam('fromName'));
     $mail->addAddress($this->getParam('to'));
     $mail->Subject = $this->getParam('subject');
     $mail->SMTPDebug = 0;
-    $mail->Host = $mailData->getHost();
-    $mail->Port = $mailData->getPort();
+    $mail->Host = $mailConfig->getHost();
+    $mail->Port = $mailConfig->getPort();
     $mail->SMTPAuth = true;
-    $mail->Username = $mailData->getLogin();
-    $mail->Password = $mailData->getPassword();
+    $mail->Username = $mailConfig->getLogin();
+    $mail->Password = $mailConfig->getPassword();
     $mail->SMTPSecure = 'tls';
     $mail->IsHTML(true);
     $mail->CharSet = 'UTF-8';

@@ -2,6 +2,11 @@
 
 namespace Objects;
 
+use Driver\SQL\Keyword;
+use Driver\SQL\Column\Column;
+use Driver\SQL\Condition\Compare;
+use Driver\SQL\Condition\CondBool;
+
 class User extends ApiObject {
 
   private $sql;
@@ -30,7 +35,7 @@ class User extends ApiObject {
   private function connectDb() {
     $databaseConf = $this->configuration->getDatabase();
     if($databaseConf) {
-      $this->sql = \Driver\SQL::createConnection($databaseConf);
+      $this->sql = \Driver\SQL\SQL::createConnection($databaseConf);
     }
   }
 
@@ -74,10 +79,13 @@ class User extends ApiObject {
   }
 
   public function logout() {
+    $success = true;
     if($this->loggedIn) {
-      $this->session->destroy();
+      $success = $this->session->destroy();
       $this->reset();
     }
+
+    return $success;
   }
 
   public function updateLanguage($lang) {
@@ -96,30 +104,29 @@ class User extends ApiObject {
   }
 
   public function readData($userId, $sessionId, $sessionUpdate = true) {
-    $query = 'SELECT User.name as userName, Language.uid as langId, Language.code as langCode,
-                Language.name as langName, Session.data as sessionData, Session.stay_logged_in as stayLoggedIn
-              FROM User
-              INNER JOIN Session ON User.uid=Session.user_id
-              LEFT JOIN Language ON User.language_id=Language.uid
-              WHERE User.uid=? AND Session.uid=?
-              AND (Session.stay_logged_in OR Session.expires>now())';
-    $request = new \Api\ExecuteSelect($this);
-    $success = $request->execute(array('query' => $query, $userId, $sessionId));
 
-    // var_dump($userId);
-    // var_dump($sessionId);
-    // var_dump($request->getResult());
+    $res = $this->sql->select("User.name", "Language.uid as langId", "Language.code as langCode", "Language.name as langName",
+        "Session.data", "Session.stay_logged_in")
+        ->from("User")
+        ->innerJoin("Session", "Session.user_id", "User.uid")
+        ->leftJoin("Language", "User.language_id", "Language.uid")
+        ->where(new Compare("User.uid", $userId))
+        ->where(new Compare("Session.uid", $sessionId))
+        ->where(new Compare("Session.active", true))
+        ->where(new CondBool("Session.stay_logged_in"), new Compare("Session.expires", new Keyword($this->sql->currentTimestamp()), '>'))
+        ->execute();
 
+    $success = ($res !== FALSE);
     if($success) {
-      if(count($request->getResult()['rows']) === 0) {
+      if(empty($res)) {
         $success = false;
       } else {
-        $row = $request->getResult()['rows'][0];
-        $this->username = $row['userName'];
+        $row = $res[0];
+        $this->username = $row['name'];
         $this->uid = $userId;
         $this->session = new Session($this, $sessionId);
-        $this->session->setData(json_decode($row["sessionData"]));
-        $this->session->stayLoggedIn($row["stayLoggedIn"]);
+        $this->session->setData(json_decode($row["data"]));
+        $this->session->stayLoggedIn($row["stay_logged_in"]);
         if($sessionUpdate) $this->session->update();
         $this->loggedIn = true;
 
@@ -127,6 +134,8 @@ class User extends ApiObject {
           $this->setLangauge(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
         }
       }
+    } else {
+      var_dump($this->sql->getLastError());
     }
 
     return $success;
@@ -171,29 +180,34 @@ class User extends ApiObject {
   }
 
   public function authorize($apiKey) {
+
     if($this->loggedIn)
       return true;
 
-    $query = 'SELECT ApiKey.user_id as uid, User.name as username, Language.uid as langId, Language.code as langCode
-              FROM ApiKey, User
-              LEFT JOIN Language ON User.language_id=Language.uid
-              WHERE api_key=? AND valid_until > now() AND User.uid = ApiKey.user_id';
+    $res = $this->sql->select("ApiKey.user_id as uid", "User.name as username", "Language.uid as langId", "Language.code as langCode", "Language.name as langName")
+      ->from("ApiKey")
+      ->innerJoin("User", "ApiKey.user_id", "User.uid")
+      ->leftJoin("Language", "User.language_id", "Language.uid")
+      ->where(new Compare("ApiKey.api_key", $apiKey))
+      ->where(new Compare("valid_until", new Keyword($this->sql->currentTimestamp()), ">"))
+      ->where(new COmpare("ApiKey.active", 1))
+      ->execute();
 
-    $request = new \Api\ExecuteSelect($this);
-    $success = $request->execute(array('query' => $query, $apiKey));
-
+    $success = ($res !== FALSE);
     if($success) {
-      if(count($request->getResult()['rows']) === 0) {
+      if(empty($res)) {
         $success = false;
       } else {
-        $row = $request->getResult()['rows'][0];
+        $row = $res[0];
         $this->uid = $row['uid'];
         $this->username = $row['username'];
 
         if(!is_null($row['langId'])) {
-          $this->setLangauge(Language::newInstance($row['langId'], $row['langCode']));
+          $this->setLangauge(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
         }
       }
+    } else {
+      var_dump($this->sql->getLastError());
     }
 
     return $success;

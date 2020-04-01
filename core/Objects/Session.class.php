@@ -2,6 +2,8 @@
 
 namespace Objects;
 
+use \Driver\SQL\Condition\Compare;
+
 class Session extends ApiObject {
 
   const DURATION = 120;
@@ -84,20 +86,22 @@ class Session extends ApiObject {
 
   public function insert($stayLoggedIn) {
     $this->updateMetaData();
-    $query = "INSERT INTO Session (expires, user_id, ipAddress, os, browser, data, stay_logged_in)
-              VALUES (DATE_ADD(NOW(), INTERVAL ? MINUTE),?,?,?,?,?,?)";
-    $request = new \Api\ExecuteStatement($this->user);
+    $sql = $this->user->getSQL();
 
-    $success = $request->execute(array(
-      'query' => $query,
-      Session::DURATION,
-      $this->user->getId(),
-      $this->ipAddress,
-      $this->os,
-      $this->browser,
-      json_encode($_SESSION),
-      $stayLoggedIn
-    ));
+    $hours = Session::DURATION;
+    $columns = array("expires", "user_id", "ipAddress", "os", "browser", "data", "stay_logged_in");
+
+    $success = $sql
+      ->insert("Session", $columns)
+      ->addRow(
+        (new \DateTime)->modify("+$hours hour"),
+        $this->user->getId(),
+        $this->ipAddress,
+        $this->os,
+        $this->browser,
+        json_encode($_SESSION),
+        $stayLoggedIn)
+      ->execute();
 
     if($success) {
       $this->sessionId = $this->user->getSQL()->getLastInsertId();
@@ -108,30 +112,30 @@ class Session extends ApiObject {
   }
 
   public function destroy() {
-    $query = 'DELETE FROM Session WHERE Session.uid=? OR (Session.stay_logged_in = 0 AND Session.expires<=NOW())';
-    $request = new \Api\ExecuteStatement($this->user);
-    $success = $request->execute(array('query' => $query, $this->sessionId));
+    $success = $this->user->getSQL()->update("Session")
+      ->set("active", false)
+      ->where(new Compare("Session.uid", $this->sessionId))
+      ->where(new Compare("Session.user_id", $this->user->getId()))
+      ->execute();
+
     return $success;
   }
 
   public function update() {
     $this->updateMetaData();
+    $hours = Session::DURATION;
 
-    $query = 'UPDATE Session
-            SET Session.expires=DATE_ADD(NOW(), INTERVAL ? MINUTE),
-                Session.ipAddress=?, Session.os=?, Session.browser=?, Session.data=?
-            WHERE Session.uid=?';
+    $sql = $this->user->getSQL();
+    $success = $sql->update("Session")
+      ->set("Session.expires", (new \DateTime)->modify("+$hours hour"))
+      ->set("Session.ipAddress", $this->ipAddress)
+      ->set("Session.os", $this->os)
+      ->set("Session.browser", $this->browser)
+      ->set("Session.data", json_encode($_SESSION))
+      ->where(new Compare("Session.uid", $this->sessionId))
+      ->where(new Compare("Session.user_id", $this->user->getId()))
+      ->execute();
 
-    $request = new \Api\ExecuteStatement($this->user);
-    $success = $request->execute(array(
-      'query' => $query,
-      Session::DURATION,
-      $this->ipAddress,
-      $this->os,
-      $this->browser,
-      json_encode($_SESSION),
-      $this->sessionId,
-    ));
     return $success;
   }
 }

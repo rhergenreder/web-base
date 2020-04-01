@@ -97,18 +97,15 @@ namespace Documents\Install {
         return self::DATABASE_CONFIGURATION;
       }
 
-      $request = new \Api\ExecuteSelect($user);
-      $success = $request->execute(array("query" => "SELECT COUNT(*) AS count FROM User"));
-      $this->errorString = $request->getLastError();
-
-      if($success) {
-        if($request->getResult()['rows'][0]["count"] > 0) {
+      $res = $user->getSQL()->select("COUNT(*) as count")->from("User")->execute();
+      if ($res === FALSE) {
+        return self::DATABASE_CONFIGURATION;
+      } else {
+        if ($res[0]["count"] > 0) {
           $step = self::ADD_MAIL_SERVICE;
         } else {
           return self::CREATE_USER;
         }
-      } else {
-        return self::DATABASE_CONFIGURATION;
       }
 
       if($step === self::ADD_MAIL_SERVICE && $config->isFilePresent("Mail")) {
@@ -163,6 +160,9 @@ namespace Documents\Install {
       $username = $this->getParameter("username");
       $password = $this->getParameter("password");
       $database = $this->getParameter("database");
+      $type = $this->getParameter("type");
+      $encoding = $this->getParameter("encoding");
+      $encoding = ($encoding ? $encoding : "UTF-8");
       $success = true;
 
       $missingInputs = array();
@@ -191,42 +191,53 @@ namespace Documents\Install {
         $missingInputs[] = "Database";
       }
 
+      if(is_null($type) || empty($type)) {
+        $success = false;
+        $missingInputs[] = "Type";
+      }
+
+      $supportedTypes = array("mysql"); # , "oracle", "postgres");
       if(!$success) {
         $msg = "Please fill out the following inputs:<br>" .
           $this->createUnorderedList($missingInputs);
       } else if(!is_numeric($port) || ($port = intval($port)) < 1 || $port > 65535) {
         $msg = "Port must be in range of 1-65535.";
         $success = false;
+      } else if(!in_array($type, $supportedTypes)) {
+        $msg = "Unsupported database type. Must be one of: " . implode(", ", $supportedTypes);
+        $success = false;
       } else {
         $connectionData = new \Objects\ConnectionData($host, $port, $username, $password);
         $connectionData->setProperty('database', $database);
-        $connectionData->setProperty('encoding', 'utf8');
-        $sql = new \Driver\SQL($connectionData);
-        $success = $sql->connect();
-
-        if(!$success) {
+        $connectionData->setProperty('encoding', $encoding);
+        $connectionData->setProperty('type', $type);
+        $sql = \Driver\SQL\SQL::createConnection($connectionData);
+        $success = false;
+        if(!($sql instanceof \Driver\SQL\SQL)) {
+          $msg = "Error connecting to database: " . str($sql);
+        } else if(!$sql->isConnected()) {
           $msg = "Error connecting to database:<br>" . $sql->getLastError();
         } else {
-          try {
-            $msg = "Error loading database script $this->databaseScript";
-            $commands = file_get_contents($this->databaseScript);
-            $success = $sql->executeMulti($commands);
-            if(!$success) {
-              $msg = $sql->getLastError();
-            } else if(!$this->getDocument()->getUser()->getConfiguration()->create("Database", $connectionData)) {
+
+          $msg = "";
+          $success = true;
+          $queries = \Configuration\CreateDatabase::createQueries($sql);
+          foreach($queries as $query) {
+            if (!$query->execute()) {
+              $msg = "Error creating tables: " . $sql->getLastError();
               $success = false;
-              $msg = "Unable to write file";
-            } else {
-              $msg = "";
+              break;
             }
-          } catch(Exception $e) {
-            $success = false;
-            $msg .= ": " . $e->getMessage();
           }
 
-          if($sql) {
-            $sql->close();
+          if($success && !$this->getDocument()->getUser()->getConfiguration()->create("Database", $connectionData)) {
+            $success = false;
+            $msg = "Unable to write file";
           }
+        }
+
+        if($sql) {
+          $sql->close();
         }
       }
 
@@ -280,10 +291,13 @@ namespace Documents\Install {
       } else {
         $salt = generateRandomString(16);
         $hash = hash('sha256', $password . $salt);
-        $query = "INSERT INTO User (name, salt, password) VALUES (?,?,?)";
-        $req = new \Api\ExecuteStatement($user);
-        $success = $req->execute(array("query" => $query, $username, $salt, $hash));
-        $nsg = $req->getLastError();
+        $sql = $user->getSQL();
+
+        $success = $sql->insert("User", array("name", "salt", "password"))
+          ->addRow($username, $salt, $hash)
+          ->execute();
+
+        $msg = $sql->getLastError();
       }
 
       return array("msg" => $msg, "success" => $success);
@@ -293,9 +307,9 @@ namespace Documents\Install {
 
       $user = $this->getDocument()->getUser();
       if($this->getParameter("prev") === "true") {
-        $req = new \Api\ExecuteStatement($user);
-        $success = $req->execute(array("query" => "TRUNCATE User"));
-        $msg = $req->getLastError();
+        $sql = $user->getSQL();
+        $success = $sql->delete("User")->execute();
+        $msg = $sql->getLastError();
         return array("success" => $success, "msg" => $msg);
       }
 
@@ -462,40 +476,58 @@ namespace Documents\Install {
       $attributes = array(
         "name" => $name,
         "id" => $name,
-        "class" => "form-control",
-        "type" => $type,
+        "class" => "form-control"
       );
 
       if(isset($formItem["required"]) && $formItem["required"]) {
         $attributes["required"] = "";
       }
 
-      if(isset($formItem["value"]) && $formItem["value"]) {
-        $attributes["value"] = $formItem["value"];
+      if ($type !== "select") {
+        $attributes["type"] = $type;
+
+        if(isset($formItem["value"]) && $formItem["value"]) {
+          $attributes["value"] = $formItem["value"];
+        }
+
+        if($type === "number") {
+          if(isset($formItem["min"]) && is_numeric($formItem["min"]))
+            $attributes["min"] = $formItem["min"];
+          if(isset($formItem["max"]) && is_numeric($formItem["max"]))
+            $attributes["max"] = $formItem["max"];
+          if(isset($formItem["step"]) && is_numeric($formItem["step"]))
+            $attributes["step"] = $formItem["step"];
+        }
       }
 
-      if($type === "number") {
-        if(isset($formItem["min"]) && is_numeric($formItem["min"]))
-          $attributes["min"] = $formItem["min"];
-        if(isset($formItem["max"]) && is_numeric($formItem["max"]))
-          $attributes["max"] = $formItem["max"];
-        if(isset($formItem["step"]) && is_numeric($formItem["step"]))
-          $attributes["step"] = $formItem["step"];
+      $replacements = array("+" => " ", "&" => "\" ", "=" => "=\"");
+      $attributes = http_build_query($attributes) . "\"";
+      foreach($replacements as $key => $val) {
+        $attributes = str_replace($key, $val, $attributes);
       }
 
-      $attributes = str_replace("+", " ", str_replace("&", "\" ", str_replace("=", "=\"", http_build_query($attributes)))) . "\"";
+      if ($type === "select") {
+        $items = $formItem["items"] ?? array();
+        $element = "<select $attributes>";
+        foreach($items as $key => $val) {
+          $element .= "<option value=\"$key\">$val</option>";
+        }
+        $element .= "</select>";
+      } else {
+        $element = "<input $attributes>";
+      }
 
       if(!$inline) {
         return
           "<div class=\"d-block my-3\">
             <label for=\"$name\">$title</label>
-            <input $attributes>
+            $element
           </div>";
       } else {
         return
           "<div class=\"col-md-6 mb-3\">
             <label for=\"$name\">$title</label>
-            <input $attributes>
+            $element
           </div>";
       }
     }
@@ -510,6 +542,9 @@ namespace Documents\Install {
         self::DATABASE_CONFIGURATION => array(
           "title" => "Database configuration",
           "form" => array(
+            array("title" => "Database Type", "name" => "type", "type" => "select", "required" => true, "items" => array(
+              "mysql" => "MySQL", "oracle" => "Oracle", "postgres" => "PostgreSQL"
+            )),
             array("title" => "Username", "name"  => "username", "type"  => "text", "required" => true),
             array("title" => "Password", "name"  => "password", "type"  => "password"),
             array("title" => "Database", "name"  => "database", "type"  => "text", "required" => true),
@@ -523,6 +558,10 @@ namespace Documents\Install {
                 "value" => "3306", "min" => "1", "max" => "65535", "row" => true
               )
             )),
+            array(
+              "title" => "Encoding", "name"  => "encoding", "type"  => "text", "required" => false,
+              "value" => "UTF-8"
+            ),
           )
         ),
         self::CREATE_USER => array(

@@ -1,7 +1,10 @@
 <?php
 
 namespace Api;
+
 use \Api\Parameter\Parameter;
+use \Driver\SQL\Keyword;
+use \Driver\SQL\Condition\Compare;
 
 class RefreshApiKey extends Request {
 
@@ -14,12 +17,20 @@ class RefreshApiKey extends Request {
 
   private function apiKeyExists() {
     $id = $this->getParam("id");
-    $query = "SELECT * FROM ApiKey WHERE uid = ? AND user_id = ? AND valid_until > now()";
-    $request = new ExecuteSelect($this->user);
-    $this->success = $request->execute(array("query" => $query, $id, $this->user->getId()));
-    $this->lastError = $request->getLastError();
 
-    if($this->success && count($request->getResult()['rows']) == 0) {
+    $sql = $this->user->getSQL();
+    $res = $sql->select("COUNT(*)")
+      ->from("ApiKey")
+      ->where(new Compare("uid", $id))
+      ->where(new Compare("user_id", $this->user->getId()))
+      ->where(new Compare("valid_until", new Keyword($sql->currentTimestamp()), ">"))
+      ->where(new Compare("active", 1))
+      ->execute();
+
+    $this->success = ($res !== FALSE);
+    $this->lastError = $sql->getLastError();
+
+    if($this->success && $res[0]["COUNT(*)"] === 0) {
       $this->success = false;
       $this->lastError = "This API-Key does not exist.";
     }
@@ -36,10 +47,18 @@ class RefreshApiKey extends Request {
     if(!$this->apiKeyExists())
       return false;
 
-    $query = "UPDATE ApiKey SET valid_until = (SELECT DATE_ADD(now(), INTERVAL 30 DAY)) WHERE uid = ? AND user_id = ? AND valid_until > now()";
-    $request = new ExecuteStatement($this->user);
-    $this->success = $request->execute(array("query" => $query, $id, $this->user->getId()));
-    $this->lastError = $request->getLastError();
+    $validUntil = (new \DateTime)->modify("+30 DAY");
+    $sql = $this->user->getSQL();
+    $this->success = $sql->update("ApiKey")
+      ->set("valid_until", $validUntil)
+      ->where(new Compare("uid", $id))
+      ->where(new Compare("user_id", $this->user->getId()))
+      ->execute();
+    $this->lastError = $sql->getLastError();
+
+    if ($this->success) {
+      $this->result["valid_until"] = $validUntil->getTimestamp();
+    }
 
     return $this->success;
   }

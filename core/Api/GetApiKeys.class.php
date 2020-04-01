@@ -2,6 +2,9 @@
 
 namespace Api;
 
+use \Driver\SQL\Keyword;
+use \Driver\SQL\Condition\Compare;
+
 class GetApiKeys extends Request {
 
   public function __construct($user, $externCall = false) {
@@ -14,16 +17,19 @@ class GetApiKeys extends Request {
       return false;
     }
 
-    $query = "SELECT ApiKey.uid, ApiKey.api_key, ApiKey.valid_until
-              FROM ApiKey
-              WHERE ApiKey.user_id = ?
-              AND ApiKey.valid_until > now()";
-    $request = new ExecuteSelect($this->user);
-    $this->success = $request->execute(array("query" => $query, $this->user->getId()));
-    $this->lastError = $request->getLastError();
+    $sql = $this->user->getSQL();
+    $res = $sql->select("uid", "api_key", "valid_until")
+      ->from("ApiKey")
+      ->where(new Compare("user_id", $this->user->getId()))
+      ->where(new Compare("valid_until", new Keyword($sql->currentTimestamp()), ">"))
+      ->where(new Compare("active", true))
+      ->execute();
+
+    $this->success = ($res !== FALSE);
+    $this->lastError = $sql->getLastError();
 
     if($this->success) {
-      $this->result["api_keys"] = $request->getResult()['rows'];
+      $this->result["api_keys"] = $res;
     }
 
     return $this->success;

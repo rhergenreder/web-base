@@ -4,6 +4,7 @@ namespace Api;
 
 use Api\Parameter\Parameter;
 use Api\Parameter\StringType;
+use Driver\SQL\Condition\Compare;
 
 class Login extends Request {
 
@@ -42,27 +43,30 @@ class Login extends Request {
     $password = $this->getParam('password');
     $stayLoggedIn = $this->getParam('stayLoggedIn');
 
-    $query = 'SELECT User.uid, User.password, User.salt FROM User WHERE User.name=?';
-    $request = new ExecuteSelect($this->user);
-    $this->success = $request->execute(array('query' => $query, $username));
-    $this->lastError = $request->getLastError();
+    $sql = $this->user->getSQL();
+    $res = $sql->select("User.uid", "User.password", "User.salt")
+      ->from("User")
+      ->where(new Compare("User.name", $username))
+      ->execute();
+
+    $this->success = ($res !== FALSE);
+    $this->lastError = $sql->getLastError();
 
     if($this->success) {
-      $this->success = false;
-      if(count($request->getResult()['rows']) === 0) {
+      if(count($res) === 0) {
         return $this->wrongCredentials();
-        $this->lastError = L('Wrong username or password');
       } else {
-        $row = $request->getResult()['rows'][0];
+        $row = $res[0];
         $salt = $row['salt'];
         $uid = $row['uid'];
         $hash = hash('sha256', $password . $salt);
         if($hash === $row['password']) {
-            if(!($this->success = $this->user->createSession($uid, $stayLoggedIn))) {
-              return $this->createError("Error creating Session");
-            } else {
-              $this->result['logoutIn'] = $this->user->getSession()->getExpiresSeconds();
-            }
+          if(!($this->success = $this->user->createSession($uid, $stayLoggedIn))) {
+            return $this->createError("Error creating Session: " . $sql->getLastError());
+          } else {
+            $this->result['logoutIn'] = $this->user->getSession()->getExpiresSeconds();
+            $this->success = true;
+          }
         }
         else {
           return $this->wrongCredentials();

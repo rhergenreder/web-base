@@ -20,11 +20,11 @@ CREATE TABLE IF NOT EXISTS User (
   `password` varchar(64) NOT NULL,
   `language_id` int(11) DEFAULT 1,
   PRIMARY KEY (`uid`),
-  FOREIGN KEY (`language_id`) REFERENCES `Language` (`uid`) ON DELETE SET DEFAULT
+  FOREIGN KEY (`language_id`) REFERENCES `Language` (`uid`) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS UserInvitation (
-  `email` VARCHAR(256) NOT NULL,
+  `email` VARCHAR(64) NOT NULL,
   `token` VARCHAR(36) UNIQUE NOT NULL,
   `valid_until` DATETIME NOT NULL
 );

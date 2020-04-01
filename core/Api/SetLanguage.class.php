@@ -4,6 +4,8 @@ namespace Api;
 
 use Api\Parameter\Parameter;
 use Api\Parameter\StringType;
+use Driver\SQL\Condition\CondOr;
+use Driver\SQL\Condition\Compare;
 
 class SetLanguage extends Request {
 
@@ -24,16 +26,20 @@ class SetLanguage extends Request {
       return $this->createError(L("Either langId or langCode must be given"));
     }
 
-    $query = "SELECT uid, code, name FROM Language WHERE uid=? OR code=?";
-    $request = new ExecuteSelect($this->user);
-    $this->success = $request->execute(array("query" => $query, $langId, $langCode));
-    $this->lastError = $request->getLastError();
+    $res = $this->user->getSQL()
+      ->select("uid", "code", "name")
+      ->from("Language")
+      ->where(new CondOr(new Compare("uid", $langId), new Compare("code", $langCode)))
+      ->execute();
 
-    if($this->success) {
-      if(count($request->getResult()['rows']) == 0) {
+    $this->success = ($res !== FALSE);
+    $this->lastError = $this->user->getSQL()->getLastError();
+
+    if ($this->success) {
+      if(count($res) == 0) {
         return $this->createError(L("This Language does not exist"));
       } else {
-        $row = $request->getResult()['rows'][0];
+        $row = $res[0];
         $this->language = \Objects\Language::newInstance($row['uid'], $row['code'], $row['name']);
         if(!$this->language) {
           return $this->createError(L("Error while loading language"));
@@ -47,11 +53,13 @@ class SetLanguage extends Request {
   private function updateLanguage() {
     $languageId = $this->language->getId();
     $userId = $this->user->getId();
+    $sql = $this->user->getSQL();
 
-    $query = "UPDATE User SET language_id = ? WHERE uid = ?";
-    $request = new ExecuteStatement($this->user);
-    $this->success = $request->execute(array("query" => $query, $languageId, $userId));
-    $this->lastError = $request->getLastError();
+    $this->success = $sql->update("User")
+      ->set("language_id", $languageId)
+      ->where(new Compare("uid", $userId))
+      ->execute();
+    $this->lastError = $sql->getLastError();
     return $this->success;
   }
 

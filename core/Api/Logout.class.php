@@ -15,9 +15,9 @@ class Logout extends Request {
       return false;
     }
 
-    $this->success = true;
-    $this->user->logout();
-    return true;
+    $this->success = $this->user->logout();
+    $this->lastError = $this->user->getSQL()->getLastError();
+    return $this->success;
   }
 };
 

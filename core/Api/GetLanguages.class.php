@@ -13,17 +13,20 @@ class GetLanguages extends Request {
       return false;
     }
 
-    $query = 'SELECT uid, code, name FROM Language';
-    $request = new ExecuteSelect($this->user);
-    $this->success = $request->execute(array('query' => $query));
-    $this->lastError = $request->getLastError();
+    $sql = $this->user->getSQL();
+    $res = $sql->select("uid", "code", "name")
+      ->from("Language")
+      ->execute();
+
+    $this->success = ($res !== FALSE);
+    $this->lastError = $sql->getLastError();
 
     if($this->success) {
       $this->result['languages'] = array();
-      if(count($request->getResult()['rows']) === 0) {
+      if(empty($res) === 0) {
         $this->lastError = L("No languages found");
       } else {
-        foreach($request->getResult()['rows'] as $row) {
+        foreach($res as $row) {
           $this->result['languages'][$row['uid']] = $row;
         }
       }

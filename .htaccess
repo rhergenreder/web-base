@@ -1,12 +1,8 @@
 php_flag display_errors on
 Options -Indexes
 
-# ErrorDocument 404
+RedirectMatch 404 /\.git
 
 RewriteEngine On
 RewriteRule ^api/(.*)?$ index.php?api=$1&$2 [L,QSA]
 RewriteRule ^((?!((js|css|img|fonts|api)($|\/)))(.*)?)$ index.php?site=$1&$2 [L,QSA]
-
-<Files ~ "^\.*">
-  Deny from all
-</Files>

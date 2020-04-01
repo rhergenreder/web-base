@@ -6,3 +6,7 @@ Options -Indexes
 RewriteEngine On
 RewriteRule ^api/(.*)?$ index.php?api=$1&$2 [L,QSA]
 RewriteRule ^((?!((js|css|img|fonts|api)($|\/)))(.*)?)$ index.php?site=$1&$2 [L,QSA]
+
+<Files ~ "^.*">
+  Deny from all
+</Files>

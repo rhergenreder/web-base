@@ -8,6 +8,7 @@ class Insert extends Query {
   private $columns;
   private $rows;
   private $onDuplicateKey;
+  private $returning;
 
   public function __construct($sql, $name, $columns=array()) {
     parent::__construct($sql);
@@ -15,6 +16,7 @@ class Insert extends Query {
     $this->columns = $columns;
     $this->rows = array();
     $this->onDuplicateKey = NULL;
+    $this->returning = NULL;
   }
 
   public function addRow(...$values) {
@@ -27,6 +29,11 @@ class Insert extends Query {
     return $this;
   }
 
+  public function returning($column) {
+    $this->returning = $column;
+    return $this;
+  }
+
   public function execute() {
     return $this->sql->executeInsert($this);
   }
@@ -35,6 +42,7 @@ class Insert extends Query {
   public function getColumns() { return $this->columns; }
   public function getRows() { return $this->rows; }
   public function onDuplicateKey() { return $this->onDuplicateKey; }
+  public function getReturning() { return $this->returning; }
 };
 
 ?>

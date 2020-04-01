@@ -139,12 +139,6 @@ namespace Documents\Install {
           $success = false;
       }
 
-      if(!function_exists('mysqli_connect')) {
-        $link = $this->createExternalLink("https://secure.php.net/manual/en/mysqli.setup.php");
-        $failedRequirements[] = "mysqli is not enabled yet. See: $link";
-        $success = false;
-      }
-
       if(!$success) {
         $msg = "The following requirements failed the check:<br>" .
           $this->createUnorderedList($failedRequirements);
@@ -196,7 +190,7 @@ namespace Documents\Install {
         $missingInputs[] = "Type";
       }
 
-      $supportedTypes = array("mysql"); # , "oracle", "postgres");
+      $supportedTypes = array("mysql", "postgres"); # , "oracle", "postgres");
       if(!$success) {
         $msg = "Please fill out the following inputs:<br>" .
           $this->createUnorderedList($missingInputs);
@@ -216,14 +210,21 @@ namespace Documents\Install {
         if(!($sql instanceof \Driver\SQL\SQL)) {
           $msg = "Error connecting to database: " . str($sql);
         } else if(!$sql->isConnected()) {
-          $msg = "Error connecting to database:<br>" . $sql->getLastError();
+          if (!$sql->checkRequirements()) {
+            $driverName = $sql->getDriverName();
+            $installLink = "https://www.php.net/manual/en/$driverName.setup.php";
+            $link = $this->createExternalLink($installLink);
+            $msg = "$driverName is not enabled yet. See: $link";
+          } else {
+            $msg = "Error connecting to database:<br>" . $sql->getLastError();
+          }
         } else {
 
           $msg = "";
           $success = true;
           $queries = \Configuration\CreateDatabase::createQueries($sql);
           foreach($queries as $query) {
-            if (!$query->execute()) {
+            if (!($res = $query->execute())) {
               $msg = "Error creating tables: " . $sql->getLastError();
               $success = false;
               break;

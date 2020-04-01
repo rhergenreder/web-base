@@ -78,13 +78,15 @@ $(document).ready(function() {
     var textBefore = $("#btnSubmit").text();
     $("#btnSubmit").prop("disabled", true);
     $("#btnSubmit").html("Submitting… <i class=\"fas fa-spinner fa-spin\">");
-    $("#installForm input").each(function() {
-      var type = $(this).attr("type");
+    $("#installForm .form-control").each(function() {
+      var type = $(this).attr("type") ?? $(this).prop("tagName").toLowerCase();
       var name = $(this).attr("name");
       if(type === "text") {
         params[name] = $(this).val().trim();
       } else if(type === "password" || type === "number") {
         params[name] = $(this).val();
+      } else if(type === "select") {
+        params[name] = $(this).find(":selected").val();
       }
     }).promise().done(function() {
       sendRequest(params, function(success) {
@@ -128,4 +130,24 @@ $(document).ready(function() {
     retry();
   });
 
+  // DATABASE PORT
+  var prevPort = $("#port").val();
+  var prevDbms = $("#type option:selected").val();
+  function updateDefaultPort() {
+    var defaultPorts = {
+      "mysql": 3306,
+      "postgres": 5432,
+      "oracle": 1521
+    };
+
+    var curDbms = $("#type option:selected").val();
+    if(defaultPorts[prevDbms] == prevPort) {
+      $("#port").val(defaultPorts[curDbms]);
+    }
+  }
+
+  updateDefaultPort();
+  $("#type").change(function() {
+    updateDefaultPort();
+  });
 });

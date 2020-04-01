@@ -25,7 +25,16 @@ use \Driver\SQL\Constraint\ForeignKey;
 class MySQL extends SQL {
 
   public function __construct($connectionData) {
-     parent::__construct("mysql", $connectionData);
+     parent::__construct($connectionData);
+     $this->installLink = ;
+  }
+
+  public function checkRequirements() {
+    return function_exists('mysqli_connect');
+  }
+
+  public abstract function getDriverName() {
+    return 'mysqli';
   }
 
   public function connect() {
@@ -48,7 +57,7 @@ class MySQL extends SQL {
       return false;
     }
 
-    mysqli_set_charset($this->connection, $this->connectionData->getProperty('encoding'));
+    mysqli_set_charset($this->connection, $this->connectionData->getProperty('encoding', 'UTF-8'));
     return true;
   }
 
@@ -58,7 +67,6 @@ class MySQL extends SQL {
     }
 
     mysqli_close($this->connection);
-    $this->connection = NULL;
   }
 
   public function getLastError() {
@@ -216,8 +224,7 @@ class MySQL extends SQL {
             $columnName = $value->getName();
             $updateValues[] = "`$key`=`$columnName`";
           } else {
-            $updateValues[] = "`$key`=?";
-            $parameters[] = $value;
+            $updateValues[] = "`$key`=" . $this->addValue($value, $parameters);
           }
         }
 
@@ -319,33 +326,6 @@ class MySQL extends SQL {
     return $this->execute($query, $params);
   }
 
-  protected function buildCondition($condition, &$params) {
-    if ($condition instanceof \Driver\SQL\Condition\CondOr) {
-      $conditions = array();
-      foreach($condition->getConditions() as $cond) {
-        $conditions[] = $this->buildCondition($cond, $params);
-      }
-      return "(" . implode(" OR ", $conditions) . ")";
-    } else if ($condition instanceof \Driver\SQL\Condition\Compare) {
-      $column = $condition->getColumn();
-      $value = $condition->getValue();
-      $operator = $condition->getOperator();
-      return $column . $operator . $this->addValue($value, $params);
-    } else if ($condition instanceof \Driver\SQL\Condition\CondBool) {
-      return $condition->getValue();
-    } else if (is_array($condition)) {
-      if (count($condition) == 1) {
-        return $this->buildCondition($condition[0], $params);
-      } else {
-        $conditions = array();
-        foreach($condition as $cond) {
-          $conditions[] = $this->buildCondition($cond, $params);
-        }
-        return implode(" AND ", $conditions);
-      }
-    }
-  }
-
   public function getColumnDefinition($column) {
     $columnName = $column->getName();
 
@@ -380,7 +360,11 @@ class MySQL extends SQL {
     }
 
     $notNull = $column->notNull() ? " NOT NULL" : "";
-    $defaultValue = (!is_null($column->getDefaultValue()) || !$column->notNull()) ? " DEFAULT " . $this->getValueDefinition($column->getDefaultValue()) : "";
+    $defaultValue = "";
+    if (!is_null($column->getDefaultValue()) || !$column->notNull()) {
+      $defaultValue = " DEFAULT " . $this->getValueDefinition($column->getDefaultValue());
+    }
+    
     return "`$columnName` $type$notNull$defaultValue";
   }
 
@@ -410,7 +394,6 @@ class MySQL extends SQL {
   }
 
   // TODO: check this please..
-  // TODO: Constants??
   public function getValueDefinition($value) {
     if (is_numeric($value) || is_bool($value)) {
       return $value;
@@ -421,6 +404,15 @@ class MySQL extends SQL {
     } else {
       $str = addslashes($value);
       return "'$str'";
+    }
+  }
+
+  protected function addValue($val, &$params) {
+    if ($val instanceof Keyword) {
+      return $val->getValue();
+    } else {
+      $params[] = $val;
+      return "?";
     }
   }
 

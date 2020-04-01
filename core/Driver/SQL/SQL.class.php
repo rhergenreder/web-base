@@ -8,18 +8,13 @@ abstract class SQL {
   protected $connection;
   protected $connectionData;
   protected $lastInsertId;
-  private $type;
 
-  public function __construct($type, $connectionData) {
-    $this->type = $type;
+  public function __construct($connectionData) {
     $this->connection = NULL;
     $this->lastError = 'Not connected';
     $this->connectionData = $connectionData;
     $this->lastInsertId = 0;
   }
-
-  public abstract function connect();
-  public abstract function disconnect();
 
   public function isConnected() {
     return !is_null($this->connection);
@@ -28,17 +23,6 @@ abstract class SQL {
   public function getLastError() {
     return trim($this->lastError);
   }
-
-  // public function executeQuery($query) {
-  //   if(!$this->isConnected()) {
-  //     $this->lastError = "Database is not connected yet.";
-  //     return false;
-  //   }
-  //
-  //   return $query->execute($this);
-  //   // var_dump($generatedQuery);
-  //   // return $this->execute($generatedQuery);
-  // }
 
   public function createTable($tableName) {
     return new Query\CreateTable($this, $tableName);
@@ -64,6 +48,18 @@ abstract class SQL {
     return new Query\Update($this, $table);
   }
 
+  // ####################
+  // ### ABSTRACT METHODS
+  // ####################
+
+  // Misc
+  public abstract function checkRequirements();
+  public abstract function getDriverName();
+
+  // Connection Managment
+  public abstract function connect();
+  public abstract function disconnect();
+
   // Querybuilder
   public abstract function executeCreateTable($query);
   public abstract function executeInsert($query);
@@ -71,114 +67,74 @@ abstract class SQL {
   public abstract function executeDelete($query);
   public abstract function executeTruncate($query);
   public abstract function executeUpdate($query);
-
-  //
-  public abstract function currentTimestamp();
-
   protected abstract function getColumnDefinition($column);
   protected abstract function getConstraintDefinition($constraint);
   protected abstract function getValueDefinition($val);
-  protected abstract function buildCondition($conditions, &$params);
+  protected abstract function addValue($val, &$params);
 
-  // Execute
+  // Special Keywords and functions
+  public abstract function currentTimestamp();
+
+  // Statements
   protected abstract function execute($query, $values=NULL, $returnValues=false);
+
+  protected function buildCondition($condition, &$params) {
+    if ($condition instanceof \Driver\SQL\Condition\CondOr) {
+      $conditions = array();
+      foreach($condition->getConditions() as $cond) {
+        $conditions[] = $this->buildCondition($cond, $params);
+      }
+      return "(" . implode(" OR ", $conditions) . ")";
+    } else if ($condition instanceof \Driver\SQL\Condition\Compare) {
+      $column = $condition->getColumn();
+      $value = $condition->getValue();
+      $operator = $condition->getOperator();
+      return $column . $operator . $this->addValue($value, $params);
+    } else if ($condition instanceof \Driver\SQL\Condition\CondBool) {
+      return $condition->getValue();
+    } else if (is_array($condition)) {
+      if (count($condition) == 1) {
+        return $this->buildCondition($condition[0], $params);
+      } else {
+        $conditions = array();
+        foreach($condition as $cond) {
+          $conditions[] = $this->buildCondition($cond, $params);
+        }
+        return implode(" AND ", $conditions);
+      }
+    }
+  }
 
   public function setLastError($str) {
     $this->lastError = $str;
   }
-
-  protected function addValue($val, &$params) {
-    if ($val instanceof Keyword) {
-      return $val->getValue();
-    } else {
-      $params[] = $val;
-      return "?";
-    }
-  }
-
-  /*public function getLastErrorNumber() {
-    return mysqli_errno($this->connection);
-  }*/
 
   public function getLastInsertId() {
     return $this->lastInsertId;
   }
 
   public function close() {
-    if(!is_null($this->connection)) {
-      $this->connection->close();
-    }
+    $this->disconnect();
+    $this->connection = NULL;
   }
-
-  /*public function getAffectedRows() {
-    return $this->connection->affected_rows;
-  }*/
-
-  /*
-  public function execute($query) {
-    if(!$this->isConnected()) {
-      return false;
-    }
-
-    if(!mysqli_query($this->connection, $query)) {
-      $this->lastError = mysqli_error($this->connection);
-      return false;
-    }
-
-    return true;
-  }
-
-  public function executeMulti($queries) {
-    if(!$this->isConnected()) {
-      return false;
-    }
-
-    if(!$this->connection->multi_query($queries)) {
-      $this->lastError = mysqli_error($this->connection);
-      return false;
-    }
-
-    while (($success = $this->connection->next_result())) {
-      if (!$this->connection->more_results()) break;
-    }
-
-    if(!$success) {
-      $this->lastError = mysqli_error($this->connection);
-      return false;
-    }
-
-    return true;
-  }
-
-  public function query($query) {
-    if(!$this->isConnected()) {
-      return false;
-    }
-
-    $res = mysqli_query($this->connection, $query);
-    if(!$res) {
-      $this->lastError = mysqli_error($this->connection);
-      return false;
-    }
-
-    return $res;
-  }
-  */
 
   public static function createConnection($connectionData) {
     $type = $connectionData->getProperty("type");
     if ($type === "mysql") {
       $sql = new MySQL($connectionData);
-    /*} else if ($type === "postgres") {
-      // $sql = new PostgreSQL($connectionData);
-    } else if ($type === "oracle") {
+    } else if ($type === "postgres") {
+      $sql = new PostgreSQL($connectionData);
+    /*} else if ($type === "oracle") {
       // $sql = new OracleSQL($connectionData);
     */
     } else {
       return "Unknown database type";
     }
 
-    $sql->connect();
+    if ($sql->checkRequirements()) {
+      $sql->connect();
+    }
+
     return $sql;
   }
 }

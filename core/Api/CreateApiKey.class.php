@@ -22,6 +22,7 @@ class CreateApiKey extends Request {
 
     $this->success = $sql->insert("ApiKey", array("user_id", "api_key", "valid_until"))
       ->addRow($this->user->getId(), $apiKey, $validUntil)
+      ->returning("uid")
       ->execute();
 
     $this->lastError = $sql->getLastError();

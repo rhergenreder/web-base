@@ -101,6 +101,7 @@ class Session extends ApiObject {
         $this->browser,
         json_encode($_SESSION),
         $stayLoggedIn)
+      ->returning("uid")
       ->execute();
 
     if($success) {

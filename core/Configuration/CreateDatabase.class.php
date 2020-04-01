@@ -25,8 +25,7 @@ class CreateDatabase {
 
     $queries[] = $sql->insert("Language", array("uid", "code", "name"))
       ->addRow(1, "en_US", 'American English')
-      ->addRow(2, "de_DE", 'Deutsch Standard')
-      ->onDuplicateKeyStrategy(new UpdateStrategy(array("name" => new Column("name"))));
+      ->addRow(2, "de_DE", 'Deutsch Standard');
 
     $queries[] = $sql->createTable("User")
       ->addSerial("uid")
@@ -56,7 +55,7 @@ class CreateDatabase {
     $queries[] = $sql->createTable("UserToken")
       ->addInt("user_id")
       ->addString("token", 36)
-      ->addEnum("type", array("password_reset", "confirmation"))
+      ->addEnum("token_type", array("password_reset", "confirmation"))
       ->addDateTime("valid_until")
       ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
 
@@ -68,8 +67,7 @@ class CreateDatabase {
 
     $queries[] = $sql->insert("Group", array("uid", "name"))
       ->addRow(1, "Default")
-      ->addRow(2, "Administrator")
-      ->onDuplicateKeyStrategy(new UpdateStrategy(array("name" => new Column("name"))));
+      ->addRow(2, "Administrator");
 
     $queries[] = $sql->createTable("UserGroup")
       ->addInt("user_id")

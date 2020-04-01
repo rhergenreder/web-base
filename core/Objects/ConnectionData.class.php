@@ -22,11 +22,8 @@ class ConnectionData {
     return $this->properties;
   }
 
-  public function getProperty($key) {
-    if(isset($this->properties[$key]))
-      return $this->properties[$key];
-    else
-      return '';
+  public function getProperty($key, $defaultValue='') {
+    return $this->properties[$key] ?? $defaultValue;
   }
 
   public function setProperty($key, $val) {

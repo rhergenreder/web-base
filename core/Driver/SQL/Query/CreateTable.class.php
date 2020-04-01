@@ -39,8 +39,8 @@ class CreateTable extends Query {
     return $this;
   }
 
-  public function addDateTime($name, $nullable=false, $defaultNow=false) {
-    $this->columns[$name] = new DateTimeColumn($name, $nullable, $defaultNow);
+  public function addDateTime($name, $nullable=false, $defaultValue=NULL) {
+    $this->columns[$name] = new DateTimeColumn($name, $nullable, $defaultValue);
     return $this;
   }
 

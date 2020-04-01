@@ -14,7 +14,7 @@ INSERT INTO Language (`uid`, `code`, `name`) VALUES
 
 CREATE TABLE IF NOT EXISTS User (
   `uid` INTEGER NOT NULL AUTO_INCREMENT,
-  `email` VARCHAR(256) UNIQUE DEFAULT NULL,
+  `email` VARCHAR(64) UNIQUE DEFAULT NULL,
   `name` VARCHAR(32) UNIQUE NOT NULL,
   `salt` varchar(16) NOT NULL,
   `password` varchar(64) NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS ApiKey (
 );
 
 CREATE TABLE IF NOT EXISTS ExternalSiteCache (
-  `url` VARCHAR(256) PRIMARY KEY,
+  `url` VARCHAR(256) UNIQUE,
   `data` TEXT NOT NULL,
-  `expires` DATETIME DEFAULT NULL
+  `expires` DATETIME DEFAULT NULL,
 );

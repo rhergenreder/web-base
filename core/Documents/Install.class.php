@@ -79,7 +79,7 @@ namespace Documents\Install {
 
     private function getCurrentStep() {
 
-      if(!$this->checkRequirements()) {
+      if(!$this->checkRequirements()["success"]) {
         return self::CHECKING_REQUIRMENTS;
       }
 
@@ -138,7 +138,7 @@ namespace Documents\Install {
 
       if (function_exists("posix_getuid")) {
         $userId = posix_getuid();
-        if(fileowner($configDir) !== posix_getuid()) {
+        if(fileowner($configDir) !== $userId) {
           $username = posix_getpwuid($userId)['name'];
           $failedRequirements[] = "<b>$configDir</b> is not owned by current user: $username ($userId). Try running <b>chown -R $username $configDir</b>";
           $success = false;
@@ -221,7 +221,7 @@ namespace Documents\Install {
         if(!($sql instanceof \Driver\SQL\SQL)) {
           $msg = "Error connecting to database: " . str($sql);
         } else if(!$sql->isConnected()) {
-          if (!$sql->checkRequirements()) {
+          if (!$sql->checkRequirements()["success"]) {
             $driverName = $sql->getDriverName();
             $installLink = "https://www.php.net/manual/en/$driverName.setup.php";
             $link = $this->createExternalLink($installLink);

@@ -44,9 +44,9 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       header("400 Bad Request");
       $response = createError("Invalid Method");
     } else {
-      $apiFunction = strtoupper($apiFunction[0]) . substr($apiFunction, 1);
-      $apiFunction = str_replace("/", "\\", $apiFunction);
-      $class = "\\Api\\$apiFunction";
+      $apiFunction = implode("\\", array_map('ucfirst', explode("/", $apiFunction)));
+      if($apiFunction[0] !== "\\") $apiFunction = "\\$apiFunction";
+      $class = "\\Api$apiFunction";
       $file = getClassPath($class);
       if(!file_exists($file)) {
         header("404 Not Found");
@@ -63,10 +63,15 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
     }
   }
 } else {
+  $documentName = $_GET["site"];
   if ($installation) {
-    $document = new Documents\Install($user);
+    if ($documentName !== "" && $documentName !== "index.php") {
+      $response = "Redirecting to <a href=\"/\">/</a>";
+      header("Location: /");
+    } else {
+      $document = new Documents\Install($user);
+    }
   } else {
-    $documentName = $_GET["site"];
     if(empty($documentName) || strcasecmp($documentName, "install") === 0) {
       $documentName = "home";
     } else if(!preg_match("/[a-zA-Z]+(\/[a-zA-Z]+)*/", $documentName)) {

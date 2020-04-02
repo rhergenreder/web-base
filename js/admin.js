@@ -11,7 +11,7 @@ $(document).ready(function() {
     errorDiv.hide();
     btn.prop("disabled", true);
     btn.html("Logging in… <i class=\"fa fa-spin fa-circle-notch\"></i>");
-    jsCore.apiCall("login", {"username": username, "password": password}, function(data) {
+    jsCore.apiCall("user/login", {"username": username, "password": password}, function(data) {
       window.location.reload();
     }, function(err) {
       btn.html("Login");

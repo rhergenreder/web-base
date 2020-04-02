@@ -63,7 +63,30 @@ abstract class SQL {
   // TODO: pull code duplicates up
 
   // Querybuilder
-  public abstract function executeCreateTable($query);
+  public function executeCreateTable($createTable) {
+    $tableName = $this->tableName($createTable->getTableName());
+    $ifNotExists = $createTable->ifNotExists() ? " IF NOT EXISTS": "";
+
+    $entries = array();
+    foreach($createTable->getColumns() as $column) {
+      $entries[] = ($tmp = $this->getColumnDefinition($column));
+      if (is_null($tmp)) {
+        return false;
+      }
+    }
+
+    foreach($createTable->getConstraints() as $constraint) {
+      $entries[] = ($tmp = $this->getConstraintDefinition($constraint));
+      if (is_null($tmp)) {
+        return false;
+      }
+    }
+
+    $entries = implode(",", $entries);
+    $query = "CREATE TABLE$ifNotExists $tableName ($entries)";
+    return $this->execute($query);
+  }
+
   public abstract function executeInsert($query);
   public abstract function executeSelect($query);
   public abstract function executeDelete($query);
@@ -79,7 +102,20 @@ abstract class SQL {
 
   // Special Keywords and functions
   public abstract function currentTimestamp();
-  public abstract function count($col = NULL);
+
+  public function count($col = NULL) {
+    if (is_null($col)) {
+      return new Keyword("COUNT(*) AS count");
+    } else {
+      $col = $this->columnName($col);
+      return new Keyword("COUNT($col) AS count");
+    }
+  }
+
+  public function distinct($col) {
+    $col = $this->columnName($col);
+    return new Keyword("DISTINCT($col)");
+  }
 
   // Statements
   protected abstract function execute($query, $values=NULL, $returnValues=false);

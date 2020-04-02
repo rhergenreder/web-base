@@ -1,8 +1,9 @@
 <?php
 
-namespace Api;
+namespace Api\ApiKey;
 
-class CreateApiKey extends Request {
+use \Api\Request;
+class Create extends Request {
 
   public function __construct($user, $externCall = false) {
     parent::__construct($user, $externCall, array());

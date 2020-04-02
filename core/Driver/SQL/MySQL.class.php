@@ -36,6 +36,7 @@ class MySQL extends SQL {
     return 'mysqli';
   }
 
+  // Connection Managment
   public function connect() {
 
     if(!is_null($this->connection)) {
@@ -164,32 +165,8 @@ class MySQL extends SQL {
     return ($success && $returnValues) ? $resultRows : $success;
   }
 
-  public function executeCreateTable($createTable) {
-    $tableName = $createTable->getTableName();
-    $ifNotExists = $createTable->ifNotExists() ? " IF NOT EXISTS": "";
-
-    $entries = array();
-    foreach($createTable->getColumns() as $column) {
-      $entries[] = ($tmp = $this->getColumnDefinition($column));
-      if (is_null($tmp)) {
-        return false;
-      }
-    }
-
-    foreach($createTable->getConstraints() as $constraint) {
-      $entries[] = ($tmp = $this->getConstraintDefinition($constraint));
-      if (is_null($tmp)) {
-        return false;
-      }
-    }
-
-    $entries = implode(",", $entries);
-    $query = "CREATE TABLE$ifNotExists `$tableName` ($entries)";
-    return $this->execute($query);
-  }
-
   public function executeInsert($insert) {
-    $tableName = $insert->getTableName();
+    $tableName = $this->tableName($insert->getTableName());
     $columns = $insert->getColumns();
     $rows = $insert->getRows();
     $onDuplicateKey = $insert->onDuplicateKey() ?? "";
@@ -204,7 +181,7 @@ class MySQL extends SQL {
       $numColumns = count($rows[0]);
     } else {
       $numColumns = count($columns);
-      $columns = " (`" . implode("`, `", $columns) . "`)";
+      $columns = " (" . $this->columnName($columns) . ")";
     }
 
     $numRows = count($rows);
@@ -235,7 +212,7 @@ class MySQL extends SQL {
       }
     }
 
-    $query = "INSERT INTO `$tableName`$columns VALUES$values$onDuplicateKey";
+    $query = "INSERT INTO $tableName$columns VALUES$values$onDuplicateKey";
     $success = $this->execute($query, $parameters);
 
     if($success) {
@@ -247,19 +224,14 @@ class MySQL extends SQL {
 
   public function executeSelect($select) {
 
-    $columns = array();
-    foreach($select->getColumns() as $col) {
-      $columns[] = $this->columnName($col);
-    }
-
-    $columns = implode(",", $columns);
+    $columns = $this->columnName($select->getColumns());
     $tables = $select->getTables();
     $params = array();
 
     if (is_null($tables) || empty($tables)) {
       return "SELECT $columns";
     } else {
-      $tables = implode(",", $tables);
+      $tables = $this->tableName($tables);
     }
 
     $conditions = $select->getConditions();
@@ -275,9 +247,9 @@ class MySQL extends SQL {
       $joinStr = "";
       foreach($joins as $join) {
         $type = $join->getType();
-        $joinTable = $join->getTable();
-        $columnA = $join->getColumnA();
-        $columnB = $join->getColumnB();
+        $joinTable = $this->tableName($join->getTable());
+        $columnA = $this->columnName($join->getColumnA());
+        $columnB = $this->columnName($join->getColumnB());
         $joinStr .= " $type JOIN $joinTable ON $columnA=$columnB";
       }
     }
@@ -399,8 +371,10 @@ class MySQL extends SQL {
 
   // TODO: check this please..
   public function getValueDefinition($value) {
-    if (is_numeric($value) || is_bool($value)) {
+    if (is_numeric($value)) {
       return $value;
+    } else if(is_bool($value)) {
+      return $value ? "TRUE" : "FALSE";
     } else if(is_null($value)) {
       return "NULL";
     } else if($value instanceof Keyword) {
@@ -421,12 +395,22 @@ class MySQL extends SQL {
   }
 
   protected function tableName($table) {
-    return "`$table`";
+    if (is_array($table)) {
+      $tables = array();
+      foreach($table as $t) $tables[] = $this->tableName($t);
+      return implode(",", $tables);
+    } else {
+      return "`$table`";
+    }
   }
 
   protected function columnName($col) {
     if ($col instanceof Keyword) {
       return $col->getValue();
+    } elseif(is_array($col)) {
+      $columns = array();
+      foreach($col as $c) $columns[] = $this->columnName($c);
+      return implode(",", $columns);
     } else {
       if (($index = strrpos($col, ".")) !== FALSE) {
         $tableName = $this->tableName(substr($col, 0, $index));
@@ -444,14 +428,6 @@ class MySQL extends SQL {
 
   public function currentTimestamp() {
     return new Keyword("NOW()");
-  }
-
-  public function count($col = NULL) {
-    if (is_null($col)) {
-      return new Keyword("COUNT(*) AS count");
-    } else {
-      return new Keyword("COUNT($col) AS count");
-    }
   }
 
 };

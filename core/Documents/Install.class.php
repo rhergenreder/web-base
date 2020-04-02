@@ -114,6 +114,16 @@ namespace Documents\Install {
         $step = self::FINISH_INSTALLATION;
         if(!$config->isFilePresent("JWT") && !$config->create("JWT", generateRandomString(32))) {
           $this->errorString = "Unable to create jwt file";
+        } else {
+          $req = new \Api\Notifications\Create($user);
+          $success = $req->execute(array(
+            "title" => "Welcome",
+            "message" => "Your Web-base was successfully installed. Check out the admin dashboard. Have fun!",
+            "groupId" => USER_GROUP_ADMIN)
+          );
+          if (!$success) {
+            $this->errorString = $req->getLastError();
+          }
         }
       }
 
@@ -298,6 +308,10 @@ namespace Documents\Install {
 
         $success = $sql->insert("User", array("name", "salt", "password"))
           ->addRow($username, $salt, $hash)
+          ->returning("uid")
+          ->execute()
+          && $sql->insert("UserGroup", array("group_id", "user_id"))
+          ->addRow(USER_GROUP_ADMIN, $sql->getLastInsertId())
           ->execute();
 
         $msg = $sql->getLastError();
@@ -726,14 +740,6 @@ namespace Documents\Install {
         $response = $this->performStep();
         die(json_encode($response));
       }
-
-      /*if($this->currentStep == self::CHECKING_REQUIRMENTS) {
-        $this->getDocument()->getHead()->addJSCode("
-          $(document).ready(function() {
-            retry();
-          });
-        ");
-      }*/
 
       $progressSidebar = $this->createProgressSidebar();
       $progressMainview = $this->createProgessMainview();

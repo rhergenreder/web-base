@@ -1,10 +1,11 @@
 <?php
 
-namespace Api;
+namespace Api\User;
 
-use Api\Parameter\Parameter;
-use Api\Parameter\StringType;
-use Driver\SQL\Condition\Compare;
+use \Api\Request;
+use \Api\Parameter\Parameter;
+use \Api\Parameter\StringType;
+use \Driver\SQL\Condition\Compare;
 
 class Login extends Request {
 

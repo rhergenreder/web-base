@@ -49,8 +49,6 @@ class Login extends \View {
       </div>";
 
     return $html;
-
-    return $html;
   }
 }
 

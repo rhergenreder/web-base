@@ -1,6 +1,8 @@
 <?php
 
-namespace Api;
+namespace Api\User;
+
+use \Api\Request;
 
 class Logout extends Request {
 

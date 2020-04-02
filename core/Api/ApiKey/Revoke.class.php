@@ -1,11 +1,12 @@
 <?php
 
-namespace Api;
+namespace Api\ApiKey;
 
+use \Api\Request;
 use \Api\Parameter\Parameter;
 use \Driver\SQL\Condition\Compare;
 
-class RevokeApiKey extends Request {
+class Revoke extends Request {
 
   public function __construct($user, $externCall = false) {
     parent::__construct($user, $externCall, array(

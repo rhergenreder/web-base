@@ -36,15 +36,6 @@ class PostgreSQL extends SQL {
     return 'pgsql';
   }
 
-  public function getLastError() {
-    $lastError = parent::getLastError();
-    if (empty($lastError)) {
-      $lastError = pg_last_error($this->connection) . " " . pg_last_error($this->connection);
-    }
-
-    return $lastError;
-  }
-
   // Connection Managment
   public function connect() {
     if(!is_null($this->connection)) {
@@ -82,6 +73,15 @@ class PostgreSQL extends SQL {
       return;
 
     pg_close($this->connection);
+  }
+
+  public function getLastError() {
+    $lastError = parent::getLastError();
+    if (empty($lastError)) {
+      $lastError = pg_last_error($this->connection) . " " . pg_last_error($this->connection);
+    }
+
+    return $lastError;
   }
 
   protected function execute($query, $values = NULL, $returnValues = false) {
@@ -136,30 +136,6 @@ class PostgreSQL extends SQL {
   }
 
   // Querybuilder
-  public function executeCreateTable($createTable) {
-    $tableName = $this->tableName($createTable->getTableName());
-    $ifNotExists = $createTable->ifNotExists() ? " IF NOT EXISTS": "";
-
-    $entries = array();
-    foreach($createTable->getColumns() as $column) {
-      $entries[] = ($tmp = $this->getColumnDefinition($column));
-      if (is_null($tmp)) {
-        return false;
-      }
-    }
-
-    foreach($createTable->getConstraints() as $constraint) {
-      $entries[] = ($tmp = $this->getConstraintDefinition($constraint));
-      if (is_null($tmp)) {
-        return false;
-      }
-    }
-
-    $entries = implode(",", $entries);
-    $query = "CREATE TABLE$ifNotExists $tableName ($entries)";
-    return $this->execute($query);
-  }
-
   public function executeInsert($insert) {
 
     $tableName = $this->tableName($insert->getTableName());
@@ -408,7 +384,7 @@ class PostgreSQL extends SQL {
     if ($val instanceof Keyword) {
       return $val->getValue();
     } else {
-      $params[] = $val;
+      $params[] = is_bool($val) ? ($val ? "TRUE" : "FALSE") : $val;
       return '$' . count($params);
     }
   }
@@ -448,14 +424,6 @@ class PostgreSQL extends SQL {
   // Special Keywords and functions
   public function currentTimestamp() {
     return new Keyword("CURRENT_TIMESTAMP");
-  }
-
-  public function count($col = NULL) {
-    if (is_null($col)) {
-      return new Keyword("COUNT(*) AS count");
-    } else {
-      return new Keyword("COUNT(" . $this->columnName($col) . ") AS count");
-    }
   }
 }
 ?>

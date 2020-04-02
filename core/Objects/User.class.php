@@ -2,6 +2,7 @@
 
 namespace Objects;
 
+use \External\JWT;
 use Driver\SQL\Column\Column;
 use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondBool;
@@ -132,8 +133,6 @@ class User extends ApiObject {
           $this->setLangauge(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
         }
       }
-    } else {
-      var_dump($this->sql->getLastError());
     }
 
     return $success;
@@ -146,7 +145,7 @@ class User extends ApiObject {
       && ($jwt = $this->configuration->getJWT())) {
       try {
         $token = $_COOKIE['session'];
-        $decoded = (array)\External\JWT::decode($token, $jwt->getKey());
+        $decoded = (array)JWT::decode($token, $jwt->getKey());
         if(!is_null($decoded)) {
           $userId = (isset($decoded['userId']) ? $decoded['userId'] : NULL);
           $sessionId = (isset($decoded['sessionId']) ? $decoded['sessionId'] : NULL);
@@ -154,8 +153,8 @@ class User extends ApiObject {
             $this->readData($userId, $sessionId);
           }
         }
-      } catch(Exception $e) {
-        echo $e;
+      } catch(\Exception $e) {
+        // ignored
       }
     }
 
@@ -204,8 +203,6 @@ class User extends ApiObject {
           $this->setLangauge(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
         }
       }
-    } else {
-      var_dump($this->sql->getLastError());
     }
 
     return $success;

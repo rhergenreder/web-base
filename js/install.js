@@ -123,7 +123,7 @@ $(document).ready(function() {
   });
 
   $("#btnFinish").click(function() {
-    window.location.reload();
+    window.location = "/admin";
   });
 
   $("#btnRetry").click(function() {

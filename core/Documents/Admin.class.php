@@ -58,7 +58,7 @@ namespace Documents\Admin {
       if(!$document->getUser()->isLoggedIn()) {
         $html .= new \Views\Login($document);
       } else {
-        $html .= "You are logged in :]";
+        $html .= new \Views\Admin($document);
       }
 
       return $html;

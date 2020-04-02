@@ -66,8 +66,8 @@ class CreateDatabase {
       ->unique("name");
 
     $queries[] = $sql->insert("Group", array("uid", "name"))
-      ->addRow(1, "Default")
-      ->addRow(2, "Administrator");
+      ->addRow(USER_GROUP_DEFAULT, "Default")
+      ->addRow(USER_GROUP_ADMIN, "Administrator");
 
     $queries[] = $sql->createTable("UserGroup")
       ->addInt("user_id")
@@ -75,6 +75,29 @@ class CreateDatabase {
       ->unique("user_id", "group_id")
       ->foreignKey("user_id", "User", "uid")
       ->foreignKey("group_id", "Group", "uid");
+
+    $queries[] = $sql->createTable("Notification")
+      ->addSerial("uid")
+      ->addDateTime("created_at", false, $sql->currentTimestamp())
+      ->addString("title", 32)
+      ->addString("message", 256)
+      ->primaryKey("uid");
+
+    $queries[] = $sql->createTable("UserNotification")
+      ->addInt("user_id")
+      ->addInt("notification_id")
+      ->addBool("seen")
+      ->foreignKey("user_id", "User", "uid")
+      ->foreignKey("notification_id", "Notification", "uid")
+      ->unique("user_id", "notification_id");
+
+    $queries[] = $sql->createTable("GroupNotification")
+      ->addInt("group_id")
+      ->addInt("notification_id")
+      ->addBool("seen")
+      ->foreignKey("group_id", "Group", "uid")
+      ->foreignKey("notification_id", "Notification", "uid")
+      ->unique("group_id", "notification_id");
 
     $queries[] = $sql->createTable("ApiKey")
       ->addSerial("uid")

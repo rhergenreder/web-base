@@ -185,7 +185,7 @@ var Core = function() {
   };
 
   this.logout = function() {
-    this.apiCall('logout');
+    this.apiCall('user/logout');
   };
 
   this.getJsonDateTime = function(date) {

@@ -7,7 +7,7 @@ use an existing database or create a temporary database (recommended).
 
 ### Usage
 
-To use this tool, some requirements must be installed. This can be done using: `pip install -r < requirements.txt`
+To use this tool, some requirements must be installed. This can be done using: `pip install -r requirements.txt`
 
 ```
 usage: test.py [-h] [--username USERNAME] [--password PASSWORD] [--host HOST]

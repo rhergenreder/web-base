@@ -1,68 +1,53 @@
-import requests
-
 from phpTest import PhpTest
+
+import sys
 
 class InstallTestCase(PhpTest):
 
     def __init__(self, args):
-        super().__init__("test_install")
+        super().__init__({
+            "Testing connection…": self.test_connection,
+            "Testing database setup…": self.test_database_setup,
+            "Testing invalid usernames…": self.test_invalid_usernames,
+            "Testing invalid password…": self.test_invalid_password,
+            "Testing not matching password…": self.test_not_matching_passwords,
+            "Testing user creation…": self.test_create_user,
+            "Testing skip mail configuration…": self.test_skil_mail_config,
+            "Testing complete setup…": self.test_complete_setup,
+        })
         self.args = args
-        self.session = requests.Session()
 
-    def test_install(self):
+    def test_connection(self):
+        self.httpGet()
 
-        # Test Connection
-        res = self.session.get(self.url)
-        self.assertEquals(200, res.status_code, self.httpError(res))
-        self.assertEquals([], self.getPhpErrors(res))
+    def test_database_setup(self):
+        obj = self.httpPost(data=vars(self.args))
+        self.assertEquals(True, obj["success"], obj["msg"])
 
-        # Database Setup
-        res = self.session.post(self.url, data=vars(self.args))
-        self.assertEquals(200, res.status_code, self.httpError(res))
-        self.assertEquals([], self.getPhpErrors(res))
-
-        # Create User
-
-        # 1. Invalid username
+    def test_invalid_usernames(self):
         for username in ["a", "a"*33]:
-            res = self.session.post(self.url, data={ "username": username, "password": "123456", "confirmPassword": "123456" })
-            self.assertEquals(200, res.status_code, self.httpError(res))
-            self.assertEquals([], self.getPhpErrors(res))
-            obj = self.getJson(res)
+            obj = self.httpPost(data={ "username": username, "password": "123456", "confirmPassword": "123456" })
             self.assertEquals(False, obj["success"])
             self.assertEquals("The username should be between 5 and 32 characters long", obj["msg"])
 
-        # 2. Invalid password
-        res = self.session.post(self.url, data={ "username": PhpTest.ADMIN_USERNAME, "password": "1", "confirmPassword": "1" })
-        self.assertEquals(200, res.status_code, self.httpError(res))
-        self.assertEquals([], self.getPhpErrors(res))
-        obj = self.getJson(res)
+    def test_invalid_password(self):
+        obj = self.httpPost(data={ "username": PhpTest.ADMIN_USERNAME, "password": "1", "confirmPassword": "1" })
         self.assertEquals(False, obj["success"])
         self.assertEquals("The password should be at least 6 characters long", obj["msg"])
 
-        # 3. Passwords do not match
-        res = self.session.post(self.url, data={ "username": PhpTest.ADMIN_USERNAME, "password": "1", "confirmPassword": "2" })
-        self.assertEquals(200, res.status_code, self.httpError(res))
-        self.assertEquals([], self.getPhpErrors(res))
-        obj = self.getJson(res)
+    def test_not_matching_passwords(self):
+        obj = self.httpPost(data={ "username": PhpTest.ADMIN_USERNAME, "password": "1", "confirmPassword": "2" })
         self.assertEquals(False, obj["success"])
         self.assertEquals("The given passwords do not match", obj["msg"])
 
-        # 4. User creation OK
-        res = self.session.post(self.url, data={ "username": PhpTest.ADMIN_USERNAME, "password": PhpTest.ADMIN_PASSWORD, "confirmPassword": PhpTest.ADMIN_PASSWORD })
-        self.assertEquals(200, res.status_code, self.httpError(res))
-        self.assertEquals([], self.getPhpErrors(res))
-        obj = self.getJson(res)
-        self.assertEquals(True, obj["success"])
+    def test_create_user(self):
+        obj = self.httpPost(data={ "username": PhpTest.ADMIN_USERNAME, "password": PhpTest.ADMIN_PASSWORD, "confirmPassword": PhpTest.ADMIN_PASSWORD })
+        self.assertEquals(True, obj["success"], obj["msg"])
 
-        # Mail: SKIP
-        res = self.session.post(self.url, data={ "skip": "true" })
-        self.assertEquals(200, res.status_code, self.httpError(res))
-        self.assertEquals([], self.getPhpErrors(res))
-        obj = self.getJson(res)
-        self.assertEquals(True, obj["success"])
+    def test_skil_mail_config(self):
+        obj = self.httpPost(data={ "skip": "true" })
+        self.assertEquals(True, obj["success"], obj["msg"])
 
-        # Creation successful:
-        res = self.session.get(self.url)
-        self.assertEquals(200, res.status_code, self.httpError(res))
-        self.assertEquals([], self.getPhpErrors(res))
+    def test_complete_setup(self):
+        res = self.httpGet()
+        self.assertTrue("Installation finished" in res.text)

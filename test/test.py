@@ -44,7 +44,6 @@ def testMysql(args):
         cursor = connection.cursor()
         print("[ ] Creating temporary databse %s" % args.database)
         cursor.execute("CREATE DATABASE %s" % args.database)
-        cursor.commit()
         print("[+] Success")
 
     # perform test

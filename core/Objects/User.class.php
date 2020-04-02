@@ -128,7 +128,6 @@ class User extends ApiObject {
         $this->session->stayLoggedIn($row["stay_logged_in"]);
         if($sessionUpdate) $this->session->update();
         $this->loggedIn = true;
-
         if(!is_null($row['langId'])) {
           $this->setLangauge(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
         }

@@ -174,14 +174,8 @@ class PostgreSQL extends SQL {
 
     if (is_null($columns) || empty($columns)) {
       $columnStr = "";
-      $numColumns = count($rows[0]);
     } else {
-      $numColumns = count($columns);
-      $columnStr = array();
-      foreach($columns as $col) {
-        $columnStr[] = $this->columnName($col);
-      }
-      $columnStr = " (" . implode(",", $columnStr) . ")";
+      $columnStr = " (" . $this->columnName($columns) . ")";
     }
 
     $numRows = count($rows);
@@ -235,23 +229,14 @@ class PostgreSQL extends SQL {
 
   public function executeSelect($select) {
 
-    $columns = array();
-    foreach($select->getColumns() as $col) {
-      $columns[] = $this->columnName($col);
-    }
-
-    $columns = implode(",", $columns);
+    $columns = $this->columnName($select->getColumns());
     $tables = $select->getTables();
     $params = array();
 
     if (is_null($tables) || empty($tables)) {
       return "SELECT $columns";
     } else {
-      $tableStr = array();
-      foreach($tables as $table) {
-        $tableStr[] = $this->tableName($table);
-      }
-      $tableStr = implode(",", $tableStr);
+      $tableStr = $this->tableName($tables);
     }
 
     $conditions = $select->getConditions();
@@ -346,7 +331,7 @@ class PostgreSQL extends SQL {
   }
 
   protected function getColumnDefinition($column) {
-    $columnName = $column->getName();
+    $columnName = $this->columnName($column->getName());
 
     if ($column instanceof StringColumn) {
       $maxSize = $column->getMaxSize();
@@ -378,22 +363,20 @@ class PostgreSQL extends SQL {
       $defaultValue = " DEFAULT " . $this->getValueDefinition($column->getDefaultValue());
     }
 
-    return "\"$columnName\" $type$notNull$defaultValue";
+    return "$columnName $type$notNull$defaultValue";
   }
 
   protected function getConstraintDefinition($constraint) {
-    $columnName = $constraint->getColumnName();
+    $columnName = $this->columnName($constraint->getColumnName());
     if ($constraint instanceof PrimaryKey) {
-      if (is_array($columnName)) $columnName = implode('","', $columnName);
-      return "PRIMARY KEY (\"$columnName\")";
+      return "PRIMARY KEY ($columnName)";
     } else if ($constraint instanceof Unique) {
-      if (is_array($columnName)) $columnName = implode('","', $columnName);
-      return "UNIQUE (\"$columnName\")";
+      return "UNIQUE ($columnName)";
     } else if ($constraint instanceof ForeignKey) {
-      $refTable = $constraint->getReferencedTable();
-      $refColumn = $constraint->getReferencedColumn();
+      $refTable = $this->tableName($constraint->getReferencedTable());
+      $refColumn = $this->columnName($constraint->getReferencedColumn());
       $strategy = $constraint->onDelete();
-      $code = "FOREIGN KEY (\"$columnName\") REFERENCES \"$refTable\" (\"$refColumn\")";
+      $code = "FOREIGN KEY ($columnName) REFERENCES $refTable ($refColumn)";
       if ($strategy instanceof SetDefaultStrategy) {
         $code .= " ON DELETE SET DEFAULT";
       } else if($strategy instanceof SetNullStrategy) {
@@ -431,20 +414,33 @@ class PostgreSQL extends SQL {
   }
 
   protected function tableName($table) {
-    return "\"$table\"";
+    if (is_array($table)) {
+      $tables = array();
+      foreach($table as $t) $tables[] = $this->tableName($t);
+      return implode(",", $tables);
+    } else {
+      return "\"$table\"";
+    }
   }
 
   protected function columnName($col) {
     if ($col instanceof KeyWord) {
       return $col->getValue();
+    } elseif(is_array($col)) {
+      $columns = array();
+      foreach($col as $c) $columns[] = $this->columnName($c);
+      return implode(",", $columns);
     } else {
-      $index = strrpos($col, ".");
-      if ($index === FALSE) {
-        return "\"$col\"";
-      } else {
+      if (($index = strrpos($col, ".")) !== FALSE) {
         $tableName = $this->tableName(substr($col, 0, $index));
         $columnName = $this->columnName(substr($col, $index + 1));
         return "$tableName.$columnName";
+      } else if(($index = stripos($col, " as ")) !== FALSE) {
+        $columnName = $this->columnName(trim(substr($col, 0, $index)));
+        $alias = $this->columnName(trim(substr($col, $index + 4)));
+        return "$columnName as $alias";
+      } else {
+        return "\"$col\"";
       }
     }
   }
@@ -456,9 +452,9 @@ class PostgreSQL extends SQL {
 
   public function count($col = NULL) {
     if (is_null($col)) {
-      return new Keyword("COUNT(*)");
+      return new Keyword("COUNT(*) AS count");
     } else {
-      return new Keyword("COUNT(\"$col\")");
+      return new Keyword("COUNT(" . $this->columnName($col) . ") AS count");
     }
   }
 }

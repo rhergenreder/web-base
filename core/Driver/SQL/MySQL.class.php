@@ -249,11 +249,7 @@ class MySQL extends SQL {
 
     $columns = array();
     foreach($select->getColumns() as $col) {
-      if ($col instanceof Keyword) {
-        $columns[] = $col->getValue();
-      } else {
-        $columns[] = "`$col`";
-      }
+      $columns[] = $this->columnName($col);
     }
 
     $columns = implode(",", $columns);
@@ -429,22 +425,32 @@ class MySQL extends SQL {
   }
 
   protected function columnName($col) {
-    if ($col instanceof KeyWord) {
+    if ($col instanceof Keyword) {
       return $col->getValue();
     } else {
-      return "`$col`";
+      if (($index = strrpos($col, ".")) !== FALSE) {
+        $tableName = $this->tableName(substr($col, 0, $index));
+        $columnName = $this->columnName(substr($col, $index + 1));
+        return "$tableName.$columnName";
+      } else if(($index = stripos($col, " as ")) !== FALSE) {
+        $columnName = $this->columnName(trim(substr($col, 0, $index)));
+        $alias = trim(substr($col, $index + 4));
+        return "$columnName as $alias";
+      } else {
+        return "`$col`";
+      }
     }
   }
 
   public function currentTimestamp() {
-    return new KeyWord("NOW()");
+    return new Keyword("NOW()");
   }
 
   public function count($col = NULL) {
     if (is_null($col)) {
-      return new Keyword("COUNT(*)");
+      return new Keyword("COUNT(*) AS count");
     } else {
-      return new Keyword("COUNT($col)");
+      return new Keyword("COUNT($col) AS count");
     }
   }
 

@@ -66,7 +66,7 @@ class Configuration {
             public function __construct() {
               \$this->key = '$key';
             }
-            
+
             public function getKey() {
               return \$this->key;
             }
@@ -110,7 +110,7 @@ class Configuration {
         ?>", false);
     }
 
-    return file_put_contents($path, $code);
+    return @file_put_contents($path, $code);
   }
 
   public function delete($className) {
@@ -120,6 +120,24 @@ class Configuration {
     }
 
     return true;
+  }
+
+  public static function checkPermissions() {
+    $classes = array(
+      \Configuration\Database::class,
+      \Configuration\Mail::class,
+      \Configuration\JWT::class
+    );
+
+    $files = array();
+    foreach($classes as $class) {
+      $file = getClassPath($class);
+      if(!is_writeable($file)) {
+        $files[] = $file;
+      }
+    }
+
+    return $files;
   }
 };
 

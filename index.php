@@ -6,10 +6,6 @@ function getClassPath($class, $suffix=true) {
   return "core/$path$suffix.php";
 }
 
-function getWebRoot() {
-  return dirname(__FILE__);
-}
-
 function createError($msg) {
   return json_encode(array("success" => false, "msg" => $msg));
 }

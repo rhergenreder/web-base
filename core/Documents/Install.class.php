@@ -62,19 +62,10 @@ namespace Documents\Install {
     const FINISH_INSTALLATION = 5;
 
     //
-    private $configDirectory;
-    private $databaseConfiguration;
-    private $mailConfiguration;
-    private $jwtConfiguration;
     private $errorString;
 
     function __construct($document) {
       parent::__construct($document);
-
-      $this->configDirectory    = getWebRoot() . '/core/Configuration';
-      $this->databaseConfiguration  = getWebRoot() . '/core/Configuration/Database.class.php';
-      $this->mailConfiguration  = getWebRoot() . '/core/Configuration/Mail.class.php';
-      $this->jwtConfiguration  = getWebRoot() . '/core/Configuration/JWT.class.php';
       $this->errorString = "";
     }
 
@@ -139,23 +130,12 @@ namespace Documents\Install {
       $success = true;
       $failedRequirements = array();
 
-      $writeableFiles = array(
-        $this->configDirectory,
-        $this->databaseConfiguration,
-        $this->mailConfiguration,
-        $this->jwtConfiguration,
-      );
-
-      foreach($writeableFiles as $file) {
-        if(!is_writeable($file)) {
+      $unwriteableFiles = \Configuration\Configuration::checkPermissions();
+      if(!empty($unwriteableFiles)) {
+        foreach($unwriteableFiles as $file) {
           $failedRequirements[] = "<b>$file</b> is not writeable. Try running <b>chmod 600</b>";
           $success = false;
         }
-      }
-
-      if(!is_writeable($this->configDirectory)) {
-        $failedRequirements[] = "<b>$this->configDirectory</b> is not writeable. Try running <b>chmod 600</b>";
-        $success = false;
       }
 
       if(version_compare(PHP_VERSION, '7.1', '<')) {

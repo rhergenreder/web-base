@@ -26,14 +26,13 @@ class MySQL extends SQL {
 
   public function __construct($connectionData) {
      parent::__construct($connectionData);
-     $this->installLink = ;
   }
 
   public function checkRequirements() {
     return function_exists('mysqli_connect');
   }
 
-  public abstract function getDriverName() {
+  public function getDriverName() {
     return 'mysqli';
   }
 
@@ -248,7 +247,16 @@ class MySQL extends SQL {
 
   public function executeSelect($select) {
 
-    $columns = implode(",", $select->getColumns());
+    $columns = array();
+    foreach($select->getColumns() as $col) {
+      if ($col instanceof Keyword) {
+        $columns[] = $col->getValue();
+      } else {
+        $columns[] = "`$col`";
+      }
+    }
+
+    $columns = implode(",", $columns);
     $tables = $select->getTables();
     $params = array();
 
@@ -364,7 +372,7 @@ class MySQL extends SQL {
     if (!is_null($column->getDefaultValue()) || !$column->notNull()) {
       $defaultValue = " DEFAULT " . $this->getValueDefinition($column->getDefaultValue());
     }
-    
+
     return "`$columnName` $type$notNull$defaultValue";
   }
 
@@ -416,7 +424,28 @@ class MySQL extends SQL {
     }
   }
 
-  public function currentTimestamp() {
-    return "NOW()";
+  protected function tableName($table) {
+    return "`$table`";
   }
+
+  protected function columnName($col) {
+    if ($col instanceof KeyWord) {
+      return $col->getValue();
+    } else {
+      return "`$col`";
+    }
+  }
+
+  public function currentTimestamp() {
+    return new KeyWord("NOW()");
+  }
+
+  public function count($col = NULL) {
+    if (is_null($col)) {
+      return new Keyword("COUNT(*)");
+    } else {
+      return new Keyword("COUNT($col)");
+    }
+  }
+
 };

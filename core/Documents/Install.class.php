@@ -97,7 +97,9 @@ namespace Documents\Install {
         return self::DATABASE_CONFIGURATION;
       }
 
-      $res = $user->getSQL()->select("COUNT(*) as count")->from("User")->execute();
+      $sql = $user->getSQL();
+      $countKeyword = $sql->count();
+      $res = $sql->select($countKeyword)->from("User")->execute();
       if ($res === FALSE) {
         return self::DATABASE_CONFIGURATION;
       } else {

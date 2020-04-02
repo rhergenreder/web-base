@@ -2,7 +2,6 @@
 
 namespace Api;
 
-use \Driver\SQL\Keyword;
 use \Driver\SQL\Condition\Compare;
 
 class GetApiKeys extends Request {
@@ -21,7 +20,7 @@ class GetApiKeys extends Request {
     $res = $sql->select("uid", "api_key", "valid_until")
       ->from("ApiKey")
       ->where(new Compare("user_id", $this->user->getId()))
-      ->where(new Compare("valid_until", new Keyword($sql->currentTimestamp()), ">"))
+      ->where(new Compare("valid_until", $sql->currentTimestamp(), ">"))
       ->where(new Compare("active", true))
       ->execute();
 

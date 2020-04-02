@@ -6,9 +6,12 @@ import argparse
 import random
 import string
 import unittest
+
 import mysql.connector
+import psycopg2
 
 from installTest import InstallTestCase
+from apiTest import ApiTestCase
 
 CONFIG_FILES = ["../core/Configuration/Database.class.php","../core/Configuration/JWT.class.php","../core/Configuration/Mail.class.php"]
 
@@ -19,15 +22,13 @@ def randomName(length):
 def performTest(args):
     suite = unittest.TestSuite()
     suite.addTest(InstallTestCase(args))
+    suite.addTest(ApiTestCase())
     runner = unittest.TextTestRunner()
     runner.run(suite)
 
 def testMysql(args):
 
     # Create a temporary database
-    cursor = None
-    database = None
-    connection = None
     if args.database is None:
         args.database = "webbase_test_%s" % randomName(6)
         config = {
@@ -43,11 +44,43 @@ def testMysql(args):
         cursor = connection.cursor()
         print("[ ] Creating temporary databse %s" % args.database)
         cursor.execute("CREATE DATABASE %s" % args.database)
+        cursor.commit()
         print("[+] Success")
 
     # perform test
     try:
         args.type = "mysql"
+        performTest(args)
+    finally:
+        if cursor is not None:
+            print("[ ] Deleting temporary database")
+            cursor.execute("DROP DATABASE %s" % args.database)
+            cursor.close()
+            print("[+] Success")
+
+    if connection is not None:
+        print("[ ] Closing connection…")
+        connection.close()
+
+def testPostgres(args):
+
+    # Create a temporary database
+    if args.database is None:
+        args.database = "webbase_test_%s" % randomName(6)
+        connection_string = "host=%s port=%d user=%s password=%s" % (args.host, args.port, args.username, args.password)
+
+        print("[ ] Connecting to dbms…")
+        connection = psycopg2.connect(connection_string)
+        connection.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+        print("[+] Success")
+        cursor = connection.cursor()
+        print("[ ] Creating temporary databse %s" % args.database)
+        cursor.execute("CREATE DATABASE %s" % args.database)
+        print("[+] Success")
+
+    # perform test
+    try:
+        args.type = "postgres"
         performTest(args)
     finally:
         if cursor is not None:
@@ -95,3 +128,9 @@ if __name__ == "__main__":
 
     if args.dbms == "mysql":
         testMysql(args)
+    elif args.dbms == "postgres":
+        testPostgres(args)
+
+    for f in CONFIG_FILES:
+        if os.path.isfile(f):
+            os.remove(f)

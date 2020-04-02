@@ -72,8 +72,12 @@ abstract class SQL {
   protected abstract function getValueDefinition($val);
   protected abstract function addValue($val, &$params);
 
+  protected abstract function tableName($table);
+  protected abstract function columnName($col);
+
   // Special Keywords and functions
   public abstract function currentTimestamp();
+  public abstract function count($col = NULL);
 
   // Statements
   protected abstract function execute($query, $values=NULL, $returnValues=false);
@@ -86,12 +90,12 @@ abstract class SQL {
       }
       return "(" . implode(" OR ", $conditions) . ")";
     } else if ($condition instanceof \Driver\SQL\Condition\Compare) {
-      $column = $condition->getColumn();
+      $column = $this->columnName($condition->getColumn());
       $value = $condition->getValue();
       $operator = $condition->getOperator();
       return $column . $operator . $this->addValue($value, $params);
     } else if ($condition instanceof \Driver\SQL\Condition\CondBool) {
-      return $condition->getValue();
+      return $this->columnName($condition->getValue());
     } else if (is_array($condition)) {
       if (count($condition) == 1) {
         return $this->buildCondition($condition[0], $params);

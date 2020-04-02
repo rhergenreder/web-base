@@ -2,7 +2,6 @@
 
 namespace Objects;
 
-use Driver\SQL\Keyword;
 use Driver\SQL\Column\Column;
 use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondBool;
@@ -113,7 +112,7 @@ class User extends ApiObject {
         ->where(new Compare("User.uid", $userId))
         ->where(new Compare("Session.uid", $sessionId))
         ->where(new Compare("Session.active", true))
-        ->where(new CondBool("Session.stay_logged_in"), new Compare("Session.expires", new Keyword($this->sql->currentTimestamp()), '>'))
+        ->where(new CondBool("Session.stay_logged_in"), new Compare("Session.expires", $this->sql->currentTimestamp(), '>'))
         ->execute();
 
     $success = ($res !== FALSE);
@@ -189,7 +188,7 @@ class User extends ApiObject {
       ->innerJoin("User", "ApiKey.user_id", "User.uid")
       ->leftJoin("Language", "User.language_id", "Language.uid")
       ->where(new Compare("ApiKey.api_key", $apiKey))
-      ->where(new Compare("valid_until", new Keyword($this->sql->currentTimestamp()), ">"))
+      ->where(new Compare("valid_until", $this->sql->currentTimestamp(), ">"))
       ->where(new COmpare("ApiKey.active", 1))
       ->execute();
 

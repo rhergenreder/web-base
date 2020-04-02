@@ -137,7 +137,7 @@ class PostgreSQL extends SQL {
 
   // Querybuilder
   public function executeCreateTable($createTable) {
-    $tableName = $createTable->getTableName();
+    $tableName = $this->tableName($createTable->getTableName());
     $ifNotExists = $createTable->ifNotExists() ? " IF NOT EXISTS": "";
 
     $entries = array();
@@ -156,13 +156,13 @@ class PostgreSQL extends SQL {
     }
 
     $entries = implode(",", $entries);
-    $query = "CREATE TABLE$ifNotExists \"$tableName\" ($entries)";
+    $query = "CREATE TABLE$ifNotExists $tableName ($entries)";
     return $this->execute($query);
   }
 
   public function executeInsert($insert) {
 
-    $tableName = $insert->getTableName();
+    $tableName = $this->tableName($insert->getTableName());
     $columns = $insert->getColumns();
     $rows = $insert->getRows();
     $onDuplicateKey = $insert->onDuplicateKey() ?? "";
@@ -173,11 +173,15 @@ class PostgreSQL extends SQL {
     }
 
     if (is_null($columns) || empty($columns)) {
-      $columns = "";
+      $columnStr = "";
       $numColumns = count($rows[0]);
     } else {
       $numColumns = count($columns);
-      $columns = " (\"" . implode("\", \"", $columns) . "\")";
+      $columnStr = array();
+      foreach($columns as $col) {
+        $columnStr[] = $this->columnName($col);
+      }
+      $columnStr = " (" . implode(",", $columnStr) . ")";
     }
 
     $numRows = count($rows);
@@ -196,7 +200,7 @@ class PostgreSQL extends SQL {
     $values = implode(",", $values);
 
     if ($onDuplicateKey) {
-      if ($onDuplicateKey instanceof UpdateStrategy) {
+      /*if ($onDuplicateKey instanceof UpdateStrategy) {
         $updateValues = array();
         foreach($onDuplicateKey->getValues() as $key => $value) {
           if ($value instanceof Column) {
@@ -208,7 +212,7 @@ class PostgreSQL extends SQL {
         }
 
         $onDuplicateKey = " ON CONFLICT DO UPDATE SET " . implode(",", $updateValues);
-      } else {
+      } else*/ {
         $strategy = get_class($onDuplicateKey);
         $this->lastError = "ON DUPLICATE Strategy $strategy is not supported yet.";
         return false;
@@ -216,9 +220,9 @@ class PostgreSQL extends SQL {
     }
 
     $returningCol = $insert->getReturning();
-    $returning = $returningCol ? " RETURNING \"$returningCol\"" : "";
+    $returning = $returningCol ? (" RETURNING " . $this->columnName($returningCol)) : "";
 
-    $query = "INSERT INTO \"$tableName\"$columns VALUES$values$onDuplicateKey$returning";
+    $query = "INSERT INTO $tableName$columnStr VALUES$values$onDuplicateKey$returning";
     $res = $this->execute($query, $parameters, !empty($returning));
     $success = ($res !== FALSE);
 
@@ -229,11 +233,93 @@ class PostgreSQL extends SQL {
     return $success;
   }
 
-  // TODO:
-  public function executeSelect($query) { }
-  public function executeDelete($query) { }
-  public function executeTruncate($query) { }
-  public function executeUpdate($query) { }
+  public function executeSelect($select) {
+
+    $columns = array();
+    foreach($select->getColumns() as $col) {
+      $columns[] = $this->columnName($col);
+    }
+
+    $columns = implode(",", $columns);
+    $tables = $select->getTables();
+    $params = array();
+
+    if (is_null($tables) || empty($tables)) {
+      return "SELECT $columns";
+    } else {
+      $tableStr = array();
+      foreach($tables as $table) {
+        $tableStr[] = $this->tableName($table);
+      }
+      $tableStr = implode(",", $tableStr);
+    }
+
+    $conditions = $select->getConditions();
+    if (!empty($conditions)) {
+      $condition = " WHERE " . $this->buildCondition($conditions, $params);
+    } else {
+      $condition = "";
+    }
+
+    $joinStr = "";
+    $joins = $select->getJoins();
+    if (!empty($joins)) {
+      $joinStr = "";
+      foreach($joins as $join) {
+        $type = $join->getType();
+        $joinTable = $this->tableName($join->getTable());
+        $columnA = $this->columnName($join->getColumnA());
+        $columnB = $this->columnName($join->getColumnB());
+        $joinStr .= " $type JOIN $joinTable ON $columnA=$columnB";
+      }
+    }
+
+    $orderBy = "";
+    $limit = "";
+    $offset = "";
+
+    $query = "SELECT $columns FROM $tableStr$joinStr$condition$orderBy$limit$offset";
+    return $this->execute($query, $params, true);
+  }
+
+  public function executeDelete($delete) {
+    $table = $delete->getTable();
+    $conditions = $delete->getConditions();
+    if (!empty($conditions)) {
+      $condition = " WHERE " . $this->buildCondition($conditions, $params);
+    } else {
+      $condition = "";
+    }
+
+    $query = "DELETE FROM \"$table\"$condition";
+    return $this->execute($query);
+  }
+
+  public function executeTruncate($truncate) {
+    $table = $truncate->getTable();
+    return $this->execute("TRUNCATE \"$table\"");
+  }
+
+  public function executeUpdate($update) {
+    $params = array();
+    $table = $update->getTable();
+
+    $valueStr = array();
+    foreach($update->getValues() as $key => $val) {
+      $valueStr[] = "$key=" . $this->addValue($val, $params);
+    }
+    $valueStr = implode(",", $valueStr);
+
+    $conditions = $update->getConditions();
+    if (!empty($conditions)) {
+      $condition = " WHERE " . $this->buildCondition($conditions, $params);
+    } else {
+      $condition = "";
+    }
+
+    $query = "UPDATE \"$table\" SET $valueStr$condition";
+    return $this->execute($query, $params);
+  }
 
   // UGLY but.. what should i do?
   private function createEnum($enumColumn) {
@@ -344,9 +430,36 @@ class PostgreSQL extends SQL {
     }
   }
 
+  protected function tableName($table) {
+    return "\"$table\"";
+  }
+
+  protected function columnName($col) {
+    if ($col instanceof KeyWord) {
+      return $col->getValue();
+    } else {
+      $index = strrpos($col, ".");
+      if ($index === FALSE) {
+        return "\"$col\"";
+      } else {
+        $tableName = $this->tableName(substr($col, 0, $index));
+        $columnName = $this->columnName(substr($col, $index + 1));
+        return "$tableName.$columnName";
+      }
+    }
+  }
+
   // Special Keywords and functions
   public function currentTimestamp() {
-    return "CURRENT_TIMESTAMP";
+    return new Keyword("CURRENT_TIMESTAMP");
+  }
+
+  public function count($col = NULL) {
+    if (is_null($col)) {
+      return new Keyword("COUNT(*)");
+    } else {
+      return new Keyword("COUNT(\"$col\")");
+    }
   }
 }
 ?>

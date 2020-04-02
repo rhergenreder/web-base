@@ -3,7 +3,6 @@
 namespace Api;
 
 use \Api\Parameter\Parameter;
-use \Driver\SQL\Keyword;
 use \Driver\SQL\Condition\Compare;
 
 class RevokeApiKey extends Request {
@@ -23,7 +22,7 @@ class RevokeApiKey extends Request {
       ->from("ApiKey")
       ->where(new Compare("uid", $id))
       ->where(new Compare("user_id", $this->user->getId()))
-      ->where(new Compare("valid_until", new Keyword($sql->currentTimestamp()), ">"))
+      ->where(new Compare("valid_until", $sql->currentTimestamp(), ">"))
       ->where(new Compare("active", 1))
       ->execute();
 

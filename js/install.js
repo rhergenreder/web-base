@@ -38,12 +38,16 @@ function setState(state) {
   li.find("i").removeClass().addClass(icon);
 }
 
+function getCurrentStep() {
+  return $("#currentStep").index() + 1;
+}
+
 function sendRequest(params, done) {
   setState(PENDING);
   var success = false;
   $("#status").hide();
   $.post("/index.php", params, function(data) {
-    if(data.success) {
+    if(data.success || data.step != getCurrentStep()) {
       success = true;
       window.location.reload();
     } else {

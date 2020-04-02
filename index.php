@@ -66,6 +66,7 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       header("Location: /");
     } else {
       $document = new Documents\Install($user);
+      $response = $document->getCode();
     }
   } else {
     if(empty($documentName) || strcasecmp($documentName, "install") === 0) {
@@ -83,9 +84,9 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
     } else {
       $document = new $class($user);
     }
-  }
 
-  $response = $document->getCode();
+    $response = $document->getCode();
+  }
 }
 
 $user->sendCookies();

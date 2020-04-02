@@ -153,6 +153,7 @@ namespace Documents\Install {
       if(!$success) {
         $msg = "The following requirements failed the check:<br>" .
           $this->createUnorderedList($failedRequirements);
+        $this->errorString = $msg;
       }
 
       return array("success" => $success, "msg" => $msg);
@@ -632,7 +633,7 @@ namespace Documents\Install {
 
       if(isset($currentView["progressText"])) {
         $progressText = $currentView["progressText"];
-        $html .= "<div id=\"progressText\" class=\"my-3\">$progressText$spinnerIcon</i></div>";
+        $html .= "<div id=\"progressText\" style=\"display:none\" class=\"my-3\">$progressText$spinnerIcon</i></div>";
       }
 
       if(isset($currentView["form"])) {
@@ -660,7 +661,11 @@ namespace Documents\Install {
       );
 
       if($this->currentStep != self::FINISH_INSTALLATION) {
-        $buttons[] = array("title" => "Submit", "type" => "success", "id" => "btnSubmit", "float" => "right");
+        if ($this->currentStep == self::CHECKING_REQUIRMENTS) {
+          $buttons[] = array("title" => "Retry", "type" => "success", "id" => "btnRetry", "float" => "right");
+        } else {
+          $buttons[] = array("title" => "Submit", "type" => "success", "id" => "btnSubmit", "float" => "right");
+        }
       } else {
         $buttons[] = array("title" => "Finish", "type" => "success", "id" => "btnFinish", "float" => "right");
       }
@@ -703,7 +708,7 @@ namespace Documents\Install {
       $this->steps = array(
         self::CHECKING_REQUIRMENTS => array(
           "title" => "Checking requirements",
-          "status" => self::NOT_STARTED
+          "status" => self::ERROR
         ),
         self::DATABASE_CONFIGURATION => array(
           "title" => "Database configuration",
@@ -737,6 +742,7 @@ namespace Documents\Install {
       // POST
       if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $response = $this->performStep();
+        $response["step"] = $this->currentStep;
         die(json_encode($response));
       }
 

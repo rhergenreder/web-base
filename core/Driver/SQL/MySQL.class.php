@@ -329,7 +329,7 @@ class MySQL extends SQL {
     } else if($column instanceof BoolColumn) {
       $type = "BOOLEAN";
     } else if($column instanceof JsonColumn) {
-      $type = "JSON";
+      $type = "LONGTEXT"; # some maria db setups don't allow JSON here…
     } else {
       $this->lastError = "Unsupported Column Type: " . get_class($column);
       return NULL;

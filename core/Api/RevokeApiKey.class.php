@@ -18,7 +18,7 @@ class RevokeApiKey extends Request {
     $id = $this->getParam("id");
 
     $sql = $this->user->getSQL();
-    $res = $sql->select("COUNT(*)")
+    $res = $sql->select($sql->count())
       ->from("ApiKey")
       ->where(new Compare("uid", $id))
       ->where(new Compare("user_id", $this->user->getId()))
@@ -29,7 +29,7 @@ class RevokeApiKey extends Request {
     $this->success = ($res !== FALSE);
     $this->lastError = $sql->getLastError();
 
-    if($this->success && $res[0]["COUNT(*)"] === 0) {
+    if($this->success && $res[0]["count"] === 0) {
       $this->success = false;
       $this->lastError = "This API-Key does not exist.";
     }

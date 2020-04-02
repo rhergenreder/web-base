@@ -28,9 +28,13 @@ class CreateApiKey extends Request {
     $this->lastError = $sql->getLastError();
 
     if ($this->success) {
-      $this->result["api_key"] = $apiKey;
-      $this->result["valid_until"] = $validUntil->getTimestamp();
-      $this->result["uid"] = $sql->getLastInsertId();
+      $this->result["api_key"] = array(
+        "api_key" => $apiKey,
+        "valid_until" => $validUntil->getTimestamp(),
+        "uid" => $sql->getLastInsertId(),
+      );
+    } else {
+      $this->result["api_key"] = null;
     }
     return $this->success;
   }

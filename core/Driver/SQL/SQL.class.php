@@ -60,6 +60,8 @@ abstract class SQL {
   public abstract function connect();
   public abstract function disconnect();
 
+  // TODO: pull code duplicates up
+
   // Querybuilder
   public abstract function executeCreateTable($query);
   public abstract function executeInsert($query);

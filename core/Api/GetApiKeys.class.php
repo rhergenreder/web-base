@@ -28,7 +28,14 @@ class GetApiKeys extends Request {
     $this->lastError = $sql->getLastError();
 
     if($this->success) {
-      $this->result["api_keys"] = $res;
+      $this->result["api_keys"] = array();
+      foreach($res as $row) {
+        $this->result["api_keys"][] = array(
+          "uid" => $row["uid"],
+          "api_key" => $row["api_key"],
+          "valid_until" => (new \DateTime($row["valid_until"]))->getTimestamp(),
+        );
+      }
     }
 
     return $this->success;

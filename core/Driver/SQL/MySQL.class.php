@@ -304,6 +304,7 @@ class MySQL extends SQL {
 
   public function getColumnDefinition($column) {
     $columnName = $column->getName();
+    $defaultValue = $column->getDefaultValue();
 
     if ($column instanceof StringColumn) {
       $maxSize = $column->getMaxSize();
@@ -330,15 +331,17 @@ class MySQL extends SQL {
       $type = "BOOLEAN";
     } else if($column instanceof JsonColumn) {
       $type = "LONGTEXT"; # some maria db setups don't allow JSON here…
+      $defaultValue = NULL; # must be null :(
     } else {
       $this->lastError = "Unsupported Column Type: " . get_class($column);
       return NULL;
     }
 
     $notNull = $column->notNull() ? " NOT NULL" : "";
-    $defaultValue = "";
-    if (!is_null($column->getDefaultValue()) || !$column->notNull()) {
+    if (!is_null($defaultValue) || !$column->notNull()) {
       $defaultValue = " DEFAULT " . $this->getValueDefinition($column->getDefaultValue());
+    } else {
+      $defaultValue = "";
     }
 
     return "`$columnName` $type$notNull$defaultValue";

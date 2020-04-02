@@ -125,7 +125,7 @@ class User extends ApiObject {
         $this->username = $row['name'];
         $this->uid = $userId;
         $this->session = new Session($this, $sessionId);
-        $this->session->setData(json_decode($row["data"]));
+        $this->session->setData(json_decode($row["data"] ?? '{}'));
         $this->session->stayLoggedIn($row["stay_logged_in"]);
         if($sessionUpdate) $this->session->update();
         $this->loggedIn = true;

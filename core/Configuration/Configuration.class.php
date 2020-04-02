@@ -121,24 +121,6 @@ class Configuration {
 
     return true;
   }
-
-  public static function checkPermissions() {
-    $classes = array(
-      \Configuration\Database::class,
-      \Configuration\Mail::class,
-      \Configuration\JWT::class
-    );
-
-    $files = array();
-    foreach($classes as $class) {
-      $file = getClassPath($class);
-      if(!is_writeable($file)) {
-        $files[] = $file;
-      }
-    }
-
-    return $files;
-  }
 };
 
 ?>

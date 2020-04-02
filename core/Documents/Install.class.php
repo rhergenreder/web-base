@@ -130,12 +130,10 @@ namespace Documents\Install {
       $success = true;
       $failedRequirements = array();
 
-      $unwriteableFiles = \Configuration\Configuration::checkPermissions();
-      if(!empty($unwriteableFiles)) {
-        foreach($unwriteableFiles as $file) {
-          $failedRequirements[] = "<b>$file</b> is not writeable. Try running <b>chmod 600</b>";
-          $success = false;
-        }
+      $configDir = "core/Configuration/";
+      if(!is_writeable($configDir)) {
+        $failedRequirements[] = "<b>$configDir</b> is not writeable. Try running <b>chmod 755</b>";
+        $success = false;
       }
 
       if(version_compare(PHP_VERSION, '7.1', '<')) {

@@ -4,7 +4,7 @@ namespace Documents {
   class Install extends \Elements\Document {
     public function __construct($user) {
       parent::__construct($user, Install\Head::class, Install\Body::class);
-      $this->databseRequired = false;
+      $this->databaseRequired = false;
     }
   }
 }
@@ -63,15 +63,18 @@ namespace Documents\Install {
 
     //
     private $configDirectory;
-    private $databaseScript;
+    private $databaseConfiguration;
+    private $mailConfiguration;
+    private $jwtConfiguration;
     private $errorString;
 
     function __construct($document) {
       parent::__construct($document);
 
-      // TODO: make better
-      $this->configDirectory = getWebRoot() . '/core/Configuration';
-      $this->databaseScript  = getWebRoot() . '/core/Configuration/database.sql';
+      $this->configDirectory    = getWebRoot() . '/core/Configuration';
+      $this->databaseConfiguration  = getWebRoot() . '/core/Configuration/Database.class.php';
+      $this->mailConfiguration  = getWebRoot() . '/core/Configuration/Mail.class.php';
+      $this->jwtConfiguration  = getWebRoot() . '/core/Configuration/JWT.class.php';
       $this->errorString = "";
     }
 
@@ -136,13 +139,22 @@ namespace Documents\Install {
       $success = true;
       $failedRequirements = array();
 
-      if(!is_writeable($this->configDirectory)) {
-        $failedRequirements[] = "<b>$this->configDirectory</b> is not writeable. Try running <b>chmod 600</b>";
-        $success = false;
+      $writeableFiles = array(
+        $this->configDirectory,
+        $this->databaseConfiguration,
+        $this->mailConfiguration,
+        $this->jwtConfiguration,
+      );
+
+      foreach($writeableFiles as $file) {
+        if(!is_writeable($file)) {
+          $failedRequirements[] = "<b>$file</b> is not writeable. Try running <b>chmod 600</b>";
+          $success = false;
+        }
       }
 
-      if(!is_readable($this->databaseScript)) {
-        $failedRequirements[] = "<b>$this->databaseScript</b> is not readable.";
+      if(!is_writeable($this->configDirectory)) {
+        $failedRequirements[] = "<b>$this->configDirectory</b> is not writeable. Try running <b>chmod 600</b>";
         $success = false;
       }
 

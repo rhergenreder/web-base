@@ -7,13 +7,13 @@ abstract class Document {
   protected $head;
   protected $body;
   protected $user;
-  protected $databseRequired;
+  protected $databaseRequired;
 
   public function __construct($user, $headClass, $bodyClass) {
     $this->head = new $headClass($this);
     $this->body = new $bodyClass($this);
     $this->user = $user;
-    $this->databseRequired = true;
+    $this->databaseRequired = true;
   }
 
   public function getHead() { return $this->head; }
@@ -55,7 +55,7 @@ abstract class Document {
 
   function getCode() {
 
-    if ($this->databseRequired) {
+    if ($this->databaseRequired) {
       $sql = $this->user->getSQL();
       if (is_null($sql)) {
         die("Database is not configured yet.");

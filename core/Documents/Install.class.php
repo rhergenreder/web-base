@@ -132,8 +132,17 @@ namespace Documents\Install {
 
       $configDir = "core/Configuration/";
       if(!is_writeable($configDir)) {
-        $failedRequirements[] = "<b>$configDir</b> is not writeable. Try running <b>chmod 755</b>";
+        $failedRequirements[] = "<b>$configDir</b> is not writeable. Try running <b>chmod 700 $configDir</b>";
         $success = false;
+      }
+
+      if (function_exists("posix_getuid")) {
+        $userId = posix_getuid();
+        if(fileowner($configDir) !== posix_getuid()) {
+          $username = posix_getpwuid($userId)['name'];
+          $failedRequirements[] = "<b>$configDir</b> is not owned by current user: $username ($userId). Try running <b>chown -R $username $configDir</b>";
+          $success = false;
+        }
       }
 
       if(version_compare(PHP_VERSION, '7.1', '<')) {

@@ -4,7 +4,6 @@ namespace Driver\SQL;
 
 use \Api\Parameter\Parameter;
 
-use \Driver\SQL\Column\Column;
 use \Driver\SQL\Column\IntColumn;
 use \Driver\SQL\Column\SerialColumn;
 use \Driver\SQL\Column\StringColumn;
@@ -13,11 +12,7 @@ use \Driver\SQL\Column\DateTimeColumn;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\JsonColumn;
 
-use \Driver\SQL\Strategy\CascadeStrategy;
-use \Driver\SQL\Strategy\SetDefaultStrategy;
-use \Driver\SQL\Strategy\SetNullStrategy;
 use Driver\SQL\Strategy\Strategy;
-use \Driver\SQL\Strategy\UpdateStrategy;
 
 class PostgreSQL extends SQL {
 
@@ -33,7 +28,7 @@ class PostgreSQL extends SQL {
     return 'pgsql';
   }
 
-  // Connection Managment
+  // Connection Management
   public function connect() {
     if(!is_null($this->connection)) {
       return true;

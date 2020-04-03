@@ -331,6 +331,7 @@ namespace Documents\Install {
           ->returning("uid")
           ->execute()
           && $sql->insert("UserGroup", array("group_id", "user_id"))
+          ->addRow(USER_GROUP_DEFAULT, $sql->getLastInsertId())
           ->addRow(USER_GROUP_ADMIN, $sql->getLastInsertId())
           ->execute();
 

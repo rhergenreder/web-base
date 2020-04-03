@@ -13,7 +13,6 @@ use \Driver\SQL\Column\DateTimeColumn;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\JsonColumn;
 
-use Driver\SQL\Query\Insert;
 use Driver\SQL\Strategy\Strategy;
 use \Driver\SQL\Strategy\UpdateStrategy;
 
@@ -31,7 +30,7 @@ class MySQL extends SQL {
     return 'mysqli';
   }
 
-  // Connection Managment
+  // Connection Management
   public function connect() {
 
     if(!is_null($this->connection)) {

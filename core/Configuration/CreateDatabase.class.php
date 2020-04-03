@@ -63,8 +63,8 @@ class CreateDatabase {
       ->unique("name");
 
     $queries[] = $sql->insert("Group", array("uid", "name"))
-      ->addRow(USER_GROUP_DEFAULT, "Default")
-      ->addRow(USER_GROUP_ADMIN, "Administrator");
+      ->addRow(USER_GROUP_DEFAULT, USER_GROUP_DEFAULT_NAME)
+      ->addRow(USER_GROUP_ADMIN, USER_GROUP_ADMIN_NAME);
 
     $queries[] = $sql->createTable("UserGroup")
       ->addInt("user_id")

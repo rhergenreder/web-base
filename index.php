@@ -1,5 +1,9 @@
 <?php
 
+use Api\Request;
+use Documents\Document404;
+use Elements\Document;
+
 include_once 'core/core.php';
 include_once 'core/datetime.php';
 include_once 'core/constants.php';
@@ -37,9 +41,9 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       if(!file_exists($file)) {
         header("404 Not Found");
         $response = createError("Not found");
-      } else if(!is_subclass_of($class, \Api\Request::class)) {
+      } else if(!is_subclass_of($class, Request::class)) {
         header("400 Bad Request");
-        $response = createError("Inalid Method");
+        $response = createError("Invalid Method");
       } else {
         $request = new $class($user, true);
         $success = $request->execute();
@@ -69,8 +73,8 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
     $documentName = str_replace("/", "\\", $documentName);
     $class = "\\Documents\\$documentName";
     $file = getClassPath($class);
-    if(!file_exists($file) || !is_subclass_of($class, \Elements\Document::class)) {
-      $document = new \Documents\Document404($user);
+    if(!file_exists($file) || !is_subclass_of($class, Document::class)) {
+      $document = new Document404($user);
     } else {
       $document = new $class($user);
     }
@@ -81,4 +85,3 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
 
 $user->sendCookies();
 die($response);
-?>

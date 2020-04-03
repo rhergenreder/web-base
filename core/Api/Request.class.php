@@ -16,24 +16,27 @@ class Request {
   protected bool $variableParamCount;
   protected bool $isDisabled;
   protected bool $apiKeyAllowed;
+  protected int $requiredGroup;
 
   private array $aDefaultParams;
   private array $allowedMethods;
-  private bool $externCall;
+  private bool $externalCall;
 
   public function __construct(User $user, bool $externalCall = false, array $params = array()) {
     $this->user = $user;
     $this->aDefaultParams = $params;
-    $this->lastError = '';
+
     $this->success = false;
     $this->result = array();
-    $this->externCall = $externalCall;
+    $this->externalCall = $externalCall;
     $this->isPublic = true;
     $this->isDisabled = false;
     $this->loginRequired = false;
     $this->variableParamCount = false;
     $this->apiKeyAllowed = true;
     $this->allowedMethods = array("GET", "POST");
+    $this->requiredGroup = 0;
+    $this->lastError = "";
   }
 
   protected function forbidMethod($method) {
@@ -82,7 +85,7 @@ class Request {
       $this->result['logoutIn'] = $this->user->getSession()->getExpiresSeconds();
     }
 
-    if($this->externCall) {
+    if($this->externalCall) {
       $values = $_REQUEST;
       if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER["CONTENT_TYPE"]) && in_array("application/json", explode(";", $_SERVER["CONTENT_TYPE"]))) {
         $jsonData = json_decode(file_get_contents('php://input'), true);
@@ -95,7 +98,7 @@ class Request {
       return false;
     }
 
-    if($this->externCall && !$this->isPublic) {
+    if($this->externalCall && !$this->isPublic) {
       $this->lastError = 'This function is private.';
       header('HTTP 1.1 403 Forbidden');
       return false;
@@ -107,8 +110,7 @@ class Request {
       return false;
     }
 
-
-    if($this->loginRequired) {
+    if($this->loginRequired || $this->requiredGroup > 0) {
       $authorized = false;
       if(isset($values['api_key']) && $this->apiKeyAllowed) {
         $apiKey = $values['api_key'];
@@ -117,6 +119,10 @@ class Request {
 
       if(!$this->user->isLoggedIn() && !$authorized) {
         $this->lastError = 'You are not logged in.';
+        header('HTTP 1.1 401 Unauthorized');
+        return false;
+      } else if($this->requiredGroup > 0 && !$this->user->hasGroup($this->requiredGroup)) {
+        $this->lastError = "Insufficient permissions. Required group: ". GroupName($this->requiredGroup);
         header('HTTP 1.1 401 Unauthorized');
         return false;
       }
@@ -151,7 +157,7 @@ class Request {
   public function getResult() { return $this->result; }
   public function success() { return $this->success; }
   public function loginRequired() { return $this->loginRequired; }
-  public function isExternalCall() { return $this->externCall; }
+  public function isExternalCall() { return $this->externalCall; }
 
   public function getJsonResult() {
     $this->result['success'] = $this->success;

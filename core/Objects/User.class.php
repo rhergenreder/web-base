@@ -19,6 +19,7 @@ class User extends ApiObject {
   private int $uid;
   private string $username;
   private Language $language;
+  private array $groups;
 
   public function __construct($configuration) {
     session_start();
@@ -52,6 +53,8 @@ class User extends ApiObject {
   public function setLanguage(Language $language) { $this->language = $language; $language->load(); }
   public function getSession() { return $this->session; }
   public function getConfiguration() { return $this->configuration; }
+  public function getGroups() { return $this->groups; }
+  public function hasGroup(int $group) { return isset($this->groups[$group]); }
 
   public function __debugInfo() {
     $debugInfo = array(
@@ -113,10 +116,12 @@ class User extends ApiObject {
   public function readData($userId, $sessionId, $sessionUpdate = true) {
 
     $res = $this->sql->select("User.name", "Language.uid as langId", "Language.code as langCode", "Language.name as langName",
-        "Session.data", "Session.stay_logged_in")
+        "Session.data", "Session.stay_logged_in", "Group.uid as groupId", "Group.name as groupName")
         ->from("User")
         ->innerJoin("Session", "Session.user_id", "User.uid")
         ->leftJoin("Language", "User.language_id", "Language.uid")
+        ->leftJoin("UserGroup", "UserGroup.user_id", "User.uid")
+        ->leftJoin("Group", "UserGroup.group_id", "Group.uid")
         ->where(new Compare("User.uid", $userId))
         ->where(new Compare("Session.uid", $sessionId))
         ->where(new Compare("Session.active", true))
@@ -136,8 +141,13 @@ class User extends ApiObject {
         $this->session->stayLoggedIn($row["stay_logged_in"]);
         if($sessionUpdate) $this->session->update();
         $this->loggedIn = true;
+
         if(!is_null($row['langId'])) {
           $this->setLanguage(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
+        }
+
+        foreach($res as $row) {
+          $this->groups[$row["groupId"]] = $row["groupName"];
         }
       }
     }

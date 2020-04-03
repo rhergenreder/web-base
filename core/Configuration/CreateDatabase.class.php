@@ -2,16 +2,13 @@
 
 namespace Configuration;
 
-use \Driver\SQL\Query\CreateTable;
-use \Driver\SQL\Query\Insert;
-use \Driver\SQL\Column\Column;
-use \Driver\SQL\Strategy\UpdateStrategy;
+use Driver\SQL\SQL;
 use \Driver\SQL\Strategy\SetNullStrategy;
 use \Driver\SQL\Strategy\CascadeStrategy;
 
 class CreateDatabase {
 
-  public static function createQueries($sql) {
+  public static function createQueries(SQL $sql) {
     $queries = array();
 
     // Language
@@ -111,5 +108,3 @@ class CreateDatabase {
     return $queries;
   }
 }
-
-?>

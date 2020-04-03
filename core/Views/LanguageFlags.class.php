@@ -50,5 +50,3 @@ class LanguageFlags extends \View {
     return implode('', $flags);
   }
 }
-
-?>

@@ -1,16 +1,28 @@
 <?php
 
 namespace Documents {
-  class Admin extends \Elements\Document {
+
+  use Documents\Admin\AdminBody;
+  use Documents\Admin\AdminHead;
+  use Elements\Document;
+
+  class Admin extends Document {
     public function __construct($user) {
-      parent::__construct($user, Admin\Head::class, Admin\Body::class);
+      parent::__construct($user, AdminHead::class, AdminBody::class);
     }
   }
 }
 
 namespace Documents\Admin {
 
-  class Head extends \Elements\Head {
+  use Elements\Body;
+  use Elements\Head;
+  use Elements\Link;
+  use Elements\Script;
+  use Views\Admin;
+  use Views\Login;
+
+  class AdminHead extends Head {
 
     public function __construct($document) {
       parent::__construct($document);
@@ -20,10 +32,10 @@ namespace Documents\Admin {
       $this->loadJQuery();
       $this->loadBootstrap();
       $this->loadFontawesome();
-      $this->addJS(\Elements\Script::CORE);
-      $this->addCSS(\Elements\Link::CORE);
-      $this->addJS(\Elements\Script::ADMIN);
-      $this->addCSS(\Elements\Link::ADMIN);
+      $this->addJS(Script::CORE);
+      $this->addCSS(Link::CORE);
+      $this->addJS(Script::ADMIN);
+      $this->addCSS(Link::ADMIN);
     }
 
     protected function initMetas() {
@@ -45,7 +57,7 @@ namespace Documents\Admin {
     }
   }
 
-  class Body extends \Elements\Body {
+  class AdminBody extends Body {
 
     public function __construct($document) {
       parent::__construct($document);
@@ -56,14 +68,12 @@ namespace Documents\Admin {
 
       $document = $this->getDocument();
       if(!$document->getUser()->isLoggedIn()) {
-        $html .= new \Views\Login($document);
+        $html .= new Login($document);
       } else {
-        $html .= new \Views\Admin($document);
+        $html .= new Admin($document);
       }
 
       return $html;
     }
   }
 }
-
-?>

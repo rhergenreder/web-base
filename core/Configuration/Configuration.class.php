@@ -2,11 +2,14 @@
 
 namespace Configuration;
 
+use Error;
+use Objects\ConnectionData;
+
 class Configuration {
 
-  private $database;
-  private $mail;
-  private $jwt;
+  private ?ConnectionData $database;
+  private ?ConnectionData $mail;
+  private ?KeyData $jwt;
 
   function __construct() {
   }
@@ -34,7 +37,7 @@ class Configuration {
       }
 
       return $success;
-    } catch(\Error $e) {
+    } catch(Error $e) {
       die($e);
     }
   }
@@ -48,7 +51,7 @@ class Configuration {
     return file_exists($path);
   }
 
-  public function create($className, $data) {
+  public function create(string $className, $data) {
     $path = getClassPath("\\Configuration\\$className");
 
     if($data) {
@@ -59,22 +62,15 @@ class Configuration {
 
           namespace Configuration;
 
-          class $className {
-
-            private \$key;
-
+          class $className extends KeyData {
+          
             public function __construct() {
-              \$this->key = '$key';
+              parent::__construct('$key');
             }
-
-            public function getKey() {
-              return \$this->key;
-            }
-          }
-
-          ?>", false
+            
+          }", false
         );
-      } else {
+      } else if($data instanceof ConnectionData) {
         $superClass = get_class($data);
         $host = addslashes($data->getHost());
         $port = intval($data->getPort());
@@ -102,18 +98,17 @@ class Configuration {
 
           ?>", false
         );
+      } else {
+        return false;
       }
     } else {
-      $code = intendCode(
-        "<?php
-
-        ?>", false);
+      $code = "<?php";
     }
 
     return @file_put_contents($path, $code);
   }
 
-  public function delete($className) {
+  public function delete(string $className) {
     $path = getClassPath("\\Configuration\\$className");
     if(file_exists($path)) {
       return unlink($path);
@@ -121,6 +116,4 @@ class Configuration {
 
     return true;
   }
-};
-
-?>
+}

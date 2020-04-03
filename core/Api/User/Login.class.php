@@ -9,10 +9,10 @@ use \Driver\SQL\Condition\Compare;
 
 class Login extends Request {
 
-  private $startedAt;
+  private int $startedAt;
 
-  public function __construct($user, $externCall = false) {
-    parent::__construct($user, $externCall, array(
+  public function __construct($user, $externalCall = false) {
+    parent::__construct($user, $externalCall, array(
       'username' => new StringType('username', 32),
       'password' => new StringType('password'),
       'stayLoggedIn' => new Parameter('stayLoggedIn', Parameter::TYPE_BOOLEAN, true, true)
@@ -77,6 +77,4 @@ class Login extends Request {
 
     return $this->success;
   }
-};
-
-?>
+}

@@ -7,10 +7,10 @@ use \Driver\SQL\Condition\Compare;
 
 class Fetch extends Request {
 
-  private $notifications;
+  private array $notifications;
 
-  public function __construct($user, $externCall = false) {
-    parent::__construct($user, $externCall, array());
+  public function __construct($user, $externalCall = false) {
+    parent::__construct($user, $externalCall, array());
     $this->loginRequired = true;
   }
 
@@ -89,6 +89,4 @@ class Fetch extends Request {
 
     return $this->success;
   }
-};
-
-?>
+}

@@ -2,7 +2,9 @@
 
 namespace Elements;
 
-class Link extends Source {
+use View;
+
+class Link extends View {
 
   const STYLESHEET    = "stylesheet";
   const MIME_TEXT_CSS = "text/css";
@@ -23,20 +25,18 @@ class Link extends Source {
   // const REVEALJS_THEME_MOON       = "/css/reveal_moon.css";
   // const REVEALJS_THEME_BLACK      = "/css/reveal_black.css";
 
-  private $type;
-  private $rel;
+  private string $type;
+  private string $rel;
+  private string $href;
 
   function __construct($rel, $href, $type = "") {
-    parent::__construct('link', $href);
+    $this->href = $href;
     $this->type = $type;
     $this->rel = $rel;
   }
 
   function getCode() {
     $type = (empty($this->type) ? "" : " type=\"$this->type\"");
-    $link = "<link rel=\"$this->rel\" href=\"$this->url\" $type/>";
-    return $link;
+    return "<link rel=\"$this->rel\" href=\"$this->href\"$type/>";
   }
 }
-
-?>

@@ -1,14 +1,8 @@
 <?php
 
-function getClassPath($class, $suffix=true) {
-  $path = str_replace('\\', '/', $class);
-  $suffix = ($suffix ? ".class" : "");
-  return "core/$path$suffix.php";
-}
-
-function createError($msg) {
-  return json_encode(array("success" => false, "msg" => $msg));
-}
+include_once 'core/core.php';
+include_once 'core/datetime.php';
+include_once 'core/constants.php';
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {
@@ -18,10 +12,6 @@ spl_autoload_register(function($class) {
   else
     include_once getClassPath($class, false);
 });
-
-include_once 'core/core.php';
-include_once 'core/datetime.php';
-include_once 'core/constants.php';
 
 $config = new Configuration\Configuration();
 $installation = (!$config->load());

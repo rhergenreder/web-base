@@ -1,16 +1,24 @@
 <?php
 
 namespace Documents {
-  class Document404 extends \Elements\Document {
+
+  use Documents\Document404\Body404;
+  use Documents\Document404\Head404;
+  use Elements\Document;
+
+  class Document404 extends Document {
     public function __construct($user) {
-      parent::__construct($user, Document404\Head404::class, Document404\Body404::class);
+      parent::__construct($user, Head404::class, Body404::class);
     }
   }
 }
 
 namespace Documents\Document404 {
 
-  class Head404 extends \Elements\Head {
+  use Elements\Body;
+  use Elements\Head;
+
+  class Head404 extends Head {
 
     public function __construct($document) {
       parent::__construct($document);
@@ -43,7 +51,7 @@ namespace Documents\Document404 {
     }
   }
 
-  class Body404 extends \Elements\Body {
+  class Body404 extends Body {
 
     public function __construct($document) {
       parent::__construct($document);
@@ -56,5 +64,3 @@ namespace Documents\Document404 {
     }
   }
 }
-
-?>

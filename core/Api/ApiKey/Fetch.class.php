@@ -3,12 +3,13 @@
 namespace Api\ApiKey;
 
 use \Api\Request;
+use DateTime;
 use \Driver\SQL\Condition\Compare;
 
 class Fetch extends Request {
 
-  public function __construct($user, $externCall = false) {
-    parent::__construct($user, $externCall, array());
+  public function __construct($user, $externalCall = false) {
+    parent::__construct($user, $externalCall, array());
     $this->loginRequired = true;
   }
 
@@ -31,16 +32,20 @@ class Fetch extends Request {
     if($this->success) {
       $this->result["api_keys"] = array();
       foreach($res as $row) {
+        try {
+          $validUntil = (new DateTime($row["valid_until"]))->getTimestamp();
+        } catch (\Exception $e) {
+          $validUntil = $row["valid_until"];
+        }
+
         $this->result["api_keys"][] = array(
-          "uid" => $row["uid"],
-          "api_key" => $row["api_key"],
-          "valid_until" => (new \DateTime($row["valid_until"]))->getTimestamp(),
-        );
+            "uid" => $row["uid"],
+            "api_key" => $row["api_key"],
+            "valid_until" => $validUntil,
+          );
       }
     }
 
     return $this->success;
   }
-};
-
-?>
+}

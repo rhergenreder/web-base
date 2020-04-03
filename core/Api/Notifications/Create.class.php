@@ -9,8 +9,8 @@ use \Driver\SQL\Condition\Compare;
 
 class Create extends Request {
 
-  public function __construct($user, $externCall = false) {
-    parent::__construct($user, $externCall, array(
+  public function __construct($user, $externalCall = false) {
+    parent::__construct($user, $externalCall, array(
       'groupId' => new Parameter('groupId', Parameter::TYPE_INT, true),
       'userId' => new Parameter('userId', Parameter::TYPE_INT, true),
       'title' =>  new StringType('title', 32),
@@ -130,6 +130,4 @@ class Create extends Request {
 
     return $this->success;
   }
-};
-
-?>
+}

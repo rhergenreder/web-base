@@ -2,25 +2,28 @@
 
 namespace Objects;
 
-use \External\JWT;
-use Driver\SQL\Column\Column;
+use Api\SetLanguage;
+use Configuration\Configuration;
+use Exception;
+use External\JWT;
+use Driver\SQL\SQL;
 use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondBool;
 
 class User extends ApiObject {
 
-  private $sql;
-  private $configuration;
-  private $loggedIn;
-  private $session;
-  private $uid;
-  private $username;
-  private $language;
+  private ?SQL $sql;
+  private Configuration $configuration;
+  private bool $loggedIn;
+  private ?Session $session;
+  private int $uid;
+  private string $username;
+  private Language $language;
 
   public function __construct($configuration) {
     session_start();
     $this->configuration = $configuration;
-    $this->setLangauge(Language::DEFAULT_LANGUAGE());
+    $this->setLanguage(Language::DEFAULT_LANGUAGE());
     $this->reset();
     $this->connectDb();
     $this->parseCookies();
@@ -35,7 +38,9 @@ class User extends ApiObject {
   private function connectDb() {
     $databaseConf = $this->configuration->getDatabase();
     if($databaseConf) {
-      $this->sql = \Driver\SQL\SQL::createConnection($databaseConf);
+      $this->sql = SQL::createConnection($databaseConf);
+    } else {
+      $this->sql = null;
     }
   }
 
@@ -44,7 +49,7 @@ class User extends ApiObject {
   public function getUsername() { return $this->username; }
   public function getSQL() { return $this->sql; }
   public function getLanguage() { return $this->language; }
-  public function setLangauge($language) { $this->language = $language; $language->load(); }
+  public function setLanguage(Language $language) { $this->language = $language; $language->load(); }
   public function getSession() { return $this->session; }
   public function getConfiguration() { return $this->configuration; }
 
@@ -75,7 +80,7 @@ class User extends ApiObject {
     $this->uid = 0;
     $this->username = '';
     $this->loggedIn = false;
-    $this->session = false;
+    $this->session = null;
   }
 
   public function logout() {
@@ -90,8 +95,10 @@ class User extends ApiObject {
 
   public function updateLanguage($lang) {
     if($this->sql) {
-      $request = new \Api\SetLanguage($this);
+      $request = new SetLanguage($this);
       return $request->execute(array("langCode" => $lang));
+    } else {
+        return false;
     }
   }
 
@@ -130,7 +137,7 @@ class User extends ApiObject {
         if($sessionUpdate) $this->session->update();
         $this->loggedIn = true;
         if(!is_null($row['langId'])) {
-          $this->setLangauge(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
+          $this->setLanguage(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
         }
       }
     }
@@ -153,7 +160,7 @@ class User extends ApiObject {
             $this->readData($userId, $sessionId);
           }
         }
-      } catch(\Exception $e) {
+      } catch(Exception $e) {
         // ignored
       }
     }
@@ -187,7 +194,7 @@ class User extends ApiObject {
       ->leftJoin("Language", "User.language_id", "Language.uid")
       ->where(new Compare("ApiKey.api_key", $apiKey))
       ->where(new Compare("valid_until", $this->sql->currentTimestamp(), ">"))
-      ->where(new COmpare("ApiKey.active", 1))
+      ->where(new Compare("ApiKey.active", 1))
       ->execute();
 
     $success = ($res !== FALSE);
@@ -200,7 +207,7 @@ class User extends ApiObject {
         $this->username = $row['username'];
 
         if(!is_null($row['langId'])) {
-          $this->setLangauge(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
+          $this->setLanguage(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
         }
       }
     }
@@ -208,5 +215,3 @@ class User extends ApiObject {
     return $success;
   }
 }
-
-?>

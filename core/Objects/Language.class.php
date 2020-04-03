@@ -2,16 +2,18 @@
 
 namespace Objects {
 
-  class Language extends ApiObject {
+    use LanguageModule;
+
+    class Language extends ApiObject {
 
     const LANG_CODE_PATTERN = "/^[a-zA-Z]+_[a-zA-Z]+$/";
 
-    private $languageId;
-    private $langCode;
-    private $langName;
-    private $modules;
+    private int $languageId;
+    private string $langCode;
+    private string $langName;
+    private array $modules;
 
-    protected $entries;
+    protected array $entries;
 
     public function __construct($languageId, $langCode, $langName) {
       $this->languageId = $languageId;
@@ -29,7 +31,7 @@ namespace Objects {
     public function getEntries() { return $this->entries; }
     public function getModules() { return $this->modules; }
 
-    public function loadModule($module) {
+    public function loadModule(LanguageModule $module) {
       if(!is_object($module))
         $module = new $module;
 
@@ -100,7 +102,8 @@ namespace Objects {
 }
 
 namespace {
-  function L($key) {
+
+    function L($key) {
     if(!array_key_exists('LANGUAGE', $GLOBALS))
       return $key;
 
@@ -132,4 +135,3 @@ namespace {
     return $LANGUAGE->getShortCode();
   }
 }
-?>

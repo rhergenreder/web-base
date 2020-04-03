@@ -2,14 +2,16 @@
 
 namespace Elements;
 
+use Objects\User;
+
 abstract class Document {
 
-  protected $head;
-  protected $body;
-  protected $user;
-  protected $databaseRequired;
+  protected Head $head;
+  protected Body $body;
+  protected User $user;
+  protected bool $databaseRequired;
 
-  public function __construct($user, $headClass, $bodyClass) {
+  public function __construct(User $user, $headClass, $bodyClass) {
     $this->head = new $headClass($this);
     $this->body = new $bodyClass($this);
     $this->user = $user;
@@ -27,30 +29,6 @@ abstract class Document {
 
   public static function createSearchableDocument($documentClass, $user) {
     return new $documentClass($user);
-  }
-
-  public static function createDocument($class) {
-    // TODO: check instance, configuration, ..
-
-    require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/sql.php';
-    // require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/conf/config.php';
-    // require_once realpath($_SERVER['DOCUMENT_ROOT']) . "/php/pages/$file.php";
-    require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/api/objects/User.php';
-
-    $connectionData = getSqlData($database);
-    $sql = connectSQL($connectionData);
-    if(!$sql->isConnected()) {
-      http_response_code(500);
-      die('Internal Database error');
-    }
-
-    $user = new CUser($sql);
-    $document = new $class($user);
-    $code = $document->getCode();
-
-    $document->sendHeaders();
-    $user->sendCookies();
-    die($code);
   }
 
   function getCode() {
@@ -75,6 +53,4 @@ abstract class Document {
     return $html;
   }
 
-};
-
-?>
+}

@@ -1,9 +1,14 @@
 <?php
 
 namespace Documents {
-  class Install extends \Elements\Document {
+
+  use Documents\Install\InstallBody;
+  use Documents\Install\InstallHead;
+  use Elements\Document;
+
+  class Install extends Document {
     public function __construct($user) {
-      parent::__construct($user, Install\Head::class, Install\Body::class);
+      parent::__construct($user, InstallHead::class, InstallBody::class);
       $this->databaseRequired = false;
     }
   }
@@ -11,7 +16,18 @@ namespace Documents {
 
 namespace Documents\Install {
 
-  class Head extends \Elements\Head {
+  use Api\Notifications\Create;
+  use Configuration\CreateDatabase;
+  use Driver\SQL\SQL;
+  use Elements\Body;
+  use Elements\Head;
+  use Elements\Link;
+  use Elements\Script;
+  use External\PHPMailer\Exception;
+  use External\PHPMailer\PHPMailer;
+  use Objects\ConnectionData;
+
+  class InstallHead extends Head {
 
     public function __construct($document) {
       parent::__construct($document);
@@ -21,9 +37,9 @@ namespace Documents\Install {
       $this->loadJQuery();
       $this->loadBootstrap();
       $this->loadFontawesome();
-      $this->addJS(\Elements\Script::CORE);
-      $this->addCSS(\Elements\Link::CORE);
-      $this->addJS(\Elements\Script::INSTALL);
+      $this->addJS(Script::CORE);
+      $this->addCSS(Link::CORE);
+      $this->addJS(Script::INSTALL);
     }
 
     protected function initMetas() {
@@ -46,27 +62,31 @@ namespace Documents\Install {
 
   }
 
-  class Body extends \Elements\Body {
+  class InstallBody extends Body {
 
     // Status enum
     const NOT_STARTED = 0;
     const PENDING = 1;
-    const SUCCESFULL = 2;
+    const SUCCESSFUL = 2;
     const ERROR = 3;
 
     // Step enum
-    const CHECKING_REQUIRMENTS = 1;
+    const CHECKING_REQUIREMENTS = 1;
     const DATABASE_CONFIGURATION = 2;
     const CREATE_USER = 3;
     const ADD_MAIL_SERVICE = 4;
     const FINISH_INSTALLATION = 5;
 
     //
-    private $errorString;
+    private string $errorString;
+    private int $currentStep;
+    private array $steps;
 
     function __construct($document) {
       parent::__construct($document);
       $this->errorString = "";
+      $this->currentStep = InstallBody::CHECKING_REQUIREMENTS;
+      $this->steps = array();
     }
 
     private function getParameter($name) {
@@ -80,7 +100,7 @@ namespace Documents\Install {
     private function getCurrentStep() {
 
       if(!$this->checkRequirements()["success"]) {
-        return self::CHECKING_REQUIRMENTS;
+        return self::CHECKING_REQUIREMENTS;
       }
 
       $user = $this->getDocument()->getUser();
@@ -109,7 +129,7 @@ namespace Documents\Install {
         if(!$config->isFilePresent("JWT") && !$config->create("JWT", generateRandomString(32))) {
           $this->errorString = "Unable to create jwt file";
         } else {
-          $req = new \Api\Notifications\Create($user);
+          $req = new Create($user);
           $success = $req->execute(array(
             "title" => "Welcome",
             "message" => "Your Web-base was successfully installed. Check out the admin dashboard. Have fun!",
@@ -145,8 +165,8 @@ namespace Documents\Install {
         }
       }
 
-      if(version_compare(PHP_VERSION, '7.1', '<')) {
-          $failedRequirements[] = "PHP Version <b>>= 7.1</b> is required. Got: <b>" . PHP_VERSION . "</b>";
+      if(version_compare(PHP_VERSION, '7.4', '<')) {
+          $failedRequirements[] = "PHP Version <b>>= 7.4</b> is required. Got: <b>" . PHP_VERSION . "</b>";
           $success = false;
       }
 
@@ -213,14 +233,14 @@ namespace Documents\Install {
         $msg = "Unsupported database type. Must be one of: " . implode(", ", $supportedTypes);
         $success = false;
       } else {
-        $connectionData = new \Objects\ConnectionData($host, $port, $username, $password);
+        $connectionData = new ConnectionData($host, $port, $username, $password);
         $connectionData->setProperty('database', $database);
         $connectionData->setProperty('encoding', $encoding);
         $connectionData->setProperty('type', $type);
-        $sql = \Driver\SQL\SQL::createConnection($connectionData);
+        $sql = SQL::createConnection($connectionData);
         $success = false;
-        if(!($sql instanceof \Driver\SQL\SQL)) {
-          $msg = "Error connecting to database: " . str($sql);
+        if(is_string($sql)) {
+          $msg = "Error connecting to database: $sql";
         } else if(!$sql->isConnected()) {
           if (!$sql->checkRequirements()["success"]) {
             $driverName = $sql->getDriverName();
@@ -234,7 +254,7 @@ namespace Documents\Install {
 
           $msg = "";
           $success = true;
-          $queries = \Configuration\CreateDatabase::createQueries($sql);
+          $queries = CreateDatabase::createQueries($sql);
           foreach($queries as $query) {
             if (!($res = $query->execute())) {
               $msg = "Error creating tables: " . $sql->getLastError();
@@ -375,7 +395,7 @@ namespace Documents\Install {
         } else {
           $success = false;
 
-          $mail = new \External\PHPMailer\PHPMailer(true);
+          $mail = new PHPMailer(true);
           $mail->IsSMTP();
           $mail->SMTPAuth = true;
           $mail->Username = $username;
@@ -395,12 +415,12 @@ namespace Documents\Install {
               $msg = "";
               $mail->smtpClose();
             }
-          } catch(\External\PHPMailer\Exception $error) {
+          } catch(Exception $error) {
             $msg = "Could not connect to SMTP Server: " . $error->errorMessage();
           }
 
           if($success) {
-            $connectionData = new \Objects\ConnectionData($address, $port, $username, $password);
+            $connectionData = new ConnectionData($address, $port, $username, $password);
             if(!$user->getConfiguration()->create("Mail", $connectionData)) {
               $success = false;
               $msg = "Unable to create file";
@@ -416,7 +436,7 @@ namespace Documents\Install {
 
       switch($this->currentStep) {
 
-        case self::CHECKING_REQUIRMENTS:
+        case self::CHECKING_REQUIREMENTS:
           return $this->checkRequirements();
 
         case self::DATABASE_CONFIGURATION:
@@ -451,7 +471,7 @@ namespace Documents\Install {
             $statusColor = "muted";
             break;
 
-          case self::SUCCESFULL:
+          case self::SUCCESSFUL:
             $statusIcon  = '<i class="fas fa-check-circle"></i>';
             $statusText  = "Successfull";
             $statusColor = "success";
@@ -552,7 +572,7 @@ namespace Documents\Install {
     private function createProgessMainview() {
 
       $views = array(
-        self::CHECKING_REQUIRMENTS => array(
+        self::CHECKING_REQUIREMENTS => array(
           "title" => "Application Requirements",
           "progressText" => "Checking requirements, please wait a moment…"
         ),
@@ -661,7 +681,7 @@ namespace Documents\Install {
       );
 
       if($this->currentStep != self::FINISH_INSTALLATION) {
-        if ($this->currentStep == self::CHECKING_REQUIRMENTS) {
+        if ($this->currentStep == self::CHECKING_REQUIREMENTS) {
           $buttons[] = array("title" => "Retry", "type" => "success", "id" => "btnRetry", "float" => "right");
         } else {
           $buttons[] = array("title" => "Submit", "type" => "success", "id" => "btnSubmit", "float" => "right");
@@ -706,7 +726,7 @@ namespace Documents\Install {
       $html = parent::getCode();
 
       $this->steps = array(
-        self::CHECKING_REQUIRMENTS => array(
+        self::CHECKING_REQUIREMENTS => array(
           "title" => "Checking requirements",
           "status" => self::ERROR
         ),
@@ -731,12 +751,12 @@ namespace Documents\Install {
       $this->currentStep = $this->getCurrentStep();
 
       // set status
-      for($step = self::CHECKING_REQUIRMENTS; $step < $this->currentStep; $step++) {
-        $this->steps[$step]["status"] = self::SUCCESFULL;
+      for($step = self::CHECKING_REQUIREMENTS; $step < $this->currentStep; $step++) {
+        $this->steps[$step]["status"] = self::SUCCESSFUL;
       }
 
       if($this->currentStep == self::FINISH_INSTALLATION) {
-        $this->steps[$this->currentStep]["status"] = self::SUCCESFULL;
+        $this->steps[$this->currentStep]["status"] = self::SUCCESSFUL;
       }
 
       // POST
@@ -783,7 +803,4 @@ namespace Documents\Install {
     }
 
   }
-
 }
-
-?>

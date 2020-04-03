@@ -2,7 +2,7 @@
 
 namespace Elements;
 
-class Script extends Source {
+class Script extends \View {
 
   const MIME_TEXT_JAVASCRIPT    = "text/javascript";
 
@@ -32,11 +32,11 @@ class Script extends Source {
 
   const HIGHLIGHT_JS_LOADER = "\$(document).ready(function(){\$('code').each(function(i, block) { hljs.highlightBlock(block); }); })";
 
-  private $type;
-  private $content;
+  private string $type;
+  private string $content;
+  private string $url;
 
   function __construct($type, $src, $content = "") {
-    parent::__construct('script', $src);
     $this->type = $type;
     $this->content = $content;
   }
@@ -49,5 +49,3 @@ class Script extends Source {
     return $script;
   }
 }
-
-?>

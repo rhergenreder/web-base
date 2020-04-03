@@ -2,6 +2,10 @@
 
 Web-Base is a php framework which provides basic web functionalities.
 
+### Requirements
+- PHP >= 7.4
+- One of these php extensions: mysqli, postgres
+
 ### Current Functionalities:
 - Installation Guide with automatic database setup
 - REST API

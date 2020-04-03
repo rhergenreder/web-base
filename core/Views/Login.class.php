@@ -2,7 +2,9 @@
 
 namespace Views;
 
-class Login extends \View {
+use View;
+
+class Login extends View {
   public function __construct($document) {
     parent::__construct($document);
   }
@@ -28,7 +30,7 @@ class Login extends \View {
         </div>';
     }
 
-    $html = "
+    $html .= "
       <div class=\"container margin-top-xxl\">
         <div class=\"title text-center\">
           <h2>Admin Control Panel</h2>
@@ -51,5 +53,3 @@ class Login extends \View {
     return $html;
   }
 }
-
-?>

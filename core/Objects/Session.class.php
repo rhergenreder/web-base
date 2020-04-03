@@ -2,21 +2,24 @@
 
 namespace Objects;
 
+use DateTime;
 use \Driver\SQL\Condition\Compare;
+use Exception;
+use External\JWT;
 
 class Session extends ApiObject {
 
   const DURATION = 120;
 
-  private $sessionId;
-  private $user;
-  private $expires;
-  private $ipAddress;
-  private $os;
-  private $browser;
-  private $stayLoggedIn;
+  private ?int $sessionId;
+  private User $user;
+  private int $expires;
+  private string $ipAddress;
+  private ?string $os;
+  private ?string $browser;
+  private bool $stayLoggedIn;
 
-  public function __construct($user, $sessionId) {
+  public function __construct(User $user, ?int $sessionId) {
     $this->user = $user;
     $this->sessionId = $sessionId;
     $this->stayLoggedIn = true;
@@ -38,7 +41,7 @@ class Session extends ApiObject {
       $userAgent = @get_browser($_SERVER['HTTP_USER_AGENT'], true);
       $this->os = $userAgent['platform'] ?? "Unknown";
       $this->browser = $userAgent['parent'] ?? "Unknown";
-    } catch(\Exception $ex) {
+    } catch(Exception $ex) {
       $this->os = "Unknown";
       $this->browser = "Unknown";
     }
@@ -59,7 +62,7 @@ class Session extends ApiObject {
     $jwt = $this->user->getConfiguration()->getJwt();
     if($jwt) {
       $token = array('userId' => $this->user->getId(), 'sessionId' => $this->sessionId);
-      $sessionCookie = \External\JWT::encode($token, $jwt->getKey());
+      $sessionCookie = JWT::encode($token, $jwt->getKey());
       $secure = strcmp(getProtocol(), "https") === 0;
       setcookie('session', $sessionCookie, $this->getExpiresTime(), "/", "", $secure);
     }
@@ -94,7 +97,7 @@ class Session extends ApiObject {
     $success = $sql
       ->insert("Session", $columns)
       ->addRow(
-        (new \DateTime)->modify("+$hours hour"),
+        (new DateTime())->modify("+$hours hour"),
         $this->user->getId(),
         $this->ipAddress,
         $this->os,
@@ -113,13 +116,11 @@ class Session extends ApiObject {
   }
 
   public function destroy() {
-    $success = $this->user->getSQL()->update("Session")
+    return $this->user->getSQL()->update("Session")
       ->set("active", false)
       ->where(new Compare("Session.uid", $this->sessionId))
       ->where(new Compare("Session.user_id", $this->user->getId()))
       ->execute();
-
-    return $success;
   }
 
   public function update() {
@@ -127,8 +128,8 @@ class Session extends ApiObject {
     $hours = Session::DURATION;
 
     $sql = $this->user->getSQL();
-    $success = $sql->update("Session")
-      ->set("Session.expires", (new \DateTime)->modify("+$hours hour"))
+    return $sql->update("Session")
+      ->set("Session.expires", (new DateTime())->modify("+$hours hour"))
       ->set("Session.ipAddress", $this->ipAddress)
       ->set("Session.os", $this->os)
       ->set("Session.browser", $this->browser)
@@ -136,9 +137,5 @@ class Session extends ApiObject {
       ->where(new Compare("Session.uid", $this->sessionId))
       ->where(new Compare("Session.user_id", $this->user->getId()))
       ->execute();
-
-    return $success;
   }
 }
-
-?>

@@ -2,30 +2,32 @@
 
 namespace Api;
 
+use Objects\User;
+
 class Request {
 
-  protected $user;
-  protected $params;
-  protected $lastError;
-  protected $result;
-  protected $success;
-  protected $isPublic;
-  protected $loginRequired;
-  protected $variableParamCount;
-  protected $isDisabled;
-  protected $apiKeyAllowed;
+  protected User $user;
+  protected array $params;
+  protected string $lastError;
+  protected array $result;
+  protected bool $success;
+  protected bool $isPublic;
+  protected bool $loginRequired;
+  protected bool $variableParamCount;
+  protected bool $isDisabled;
+  protected bool $apiKeyAllowed;
 
-  private $aDefaultParams;
-  private $allowedMethods;
-  private $externCall;
+  private array $aDefaultParams;
+  private array $allowedMethods;
+  private bool $externCall;
 
-  public function __construct($user, $externCall = false, $params = array()) {
+  public function __construct(User $user, bool $externalCall = false, array $params = array()) {
     $this->user = $user;
     $this->aDefaultParams = $params;
     $this->lastError = '';
     $this->success = false;
     $this->result = array();
-    $this->externCall = $externCall;
+    $this->externCall = $externalCall;
     $this->isPublic = true;
     $this->isDisabled = false;
     $this->loginRequired = false;
@@ -38,19 +40,6 @@ class Request {
     if (($key = array_search($method, $this->allowedMethods)) !== false) {
         unset($this->allowedMethods[$key]);
     }
-  }
-
-  public function getParamsString() {
-    $str = "";
-    $count = count($this->params);
-    $i = 0;
-    foreach($this->params as $param) {
-      $str .= $param->toString();
-      if($i < $count - 1) $str .= ", ";
-      $i++;
-    }
-
-    return "($str)";
   }
 
   public function parseParams($values) {
@@ -149,47 +138,24 @@ class Request {
     return true;
   }
 
-  protected function isValidString($str, $regex) {
-    return preg_replace($regex, "", $str) === $str;
-  }
-
   protected function createError($err) {
     $this->success = false;
     $this->lastError = $err;
     return false;
   }
-  //
-  // public static function callDirectly($class, $db) {
-  //   header('Content-Type: application/json');
-  //   require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/api/objects/User.php';
-  //   require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/sql.php';
-  //   require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/conf/sql.php';
-  //
-  //   $sql = connectSQL(getSqlData($db));
-  //   $user = new CUser($sql);
-  //   $request = new $class($user, true);
-  //   $request->execute();
-  //   $sql->close();
-  //   $user->sendCookies();
-  //   return $request->getJsonResult();
-  // }
 
   protected function getParam($name) { return isset($this->params[$name]) ? $this->params[$name]->value : NULL; }
+
   public function isPublic() { return $this->isPublic; }
-  public function getDescription() { return ''; }
-  public function getSection() { return 'Default'; }
   public function getLastError() { return $this->lastError; }
   public function getResult() { return $this->result; }
   public function success() { return $this->success; }
   public function loginRequired() { return $this->loginRequired; }
-  public function isExternCall() { return $this->externCall; }
+  public function isExternalCall() { return $this->externCall; }
 
   public function getJsonResult() {
     $this->result['success'] = $this->success;
     $this->result['msg'] = $this->lastError;
     return json_encode($this->result);
   }
-};
-
-
-?>
+}

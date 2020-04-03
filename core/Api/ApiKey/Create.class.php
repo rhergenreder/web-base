@@ -3,10 +3,11 @@
 namespace Api\ApiKey;
 
 use \Api\Request;
+
 class Create extends Request {
 
-  public function __construct($user, $externCall = false) {
-    parent::__construct($user, $externCall, array());
+  public function __construct($user, $externalCall = false) {
+    parent::__construct($user, $externalCall, array());
     $this->apiKeyAllowed = false;
     $this->loginRequired = true;
   }
@@ -39,6 +40,4 @@ class Create extends Request {
     }
     return $this->success;
   }
-};
-
-?>
+}

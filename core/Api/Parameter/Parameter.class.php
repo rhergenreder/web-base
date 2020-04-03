@@ -2,6 +2,8 @@
 
 namespace Api\Parameter;
 
+use DateTime;
+
 class Parameter {
   const TYPE_INT       = 0;
   const TYPE_FLOAT     = 1;
@@ -18,11 +20,11 @@ class Parameter {
 
   const names = array('Integer', 'Float', 'Boolean', 'String', 'Date', 'Time', 'DateTime', 'E-Mail', 'Raw', 'Array');
 
-  public $name;
+  public string $name;
   public $value;
   public $optional;
-  public $type;
-  public $typeName;
+  public int $type;
+  public string $typeName;
 
   public function __construct($name, $type, $optional = FALSE, $defaultValue = NULL) {
     $this->name = $name;
@@ -59,11 +61,11 @@ class Parameter {
       return Parameter::TYPE_BOOLEAN;
     else if(is_a($value, 'DateTime'))
       return Parameter::TYPE_DATE_TIME;
-    else if(($d = \DateTime::createFromFormat('Y-m-d', $value)) && $d->format('Y-m-d') === $value)
+    else if(($d = DateTime::createFromFormat('Y-m-d', $value)) && $d->format('Y-m-d') === $value)
       return Parameter::TYPE_DATE;
-    else if(($d = \DateTime::createFromFormat('H:i:s', $value)) && $d->format('H:i:s') === $value)
+    else if(($d = DateTime::createFromFormat('H:i:s', $value)) && $d->format('H:i:s') === $value)
       return Parameter::TYPE_TIME;
-    else if(($d = \DateTime::createFromFormat('Y-m-d H:i:s', $value)) && $d->format('Y-m-d H:i:s') === $value)
+    else if(($d = DateTime::createFromFormat('Y-m-d H:i:s', $value)) && $d->format('Y-m-d H:i:s') === $value)
       return Parameter::TYPE_DATE_TIME;
     else if (filter_var($value, FILTER_VALIDATE_EMAIL))
       return Parameter::TYPE_EMAIL;
@@ -157,5 +159,3 @@ class Parameter {
     }
   }
 }
-
-?>

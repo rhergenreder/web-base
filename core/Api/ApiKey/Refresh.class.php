@@ -8,8 +8,8 @@ use \Driver\SQL\Condition\Compare;
 
 class Refresh extends Request {
 
-  public function __construct($user, $externCall = false) {
-    parent::__construct($user, $externCall, array(
+  public function __construct($user, $externalCall = false) {
+    parent::__construct($user, $externalCall, array(
       "id" => new Parameter("id", Parameter::TYPE_INT),
     ));
     $this->loginRequired = true;
@@ -62,6 +62,4 @@ class Refresh extends Request {
 
     return $this->success;
   }
-};
-
-?>
+}

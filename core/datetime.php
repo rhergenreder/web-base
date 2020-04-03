@@ -1,5 +1,26 @@
 <?php
 
+function setTimezone($default) {
+  $timezone = "";
+  if (is_link("/etc/localtime")) {
+    $filename = readlink("/etc/localtime");
+    $pos = strpos($filename, "zoneinfo");
+    if ($pos) {
+      $timezone = substr($filename, $pos + strlen("zoneinfo/"));
+    } else {
+      $timezone = $default;
+    }
+  } else {
+    $timezone = file_get_contents("/etc/timezone");
+    if (!strlen($timezone)) {
+      $timezone = $default;
+    }
+  }
+  date_default_timezone_set($timezone);
+}
+
+setTimezone("UTC");
+
 function getFirstWeekDayOfMonth($d = NULL) {
   if(is_null($d)) $d = date('Y-m-d H:i:s');
   $dt = new DateTime($d);
@@ -58,8 +79,8 @@ function formatPeriod($d1, $d2) {
 
 function now() { return new DateTime(); }
 function getTime($d = NULL) { return dateFunction('H:i', $d); }
-function getHour($d = NULL){ return dateFunction('H', $d); }
-function getMinute($d = NULL){ return dateFunction('i', $d); }
+function getHour($d = NULL) { return dateFunction('H', $d); }
+function getMinute($d = NULL) { return dateFunction('i', $d); }
 function getYear($d = NULL) { return intval(dateFunction('Y', $d)); }
 function getMonth($d = NULL) { return intval(dateFunction('n', $d)); }
 function getDay($d = NULL) { return intval(dateFunction('d', $d)); }
@@ -118,4 +139,25 @@ function dateFunction($str, $d = NULL) {
   return $d->format($str);
 }
 
-?>
+function getPeriodString($d) {
+  if(!is_a($d, "DateTime")) $d = new DateTime($d);
+  $diff = datetimeDiff(new DateTime(), $d);
+  $diff = abs($diff);
+
+
+  if ($diff < 60) {
+    $str = "< %d min";
+    $diff = 1;
+  } else if($diff < 60*60) {
+    $diff = intval($diff / 60);
+    $str = "%d min.";
+  } else if($diff < 60*60*24) {
+    $diff = intval($diff / (60*60));
+    $str = "%d h.";
+  } else {
+    $diff = intval($diff / (60*60*24));
+    $str = "%d d.";
+  }
+
+  return L(sprintf($str, $diff));
+}

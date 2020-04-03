@@ -2,15 +2,17 @@
 
 namespace Elements;
 
-abstract class Head extends \View {
+use View;
 
-  protected $sources;
-  protected $title;
-  protected $metas;
-  protected $rawFields;
-  protected $keywords;
-  protected $description;
-  protected $baseUrl;
+abstract class Head extends View {
+
+  protected array $sources;
+  protected string $title;
+  protected array $metas;
+  protected array $rawFields;
+  protected array $keywords;
+  protected string $description;
+  protected string $baseUrl;
 
   function __construct($document) {
     parent::__construct($document);
@@ -54,19 +56,6 @@ abstract class Head extends \View {
     $this->addCSS(Link::FONTAWESOME);
   }
 
-  public function loadSyntaxHighlighting() {
-    $this->addJS(Script::HIGHLIGHT);
-    $this->addJSCode(Script::HIGHLIGHT_JS_LOADER);
-    $this->addCSS(Link::HIGHLIGHT);
-    $this->addCSS(Link::HIGHLIGHT_THEME);
-  }
-
-  public function loadJQueryTerminal($unixFormatting = true) {
-    $this->addJS(Script::JQUERY_TERMINAL);
-    if($unixFormatting) $this->addJS(Script::JQUERY_TERMINAL_UNIX);
-    $this->addCSS(Link::JQUERY_TERMINAL);
-  }
-
   public function loadGoogleRecaptcha($siteKey) {
     $this->addJS("https://www.google.com/recaptcha/api.js?render=$siteKey");
   }
@@ -78,11 +67,6 @@ abstract class Head extends \View {
   public function loadBootstrap() {
     $this->addCSS(Link::BOOTSTRAP);
     $this->addJS(Script::BOOTSTRAP);
-  }
-
-  public function loadChartJS() {
-    $this->addJS(Script::MOMENT);
-    $this->addJS(Script::CHART);
   }
 
   public function getCode() {
@@ -123,4 +107,3 @@ abstract class Head extends \View {
     return $header;
   }
 }
-?>

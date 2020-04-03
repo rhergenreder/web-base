@@ -4,8 +4,8 @@ namespace Api;
 
 class GetLanguages extends Request {
 
-  public function __construct($user, $externCall = false) {
-    parent::__construct($user, $externCall, array());
+  public function __construct($user, $externalCall = false) {
+    parent::__construct($user, $externalCall, array());
   }
 
   public function execute($values = array()) {
@@ -34,6 +34,4 @@ class GetLanguages extends Request {
 
     return $this->success;
   }
-};
-
-?>
+}

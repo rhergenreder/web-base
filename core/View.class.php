@@ -1,18 +1,19 @@
 <?php
 
+use Elements\Document;
+
 abstract class View {
 
-  private $document;
-  private $loadView;
-  protected $searchable;
-  protected $reference;
-  protected $title;
-  protected $langModules;
+  private Document $document;
+  private bool $loadView;
+  protected bool $searchable;
+  protected string $reference;
+  protected string $title;
+  protected array $langModules;
 
-  public function __construct($document, $loadView = true) {
+  public function __construct(Document $document, $loadView = true) {
     $this->document = $document;
     $this->searchable = false;
-    $this->printable = false;
     $this->reference = "";
     $this->title = "Untitled View";
     $this->langModules = array();
@@ -224,7 +225,4 @@ abstract class View {
     $hidden = ($hidden?" hidden" : "");
     return "<div class=\"alert alert-$type$hidden\" role=\"alert\"$id>$text</div>";
   }
-};
-
-
-?>
+}

@@ -6,13 +6,14 @@ use Api\Parameter\Parameter;
 use Api\Parameter\StringType;
 use Driver\SQL\Condition\CondOr;
 use Driver\SQL\Condition\Compare;
+use Objects\Language;
 
 class SetLanguage extends Request {
 
-  private $language;
+  private Language $language;
 
-  public function __construct($user, $externCall = false) {
-    parent::__construct($user, $externCall, array(
+  public function __construct($user, $externalCall = false) {
+    parent::__construct($user, $externalCall, array(
       'langId' => new Parameter('langId', Parameter::TYPE_INT, true, NULL),
       'langCode' => new StringType('langCode', 5, true, NULL),
     ));
@@ -40,7 +41,7 @@ class SetLanguage extends Request {
         return $this->createError(L("This Language does not exist"));
       } else {
         $row = $res[0];
-        $this->language = \Objects\Language::newInstance($row['uid'], $row['code'], $row['name']);
+        $this->language = Language::newInstance($row['uid'], $row['code'], $row['name']);
         if(!$this->language) {
           return $this->createError(L("Error while loading language"));
         }
@@ -75,9 +76,7 @@ class SetLanguage extends Request {
       $this->updateLanguage();
     }
 
-    $this->user->setLangauge($this->language);
+    $this->user->setLanguage($this->language);
     return $this->success;
   }
-};
-
-?>
+}

@@ -6,8 +6,8 @@ use \Api\Request;
 
 class Logout extends Request {
 
-  public function __construct($user, $externCall = false) {
-    parent::__construct($user, $externCall);
+  public function __construct($user, $externalCall = false) {
+    parent::__construct($user, $externalCall);
     $this->loginRequired = true;
     $this->apiKeyAllowed = false;
   }
@@ -21,6 +21,4 @@ class Logout extends Request {
     $this->lastError = $this->user->getSQL()->getLastError();
     return $this->success;
   }
-};
-
-?>
+}

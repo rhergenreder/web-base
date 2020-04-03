@@ -2,6 +2,8 @@
 
 namespace Driver\SQL\Query;
 
+use Driver\SQL\Condition\CondOr;
+
 class Update extends Query {
 
   private array $values;
@@ -16,7 +18,7 @@ class Update extends Query {
   }
 
   public function where(...$conditions) {
-    $this->conditions = array_merge($this->conditions, $conditions);
+    $this->conditions[] = (count($conditions) === 1 ? $conditions : new CondOr($conditions));
     return $this;
   }
 

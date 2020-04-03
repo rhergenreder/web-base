@@ -2,6 +2,7 @@
 
 namespace Driver\SQL\Query;
 
+use Driver\SQL\Condition\CondOr;
 use Driver\SQL\Join;
 
 class Select extends Query {
@@ -33,7 +34,7 @@ class Select extends Query {
   }
 
   public function where(...$conditions) {
-    $this->conditions = array_merge($this->conditions, $conditions);
+    $this->conditions[] = (count($conditions) === 1 ? $conditions : new CondOr($conditions));
     return $this;
   }
 

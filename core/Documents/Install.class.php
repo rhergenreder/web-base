@@ -17,6 +17,7 @@ namespace Documents {
 namespace Documents\Install {
 
   use Api\Notifications\Create;
+  use Api\Parameter\Parameter;
   use Configuration\CreateDatabase;
   use Driver\SQL\SQL;
   use Elements\Body;
@@ -289,8 +290,8 @@ namespace Documents\Install {
       $username = $this->getParameter("username");
       $password = $this->getParameter("password");
       $confirmPassword = $this->getParameter("confirmPassword");
+      $email = $this->getParameter("email") ?? "";
 
-      $msg = $this->errorString;
       $success = true;
       $missingInputs = array();
 
@@ -321,13 +322,16 @@ namespace Documents\Install {
       } else if(strlen($password) < 6) {
         $msg = "The password should be at least 6 characters long";
         $success = false;
+      } else if($email && Parameter::parseType($email) !== Parameter::TYPE_EMAIL) {
+        $msg = "Invalid email address";
+        $success = false;
       } else {
         $salt = generateRandomString(16);
         $hash = hash('sha256', $password . $salt);
         $sql = $user->getSQL();
 
-        $success = $sql->insert("User", array("name", "salt", "password"))
-          ->addRow($username, $salt, $hash)
+        $success = $sql->insert("User", array("name", "salt", "password", "email"))
+          ->addRow($username, $salt, $hash, $email)
           ->returning("uid")
           ->execute()
           && $sql->insert("UserGroup", array("group_id", "user_id"))
@@ -606,6 +610,7 @@ namespace Documents\Install {
           "title" => "Create a User",
           "form" => array(
             array("title" => "Username", "name"  => "username", "type"  => "text", "required" => true),
+            array("title" => "Email", "name"  => "email", "type"  => "text"),
             array("title" => "Password", "name"  => "password", "type"  => "password", "required" => true),
             array("title" => "Confirm Password", "name"  => "confirmPassword", "type"  => "password", "required" => true),
           ),
@@ -704,7 +709,7 @@ namespace Documents\Install {
         $id = $button["id"];
         $float = $button["float"];
         $disabled = (isset($button["disabled"]) && $button["disabled"]) ? " disabled" : "";
-        $button = "<button type=\"button\" id=\"$id\" class=\"btn btn-$type margin-xs\"$disabled>$title</button>";
+        $button = "<button type=\"button\" id=\"$id\" class=\"btn btn-$type m-1\"$disabled>$title</button>";
 
         if($float === "left") {
           $buttonsLeft .= $button;

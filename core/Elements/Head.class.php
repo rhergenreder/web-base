@@ -2,8 +2,6 @@
 
 namespace Elements;
 
-use View;
-
 abstract class Head extends View {
 
   protected array $sources;
@@ -47,7 +45,7 @@ abstract class Head extends View {
   public function addKeywords($keywords) { array_merge($this->keywords, $keywords); }
   public function getTitle() { return $this->title; }
 
-  public function addCSS($href, $type = Link::MIME_TEXT_CSS)  { $this->sources[] = new Link("stylesheet", $href, $type); }
+  public function addCSS($href, $type = Link::MIME_TEXT_CSS)  { $this->sources[] = new Link(Link::STYLESHEET, $href, $type); }
   public function addStyle($style) { $this->sources[] = new Style($style); }
   public function addJS($url) { $this->sources[] = new Script(Script::MIME_TEXT_JAVASCRIPT, $url, ""); }
   public function addJSCode($code) { $this->sources[] = new Script(Script::MIME_TEXT_JAVASCRIPT, "", $code); }

@@ -10,7 +10,7 @@ class ApiTestCase(PhpTest):
             # ApiKeys
             "Testing get api keys empty…": self.test_get_api_keys_empty,
             "Testing create api key…": self.test_create_api_key,
-            "Testing referesh api key…": self.test_refresh_api_key,
+            "Testing refresh api key…": self.test_refresh_api_key,
             "Testing revoke api key…": self.test_revoke_api_key,
 
             # Notifications

@@ -9,7 +9,8 @@ use External\JWT;
 
 class Session extends ApiObject {
 
-  const DURATION = 120;
+  # in minutes
+  const DURATION = 60*24;
 
   private ?int $sessionId;
   private User $user;
@@ -91,13 +92,13 @@ class Session extends ApiObject {
     $this->updateMetaData();
     $sql = $this->user->getSQL();
 
-    $hours = Session::DURATION;
+    $minutes = Session::DURATION;
     $columns = array("expires", "user_id", "ipAddress", "os", "browser", "data", "stay_logged_in");
 
     $success = $sql
       ->insert("Session", $columns)
       ->addRow(
-        (new DateTime())->modify("+$hours hour"),
+        (new DateTime())->modify("+$minutes minute"),
         $this->user->getId(),
         $this->ipAddress,
         $this->os,
@@ -125,11 +126,11 @@ class Session extends ApiObject {
 
   public function update() {
     $this->updateMetaData();
-    $hours = Session::DURATION;
+    $minutes = Session::DURATION;
 
     $sql = $this->user->getSQL();
     return $sql->update("Session")
-      ->set("Session.expires", (new DateTime())->modify("+$hours hour"))
+      ->set("Session.expires", (new DateTime())->modify("+$minutes minute"))
       ->set("Session.ipAddress", $this->ipAddress)
       ->set("Session.os", $this->os)
       ->set("Session.browser", $this->browser)

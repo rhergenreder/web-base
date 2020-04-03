@@ -31,6 +31,7 @@ class CreateDatabase {
       ->addString("salt", 16)
       ->addString("password", 64)
       ->addInt("language_id", true, 1)
+      ->addDateTime("registered_at", false, $sql->currentTimestamp())
       ->primaryKey("uid")
       ->unique("email")
       ->unique("name")

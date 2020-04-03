@@ -10,9 +10,13 @@ class LoginBody extends Body {
     parent::__construct($document);
   }
 
-  public function getCode() {
-
+  public function loadView() {
+    parent::loadView();
     $this->getDocument()->getHead()->loadBootstrap();
+  }
+
+  public function getCode() {
+    $html = parent::getCode();
 
     $username = L("Username");
     $password = L("Password");
@@ -25,7 +29,7 @@ class LoginBody extends Body {
     $domain = $_SERVER['HTTP_HOST'];
     $protocol = getProtocol();
 
-    $html = "<body>";
+    $html .= "<body>";
 
     $accountCreated = "";
     if(isset($_GET["accountCreated"])) {

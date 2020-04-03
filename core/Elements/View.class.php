@@ -1,8 +1,8 @@
 <?php
 
-use Elements\Document;
+namespace Elements;
 
-abstract class View {
+abstract class View extends StaticView {
 
   private Document $document;
   private bool $loadView;
@@ -111,5 +111,10 @@ abstract class View {
     if(strlen($id) > 0) $id = " id=\"$id\"";
     $hidden = ($hidden?" hidden" : "");
     return "<div class=\"alert alert-$type$hidden\" role=\"alert\"$id>$text</div>";
+  }
+
+  protected function createBadge($type, $text) {
+    $text = htmlspecialchars($text);
+    return "<span class=\"badge badge-$type\">$text</span>";
   }
 }

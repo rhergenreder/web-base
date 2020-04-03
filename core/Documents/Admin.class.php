@@ -5,12 +5,12 @@ namespace Documents {
   use Documents\Admin\AdminHead;
   use Elements\Document;
   use Objects\User;
-  use Views\AdminDashboard;
+  use Views\Admin\AdminDashboardBody;
   use Views\LoginBody;
 
   class Admin extends Document {
     public function __construct(User $user) {
-      $body = $user->isLoggedIn() ? AdminDashboard::class : LoginBody::class;
+      $body = $user->isLoggedIn() ? AdminDashboardBody::class : LoginBody::class;
       parent::__construct($user, AdminHead::class, $body);
     }
   }

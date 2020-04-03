@@ -144,6 +144,7 @@ abstract class SQL {
     $returning = $this->getReturning($returningCol);
 
     $query = "INSERT INTO $tableName$columnStr VALUES$values$onDuplicateKey$returning";
+    if($insert->dump) { var_dump($query); var_dump($parameters); }
     $res = $this->execute($query, $parameters, !empty($returning));
     $success = ($res !== FALSE);
 
@@ -189,6 +190,7 @@ abstract class SQL {
     $limit = ($select->getLimit() > 0 ? (" LIMIT " . $select->getLimit()) : "");
     $offset = ($select->getOffset() > 0 ? (" OFFSET " . $select->getOffset()) : "");
     $query = "SELECT $columns FROM $tables$joinStr$where$orderBy$limit$offset";
+    if($select->dump) { var_dump($query); var_dump($params); }
     return $this->execute($query, $params, true);
   }
 
@@ -198,6 +200,7 @@ abstract class SQL {
     $where = $this->getWhereClause($delete->getConditions(), $params);
 
     $query = "DELETE FROM $table$where";
+    if($delete->dump) { var_dump($query); }
     return $this->execute($query);
   }
 
@@ -218,6 +221,7 @@ abstract class SQL {
 
     $where = $this->getWhereClause($update->getConditions(), $params);
     $query = "UPDATE $table SET $valueStr$where";
+    if($update->dump) { var_dump($query); var_dump($params); }
     return $this->execute($query, $params);
   }
 
@@ -290,6 +294,7 @@ abstract class SQL {
   protected abstract function execute($query, $values=NULL, $returnValues=false);
 
   protected function buildCondition($condition, &$params) {
+
     if ($condition instanceof CondOr) {
       $conditions = array();
       foreach($condition->getConditions() as $cond) {
@@ -304,7 +309,7 @@ abstract class SQL {
     } else if ($condition instanceof CondBool) {
       return $this->columnName($condition->getValue());
     } else if (is_array($condition)) {
-      if (count($condition) == 1) {
+      if (count($condition) === 1) {
         return $this->buildCondition($condition[0], $params);
       } else {
         $conditions = array();

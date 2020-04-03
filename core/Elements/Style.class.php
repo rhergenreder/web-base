@@ -2,9 +2,7 @@
 
 namespace Elements;
 
-use View;
-
-class Style extends View {
+class Style extends StaticView {
 
   private string $style;
 

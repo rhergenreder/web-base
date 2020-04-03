@@ -274,3 +274,7 @@ let jsCore = new Core();
 $(document).ready(function() {
 
 });
+
+function createLoadingIcon() {
+  return '<i class="fas fa-spin fa-spinner"></i>';
+}

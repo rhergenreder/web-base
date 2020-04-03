@@ -17,6 +17,7 @@ namespace Documents\Document404 {
 
   use Elements\Body;
   use Elements\Head;
+  use Views\View404;
 
   class Head404 extends Head {
 
@@ -25,11 +26,6 @@ namespace Documents\Document404 {
     }
 
     protected function initSources() {
-      // $this->loadJQuery();
-      // $this->loadBootstrap();
-      // $this->loadFontawesome();
-      // $this->addJS(\Elements\Script::CORE);
-      // $this->addCSS(\Elements\Link::CORE);
     }
 
     protected function initMetas() {
@@ -59,7 +55,7 @@ namespace Documents\Document404 {
 
     public function getCode() {
       $html = parent::getCode();
-      $html .= "<b>404 Not Found</b>";
+      $html .= "<body>" . (new View404($this->getDocument())) . "</body>";
       return $html;
     }
   }

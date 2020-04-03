@@ -11,6 +11,7 @@ class InstallTestCase(PhpTest):
             "Testing invalid usernames…": self.test_invalid_usernames,
             "Testing invalid password…": self.test_invalid_password,
             "Testing not matching password…": self.test_not_matching_passwords,
+            "Testing invalid email…": self.test_invalid_email,
             "Testing user creation…": self.test_create_user,
             "Testing skip mail configuration…": self.test_skil_mail_config,
             "Testing complete setup…": self.test_complete_setup,
@@ -40,8 +41,13 @@ class InstallTestCase(PhpTest):
         self.assertEquals(False, obj["success"])
         self.assertEquals("The given passwords do not match", obj["msg"])
 
+    def test_invalid_email(self):
+        obj = self.httpPost(data={ "username": PhpTest.ADMIN_USERNAME, "password": PhpTest.ADMIN_PASSWORD, "confirmPassword": PhpTest.ADMIN_PASSWORD, "email": "123abc" })
+        self.assertEquals(False, obj["success"])
+        self.assertEquals("Invalid email address", obj["msg"])
+
     def test_create_user(self):
-        obj = self.httpPost(data={ "username": PhpTest.ADMIN_USERNAME, "password": PhpTest.ADMIN_PASSWORD, "confirmPassword": PhpTest.ADMIN_PASSWORD })
+        obj = self.httpPost(data={ "username": PhpTest.ADMIN_USERNAME, "password": PhpTest.ADMIN_PASSWORD, "confirmPassword": PhpTest.ADMIN_PASSWORD, "email": "test@test.com" })
         self.assertEquals(True, obj["success"], obj["msg"])
 
     def test_skil_mail_config(self):

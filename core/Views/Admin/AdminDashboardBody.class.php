@@ -1,19 +1,24 @@
 <?php
 
-namespace Views;
+namespace Views\Admin;
 
 // Source: https://adminlte.io/themes/v3/
 
+use Documents\Document404\Body404;
 use Elements\Body;
 use Elements\Script;
+use Elements\View;
+use Views\View404;
 
-class AdminDashboard extends Body {
+class AdminDashboardBody extends Body {
 
   private array $errorMessages;
+  private array $notifications;
 
   public function __construct($document) {
     parent::__construct($document);
     $this->errorMessages = array();
+    $this->notifications = array();
   }
 
   private function getNotifications() : array {
@@ -49,8 +54,7 @@ class AdminDashboard extends Body {
     $iconMail = $this->createIcon("envelope", "fas");
 
     // Notifications
-    $notifications = $this->getNotifications();
-    $numNotifications = count($notifications);
+    $numNotifications = count($this->notifications);
     if ($numNotifications === 0) {
       $notificationText = L("No new notifications");
     } else if($numNotifications === 1) {
@@ -98,7 +102,7 @@ class AdminDashboard extends Body {
 
     // Notifications
     $i = 0;
-    foreach($notifications as $notification) {
+    foreach($this->notifications as $notification) {
 
       $title = $notification["title"];
       $notificationId = $notification["uid"];
@@ -150,12 +154,17 @@ class AdminDashboard extends Body {
       ),
     );
 
+    $notificationCount = count($this->notifications);
+    if ($notificationCount > 0) {
+      $menuEntries["dashboard"]["badge"] = array("type" => "warning", "value" => $notificationCount);
+    }
+
     $currentView = $_GET["view"] ?? "dashboard";
 
     $html =
       "<aside class=\"main-sidebar sidebar-dark-primary elevation-4\">
         <!-- Brand Logo -->
-        <a href=\"index3.html\" class=\"brand-link\">
+        <a href=\"/admin\" class=\"brand-link\">
           <img src=\"/img/web_base_logo.png\" alt=\"WebBase Logo\" class=\"brand-image img-circle elevation-3\"
                style=\"opacity: .8\">
           <span class=\"brand-text font-weight-light\">WebBase</span>
@@ -172,17 +181,23 @@ class AdminDashboard extends Body {
       $name = L($menuEntry["name"]);
       $icon = $this->createIcon($menuEntry["icon"], "fas", "nav-icon");
       $active = ($currentView === $view) ? " active" : "";
+      $badge = $menuEntry["badge"] ?? "";
+      if($badge) {
+        $badgeType = $badge["type"];
+        $badgeValue = $badge["value"];
+        $badge = "<span class=\"badge badge-$badgeType right\">$badgeValue</span>";
+      }
+
       $html .=
-              "<li class=\"nav-item\">
+        "<li class=\"nav-item\">
                 <a href=\"?view=$view\" class=\"nav-link$active\">
-                  $icon
-                  <p>$name </p>
+                  $icon<p>$name$badge</p>
                 </a>
               </li>";
     }
 
     $html .=
-            "</ul>  
+      "</ul>  
           </nav>
         </div>
       </aside>";
@@ -190,32 +205,64 @@ class AdminDashboard extends Body {
     return $html;
   }
 
+  private function getView() {
+
+    $views = array(
+      "dashboard" => Dashboard::class,
+      "users" => UserOverview::class,
+      "404" => View404::class,
+    );
+
+    $currentView = $_GET["view"] ?? "dashboard";
+    if (!isset($views[$currentView])) {
+      $currentView = "404";
+    }
+
+    $view = new $views[$currentView]($this->getDocument());
+    assert($view instanceof View);
+    $code = $view->getCode();
+
+    if ($view instanceof AdminView) {
+      $this->errorMessages = array_merge($this->errorMessages, $view->getErrorMessages());
+    }
+
+    return $code;
+  }
+
+  public function loadView() {
+    parent::loadView();
+
+    $head = $this->getDocument()->getHead();
+    $head->addJS(Script::BOOTSTRAP);
+    $head->loadAdminlte();
+
+    $this->notifications = $this->getNotifications();
+  }
+
   private function getContent() {
 
     $this->getUsers();
 
+    $view = $this->getView();
     $html = "<div class=\"content-wrapper p-2\">";
 
     foreach($this->errorMessages as $errorMessage) {
       $html .= $this->createErrorText($errorMessage);
     }
 
+    $html .= $view;
     $html .= "</div>";
-
     return $html;
   }
 
   public function getCode() {
-
-    $head = $this->getDocument()->getHead();
-    $head->addJS(Script::BOOTSTRAP);
-    $head->loadAdminlte();
+    $html = parent::getCode();
 
     $header = $this->getHeader();
     $sidebar = $this->getSidebar();
     $content = $this->getContent();
 
-    $html =
+    $html .=
       "<!-- LICENSE: /docs/LICENSE_ADMINLTE -->
       <body class=\"hold-transition sidebar-mini layout-fixed\">
           <div class=\"wrapper\">

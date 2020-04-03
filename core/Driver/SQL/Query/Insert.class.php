@@ -2,13 +2,15 @@
 
 namespace Driver\SQL\Query;
 
+use Driver\SQL\Strategy\Strategy;
+
 class Insert extends Query {
 
-  private $tableName;
-  private $columns;
-  private $rows;
-  private $onDuplicateKey;
-  private $returning;
+  private string $tableName;
+  private array $columns;
+  private array $rows;
+  private ?Strategy $onDuplicateKey;
+  private ?string $returning;
 
   public function __construct($sql, $name, $columns=array()) {
     parent::__construct($sql);
@@ -43,6 +45,4 @@ class Insert extends Query {
   public function getRows() { return $this->rows; }
   public function onDuplicateKey() { return $this->onDuplicateKey; }
   public function getReturning() { return $this->returning; }
-};
-
-?>
+}

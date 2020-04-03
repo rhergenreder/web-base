@@ -4,7 +4,7 @@ namespace Driver\SQL\Column;
 
 class StringColumn extends Column {
 
-  private $maxSize;
+  private ?int $maxSize;
 
   public function __construct($name, $maxSize=null, $nullable=false, $defaultValue=null) {
     parent::__construct($name, $nullable, $defaultValue);
@@ -13,5 +13,3 @@ class StringColumn extends Column {
 
   public function getMaxSize() { return $this->maxSize; }
 }
-
-?>

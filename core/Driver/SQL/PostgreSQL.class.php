@@ -16,6 +16,7 @@ use Driver\SQL\Column\JsonColumn;
 use \Driver\SQL\Strategy\CascadeStrategy;
 use \Driver\SQL\Strategy\SetDefaultStrategy;
 use \Driver\SQL\Strategy\SetNullStrategy;
+use Driver\SQL\Strategy\Strategy;
 use \Driver\SQL\Strategy\UpdateStrategy;
 
 class PostgreSQL extends SQL {
@@ -131,76 +132,41 @@ class PostgreSQL extends SQL {
     }
   }
 
-  // Querybuilder
-  public function executeInsert($insert) {
+  protected function getOnDuplicateStrategy(?Strategy $strategy, &$params) {
+      if (!is_null($strategy)) {
 
-    $tableName = $this->tableName($insert->getTableName());
-    $columns = $insert->getColumns();
-    $rows = $insert->getRows();
-    $onDuplicateKey = $insert->onDuplicateKey() ?? "";
+        /*if ($onDuplicateKey instanceof UpdateStrategy) {
+              $updateValues = array();
+              foreach($onDuplicateKey->getValues() as $key => $value) {
+                if ($value instanceof Column) {
+                  $columnName = $value->getName();
+                  $updateValues[] = "\"$key\"=\"$columnName\"";
+                } else {
+                  $updateValues[] = "\"$key\"=" . $this->addValue($value, $parameters);
+                }
+              }
 
-    if (empty($rows)) {
-      $this->lastError = "No rows to insert given.";
-      return false;
-    }
-
-    if (is_null($columns) || empty($columns)) {
-      $columnStr = "";
-    } else {
-      $columnStr = " (" . $this->columnName($columns) . ")";
-    }
-
-    $numRows = count($rows);
-    $parameters = array();
-
-    $values = array();
-    foreach($rows as $row) {
-      $rowPlaceHolder = array();
-      foreach($row as $val) {
-        $rowPlaceHolder[] = $this->addValue($val, $parameters);
-      }
-
-      $values[] = "(" . implode(",", $rowPlaceHolder) . ")";
-    }
-
-    $values = implode(",", $values);
-
-    if ($onDuplicateKey) {
-      /*if ($onDuplicateKey instanceof UpdateStrategy) {
-        $updateValues = array();
-        foreach($onDuplicateKey->getValues() as $key => $value) {
-          if ($value instanceof Column) {
-            $columnName = $value->getName();
-            $updateValues[] = "\"$key\"=\"$columnName\"";
-          } else {
-            $updateValues[] = "\"$key\"=" . $this->addValue($value, $parameters);
-          }
+              $onDuplicateKey = " ON CONFLICT DO UPDATE SET " . implode(",", $updateValues);
+            } else*/ {
+          $strategyClass = get_class($strategy);
+          $this->lastError = "ON DUPLICATE Strategy $strategyClass is not supported yet.";
+          return false;
         }
-
-        $onDuplicateKey = " ON CONFLICT DO UPDATE SET " . implode(",", $updateValues);
-      } else*/ {
-        $strategy = get_class($onDuplicateKey);
-        $this->lastError = "ON DUPLICATE Strategy $strategy is not supported yet.";
-        return false;
+      } else {
+        return "";
       }
-    }
+  }
 
-    $returningCol = $insert->getReturning();
-    $returning = $returningCol ? (" RETURNING " . $this->columnName($returningCol)) : "";
+  protected function getReturning(?string $columns) {
+    return $columns ? (" RETURNING " . $this->columnName($columns)) : "";
+  }
 
-    $query = "INSERT INTO $tableName$columnStr VALUES$values$onDuplicateKey$returning";
-    $res = $this->execute($query, $parameters, !empty($returning));
-    $success = ($res !== FALSE);
-
-    if($success && !empty($returning)) {
-      $this->lastInsertId = $res[0][$returningCol];
-    }
-
-    return $success;
+  protected function fetchReturning($res, string $returningCol) {
+    $this->lastInsertId = $res[0][$returningCol];
   }
 
   // UGLY but.. what should i do?
-  private function createEnum($enumColumn) {
+  private function createEnum(EnumColumn $enumColumn) {
     $typeName = $enumColumn->getName();
     if(!endsWith($typeName, "_type")) {
       $typeName = "${typeName}_type";
@@ -320,4 +286,3 @@ class PostgreSQL extends SQL {
     return new Keyword("CURRENT_TIMESTAMP");
   }
 }
-?>

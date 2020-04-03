@@ -4,8 +4,8 @@ namespace Driver\SQL\Query;
 
 class Delete extends Query {
 
-  private $table;
-  private $conditions;
+  private string $table;
+  private array $conditions;
 
   public function __construct($sql, $table) {
     parent::__construct($sql);
@@ -24,6 +24,4 @@ class Delete extends Query {
 
   public function getTable() { return $this->table; }
   public function getConditions() { return $this->conditions; }
-};
-
-?>
+}

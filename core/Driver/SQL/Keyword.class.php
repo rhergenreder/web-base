@@ -4,7 +4,7 @@ namespace Driver\SQL;
 
 class Keyword {
 
-  private $value;
+  private string $value;
 
   public function __construct($value) {
     $this->value = $value;
@@ -13,5 +13,3 @@ class Keyword {
   public function getValue() { return $this->value; }
 
 }
-
-?>

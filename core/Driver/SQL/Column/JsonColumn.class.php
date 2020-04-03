@@ -9,5 +9,3 @@ class JsonColumn extends Column {
   }
 
 }
-
-?>

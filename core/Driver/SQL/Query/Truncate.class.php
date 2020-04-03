@@ -4,7 +4,7 @@ namespace Driver\SQL\Query;
 
 class Truncate extends Query {
 
-  private $tableName;
+  private string $tableName;
 
   public function __construct($sql, $name) {
     parent::__construct($sql);
@@ -15,7 +15,5 @@ class Truncate extends Query {
     return $this->sql->executeTruncate($this);
   }
 
-  public function getTableName() { return $this->tableName; }
-};
-
-?>
+  public function getTable() { return $this->tableName; }
+}

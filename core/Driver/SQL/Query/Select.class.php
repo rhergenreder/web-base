@@ -2,16 +2,18 @@
 
 namespace Driver\SQL\Query;
 
+use Driver\SQL\Join;
+
 class Select extends Query {
 
-  private $columns;
-  private $tables;
-  private $conditions;
-  private $joins;
-  private $orderColumns;
-  private $sortAscending;
-  private $limit;
-  private $offset;
+  private array $columns;
+  private array $tables;
+  private array $conditions;
+  private array $joins;
+  private array $orderColumns;
+  private bool $sortAscending;
+  private int $limit;
+  private int $offset;
 
   public function __construct($sql, ...$columns) {
     parent::__construct($sql);
@@ -36,12 +38,12 @@ class Select extends Query {
   }
 
   public function innerJoin($table, $columnA, $columnB) {
-    $this->joins[] = new \Driver\SQL\Join("INNER", $table, $columnA, $columnB);
+    $this->joins[] = new Join("INNER", $table, $columnA, $columnB);
     return $this;
   }
 
   public function leftJoin($table, $columnA, $columnB) {
-    $this->joins[] = new \Driver\SQL\Join("LEFT", $table, $columnA, $columnB);
+    $this->joins[] = new Join("LEFT", $table, $columnA, $columnB);
     return $this;
   }
 
@@ -51,12 +53,12 @@ class Select extends Query {
   }
 
   public function ascending() {
-    $this->ascending = true;
+    $this->sortAscending = true;
     return $this;
   }
 
   public function descending() {
-    $this->ascending = false;
+    $this->sortAscending = false;
     return $this;
   }
 
@@ -78,11 +80,9 @@ class Select extends Query {
   public function getTables() { return $this->tables; }
   public function getConditions() { return $this->conditions; }
   public function getJoins() { return $this->joins; }
-  public function isOrderedAscending() { return $this->ascending; }
+  public function isOrderedAscending() { return $this->sortAscending; }
   public function getOrderBy() { return $this->orderColumns; }
   public function getLimit() { return $this->limit; }
   public function getOffset() { return $this->offset; }
 
-};
-
-?>
+}

@@ -2,9 +2,11 @@
 
 namespace Driver\SQL\Query;
 
+use Driver\SQL\SQL;
+
 abstract class Query {
 
-  protected $sql;
+  protected SQL $sql;
 
   public function __construct($sql) {
     $this->sql = $sql;
@@ -12,6 +14,4 @@ abstract class Query {
 
   public abstract function execute();
 
-};
-
-?>
+}

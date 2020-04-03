@@ -16,10 +16,10 @@ use Driver\SQL\Constraint\ForeignKey;
 
 class CreateTable extends Query {
 
-  private $tableName;
-  private $columns;
-  private $constraints;
-  private $ifNotExists;
+  private string $tableName;
+  private array $columns;
+  private array $constraints;
+  private bool $ifNotExists;
 
   public function __construct($sql, $name) {
     parent::__construct($sql);
@@ -92,6 +92,4 @@ class CreateTable extends Query {
   public function getTableName() { return $this->tableName; }
   public function getColumns() { return $this->columns; }
   public function getConstraints() { return $this->constraints; }
-};
-
-?>
+}

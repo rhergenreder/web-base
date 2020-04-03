@@ -34,18 +34,16 @@ class Script extends \View {
 
   private string $type;
   private string $content;
-  private string $url;
+  private string $src;
 
   function __construct($type, $src, $content = "") {
+    $this->src = $src;
     $this->type = $type;
     $this->content = $content;
   }
 
   function getCode() {
-    $src = (empty($this->url) ? "" : " src=\"$this->url\"");
-    $script = "<script type=\"$this->type\"$src>";
-    $script .= $this->content;
-    $script .= '</script>';
-    return $script;
+    $src = (empty($this->src) ? "" : " src=\"$this->src\"");
+      return "<script type=\"$this->type\"$src>$this->content</script>";
   }
 }

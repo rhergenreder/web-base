@@ -2,16 +2,32 @@
 
 namespace Driver\SQL;
 
+use Driver\SQL\Column\Column;
+use Driver\SQL\Condition\Compare;
+use Driver\SQL\Condition\CondBool;
+use Driver\SQL\Condition\CondOr;
+use Driver\SQL\Constraint\Constraint;
 use \Driver\SQL\Constraint\Unique;
 use \Driver\SQL\Constraint\PrimaryKey;
 use \Driver\SQL\Constraint\ForeignKey;
+use Driver\SQL\Query\CreateTable;
+use Driver\SQL\Query\Delete;
+use Driver\SQL\Query\Insert;
+use Driver\SQL\Query\Select;
+use Driver\SQL\Query\Truncate;
+use Driver\SQL\Query\Update;
+use Driver\SQL\Strategy\CascadeStrategy;
+use Driver\SQL\Strategy\SetDefaultStrategy;
+use Driver\SQL\Strategy\SetNullStrategy;
+use Driver\SQL\Strategy\Strategy;
+use Objects\ConnectionData;
 
 abstract class SQL {
 
-  protected $lastError;
+  protected string $lastError;
   protected $connection;
-  protected $connectionData;
-  protected $lastInsertId;
+  protected ConnectionData $connectionData;
+  protected int $lastInsertId;
 
   public function __construct($connectionData) {
     $this->connection = NULL;
@@ -65,7 +81,7 @@ abstract class SQL {
   public abstract function disconnect();
 
   // Querybuilder
-  public function executeCreateTable($createTable) {
+  public function executeCreateTable(CreateTable $createTable) {
     $tableName = $this->tableName($createTable->getTableName());
     $ifNotExists = $createTable->ifNotExists() ? " IF NOT EXISTS": "";
 
@@ -89,10 +105,56 @@ abstract class SQL {
     return $this->execute($query);
   }
 
-  // TODO pull this function up
-  public abstract function executeInsert($query);
+  public function executeInsert(Insert $insert) {
 
-  public function executeSelect($select) {
+    $tableName = $this->tableName($insert->getTableName());
+    $columns = $insert->getColumns();
+    $rows = $insert->getRows();
+
+    if (empty($rows)) {
+      $this->lastError = "No rows to insert given.";
+      return false;
+    }
+
+    if (is_null($columns) || empty($columns)) {
+      $columnStr = "";
+    } else {
+      $columnStr = " (" . $this->columnName($columns) . ")";
+    }
+
+    $parameters = array();
+    $values = array();
+    foreach($rows as $row) {
+      $rowPlaceHolder = array();
+      foreach($row as $val) {
+        $rowPlaceHolder[] = $this->addValue($val, $parameters);
+      }
+
+      $values[] = "(" . implode(",", $rowPlaceHolder) . ")";
+    }
+
+    $values = implode(",", $values);
+
+    $onDuplicateKey = $this->getOnDuplicateStrategy($insert->onDuplicateKey(), $parameters);
+    if ($onDuplicateKey === FALSE) {
+      return false;
+    }
+
+    $returningCol = $insert->getReturning();
+    $returning = $this->getReturning($returningCol);
+
+    $query = "INSERT INTO $tableName$columnStr VALUES$values$onDuplicateKey$returning";
+    $res = $this->execute($query, $parameters, !empty($returning));
+    $success = ($res !== FALSE);
+
+    if($success && $returningCol) {
+      $this->fetchReturning($res, $returningCol);
+    }
+
+    return $success;
+  }
+
+  public function executeSelect(Select $select) {
 
     $columns = $this->columnName($select->getColumns());
     $tables = $select->getTables();
@@ -130,7 +192,7 @@ abstract class SQL {
     return $this->execute($query, $params, true);
   }
 
-  public function executeDelete($delete) {
+  public function executeDelete(Delete $delete) {
 
     $table = $this->tableName($delete->getTable());
     $where = $this->getWhereClause($delete->getConditions(), $params);
@@ -139,11 +201,11 @@ abstract class SQL {
     return $this->execute($query);
   }
 
-  public function executeTruncate($truncate) {
+  public function executeTruncate(Truncate $truncate) {
     return $this->execute("TRUNCATE " . $truncate->getTable());
   }
 
-  public function executeUpdate($update) {
+  public function executeUpdate(Update $update) {
 
     $params = array();
     $table = $this->tableName($update->getTable());
@@ -167,10 +229,8 @@ abstract class SQL {
     }
   }
 
-  protected abstract function getColumnDefinition($column);
-
-  public function getConstraintDefinition($constraint) {
-    $columnName = $this->columnName($constraint->getColumnName());
+  public function getConstraintDefinition(Constraint $constraint) {
+    $columnName = $this->columnName($constraint->getColumnNames());
     if ($constraint instanceof PrimaryKey) {
       return "PRIMARY KEY ($columnName)";
     } else if ($constraint instanceof Unique) {
@@ -190,9 +250,18 @@ abstract class SQL {
 
       return $code;
     } else {
-      $this->lastError = "Unsupported constraint type: " . get_class($strategy);
+      $this->lastError = "Unsupported constraint type: " . get_class($constraint);
+      return false;
     }
   }
+
+  protected function getReturning(?string $columns) {
+    return "";
+  }
+
+  protected abstract function getColumnDefinition(Column $column);
+  protected abstract function fetchReturning($res, string $returningCol);
+  protected abstract function getOnDuplicateStrategy(?Strategy $strategy, &$params);
 
   protected abstract function getValueDefinition($val);
   protected abstract function addValue($val, &$params);
@@ -221,18 +290,18 @@ abstract class SQL {
   protected abstract function execute($query, $values=NULL, $returnValues=false);
 
   protected function buildCondition($condition, &$params) {
-    if ($condition instanceof \Driver\SQL\Condition\CondOr) {
+    if ($condition instanceof CondOr) {
       $conditions = array();
       foreach($condition->getConditions() as $cond) {
         $conditions[] = $this->buildCondition($cond, $params);
       }
       return "(" . implode(" OR ", $conditions) . ")";
-    } else if ($condition instanceof \Driver\SQL\Condition\Compare) {
+    } else if ($condition instanceof Compare) {
       $column = $this->columnName($condition->getColumn());
       $value = $condition->getValue();
       $operator = $condition->getOperator();
       return $column . $operator . $this->addValue($value, $params);
-    } else if ($condition instanceof \Driver\SQL\Condition\CondBool) {
+    } else if ($condition instanceof CondBool) {
       return $this->columnName($condition->getValue());
     } else if (is_array($condition)) {
       if (count($condition) == 1) {
@@ -244,6 +313,9 @@ abstract class SQL {
         }
         return implode(" AND ", $conditions);
       }
+    } else {
+      $this->lastError = "Unsupported condition type: " . get_class($condition);
+      return false;
     }
   }
 
@@ -260,7 +332,7 @@ abstract class SQL {
     $this->connection = NULL;
   }
 
-  public static function createConnection($connectionData) {
+  public static function createConnection(ConnectionData $connectionData) {
     $type = $connectionData->getProperty("type");
     if ($type === "mysql") {
       $sql = new MySQL($connectionData);
@@ -280,5 +352,3 @@ abstract class SQL {
     return $sql;
   }
 }
-
-?>

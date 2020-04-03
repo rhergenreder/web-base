@@ -4,6 +4,8 @@ namespace Driver\SQL\Condition;
 
 class CondBool extends Condition {
 
+  private $value;
+
   public function __construct($val) {
     $this->value = $val;
   }
@@ -11,5 +13,3 @@ class CondBool extends Condition {
   public function getValue() { return $this->value; }
 
 }
-
-?>

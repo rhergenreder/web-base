@@ -7,6 +7,4 @@ class SetNullStrategy extends Strategy {
   public function __construct() {
   }
 
-};
-
-?>
+}

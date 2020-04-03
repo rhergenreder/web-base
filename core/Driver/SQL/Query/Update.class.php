@@ -4,9 +4,9 @@ namespace Driver\SQL\Query;
 
 class Update extends Query {
 
-  private $values;
-  private $table;
-  private $conditions;
+  private array $values;
+  private string $table;
+  private array $conditions;
 
   public function __construct($sql, $table) {
     parent::__construct($sql);
@@ -32,6 +32,4 @@ class Update extends Query {
   public function getTable() { return $this->table; }
   public function getConditions() { return $this->conditions; }
   public function getValues() { return $this->values; }
-};
-
-?>
+}

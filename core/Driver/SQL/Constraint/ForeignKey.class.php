@@ -2,11 +2,13 @@
 
 namespace Driver\SQL\Constraint;
 
+use Driver\SQL\Strategy\Strategy;
+
 class ForeignKey extends Constraint {
 
-  private $referencedTable;
-  private $referencedColumn;
-  private $strategy;
+  private string $referencedTable;
+  private string $referencedColumn;
+  private ?Strategy $strategy;
 
   public function __construct($name, $refTable, $refColumn, $strategy = NULL) {
     parent::__construct($name);
@@ -18,6 +20,4 @@ class ForeignKey extends Constraint {
   public function getReferencedTable() { return $this->referencedTable; }
   public function getReferencedColumn() { return $this->referencedColumn; }
   public function onDelete() { return $this->strategy; }
-};
-
-?>
+}

@@ -4,7 +4,7 @@ namespace Driver\SQL\Condition;
 
 class CondOr extends Condition {
 
-  private $conditions;
+  private array $conditions;
 
   public function __construct(...$conditions) {
     $this->conditions = $conditions;
@@ -12,5 +12,3 @@ class CondOr extends Condition {
 
   public function getConditions() { return $this->conditions; }
 }
-
-?>

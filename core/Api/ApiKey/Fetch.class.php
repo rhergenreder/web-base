@@ -5,6 +5,7 @@ namespace Api\ApiKey;
 use \Api\Request;
 use DateTime;
 use \Driver\SQL\Condition\Compare;
+use Exception;
 
 class Fetch extends Request {
 
@@ -34,12 +35,12 @@ class Fetch extends Request {
       foreach($res as $row) {
         try {
           $validUntil = (new DateTime($row["valid_until"]))->getTimestamp();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
           $validUntil = $row["valid_until"];
         }
 
         $this->result["api_keys"][] = array(
-            "uid" => $row["uid"],
+            "uid" => intval($row["uid"]),
             "api_key" => $row["api_key"],
             "valid_until" => $validUntil,
           );

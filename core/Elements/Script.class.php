@@ -20,7 +20,7 @@ class Script extends \View {
   // const SYNTAX_HIGHLIGHTER      = "/js/syntaxhighlighter.js";
   // const HIGHLIGHT               = "/js/highlight.pack.js";
   // const GOOGLE_CHARTS           = "/js/loader.js";
-  const BOOTSTRAP               = "/js/bootstrap.min.js";
+  // const BOOTSTRAP               = "/js/bootstrap.min.js";
   // const BOOTSTRAP_DATEPICKER_JS = "/js/bootstrap-datepicker.min.js";
   // const POPPER                  = "/js/popper.min.js";
   // const JSMPEG                  = "/js/jsmpeg.min.js";
@@ -29,8 +29,10 @@ class Script extends \View {
   // const REVEALJS                = "/js/reveal.js";
   // const REVEALJS_PLUGIN_NOTES   = "/js/reveal_notes.js";
   const INSTALL                 = "/js/install.js";
+  const BOOTSTRAP = "/js/bootstrap.bundle.min.js";
 
   const HIGHLIGHT_JS_LOADER = "\$(document).ready(function(){\$('code').each(function(i, block) { hljs.highlightBlock(block); }); })";
+  const ADMINLTE = "/js/adminlte.min.js";
 
   private string $type;
   private string $content;

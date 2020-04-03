@@ -2,25 +2,25 @@
 
 namespace Documents {
 
-  use Documents\Admin\AdminBody;
   use Documents\Admin\AdminHead;
   use Elements\Document;
+  use Objects\User;
+  use Views\AdminDashboard;
+  use Views\LoginBody;
 
   class Admin extends Document {
-    public function __construct($user) {
-      parent::__construct($user, AdminHead::class, AdminBody::class);
+    public function __construct(User $user) {
+      $body = $user->isLoggedIn() ? AdminDashboard::class : LoginBody::class;
+      parent::__construct($user, AdminHead::class, $body);
     }
   }
 }
 
 namespace Documents\Admin {
 
-  use Elements\Body;
   use Elements\Head;
   use Elements\Link;
   use Elements\Script;
-  use Views\Admin;
-  use Views\Login;
 
   class AdminHead extends Head {
 
@@ -30,7 +30,6 @@ namespace Documents\Admin {
 
     protected function initSources() {
       $this->loadJQuery();
-      $this->loadBootstrap();
       $this->loadFontawesome();
       $this->addJS(Script::CORE);
       $this->addCSS(Link::CORE);
@@ -54,26 +53,6 @@ namespace Documents\Admin {
 
     protected function initTitle() {
       return "WebBase - Administration";
-    }
-  }
-
-  class AdminBody extends Body {
-
-    public function __construct($document) {
-      parent::__construct($document);
-    }
-
-    public function getCode() {
-      $html = parent::getCode();
-
-      $document = $this->getDocument();
-      if(!$document->getUser()->isLoggedIn()) {
-        $html .= new Login($document);
-      } else {
-        $html .= new Admin($document);
-      }
-
-      return $html;
     }
   }
 }

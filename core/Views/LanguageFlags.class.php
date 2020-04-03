@@ -2,6 +2,8 @@
 
 namespace Views;
 
+use Api\GetLanguages;
+
 class LanguageFlags extends \View {
 
   public function __construct($document) {
@@ -14,7 +16,7 @@ class LanguageFlags extends \View {
     $queryString = $_SERVER['QUERY_STRING'];
 
     $flags = array();
-    $request = new \Api\GetLanguages($this->getDocument()->getUser());
+    $request = new GetLanguages($this->getDocument()->getUser());
     $params = explode("&", $queryString);
     $query = array();
     foreach($params as $param) {
@@ -40,7 +42,7 @@ class LanguageFlags extends \View {
 
         $flags[] = $this->createLink(
           "$url$queryString",
-          "<img src=\"/img/icons/lang/$langCode.gif\" alt=\"$langName\" title=\"$langName\">"
+          "<img class=\"p-1\" src=\"/img/icons/lang/$langCode.gif\" alt=\"$langName\" title=\"$langName\">"
         );
       }
     } else {

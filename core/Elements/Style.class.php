@@ -2,6 +2,8 @@
 
 namespace Elements;
 
+use View;
+
 class Style extends View {
 
   private string $style;

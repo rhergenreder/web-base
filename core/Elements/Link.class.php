@@ -24,6 +24,7 @@ class Link extends View {
   // const REVEALJS                  = "/css/reveal.css";
   // const REVEALJS_THEME_MOON       = "/css/reveal_moon.css";
   // const REVEALJS_THEME_BLACK      = "/css/reveal_black.css";
+  const ADMINLTE = "/css/adminlte.min.css";
 
   private string $type;
   private string $rel;

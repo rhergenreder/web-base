@@ -2,16 +2,17 @@ $(document).ready(function() {
   $("#username").keypress(function(e) { if(e.which == 13) $("#password").focus(); });
   $("#password").keypress(function(e) { if(e.which == 13) $("#btnLogin").click(); });
   $("#btnLogin").click(function() {
-    var username = $("#username").val();
-    var password = $("#password").val();
-    var errorDiv = $("#loginError");
-    var createdDiv = $("#accountCreated");
-    var btn      = $(this);
+    const username = $("#username").val();
+    const password = $("#password").val();
+    const errorDiv = $("#loginError");
+    const createdDiv = $("#accountCreated");
+    const stayLoggedIn = $("#stayLoggedIn").is(":checked");
+    const btn = $(this);
 
     errorDiv.hide();
     btn.prop("disabled", true);
     btn.html("Logging in… <i class=\"fa fa-spin fa-circle-notch\"></i>");
-    jsCore.apiCall("user/login", {"username": username, "password": password}, function(data) {
+    jsCore.apiCall("/user/login", {"username": username, "password": password, "stayLoggedIn": stayLoggedIn }, function(data) {
       window.location.reload();
     }, function(err) {
       btn.html("Login");
@@ -21,5 +22,10 @@ $(document).ready(function() {
       errorDiv.html(err);
       errorDiv.show();
     });
+  });
+
+  $("#toggleSidebar").click(function() {
+    $(".main-wrapper").toggleClass("sidebar-collapsed");
+    $(".main-sidebar").toggleClass("collapsed");
   });
 });

@@ -9,7 +9,7 @@ class Fetch extends Request {
   public function __construct($user, $externalCall = false) {
     parent::__construct($user, $externalCall, array());
     $this->loginRequired = true;
-    // $this->requiredGroup = USER_GROUP_ADMIN;
+    $this->requiredGroup = USER_GROUP_ADMIN;
   }
 
   public function execute($values = array()) {

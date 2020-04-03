@@ -161,7 +161,7 @@ abstract class SQL {
     $params = array();
 
     if (!$tables) {
-      return "SELECT $columns";
+      return $this->execute("SELECT $columns", $params, true);
     }
 
     $tables = $this->tableName($tables);

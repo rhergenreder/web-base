@@ -794,7 +794,7 @@ namespace Documents\Install {
             </div>
             <div class=\"col-md-8 order-md-1\">
               $progressMainview
-              <div class=\"alert$errorClass margin-top-m\" id=\"status\"$errorStyle>$this->errorString</div>
+              <div class=\"alert$errorClass mt-4\" id=\"status\"$errorStyle>$this->errorString</div>
             </div>
           </div>
         </div>

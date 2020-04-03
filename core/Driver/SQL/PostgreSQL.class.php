@@ -18,10 +18,6 @@ use \Driver\SQL\Strategy\SetDefaultStrategy;
 use \Driver\SQL\Strategy\SetNullStrategy;
 use \Driver\SQL\Strategy\UpdateStrategy;
 
-use \Driver\SQL\Constraint\Unique;
-use \Driver\SQL\Constraint\PrimaryKey;
-use \Driver\SQL\Constraint\ForeignKey;
-
 class PostgreSQL extends SQL {
 
   public function __construct($connectionData) {
@@ -203,85 +199,6 @@ class PostgreSQL extends SQL {
     return $success;
   }
 
-  public function executeSelect($select) {
-
-    $columns = $this->columnName($select->getColumns());
-    $tables = $select->getTables();
-    $params = array();
-
-    if (is_null($tables) || empty($tables)) {
-      return "SELECT $columns";
-    } else {
-      $tableStr = $this->tableName($tables);
-    }
-
-    $conditions = $select->getConditions();
-    if (!empty($conditions)) {
-      $condition = " WHERE " . $this->buildCondition($conditions, $params);
-    } else {
-      $condition = "";
-    }
-
-    $joinStr = "";
-    $joins = $select->getJoins();
-    if (!empty($joins)) {
-      $joinStr = "";
-      foreach($joins as $join) {
-        $type = $join->getType();
-        $joinTable = $this->tableName($join->getTable());
-        $columnA = $this->columnName($join->getColumnA());
-        $columnB = $this->columnName($join->getColumnB());
-        $joinStr .= " $type JOIN $joinTable ON $columnA=$columnB";
-      }
-    }
-
-    $orderBy = "";
-    $limit = "";
-    $offset = "";
-
-    $query = "SELECT $columns FROM $tableStr$joinStr$condition$orderBy$limit$offset";
-    return $this->execute($query, $params, true);
-  }
-
-  public function executeDelete($delete) {
-    $table = $delete->getTable();
-    $conditions = $delete->getConditions();
-    if (!empty($conditions)) {
-      $condition = " WHERE " . $this->buildCondition($conditions, $params);
-    } else {
-      $condition = "";
-    }
-
-    $query = "DELETE FROM \"$table\"$condition";
-    return $this->execute($query);
-  }
-
-  public function executeTruncate($truncate) {
-    $table = $truncate->getTable();
-    return $this->execute("TRUNCATE \"$table\"");
-  }
-
-  public function executeUpdate($update) {
-    $params = array();
-    $table = $update->getTable();
-
-    $valueStr = array();
-    foreach($update->getValues() as $key => $val) {
-      $valueStr[] = "$key=" . $this->addValue($val, $params);
-    }
-    $valueStr = implode(",", $valueStr);
-
-    $conditions = $update->getConditions();
-    if (!empty($conditions)) {
-      $condition = " WHERE " . $this->buildCondition($conditions, $params);
-    } else {
-      $condition = "";
-    }
-
-    $query = "UPDATE \"$table\" SET $valueStr$condition";
-    return $this->execute($query, $params);
-  }
-
   // UGLY but.. what should i do?
   private function createEnum($enumColumn) {
     $typeName = $enumColumn->getName();
@@ -340,29 +257,6 @@ class PostgreSQL extends SQL {
     }
 
     return "$columnName $type$notNull$defaultValue";
-  }
-
-  protected function getConstraintDefinition($constraint) {
-    $columnName = $this->columnName($constraint->getColumnName());
-    if ($constraint instanceof PrimaryKey) {
-      return "PRIMARY KEY ($columnName)";
-    } else if ($constraint instanceof Unique) {
-      return "UNIQUE ($columnName)";
-    } else if ($constraint instanceof ForeignKey) {
-      $refTable = $this->tableName($constraint->getReferencedTable());
-      $refColumn = $this->columnName($constraint->getReferencedColumn());
-      $strategy = $constraint->onDelete();
-      $code = "FOREIGN KEY ($columnName) REFERENCES $refTable ($refColumn)";
-      if ($strategy instanceof SetDefaultStrategy) {
-        $code .= " ON DELETE SET DEFAULT";
-      } else if($strategy instanceof SetNullStrategy) {
-        $code .= " ON DELETE SET NULL";
-      } else if($strategy instanceof CascadeStrategy) {
-        $code .= " ON DELETE CASCADE";
-      }
-
-      return $code;
-    }
   }
 
   protected function getValueDefinition($value) {

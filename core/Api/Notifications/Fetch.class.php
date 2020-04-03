@@ -22,6 +22,7 @@ class Fetch extends Request {
       ->innerJoin("UserNotification", "UserNotification.notification_id", "Notification.uid")
       ->where(new Compare("UserNotification.user_id", $userId))
       ->where(new Compare("UserNotification.seen", false))
+      ->orderBy("created_at")->descending()
       ->execute();
 
     $this->success = ($res !== FALSE);
@@ -53,6 +54,7 @@ class Fetch extends Request {
       ->innerJoin("UserGroup", "GroupNotification.group_id", "UserGroup.group_id")
       ->where(new Compare("UserGroup.user_id", $userId))
       ->where(new Compare("GroupNotification.seen", false))
+      ->orderBy("created_at")->descending()
       ->execute();
 
     $this->success = ($res !== FALSE);

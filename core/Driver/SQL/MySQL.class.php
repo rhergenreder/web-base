@@ -18,10 +18,6 @@ use \Driver\SQL\Strategy\SetDefaultStrategy;
 use \Driver\SQL\Strategy\SetNullStrategy;
 use \Driver\SQL\Strategy\UpdateStrategy;
 
-use \Driver\SQL\Constraint\Unique;
-use \Driver\SQL\Constraint\PrimaryKey;
-use \Driver\SQL\Constraint\ForeignKey;
-
 class MySQL extends SQL {
 
   public function __construct($connectionData) {
@@ -222,88 +218,8 @@ class MySQL extends SQL {
     return $success;
   }
 
-  public function executeSelect($select) {
-
-    $columns = $this->columnName($select->getColumns());
-    $tables = $select->getTables();
-    $params = array();
-
-    if (is_null($tables) || empty($tables)) {
-      return "SELECT $columns";
-    } else {
-      $tables = $this->tableName($tables);
-    }
-
-    $conditions = $select->getConditions();
-    if (!empty($conditions)) {
-      $condition = " WHERE " . $this->buildCondition($conditions, $params);
-    } else {
-      $condition = "";
-    }
-
-    $joinStr = "";
-    $joins = $select->getJoins();
-    if (!empty($joins)) {
-      $joinStr = "";
-      foreach($joins as $join) {
-        $type = $join->getType();
-        $joinTable = $this->tableName($join->getTable());
-        $columnA = $this->columnName($join->getColumnA());
-        $columnB = $this->columnName($join->getColumnB());
-        $joinStr .= " $type JOIN $joinTable ON $columnA=$columnB";
-      }
-    }
-
-    $orderBy = "";
-    $limit = "";
-    $offset = "";
-
-    $query = "SELECT $columns FROM $tables$joinStr$condition$orderBy$limit$offset";
-    return $this->execute($query, $params, true);
-  }
-
-  public function executeDelete($delete) {
-
-    $table = $delete->getTable();
-    $conditions = $delete->getConditions();
-    if (!empty($conditions)) {
-      $condition = " WHERE " . $this->buildCondition($conditions, $params);
-    } else {
-      $condition = "";
-    }
-
-    $query = "DELETE FROM $table$condition";
-    return $this->execute($query);
-  }
-
-  public function executeTruncate($truncate) {
-    return $this->execute("TRUNCATE " . $truncate->getTable());
-  }
-
-  public function executeUpdate($update) {
-
-    $params = array();
-    $table = $update->getTable();
-
-    $valueStr = array();
-    foreach($update->getValues() as $key => $val) {
-      $valueStr[] = "$key=" . $this->addValue($val, $params);
-    }
-    $valueStr = implode(",", $valueStr);
-
-    $conditions = $update->getConditions();
-    if (!empty($conditions)) {
-      $condition = " WHERE " . $this->buildCondition($conditions, $params);
-    } else {
-      $condition = "";
-    }
-
-    $query = "UPDATE $table SET $valueStr$condition";
-    return $this->execute($query, $params);
-  }
-
   public function getColumnDefinition($column) {
-    $columnName = $column->getName();
+    $columnName = $this->columnName($column->getName());
     $defaultValue = $column->getDefaultValue();
 
     if ($column instanceof StringColumn) {
@@ -344,35 +260,9 @@ class MySQL extends SQL {
       $defaultValue = "";
     }
 
-    return "`$columnName` $type$notNull$defaultValue";
+    return "$columnName $type$notNull$defaultValue";
   }
 
-  public function getConstraintDefinition($constraint) {
-    $columnName = $constraint->getColumnName();
-    if ($constraint instanceof PrimaryKey) {
-      if (is_array($columnName)) $columnName = implode('`,`', $columnName);
-      return "PRIMARY KEY (`$columnName`)";
-    } else if ($constraint instanceof Unique) {
-      if (is_array($columnName)) $columnName = implode('`,`', $columnName);
-      return "UNIQUE (`$columnName`)";
-    } else if ($constraint instanceof ForeignKey) {
-      $refTable = $constraint->getReferencedTable();
-      $refColumn = $constraint->getReferencedColumn();
-      $strategy = $constraint->onDelete();
-      $code = "FOREIGN KEY (`$columnName`) REFERENCES `$refTable` (`$refColumn`)";
-      if ($strategy instanceof SetDefaultStrategy) {
-        $code .= " ON DELETE SET DEFAULT";
-      } else if($strategy instanceof SetNullStrategy) {
-        $code .= " ON DELETE SET NULL";
-      } else if($strategy instanceof CascadeStrategy) {
-        $code .= " ON DELETE CASCADE";
-      }
-
-      return $code;
-    }
-  }
-
-  // TODO: check this please..
   public function getValueDefinition($value) {
     if (is_numeric($value)) {
       return $value;

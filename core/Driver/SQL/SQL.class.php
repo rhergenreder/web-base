@@ -2,6 +2,10 @@
 
 namespace Driver\SQL;
 
+use \Driver\SQL\Constraint\Unique;
+use \Driver\SQL\Constraint\PrimaryKey;
+use \Driver\SQL\Constraint\ForeignKey;
+
 abstract class SQL {
 
   protected $lastError;
@@ -11,7 +15,7 @@ abstract class SQL {
 
   public function __construct($connectionData) {
     $this->connection = NULL;
-    $this->lastError = 'Not connected';
+    $this->lastError = 'Unknown Error';
     $this->connectionData = $connectionData;
     $this->lastInsertId = 0;
   }
@@ -60,8 +64,6 @@ abstract class SQL {
   public abstract function connect();
   public abstract function disconnect();
 
-  // TODO: pull code duplicates up
-
   // Querybuilder
   public function executeCreateTable($createTable) {
     $tableName = $this->tableName($createTable->getTableName());
@@ -87,13 +89,111 @@ abstract class SQL {
     return $this->execute($query);
   }
 
+  // TODO pull this function up
   public abstract function executeInsert($query);
-  public abstract function executeSelect($query);
-  public abstract function executeDelete($query);
-  public abstract function executeTruncate($query);
-  public abstract function executeUpdate($query);
+
+  public function executeSelect($select) {
+
+    $columns = $this->columnName($select->getColumns());
+    $tables = $select->getTables();
+    $params = array();
+
+    if (!$tables) {
+      return "SELECT $columns";
+    }
+
+    $tables = $this->tableName($tables);
+    $where = $this->getWhereClause($select->getConditions(), $params);
+
+    $joinStr = "";
+    $joins = $select->getJoins();
+    if (!empty($joins)) {
+      foreach($joins as $join) {
+        $type = $join->getType();
+        $joinTable = $this->tableName($join->getTable());
+        $columnA = $this->columnName($join->getColumnA());
+        $columnB = $this->columnName($join->getColumnB());
+        $joinStr .= " $type JOIN $joinTable ON $columnA=$columnB";
+      }
+    }
+
+    $orderBy = "";
+    $orderColumns = $select->getOrderBy();
+    if (!empty($orderColumns)) {
+      $orderBy = " ORDER BY " . $this->columnName($orderColumns);
+      $orderBy .= ($select->isOrderedAscending() ? " ASC" : " DESC");
+    }
+
+    $limit = ($select->getLimit() > 0 ? (" LIMIT " . $select->getLimit()) : "");
+    $offset = ($select->getOffset() > 0 ? (" OFFSET " . $select->getOffset()) : "");
+    $query = "SELECT $columns FROM $tables$joinStr$where$orderBy$limit$offset";
+    return $this->execute($query, $params, true);
+  }
+
+  public function executeDelete($delete) {
+
+    $table = $this->tableName($delete->getTable());
+    $where = $this->getWhereClause($delete->getConditions(), $params);
+
+    $query = "DELETE FROM $table$where";
+    return $this->execute($query);
+  }
+
+  public function executeTruncate($truncate) {
+    return $this->execute("TRUNCATE " . $truncate->getTable());
+  }
+
+  public function executeUpdate($update) {
+
+    $params = array();
+    $table = $this->tableName($update->getTable());
+
+    $valueStr = array();
+    foreach($update->getValues() as $key => $val) {
+      $valueStr[] = "$key=" . $this->addValue($val, $params);
+    }
+    $valueStr = implode(",", $valueStr);
+
+    $where = $this->getWhereClause($update->getConditions(), $params);
+    $query = "UPDATE $table SET $valueStr$where";
+    return $this->execute($query, $params);
+  }
+
+  protected function getWhereClause($conditions, &$params) {
+    if (!$conditions) {
+      return "";
+    } else {
+      return " WHERE " . $this->buildCondition($conditions, $params);
+    }
+  }
+
   protected abstract function getColumnDefinition($column);
-  protected abstract function getConstraintDefinition($constraint);
+
+  public function getConstraintDefinition($constraint) {
+    $columnName = $this->columnName($constraint->getColumnName());
+    if ($constraint instanceof PrimaryKey) {
+      return "PRIMARY KEY ($columnName)";
+    } else if ($constraint instanceof Unique) {
+      return "UNIQUE ($columnName)";
+    } else if ($constraint instanceof ForeignKey) {
+      $refTable = $this->tableName($constraint->getReferencedTable());
+      $refColumn = $this->columnName($constraint->getReferencedColumn());
+      $strategy = $constraint->onDelete();
+      $code = "FOREIGN KEY ($columnName) REFERENCES $refTable ($refColumn)";
+      if ($strategy instanceof SetDefaultStrategy) {
+        $code .= " ON DELETE SET DEFAULT";
+      } else if($strategy instanceof SetNullStrategy) {
+        $code .= " ON DELETE SET NULL";
+      } else if($strategy instanceof CascadeStrategy) {
+        $code .= " ON DELETE CASCADE";
+      }
+
+      return $code;
+    } else {
+      $this->lastError = "Unsupported constraint type: " . get_class($strategy);
+    }
+  }
+
   protected abstract function getValueDefinition($val);
   protected abstract function addValue($val, &$params);
 

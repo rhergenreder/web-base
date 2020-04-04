@@ -51,7 +51,7 @@ class Fetch extends Request {
     }
 
     $sql = $this->user->getSQL();
-    $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.created_at",
+    $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at",
                         "Group.uid as groupId", "Group.name as groupName")
       ->from("User")
       ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
@@ -76,7 +76,7 @@ class Fetch extends Request {
             "uid" => $userId,
             "name" => $row["name"],
             "email" => $row["email"],
-            "created_at" => $row["created_at"],
+            "registered_at" => $row["registered_at"],
             "groups" => array(),
           );
         }

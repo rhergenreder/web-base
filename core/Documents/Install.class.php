@@ -243,7 +243,7 @@ namespace Documents\Install {
         if(is_string($sql)) {
           $msg = "Error connecting to database: $sql";
         } else if(!$sql->isConnected()) {
-          if (!$sql->checkRequirements()["success"]) {
+          if (!$sql->checkRequirements()) {
             $driverName = $sql->getDriverName();
             $installLink = "https://www.php.net/manual/en/$driverName.setup.php";
             $link = $this->createExternalLink($installLink);

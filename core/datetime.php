@@ -140,7 +140,13 @@ function dateFunction($str, $d = NULL) {
 }
 
 function getPeriodString($d) {
-  if(!is_a($d, "DateTime")) $d = new DateTime($d);
+
+  try {
+    $d = new DateTime($d);
+  } catch(Exception $e) {
+    return L("Unknown");
+  }
+
   $diff = datetimeDiff(new DateTime(), $d);
   $diff = abs($diff);
 
@@ -160,4 +166,28 @@ function getPeriodString($d) {
   }
 
   return L(sprintf($str, $diff));
+}
+
+function formatDateTime($d) {
+  $format = L("Y/m/d H:i:s");
+  return apply_format($d, $format);
+}
+
+function formatTime($d) {
+  $format = L("H:i:s");
+  return apply_format($d, $format);
+}
+
+function formatDate($d) {
+  $format = L("Y/m/d");
+  return apply_format($d, $format);
+}
+
+function apply_format($d, $fmt) {
+  try {
+    $dt = new DateTime($d);
+    return $dt->format($fmt);
+  } catch(Exception $e) {
+    return L("Unknown");
+  }
 }

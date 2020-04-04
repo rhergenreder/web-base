@@ -48,4 +48,12 @@ $(document).ready(function() {
       alert(err);
     });
   });
+
+  $("#btnLogout").click(function() {
+    jsCore.apiCall("/user/logout", function(data) {
+      document.location = "/admin";
+    }, function(err) {
+      alert("err");
+    });
+  });
 });

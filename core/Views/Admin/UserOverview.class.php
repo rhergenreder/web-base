@@ -85,13 +85,12 @@ class UserOverview extends AdminView {
 
   private function getUserRows() {
 
-    $dateFormat = L("Y/m/d");
     $userRows = array();
 
     foreach($this->users as $uid => $user) {
       $name = $user["name"];
       $email = $user["email"] ?? "";
-      $registeredAt = (new DateTime($user["created_at"]))->format($dateFormat);
+      $registeredAt = formatDate($user["registered_at"]);
       $groups = $this->getGroups($user["groups"]);
 
       $userRows[] =

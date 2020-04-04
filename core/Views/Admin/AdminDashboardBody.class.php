@@ -31,16 +31,6 @@ class AdminDashboardBody extends Body {
     }
   }
 
-  private function getUsers() : array {
-    $req = new \Api\User\Fetch($this->getDocument()->getUser());
-    if(!$req->execute()) {
-      $this->errorMessages[] = $req->getLastError();
-      return array();
-    } else {
-      return $req->getResult()['users'];
-    }
-  }
-
   private function getHeader() {
 
     // Locale
@@ -75,7 +65,7 @@ class AdminDashboardBody extends Body {
             <a href=\"/\" class=\"nav-link\">$home</a>
           </li>
         </ul>
-    
+
         <!-- SEARCH FORM -->
         <form class=\"form-inline ml-3\">
           <div class=\"input-group input-group-sm\">
@@ -87,7 +77,7 @@ class AdminDashboardBody extends Body {
             </div>
           </div>
         </form>
-    
+
         <!-- Right navbar links -->
         <ul class=\"navbar-nav ml-auto\">
           <!-- Notifications Dropdown Menu -->
@@ -135,6 +125,9 @@ class AdminDashboardBody extends Body {
 
   private function getSidebar() {
 
+    $logout = L("Logout");
+    $iconLogout = $this->createIcon("arrow-left", "fas", "nav-icon");
+
     $menuEntries = array(
       "dashboard" => array(
         "name" => "Dashboard",
@@ -169,10 +162,10 @@ class AdminDashboardBody extends Body {
                style=\"opacity: .8\">
           <span class=\"brand-text font-weight-light\">WebBase</span>
         </a>
-    
+
         <!-- Sidebar -->
         <div class=\"sidebar\">
-     
+
           <!-- Sidebar Menu -->
           <nav class=\"mt-2\">
             <ul class=\"nav nav-pills nav-sidebar flex-column\" data-widget=\"treeview\" role=\"menu\" data-accordion=\"false\">";
@@ -189,15 +182,19 @@ class AdminDashboardBody extends Body {
       }
 
       $html .=
-        "<li class=\"nav-item\">
+              "<li class=\"nav-item\">
                 <a href=\"?view=$view\" class=\"nav-link$active\">
                   $icon<p>$name$badge</p>
                 </a>
               </li>";
     }
 
-    $html .=
-      "</ul>  
+    $html .= "<li class=\"nav-item\">
+                <a href=\"#\" id=\"btnLogout\" class=\"nav-link\">
+                  $iconLogout<p>$logout</p>
+                </a>
+              </li>
+            </ul>
           </nav>
         </div>
       </aside>";
@@ -240,8 +237,6 @@ class AdminDashboardBody extends Body {
   }
 
   private function getContent() {
-
-    $this->getUsers();
 
     $view = $this->getView();
     $html = "<div class=\"content-wrapper p-2\">";

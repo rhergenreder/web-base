@@ -3,6 +3,8 @@
 namespace Views;
 
 use Elements\Body;
+use Elements\Link;
+use Elements\Script;
 
 class LoginBody extends Body {
 
@@ -12,7 +14,14 @@ class LoginBody extends Body {
 
   public function loadView() {
     parent::loadView();
-    $this->getDocument()->getHead()->loadBootstrap();
+    $head = $this->getDocument()->getHead();
+    $head->loadBootstrap();
+    $head->loadJQuery();
+    $head->loadFontawesome();
+    $head->addJS(Script::CORE);
+    $head->addCSS(Link::CORE);
+    $head->addJS(Script::ADMIN);
+    $head->addCSS(Link::ADMIN);
   }
 
   public function getCode() {

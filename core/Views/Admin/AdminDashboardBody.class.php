@@ -230,10 +230,10 @@ class AdminDashboardBody extends Body {
     parent::loadView();
 
     $head = $this->getDocument()->getHead();
-    $head->addJS(Script::BOOTSTRAP);
-    $head->loadAdminlte();
+    // $head->addJS("/js/admin.min.js");
+    // $head->loadAdminlte();
 
-    $this->notifications = $this->getNotifications();
+    // $this->notifications = $this->getNotifications();
   }
 
   private function getContent() {
@@ -253,9 +253,13 @@ class AdminDashboardBody extends Body {
   public function getCode() {
     $html = parent::getCode();
 
+    // $this->getDocument()->getHead()->addJS("/js/admin.min.js");
+
+    /*
     $header = $this->getHeader();
     $sidebar = $this->getSidebar();
     $content = $this->getContent();
+
 
     $html .=
       "<!-- LICENSE: /docs/LICENSE_ADMINLTE -->
@@ -266,7 +270,10 @@ class AdminDashboardBody extends Body {
             $content
           </div>
       </body>";
+    */
 
+    $script = new Script(Script::MIME_TEXT_JAVASCRIPT, "/js/admin.min.js");
+    $html .= "<body id=\"root\">$script</body>";
     return $html;
   }
 }

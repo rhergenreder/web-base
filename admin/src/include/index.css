@@ -1,0 +1,77 @@
+.main-header {
+    transition: all 0.3s;
+    margin-left: 75px;
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.7rem;
+}
+
+.navbar-badge {
+    font-size: .6rem;
+    font-weight: 300;
+    padding: 2px 4px;
+    position: absolute;
+    right: 3px;
+    top: 7px;
+}
+
+.navbar-white {
+    background-color: #fff;
+}
+
+.main-wrapper:not(.sidebar-collapsed) .main-header {
+    transition: all 0.3s;
+    margin-left: 250px;
+}
+
+.main-sidebar {
+    background-color: #343a40;
+    width: 250px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 999;
+    color: #fff;
+    transition: all 0.3s;
+}
+
+.main-sidebar.collapsed {
+    margin-left: 0;
+    width: 4.6rem;
+}
+
+.hide-collapsed {
+    transition: all 0.2s linear;
+    opacity: 1;
+}
+
+.main-sidebar.collapsed .hide-collapsed {
+    opacity: 0;
+    font-size: 0;
+    margin-left: 0;
+}
+
+.main-content {
+    height: 100%;
+}
+
+.main-wrapper {
+    height: 100%;
+}
+
+.dropdown-menu-lg {
+    max-width: 300px;
+    min-width: 280px;
+    padding: 0;
+}
+
+.brand-link {
+    display: block;
+    font-size: 1.5rem;
+    line-height: 2;
+    padding: 1rem;
+}
+
+.show {
+    display: block !important;
+}

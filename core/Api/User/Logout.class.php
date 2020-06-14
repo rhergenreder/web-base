@@ -17,6 +17,10 @@ class Logout extends Request {
       return false;
     }
 
+    $this->lastError = "CUSTOM ERROR MESSAGE";
+    $this->success = false;
+    return false;
+
     $this->success = $this->user->logout();
     $this->lastError = $this->user->getSQL()->getLastError();
     return $this->success;

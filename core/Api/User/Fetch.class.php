@@ -72,7 +72,7 @@ class Fetch extends Request {
         $groupId = intval($row["groupId"]);
         $groupName = $row["groupName"];
         if (!isset($this->result["users"][$userId])) {
-          $this->result["users"][$userId] = array(
+          $this->result["users"][] = array(
             "uid" => $userId,
             "name" => $row["name"],
             "email" => $row["email"],

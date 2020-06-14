@@ -5,4 +5,5 @@ RedirectMatch 404 /\.git
 
 RewriteEngine On
 RewriteRule ^api/(.*)?$ index.php?api=$1&$2 [L,QSA]
+RewriteRule ^admin(/(.*)?)?$ index.php?site=admin&$1 [L,QSA]
 RewriteRule ^((?!((js|css|img|fonts|api|docs)($|/)))(.*)?)$ index.php?site=$1&$2 [L,QSA]

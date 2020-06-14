@@ -12,6 +12,7 @@ class Fetch extends Request {
   public function __construct($user, $externalCall = false) {
     parent::__construct($user, $externalCall, array());
     $this->loginRequired = true;
+    $this->csrfTokenRequired = true;
   }
 
   public function execute($values = array()) {

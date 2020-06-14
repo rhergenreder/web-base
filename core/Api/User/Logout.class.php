@@ -10,6 +10,7 @@ class Logout extends Request {
     parent::__construct($user, $externalCall);
     $this->loginRequired = true;
     $this->apiKeyAllowed = false;
+    $this->csrfTokenRequired = true;
   }
 
   public function execute($values = array()) {

@@ -47,6 +47,7 @@ class CreateDatabase {
       ->addString("browser", 64)
       ->addJson("data", false, '{}')
       ->addBool("stay_logged_in", true)
+      ->addString("csrf_token", 16 )
       ->primaryKey("uid", "user_id")
       ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
 

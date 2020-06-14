@@ -17,6 +17,7 @@ class Request {
   protected bool $isDisabled;
   protected bool $apiKeyAllowed;
   protected int $requiredGroup;
+  protected bool $csrfTokenRequired;
 
   private array $aDefaultParams;
   private array $allowedMethods;
@@ -37,6 +38,7 @@ class Request {
     $this->allowedMethods = array("GET", "POST");
     $this->requiredGroup = 0;
     $this->lastError = "";
+    $this->csrfTokenRequired = false;
   }
 
   protected function forbidMethod($method) {
@@ -111,13 +113,13 @@ class Request {
     }
 
     if($this->loginRequired || $this->requiredGroup > 0) {
-      $authorized = false;
+      $apiKeyAuthorized = false;
       if(isset($values['api_key']) && $this->apiKeyAllowed) {
         $apiKey = $values['api_key'];
-        $authorized = $this->user->authorize($apiKey);
+        $apiKeyAuthorized = $this->user->authorize($apiKey);
       }
 
-      if(!$this->user->isLoggedIn() && !$authorized) {
+      if(!$this->user->isLoggedIn() && !$apiKeyAuthorized) {
         $this->lastError = 'You are not logged in.';
         header('HTTP 1.1 401 Unauthorized');
         return false;
@@ -125,6 +127,14 @@ class Request {
         $this->lastError = "Insufficient permissions. Required group: ". GroupName($this->requiredGroup);
         header('HTTP 1.1 401 Unauthorized');
         return false;
+      } else if($this->csrfTokenRequired && !$apiKeyAuthorized && $this->externalCall) {
+        // csrf token required + external call
+        // if it's not a call with API_KEY, check for csrf_token
+        if (!isset($values["csrf_token"]) || strcmp($values["csrf_token"], $this->user->getSession()->getCsrfToken()) !== 0) {
+          $this->lastError = "CSRF-Token mismatch";
+          header('HTTP 1.1 403 Forbidden');
+          return false;
+        }
       }
     }
 

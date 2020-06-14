@@ -20,6 +20,7 @@ class Fetch extends Request {
     $this->loginRequired = true;
     $this->requiredGroup = USER_GROUP_ADMIN;
     $this->userCount = 0;
+    $this->csrfTokenRequired = true;
   }
 
   private function getUserCount() {

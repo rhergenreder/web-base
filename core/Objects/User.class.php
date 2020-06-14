@@ -71,12 +71,19 @@ class User extends ApiObject {
   }
 
   public function jsonSerialize() {
-    return array(
-      'uid' => $this->uid,
-      'name' => $this->username,
-      'language' => $this->language,
-      'session' => $this->session,
-    );
+    if ($this->isLoggedIn()) {
+      return array(
+        'uid' => $this->uid,
+        'name' => $this->username,
+        'groups' => $this->groups,
+        'language' => $this->language->jsonSerialize(),
+        'session' => $this->session->jsonSerialize(),
+      );
+    } else {
+      return array(
+         'language' => $this->language->jsonSerialize(),
+      );
+    }
   }
 
   private function reset() {
@@ -116,7 +123,7 @@ class User extends ApiObject {
   public function readData($userId, $sessionId, $sessionUpdate = true) {
 
     $res = $this->sql->select("User.name", "Language.uid as langId", "Language.code as langCode", "Language.name as langName",
-        "Session.data", "Session.stay_logged_in", "Group.uid as groupId", "Group.name as groupName")
+        "Session.data", "Session.stay_logged_in", "Session.csrf_token", "Group.uid as groupId", "Group.name as groupName")
         ->from("User")
         ->innerJoin("Session", "Session.user_id", "User.uid")
         ->leftJoin("Language", "User.language_id", "Language.uid")
@@ -134,9 +141,10 @@ class User extends ApiObject {
         $success = false;
       } else {
         $row = $res[0];
+        $csrfToken = $row["csrf_token"];
         $this->username = $row['name'];
         $this->uid = $userId;
-        $this->session = new Session($this, $sessionId);
+        $this->session = new Session($this, $sessionId, $csrfToken);
         $this->session->setData(json_decode($row["data"] ?? '{}'));
         $this->session->stayLoggedIn($row["stay_logged_in"]);
         if($sessionUpdate) $this->session->update();

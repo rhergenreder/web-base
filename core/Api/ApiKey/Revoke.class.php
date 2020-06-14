@@ -13,6 +13,7 @@ class Revoke extends Request {
       "id" => new Parameter("id", Parameter::TYPE_INT),
     ));
     $this->loginRequired = true;
+    $this->csrfTokenRequired = true;
   }
 
   private function apiKeyExists() {

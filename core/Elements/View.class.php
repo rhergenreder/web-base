@@ -21,7 +21,6 @@ abstract class View extends StaticView {
   }
 
   public function getTitle() { return $this->title; }
-  public function __toString() { return $this->getCode(); }
   public function getDocument() { return $this->document; }
   public function isSearchable() { return $this->searchable; }
   public function getReference() { return $this->reference; }

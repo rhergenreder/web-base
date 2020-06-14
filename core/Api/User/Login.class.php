@@ -65,6 +65,7 @@ class Login extends Request {
           if(!($this->success = $this->user->createSession($uid, $stayLoggedIn))) {
             return $this->createError("Error creating Session: " . $sql->getLastError());
           } else {
+            $this->result["loggedIn"] = true;
             $this->result['logoutIn'] = $this->user->getSession()->getExpiresSeconds();
             $this->success = true;
           }

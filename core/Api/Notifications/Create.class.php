@@ -17,6 +17,7 @@ class Create extends Request {
       'message' =>  new StringType('message', 256),
     ));
     $this->isPublic = false;
+    $this->csrfTokenRequired = true;
   }
 
   private function checkUser($userId) {

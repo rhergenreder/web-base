@@ -19,15 +19,17 @@ class Session extends ApiObject {
   private ?string $os;
   private ?string $browser;
   private bool $stayLoggedIn;
+  private string $csrfToken;
 
-  public function __construct(User $user, ?int $sessionId) {
+  public function __construct(User $user, ?int $sessionId, ?string $csrfToken) {
     $this->user = $user;
     $this->sessionId = $sessionId;
     $this->stayLoggedIn = true;
+    $this->csrfToken = $csrfToken ?? generateRandomString(16);
   }
 
   public static function create($user, $stayLoggedIn) {
-    $session = new Session($user, null);
+    $session = new Session($user, null, null);
     if($session->insert($stayLoggedIn)) {
       return $session;
     }
@@ -85,6 +87,7 @@ class Session extends ApiObject {
       'ipAddress' => $this->ipAddress,
       'os' => $this->os,
       'browser' => $this->browser,
+      'csrf_token' => $this->csrfToken
     );
   }
 
@@ -93,7 +96,7 @@ class Session extends ApiObject {
     $sql = $this->user->getSQL();
 
     $minutes = Session::DURATION;
-    $columns = array("expires", "user_id", "ipAddress", "os", "browser", "data", "stay_logged_in");
+    $columns = array("expires", "user_id", "ipAddress", "os", "browser", "data", "stay_logged_in", "csrf_token");
 
     $success = $sql
       ->insert("Session", $columns)
@@ -104,7 +107,8 @@ class Session extends ApiObject {
         $this->os,
         $this->browser,
         json_encode($_SESSION),
-        $stayLoggedIn)
+        $stayLoggedIn,
+        $this->csrfToken)
       ->returning("uid")
       ->execute();
 
@@ -135,8 +139,13 @@ class Session extends ApiObject {
       ->set("Session.os", $this->os)
       ->set("Session.browser", $this->browser)
       ->set("Session.data", json_encode($_SESSION))
+      ->set("Session.csrf_token", $this->csrfToken)
       ->where(new Compare("Session.uid", $this->sessionId))
       ->where(new Compare("Session.user_id", $this->user->getId()))
       ->execute();
+  }
+
+  public function getCsrfToken(): string {
+    return $this->csrfToken;
   }
 }

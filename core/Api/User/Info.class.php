@@ -4,12 +4,10 @@ namespace Api\User;
 
 use \Api\Request;
 
-class Logout extends Request {
+class Info extends Request {
 
   public function __construct($user, $externalCall = false) {
-    parent::__construct($user, $externalCall);
-    $this->loginRequired = true;
-    $this->apiKeyAllowed = false;
+    parent::__construct($user, $externalCall, array());
     $this->csrfTokenRequired = true;
   }
 
@@ -18,8 +16,13 @@ class Logout extends Request {
       return false;
     }
 
-    $this->success = $this->user->logout();
-    $this->lastError = $this->user->getSQL()->getLastError();
+    if (!$this->user->isLoggedIn()) {
+      $this->result["loggedIn"] = false;
+    } else {
+      $this->result["loggedIn"] = true;
+    }
+
+    $this->result["user"] = $this->user->jsonSerialize();
     return $this->success;
   }
 }

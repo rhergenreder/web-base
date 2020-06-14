@@ -67,9 +67,17 @@ class AdminDashboard extends React.Component {
       return <b>Loading… <Icon icon={"spinner"} /></b>
     }
 
+    const controlObj = {
+      notifications: this.state.notifications,
+      currentView: this.state.currentView,
+      onChangeView: this.onChangeView.bind(this),
+      showDialog: this.showDialog.bind(this),
+      api: this.api
+    };
+
     return <>
-        <Header />
-        <Sidebar currentView={this.state.currentView} notifications={this.state.notifications} onChangeView={this.onChangeView.bind(this)} showDialog={this.showDialog.bind(this)} api={this.api} />
+        <Header {...controlObj} />
+        <Sidebar {...controlObj} />
         <div className={"content-wrapper p-2"}>
           <section className={"content"}>
             {this.createContent()}

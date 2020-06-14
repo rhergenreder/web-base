@@ -15,8 +15,8 @@ class LoginBody extends Body {
   public function loadView() {
     parent::loadView();
     $head = $this->getDocument()->getHead();
-    $head->loadBootstrap();
     $head->loadJQuery();
+    $head->loadBootstrap();
     $head->addJS(Script::CORE);
     $head->addCSS(Link::CORE);
     $head->addJS(Script::ADMIN);

@@ -33,4 +33,8 @@ export default class API {
     async logout() {
         return this.apiCall("user/logout");
     }
+
+    async getNotifications() {
+        return this.apiCall("notifications/fetch");
+    }
 };

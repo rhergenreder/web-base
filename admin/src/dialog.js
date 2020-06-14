@@ -1,24 +1,11 @@
-import React, {useEffect, useState} from "react";
-
-function useStateFromProp(initialValue) {
-    const [value, setValue] = useState(initialValue);
-
-    useEffect(() => setValue(initialValue), [initialValue]);
-
-    return [value, setValue];
-}
+import React from "react";
 
 export default function Dialog(props) {
 
-    const [value, setValue] = useStateFromProp(props);
-
-    function onClose() {
-        setValue({ });
-    }
-
-    const show = typeof value.message !== "undefined";
+    const show = props.show;
     const classes = "modal fade" + (show ? " show" : "");
     const style = { paddingRight: "12px", display: (show ? "block" : "none") };
+    const onClose = props.onClose || function() { };
 
     return (
         <div className={classes} id="modal-default" style={style} aria-modal="true" onClick={() => onClose()}>

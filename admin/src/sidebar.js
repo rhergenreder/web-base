@@ -1,78 +1,76 @@
 import React from 'react';
 import Icon from "./icon";
 
-export default class Sidebar extends React.Component  {
+export default function Sidebar(props) {
 
-    constructor(props) {
-        super(props);
-        this.parent = {
-            onChangeView: props.onChangeView || function() { },
-            showDialog: props.showDialog || function() {},
-            api: props.api
-        };
-        this.state = { currentView: props.currentView, }
+    let parent = {
+        onChangeView: props.onChangeView || function() { },
+        showDialog: props.showDialog || function() {},
+        api: props.api
+    };
+
+    function onChangeView(view) {
+        parent.onChangeView(view);
     }
 
-    onChangeView(view) {
-        this.setState({ ...this.state, currentView: view });
-        this.parent.onChangeView(view);
-    }
-
-    onLogout() {
-        this.parent.api.logout().then(obj => {
-           if (obj.success) {
-               document.location = "/admin";
-           } else {
-               this.parent.showDialog({message: "Error logging out: " + obj.msg, title: "Error logging out"});
-           }
+    function onLogout() {
+        parent.api.logout().then(obj => {
+            if (obj.success) {
+                document.location = "/admin";
+            } else {
+                parent.showDialog("Error logging out: " + obj.msg, "Error logging out");
+            }
         });
     }
 
-    render() {
+    const menuItems = {
+        "dashboard": {
+            "name": "Dashboard",
+            "icon": "tachometer-alt"
+        },
+        "users": {
+            "name": "Users",
+            "icon": "users"
+        },
+        "settings": {
+            "name": "Settings",
+            "icon": "tools"
+        },
+        "help": {
+            "name": "Help",
+            "icon": "question-circle"
+        },
+    };
 
-        const menuItems = {
-            "dashboard": {
-                "name": "Dashboard",
-                "icon": "tachometer-alt"
-            },
-            "users": {
-                "name": "Users",
-                "icon": "users"
-            },
-            "settings": {
-                "name": "Settings",
-                "icon": "tools"
-            },
-            "help": {
-                "name": "Help",
-                "icon": "question-circle"
-            },
-        };
+    let numNotifications = Object.keys(props.notifications).length;
+    if (numNotifications > 0) {
+        if (numNotifications > 9) numNotifications = "9+";
+        menuItems["dashboard"]["badge"] = { type: "warning", value: numNotifications };
+    }
 
-        let li = [];
-        // li.push(<li className={"nav-item"} key={"logged-in-as"}><span className={""}>Logged in as: {this.parent.api.user.name}</span><hr/></li>);
-        // li.push(<li key={"hr"}><hr/></li>);
-        // li.push(<li key={"header"} className={"header"}>MAIN NAVIGATION</li>);
+    let li = [];
+    for (let id in menuItems) {
+        let obj = menuItems[id];
+        let active = props.currentView === id ? " active" : "";
+        const badge = (obj.badge ? <span className={"right badge badge-" + obj.badge.type}>{obj.badge.value}</span> : <></>);
 
-        for (let id in menuItems) {
-            let obj = menuItems[id];
-            let active = this.state.currentView === id ? " active" : "";
-            li.push(<li key={id} className={"nav-item"}>
-                <a href={"#"} onClick={() => this.onChangeView(id)} className={"nav-link" + active}>
-                    <Icon icon={obj.icon} classes={"nav-icon"} /><p>{obj.name}</p>
-                </a>
-            </li>);
-        }
-
-        li.push(<li className={"nav-item"} key={"logout"}>
-            <a href={"#"} onClick={() => this.onLogout()} className={"nav-link"}>
-                <Icon icon={"arrow-left"} classes={"nav-icon"} />
-                <p>Logout</p>
+        li.push(<li key={id} className={"nav-item"}>
+            <a href={"#"} onClick={() => onChangeView(id)} className={"nav-link" + active}>
+                <Icon icon={obj.icon} classes={"nav-icon"} /><p>{obj.name}{badge}</p>
             </a>
         </li>);
-        
-        return <aside className={"main-sidebar sidebar-dark-primary elevation-4"}>
-            <a href={"#"} className={"brand-link"} onClick={() => this.onChangeView("dashboard")}>
+    }
+
+    li.push(<li className={"nav-item"} key={"logout"}>
+        <a href={"#"} onClick={() => onLogout()} className={"nav-link"}>
+            <Icon icon={"arrow-left"} classes={"nav-icon"} />
+            <p>Logout</p>
+        </a>
+    </li>);
+
+    return (
+        <aside className={"main-sidebar sidebar-dark-primary elevation-4"}>
+            <a href={"#"} className={"brand-link"} onClick={() => onChangeView("dashboard")}>
                 <img src={"/img/icons/logo.png"} alt={"Logo"} className={"brand-image img-circle elevation-3"} style={{opacity: ".8"}} />
                 <span className={"brand-text font-weight-light ml-2"}>WebBase</span>
             </a>
@@ -93,7 +91,7 @@ export default class Sidebar extends React.Component  {
                             {/* LOGGED IN AS */}
                             <div className="user-panel mt-3 pb-3 mb-3 d-flex">
                                 <div className="info">
-                                    <a href="#" className="d-block">Logged in as: {this.parent.api.user.name}</a>
+                                    <a href="#" className="d-block">Logged in as: {parent.api.user.name}</a>
                                 </div>
                             </div>
 
@@ -109,6 +107,5 @@ export default class Sidebar extends React.Component  {
                 </div>
             </div>
         </aside>
-    }
-
-};
+    )
+}

@@ -18,17 +18,38 @@ class AdminDashboard extends React.Component {
     this.state = {
       currentView: "dashboard",
       loaded: false,
-      dialog: { }
+      dialog: { onClose: () => this.hideDialog() },
+      notifications: { }
     };
   }
 
-  onChangeView(view) {
-    this.setState({ ...this.state, currentView: view || "dashboard", dialog: { } });
+  onUpdate() {
+    if (this.state.loaded) {
+      this.fetchNotifications();
+    }
   }
 
-  showDialog(props) {
-    props = props || { };
-    this.setState({ ...this.state, dialog: props });
+  onChangeView(view) {
+    this.setState({ ...this.state, currentView: view || "dashboard" });
+  }
+
+  showDialog(message, title) {
+    const props = { show: true, message: message, title: title };
+    this.setState({ ...this.state, dialog: { ...this.state.dialog, ...props } });
+  }
+
+  hideDialog() {
+    this.setState({ ...this.state, dialog: { ...this.state.dialog, show: false } });
+  }
+
+  fetchNotifications() {
+    this.api.getNotifications().then((res) => {
+      if (!res.success) {
+        this.showDialog("Error fetching notifications: " + res.msg, "Error fetching notifications");
+      } else {
+        this.setState({...this.state, notifications: res.notifications});
+      }
+    });
   }
 
   render() {
@@ -38,16 +59,17 @@ class AdminDashboard extends React.Component {
         if (!Success) {
           document.location = "/admin";
         } else {
+          this.fetchNotifications();
+          setInterval(this.onUpdate.bind(this), 60000);
           this.setState({...this.state, loaded: true});
         }
       });
       return <b>Loading… <Icon icon={"spinner"} /></b>
     }
 
-    console.log("index.render, state=", this.state);
     return <>
         <Header />
-        <Sidebar currentView={this.state.currentView} onChangeView={this.onChangeView.bind(this)} showDialog={this.showDialog.bind(this)} api={this.api} />
+        <Sidebar currentView={this.state.currentView} notifications={this.state.notifications} onChangeView={this.onChangeView.bind(this)} showDialog={this.showDialog.bind(this)} api={this.api} />
         <div className={"content-wrapper p-2"}>
           <section className={"content"}>
             {this.createContent()}

@@ -17,7 +17,6 @@ class LoginBody extends Body {
     $head = $this->getDocument()->getHead();
     $head->loadBootstrap();
     $head->loadJQuery();
-    $head->loadFontawesome();
     $head->addJS(Script::CORE);
     $head->addCSS(Link::CORE);
     $head->addJS(Script::ADMIN);

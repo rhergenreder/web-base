@@ -7,8 +7,8 @@ export default function Icon(props) {
     let type = props.type || "fas";
     let icon = props.icon;
 
-    classes.push("fa");
-    classes.push(type + "-" + icon);
+    classes.push(type);
+    classes.push("fa-" + icon);
 
     if (icon === "spinner") {
         classes.push("fa-spin");

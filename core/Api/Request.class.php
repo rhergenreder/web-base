@@ -91,7 +91,13 @@ class Request {
       $values = $_REQUEST;
       if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER["CONTENT_TYPE"]) && in_array("application/json", explode(";", $_SERVER["CONTENT_TYPE"]))) {
         $jsonData = json_decode(file_get_contents('php://input'), true);
-        $values = array_merge($values, $jsonData);
+        if ($jsonData) {
+          $values = array_merge($values, $jsonData);
+        } else {
+          $this->lastError = 'Invalid request body.';
+          header('HTTP 1.1 400 Bad Request');
+          return false;
+        }
       }
     }
 

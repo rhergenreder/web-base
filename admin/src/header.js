@@ -37,10 +37,11 @@ export default class Header extends React.Component {
 
             {/* Right navbar links */}
             <ul className={"navbar-nav ml-auto"}>
+
                 {/* Notifications Dropdown Menu */}
                 <li className={"nav-item dropdown"}>
                     <a href={"#"} className={"nav-link"} data-toggle={"dropdown"}>
-                        <Icon class={"bell"} type={"far"} />
+                        <Icon icon={"bell"} type={"far"} />
                         <span className={"badge badge-warning navbar-badge"}>
                             {notificationCount}
                         </span>

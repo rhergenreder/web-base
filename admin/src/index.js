@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './include/index.css';
 import './include/adminlte.min.css';
+import './include/index.css';
 import API from './api.js';
 import Header from './header.js';
 import Sidebar from './sidebar.js';
@@ -9,7 +9,9 @@ import UserOverview from './users.js';
 import Overview from './overview.js'
 import Icon from "./icon";
 import Dialog from "./dialog";
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
+import {BrowserRouter as Router, Route} from 'react-router-dom'
+import View404 from "./404";
+import Switch from "react-router-dom/es/Switch";
 
 class AdminDashboard extends React.Component {
 
@@ -21,12 +23,14 @@ class AdminDashboard extends React.Component {
       dialog: { onClose: () => this.hideDialog() },
       notifications: { }
     };
+    this.controlObj = {
+      showDialog: this.showDialog.bind(this),
+      api: this.api
+    };
   }
 
   onUpdate() {
-    if (this.state.loaded) {
-      this.fetchNotifications();
-    }
+    this.fetchNotifications();
   }
 
   showDialog(message, title) {
@@ -43,7 +47,7 @@ class AdminDashboard extends React.Component {
       if (!res.success) {
         this.showDialog("Error fetching notifications: " + res.msg, "Error fetching notifications");
       } else {
-        this.setState({...this.state, notifications: res.notifications});
+        this.setState({...this.state, notifications: res.notifications });
       }
     });
   }
@@ -54,7 +58,7 @@ class AdminDashboard extends React.Component {
         document.location = "/admin";
       } else {
         this.fetchNotifications();
-        setInterval(this.onUpdate.bind(this), 60000);
+        setInterval(this.onUpdate.bind(this), 60*1000);
         this.setState({...this.state, loaded: true});
       }
     });
@@ -66,29 +70,16 @@ class AdminDashboard extends React.Component {
       return <b>Loading… <Icon icon={"spinner"} /></b>
     }
 
-    const controlObj = {
-      notifications: this.state.notifications,
-      showDialog: this.showDialog.bind(this),
-      api: this.api
-    };
-
-    const createView = (view) => {
-      controlObj.currentView = view;
-      switch (view) {
-        case "users":
-          return <UserOverview {...controlObj} />;
-        case "dashboard":
-        default:
-          return <Overview {...controlObj} />;
-      }
-    };
-
     return <Router>
-        <Header {...controlObj} />
-        <Sidebar {...controlObj} />
+        <Header {...this.controlObj} notifications={this.state.notifications} />
+        <Sidebar {...this.controlObj} notifications={this.state.notifications} />
         <div className={"content-wrapper p-2"}>
           <section className={"content"}>
-            <Route path={"/admin/:view"} component={(obj) => createView(obj.match.params.view)}/>
+            <Switch>
+              <Route path={"/admin/dashboard"}><Overview {...this.controlObj} /></Route>
+              <Route path={"/admin/users"}><UserOverview {...this.controlObj} /></Route>
+              <Route path={"*"}><View404 /></Route>
+            </Switch>
             <Dialog {...this.state.dialog}/>
           </section>
         </div>
@@ -97,6 +88,6 @@ class AdminDashboard extends React.Component {
 }
 
 ReactDOM.render(
-  <AdminDashboard />,
-  document.getElementById('root')
+    <AdminDashboard />,
+    document.getElementById('root')
 );

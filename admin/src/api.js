@@ -37,4 +37,8 @@ export default class API {
     async getNotifications() {
         return this.apiCall("notifications/fetch");
     }
+
+    async fetchUsers(pageNum = 1) {
+        return this.apiCall("user/fetch", { page: pageNum });
+    }
 };

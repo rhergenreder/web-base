@@ -7,7 +7,7 @@ use \Api\Request;
 
 class Fetch extends Request {
 
-  const SELECT_SIZE = 20;
+  const SELECT_SIZE = 10;
 
   private int $userCount;
 
@@ -73,7 +73,7 @@ class Fetch extends Request {
         $groupId = intval($row["groupId"]);
         $groupName = $row["groupName"];
         if (!isset($this->result["users"][$userId])) {
-          $this->result["users"][] = array(
+          $this->result["users"][$userId] = array(
             "uid" => $userId,
             "name" => $row["name"],
             "email" => $row["email"],
@@ -86,7 +86,7 @@ class Fetch extends Request {
           $this->result["users"][$userId]["groups"][$groupId] = $groupName;
         }
       }
-      $this->result["pages"] = intval(ceil($this->userCount / Fetch::SELECT_SIZE));
+      $this->result["pageCount"] = intval(ceil($this->userCount / Fetch::SELECT_SIZE));
     }
 
     return $this->success;

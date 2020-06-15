@@ -1,14 +1,16 @@
 import * as React from "react";
-import Icon from "./icon";
+import Icon from "../elements/icon";
 import {Link} from "react-router-dom";
-import {getPeriodString} from "./global";
+import {getPeriodString} from "../global";
+import Alert from "../elements/alert";
 
 export default class UserOverview extends React.Component {
 
     constructor(props) {
         super(props);
         this.parent = {
-            showDialog: props.showDialog || function() {},
+            showDialog: props.showDialog || function () {
+            },
             api: props.api,
         };
         this.state = {
@@ -16,12 +18,14 @@ export default class UserOverview extends React.Component {
             users: {
                 data: {},
                 page: 1,
-                pageCount: 1
+                pageCount: 1,
+                totalCount: 0,
             },
             groups: {
                 data: {},
                 page: 1,
-                pageCount: 1
+                pageCount: 1,
+                totalCount: 0,
             },
             errors: []
         };
@@ -29,7 +33,7 @@ export default class UserOverview extends React.Component {
 
     fetchGroups(page) {
         page = page || this.state.groups.page;
-        this.setState({ ...this.state, groups: { ...this.state.groups, data: { }, page: 1 } });
+        this.setState({...this.state, groups: {...this.state.groups, data: {}, page: 1, totalCount: 0}});
         this.parent.api.fetchGroups(page).then((res) => {
             if (res.success) {
                 this.setState({
@@ -37,13 +41,16 @@ export default class UserOverview extends React.Component {
                     groups: {
                         data: res.groups,
                         pageCount: res.pageCount,
-                        page: page
+                        page: page,
+                        totalCount: res.totalCount,
                     }
                 });
             } else {
+                let errors = this.state.errors.slice();
+                errors.push({title: "Error fetching groups", message: res.msg});
                 this.setState({
                     ...this.state,
-                    errors: this.state.errors.slice().push(res.msg)
+                    errors: errors
                 });
             }
             if (!this.state.loaded) {
@@ -54,7 +61,7 @@ export default class UserOverview extends React.Component {
 
     fetchUsers(page) {
         page = page || this.state.users.page;
-        this.setState({ ...this.state, users: { ...this.state.users, data: { }, pageCount: 1 } });
+        this.setState({...this.state, users: {...this.state.users, data: {}, pageCount: 1, totalCount: 0}});
         this.parent.api.fetchUsers(page).then((res) => {
             if (res.success) {
                 this.setState({
@@ -63,22 +70,33 @@ export default class UserOverview extends React.Component {
                     users: {
                         data: res.users,
                         pageCount: res.pageCount,
-                        page: page
+                        page: page,
+                        totalCount: res.totalCount,
                     }
                 });
             } else {
+                let errors = this.state.errors.slice();
+                errors.push({title: "Error fetching users", message: res.msg});
                 this.setState({
                     ...this.state,
                     loaded: true,
-                    errors: this.state.errors.slice().push(res.msg)
+                    errors: errors
                 });
             }
         });
     }
 
     componentDidMount() {
-        this.setState({ ...this.state, loaded: false });
+        this.setState({...this.state, loaded: false});
         this.fetchGroups(1);
+    }
+
+    removeError(i) {
+        if (i >= 0 && i < this.state.errors.length) {
+            let errors = this.state.errors.slice();
+            errors.splice(i, 1);
+            this.setState({...this.state, errors: errors});
+        }
     }
 
     render() {
@@ -87,6 +105,11 @@ export default class UserOverview extends React.Component {
             return <div className={"text-center mt-4"}>
                 <h3>Loading…&nbsp;<Icon icon={"spinner"}/></h3>
             </div>
+        }
+
+        let errors = [];
+        for (let i = 0; i < this.state.errors.length; i++) {
+            errors.push(<Alert key={"error-" + i} onClose={() => this.removeError(i)} {...this.state.errors[i]}/>)
         }
 
         return <>
@@ -106,13 +129,14 @@ export default class UserOverview extends React.Component {
                 </div>
             </div>
             <div className={"content"}>
+                {errors}
                 <div className={"content-fluid"}>
                     <div className={"row"}>
                         <div className={"col-lg-6"}>
-                            { this.createUserCard() }
+                            {this.createUserCard()}
                         </div>
                         <div className={"col-lg-6"}>
-                            { this.createGroupCard() }
+                            {this.createGroupCard()}
                         </div>
                     </div>
                 </div>
@@ -135,7 +159,8 @@ export default class UserOverview extends React.Component {
                 if (user.groups.hasOwnProperty(groupId)) {
                     let groupName = user.groups[groupId];
                     let color = (groupId === "1" ? "danger" : "secondary");
-                    groups.push(<span key={"group-" + groupId} className={"mr-1 badge badge-" + color}>{groupName}</span>);
+                    groups.push(<span key={"group-" + groupId}
+                                      className={"mr-1 badge badge-" + color}>{groupName}</span>);
                 }
             }
 
@@ -156,11 +181,11 @@ export default class UserOverview extends React.Component {
         for (let i = 1; i <= this.state.users.pageCount; i++) {
             let active = (this.state.users.page === i ? " active" : "");
             pages.push(
-              <li key={"page-" + i} className={"page-item" + active}>
-                  <a className={"page-link"} href={"#"} onClick={() => this.fetchUsers(i)}>
-                      {i}
-                  </a>
-              </li>
+                <li key={"page-" + i} className={"page-item" + active}>
+                    <a className={"page-link"} href={"#"} onClick={() => this.fetchUsers(i)}>
+                        {i}
+                    </a>
+                </li>
             );
         }
 
@@ -176,31 +201,38 @@ export default class UserOverview extends React.Component {
             <div className={"card-body table-responsive p-0"}>
                 <table className={"table table-striped table-valign-middle"}>
                     <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Groups</th>
-                            <th>Registered</th>
-                        </tr>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Groups</th>
+                        <th>Registered</th>
+                    </tr>
                     </thead>
                     <tbody>
-                      { userRows }
+                    {userRows}
                     </tbody>
                 </table>
-                <nav aria-label={""}>
-                    <ul className={"pagination p-2 m-0 justify-content-end"}>
-                        <li className={"page-item" + previousDisabled}>
-                          <a className={"page-link"} href={"#"} onClick={() => this.fetchUsers(this.state.users.page - 1)}>
-                              Previous
-                          </a>
-                        </li>
-                        { pages }
-                        <li className={"page-item" + nextDisabled}>
-                            <a className={"page-link"} href={"#"} onClick={() => this.fetchUsers(this.state.users.page + 1)}>
-                                Next
-                            </a>
-                        </li>
-                    </ul>
+                <nav className={"row m-0"}>
+                    <div className={"col-6 pl-3 pt-3 pb-3 text-muted"}>
+                        Total: {this.state.users.totalCount}
+                    </div>
+                    <div className={"col-6 p-0"}>
+                        <ul className={"pagination p-2 m-0 justify-content-end"}>
+                            <li className={"page-item" + previousDisabled}>
+                                <a className={"page-link"} href={"#"}
+                                   onClick={() => this.fetchUsers(this.state.users.page - 1)}>
+                                    Previous
+                                </a>
+                            </li>
+                            {pages}
+                            <li className={"page-item" + nextDisabled}>
+                                <a className={"page-link"} href={"#"}
+                                   onClick={() => this.fetchUsers(this.state.users.page + 1)}>
+                                    Next
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </nav>
             </div>
         </div>;
@@ -256,23 +288,30 @@ export default class UserOverview extends React.Component {
                     </tr>
                     </thead>
                     <tbody>
-                    { groupRows }
+                    {groupRows}
                     </tbody>
                 </table>
-                <nav aria-label={""}>
-                    <ul className={"pagination p-2 m-0 justify-content-end"}>
-                        <li className={"page-item" + previousDisabled}>
-                            <a className={"page-link"} href={"#"} onClick={() => this.fetchGroups(this.state.groups.page - 1)}>
-                                Previous
-                            </a>
-                        </li>
-                        { pages }
-                        <li className={"page-item" + nextDisabled}>
-                            <a className={"page-link"} href={"#"} onClick={() => this.fetchGroups(this.state.groups.page + 1)}>
-                                Next
-                            </a>
-                        </li>
-                    </ul>
+                <nav className={"row m-0"}>
+                    <div className={"col-6 pl-3 pt-3 pb-3 text-muted"}>
+                        Total: {this.state.groups.totalCount}
+                    </div>
+                    <div className={"col-6 p-0"}>
+                        <ul className={"pagination p-2 m-0 justify-content-end"}>
+                            <li className={"page-item" + previousDisabled}>
+                                <a className={"page-link"} href={"#"}
+                                   onClick={() => this.fetchGroups(this.state.groups.page - 1)}>
+                                    Previous
+                                </a>
+                            </li>
+                            {pages}
+                            <li className={"page-item" + nextDisabled}>
+                                <a className={"page-link"} href={"#"}
+                                   onClick={() => this.fetchGroups(this.state.groups.page + 1)}>
+                                    Next
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </nav>
             </div>
         </div>;

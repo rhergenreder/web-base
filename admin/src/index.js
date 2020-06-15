@@ -5,13 +5,13 @@ import './include/index.css';
 import API from './api.js';
 import Header from './header.js';
 import Sidebar from './sidebar.js';
-import UserOverview from './users.js';
-import Overview from './overview.js'
-import Icon from "./icon";
-import Dialog from "./dialog";
-import {BrowserRouter as Router, Route} from 'react-router-dom'
+import UserOverview from './views/users.js';
+import Overview from './views/overview.js'
+import Icon from "./elements/icon";
+import Dialog from "./elements/dialog";
+import {BrowserRouter as Router, Route, Switch} from 'react-router-dom'
 import View404 from "./404";
-import Switch from "react-router-dom/es/Switch";
+import Logs from "./views/logs";
 
 class AdminDashboard extends React.Component {
 
@@ -78,6 +78,7 @@ class AdminDashboard extends React.Component {
             <Switch>
               <Route path={"/admin/dashboard"}><Overview {...this.controlObj} /></Route>
               <Route path={"/admin/users"}><UserOverview {...this.controlObj} /></Route>
+              <Route path={"/admin/logs"}><Logs {...this.controlObj} /></Route>
               <Route path={"*"}><View404 /></Route>
             </Switch>
             <Dialog {...this.state.dialog}/>

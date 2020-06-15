@@ -14,7 +14,12 @@ export default function Icon(props) {
         classes.push("fa-spin");
     }
 
+    let newProps = {...props, className: classes.join(" ") };
+    delete newProps["classes"];
+    delete newProps["type"];
+    delete newProps["icon"];
+
     return (
-        <i className={classes.join(" ")} />
+        <i {...newProps} />
     );
 }

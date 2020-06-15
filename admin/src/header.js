@@ -1,18 +1,14 @@
 import * as React from "react";
-import Icon from "./icon";
+import Icon from "./elements/icon";
 import {useState} from "react";
 import {getPeriodString} from "./global";
+import {Link} from "react-router-dom";
 
 export default function Header(props) {
 
     const parent = {
-        onChangeView: props.onChangeView || function() {},
         notifications: props.notifications || { },
     };
-
-    function onChangeView(view) {
-        parent.onChangeView(view);
-    }
 
     const [dropdownVisible, showDropdown] = useState(false);
     const mailIcon = <Icon icon={"envelope"} type={"fas"} />;
@@ -31,11 +27,11 @@ export default function Header(props) {
         const notification = parent.notifications[uid];
         const createdAt = getPeriodString(notification.created_at);
         notificationItems.push(
-            <a href="#" className={"dropdown-item"} key={"notification-" + uid}>
+            <Link to={"/admin/logs?notification=" + uid} className={"dropdown-item"} key={"notification-" + uid}>
                 {mailIcon}
                 <span className={"ml-2"}>{notification.title}</span>
                 <span className={"float-right text-muted text-sm"}>{createdAt}</span>
-            </a>);
+            </Link>);
     }
 
     return (
@@ -49,9 +45,9 @@ export default function Header(props) {
                     </a>
                 </li>
                 <li className={"nav-item d-none d-sm-inline-block"}>
-                    <a href={"#"} onClick={() => onChangeView("dashboard")} className={"nav-link"}>
+                    <Link to={"/admin/dashboard"} className={"nav-link"}>
                         Home
-                    </a>
+                    </Link>
                 </li>
             </ul>
 
@@ -84,7 +80,7 @@ export default function Header(props) {
                         </span>
                         {notificationItems}
                         <div className={"dropdown-divider"} />
-                        <a href={"#"} onClick={() => onChangeView("dashboard")} className={"dropdown-item dropdown-footer"}>See All Notifications</a>
+                        <Link to={"/admin/logs"} className={"dropdown-item dropdown-footer"}>See All Notifications</Link>
                     </div>
                 </li>
             </ul>

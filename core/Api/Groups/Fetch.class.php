@@ -76,6 +76,7 @@ class Fetch extends Request {
         );
       }
       $this->result["pageCount"] = intval(ceil($this->groupCount / Fetch::SELECT_SIZE));
+      $this->result["totalCount"] = $this->groupCount;
     }
 
     return $this->success;

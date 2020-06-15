@@ -1,5 +1,5 @@
 import React from 'react';
-import Icon from "./icon";
+import Icon from "./elements/icon";
 import {Link, NavLink} from "react-router-dom";
 
 export default function Sidebar(props) {
@@ -32,6 +32,10 @@ export default function Sidebar(props) {
             "name": "Settings",
             "icon": "tools"
         },
+        "logs": {
+            "name": "Logs & Notifications",
+            "icon": "file-medical-alt"
+        },
         "help": {
             "name": "Help",
             "icon": "question-circle"
@@ -41,7 +45,7 @@ export default function Sidebar(props) {
     let numNotifications = Object.keys(props.notifications).length;
     if (numNotifications > 0) {
         if (numNotifications > 9) numNotifications = "9+";
-        menuItems["dashboard"]["badge"] = { type: "warning", value: numNotifications };
+        menuItems["logs"]["badge"] = { type: "warning", value: numNotifications };
     }
 
     let li = [];

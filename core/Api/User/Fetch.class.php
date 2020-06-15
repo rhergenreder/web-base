@@ -87,6 +87,7 @@ class Fetch extends Request {
         }
       }
       $this->result["pageCount"] = intval(ceil($this->userCount / Fetch::SELECT_SIZE));
+      $this->result["totalCount"] = $this->userCount;
     }
 
     return $this->success;

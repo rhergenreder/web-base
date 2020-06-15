@@ -1,17 +1,13 @@
 import React from 'react';
 import Icon from "./icon";
+import {Link, NavLink} from "react-router-dom";
 
 export default function Sidebar(props) {
 
     let parent = {
-        onChangeView: props.onChangeView || function() { },
         showDialog: props.showDialog || function() {},
         api: props.api
     };
-
-    function onChangeView(view) {
-        parent.onChangeView(view);
-    }
 
     function onLogout() {
         parent.api.logout().then(obj => {
@@ -29,7 +25,7 @@ export default function Sidebar(props) {
             "icon": "tachometer-alt"
         },
         "users": {
-            "name": "Users",
+            "name": "Users & Groups",
             "icon": "users"
         },
         "settings": {
@@ -51,14 +47,15 @@ export default function Sidebar(props) {
     let li = [];
     for (let id in menuItems) {
         let obj = menuItems[id];
-        let active = props.currentView === id ? " active" : "";
         const badge = (obj.badge ? <span className={"right badge badge-" + obj.badge.type}>{obj.badge.value}</span> : <></>);
 
-        li.push(<li key={id} className={"nav-item"}>
-            <a href={"#"} onClick={() => onChangeView(id)} className={"nav-link" + active}>
-                <Icon icon={obj.icon} classes={"nav-icon"} /><p>{obj.name}{badge}</p>
-            </a>
-        </li>);
+        li.push(
+            <li key={id} className={"nav-item"}>
+                <NavLink to={"/admin/" + id} className={"nav-link"} activeClassName={"active"}>
+                    <Icon icon={obj.icon} classes={"nav-icon"} /><p>{obj.name}{badge}</p>
+                </NavLink>
+            </li>
+        );
     }
 
     li.push(<li className={"nav-item"} key={"logout"}>
@@ -70,10 +67,10 @@ export default function Sidebar(props) {
 
     return (
         <aside className={"main-sidebar sidebar-dark-primary elevation-4"}>
-            <a href={"#"} className={"brand-link"} onClick={() => onChangeView("dashboard")}>
+            <Link href={"#"} className={"brand-link"} to={"/admin/dashboard"}>
                 <img src={"/img/icons/logo.png"} alt={"Logo"} className={"brand-image img-circle elevation-3"} style={{opacity: ".8"}} />
                 <span className={"brand-text font-weight-light ml-2"}>WebBase</span>
-            </a>
+            </Link>
 
             <div className={"sidebar os-host os-theme-light os-host-overflow os-host-overflow-y os-host-resize-disabled os-host-scrollbar-horizontal-hidden os-host-transition"}>
                 {/* IDK what this is */}
@@ -101,7 +98,6 @@ export default function Sidebar(props) {
                                     {li}
                                 </ul>
                             </nav>
-
                         </div>
                     </div>
                 </div>

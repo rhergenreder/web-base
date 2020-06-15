@@ -9,6 +9,7 @@ import UserOverview from './users.js';
 import Overview from './overview.js'
 import Icon from "./icon";
 import Dialog from "./dialog";
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 
 class AdminDashboard extends React.Component {
 
@@ -16,7 +17,6 @@ class AdminDashboard extends React.Component {
     super(props);
     this.api = new API();
     this.state = {
-      currentView: "dashboard",
       loaded: false,
       dialog: { onClose: () => this.hideDialog() },
       notifications: { }
@@ -27,10 +27,6 @@ class AdminDashboard extends React.Component {
     if (this.state.loaded) {
       this.fetchNotifications();
     }
-  }
-
-  onChangeView(view) {
-    this.setState({ ...this.state, currentView: view || "dashboard" });
   }
 
   showDialog(message, title) {
@@ -52,47 +48,51 @@ class AdminDashboard extends React.Component {
     });
   }
 
+  componentDidMount() {
+    this.api.fetchUser().then(Success => {
+      if (!Success) {
+        document.location = "/admin";
+      } else {
+        this.fetchNotifications();
+        setInterval(this.onUpdate.bind(this), 60000);
+        this.setState({...this.state, loaded: true});
+      }
+    });
+  }
+
   render() {
 
     if (!this.state.loaded) {
-      this.api.fetchUser().then(Success => {
-        if (!Success) {
-          document.location = "/admin";
-        } else {
-          this.fetchNotifications();
-          setInterval(this.onUpdate.bind(this), 60000);
-          this.setState({...this.state, loaded: true});
-        }
-      });
       return <b>Loading… <Icon icon={"spinner"} /></b>
     }
 
     const controlObj = {
       notifications: this.state.notifications,
-      currentView: this.state.currentView,
-      onChangeView: this.onChangeView.bind(this),
       showDialog: this.showDialog.bind(this),
       api: this.api
     };
 
-    return <>
+    const createView = (view) => {
+      controlObj.currentView = view;
+      switch (view) {
+        case "users":
+          return <UserOverview {...controlObj} />;
+        case "dashboard":
+        default:
+          return <Overview {...controlObj} />;
+      }
+    };
+
+    return <Router>
         <Header {...controlObj} />
         <Sidebar {...controlObj} />
         <div className={"content-wrapper p-2"}>
           <section className={"content"}>
-            {this.createContent()}
+            <Route path={"/admin/:view"} component={(obj) => createView(obj.match.params.view)}/>
             <Dialog {...this.state.dialog}/>
           </section>
         </div>
-      </>
-  }
-
-  createContent() {
-    if (this.state.currentView === "users") {
-      return <UserOverview />
-    } else {
-      return <Overview />
-    }
+      </Router>
   }
 }
 

@@ -41,4 +41,8 @@ export default class API {
     async fetchUsers(pageNum = 1) {
         return this.apiCall("user/fetch", { page: pageNum });
     }
+
+    async fetchGroups(pageNum = 1) {
+        return this.apiCall("groups/fetch", { page: pageNum });
+    }
 };

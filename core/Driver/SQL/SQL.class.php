@@ -180,6 +180,12 @@ abstract class SQL {
       }
     }
 
+    $groupBy = "";
+    $groupColumns = $select->getGroupBy();
+    if (!empty($groupColumns)) {
+      $groupBy = " GROUP BY " . $this->columnName($groupColumns);
+    }
+
     $orderBy = "";
     $orderColumns = $select->getOrderBy();
     if (!empty($orderColumns)) {
@@ -189,7 +195,7 @@ abstract class SQL {
 
     $limit = ($select->getLimit() > 0 ? (" LIMIT " . $select->getLimit()) : "");
     $offset = ($select->getOffset() > 0 ? (" OFFSET " . $select->getOffset()) : "");
-    $query = "SELECT $columns FROM $tables$joinStr$where$orderBy$limit$offset";
+    $query = "SELECT $columns FROM $tables$joinStr$where$groupBy$orderBy$limit$offset";
     if($select->dump) { var_dump($query); var_dump($params); }
     return $this->execute($query, $params, true);
   }
@@ -280,8 +286,9 @@ abstract class SQL {
     if (is_null($col)) {
       return new Keyword("COUNT(*) AS count");
     } else {
+      $countCol = strtolower(str_replace(".","_", $col)) .  "_count";
       $col = $this->columnName($col);
-      return new Keyword("COUNT($col) AS count");
+      return new Keyword("COUNT($col) AS $countCol");
     }
   }
 

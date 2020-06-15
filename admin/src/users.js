@@ -27,6 +27,31 @@ export default class UserOverview extends React.Component {
         };
     }
 
+    fetchGroups(page) {
+        page = page || this.state.groups.page;
+        this.setState({ ...this.state, groups: { ...this.state.groups, data: { }, page: 1 } });
+        this.parent.api.fetchGroups(page).then((res) => {
+            if (res.success) {
+                this.setState({
+                    ...this.state,
+                    groups: {
+                        data: res.groups,
+                        pageCount: res.pageCount,
+                        page: page
+                    }
+                });
+            } else {
+                this.setState({
+                    ...this.state,
+                    errors: this.state.errors.slice().push(res.msg)
+                });
+            }
+            if (!this.state.loaded) {
+                this.fetchUsers(1)
+            }
+        });
+    }
+
     fetchUsers(page) {
         page = page || this.state.users.page;
         this.setState({ ...this.state, users: { ...this.state.users, data: { }, pageCount: 1 } });
@@ -53,7 +78,7 @@ export default class UserOverview extends React.Component {
 
     componentDidMount() {
         this.setState({ ...this.state, loaded: false });
-        this.fetchUsers(1);
+        this.fetchGroups(1);
     }
 
     render() {
@@ -85,6 +110,9 @@ export default class UserOverview extends React.Component {
                     <div className={"row"}>
                         <div className={"col-lg-6"}>
                             { this.createUserCard() }
+                        </div>
+                        <div className={"col-lg-6"}>
+                            { this.createGroupCard() }
                         </div>
                     </div>
                 </div>
@@ -169,6 +197,78 @@ export default class UserOverview extends React.Component {
                         { pages }
                         <li className={"page-item" + nextDisabled}>
                             <a className={"page-link"} href={"#"} onClick={() => this.fetchUsers(this.state.users.page + 1)}>
+                                Next
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>;
+    }
+
+    createGroupCard() {
+        let groupRows = [];
+        for (let uid in this.state.groups.data) {
+            if (!this.state.groups.data.hasOwnProperty(uid)) {
+                continue;
+            }
+
+            let group = this.state.groups.data[uid];
+
+            groupRows.push(
+                <tr key={"group-" + uid}>
+                    <td>{group.name}</td>
+                    <td>{group.memberCount}</td>
+                </tr>
+            );
+        }
+
+        let pages = [];
+        let previousDisabled = (this.state.groups.page === 1 ? " disabled" : "");
+        let nextDisabled = (this.state.groups.page >= this.state.groups.pageCount ? " disabled" : "");
+
+        for (let i = 1; i <= this.state.groups.pageCount; i++) {
+            let active = (this.state.groups.page === i ? " active" : "");
+            pages.push(
+                <li key={"page-" + i} className={"page-item" + active}>
+                    <a className={"page-link"} href={"#"} onClick={() => this.fetchGroups(i)}>
+                        {i}
+                    </a>
+                </li>
+            );
+        }
+
+        return <div className={"card"}>
+            <div className={"card-header border-0"}>
+                <h3 className={"card-title"}>Groups</h3>
+                <div className={"card-tools"}>
+                    <a href={"#"} className={"btn btn-tool btn-sm"} onClick={() => this.fetchGroups()}>
+                        <Icon icon={"sync"}/>
+                    </a>
+                </div>
+            </div>
+            <div className={"card-body table-responsive p-0"}>
+                <table className={"table table-striped table-valign-middle"}>
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Members</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    { groupRows }
+                    </tbody>
+                </table>
+                <nav aria-label={""}>
+                    <ul className={"pagination p-2 m-0 justify-content-end"}>
+                        <li className={"page-item" + previousDisabled}>
+                            <a className={"page-link"} href={"#"} onClick={() => this.fetchGroups(this.state.groups.page - 1)}>
+                                Previous
+                            </a>
+                        </li>
+                        { pages }
+                        <li className={"page-item" + nextDisabled}>
+                            <a className={"page-link"} href={"#"} onClick={() => this.fetchGroups(this.state.groups.page + 1)}>
                                 Next
                             </a>
                         </li>

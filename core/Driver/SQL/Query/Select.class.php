@@ -12,6 +12,7 @@ class Select extends Query {
   private array $conditions;
   private array $joins;
   private array $orderColumns;
+  private array $groupColumns;
   private bool $sortAscending;
   private int $limit;
   private int $offset;
@@ -23,6 +24,7 @@ class Select extends Query {
     $this->conditions = array();
     $this->joins = array();
     $this->orderColumns = array();
+    $this->groupColumns = array();
     $this->limit = 0;
     $this->offset = 0;
     $this->sortAscending = true;
@@ -45,6 +47,11 @@ class Select extends Query {
 
   public function leftJoin($table, $columnA, $columnB) {
     $this->joins[] = new Join("LEFT", $table, $columnA, $columnB);
+    return $this;
+  }
+
+  public function groupBy(...$columns) {
+    $this->groupColumns = $columns;
     return $this;
   }
 
@@ -85,5 +92,6 @@ class Select extends Query {
   public function getOrderBy() { return $this->orderColumns; }
   public function getLimit() { return $this->limit; }
   public function getOffset() { return $this->offset; }
+  public function getGroupBy() { return $this->groupColumns; }
 
 }

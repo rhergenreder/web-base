@@ -65,7 +65,7 @@ class Fetch extends Request {
       foreach($res as $row) {
         $id = $row["uid"];
         if (!isset($this->notifications[$id])) {
-          $this->notifications[$id] = array(
+          $this->notifications[] = array(
             "uid" => $id,
             "title" => $row["title"],
             "message" => $row["message"],

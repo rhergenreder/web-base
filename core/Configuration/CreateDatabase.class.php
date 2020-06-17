@@ -51,6 +51,12 @@ class CreateDatabase {
       ->primaryKey("uid", "user_id")
       ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
 
+    $queries[] = $sql->createTable("UserInvitation")
+      ->addString("username",32)
+      ->addString("email",32)
+      ->addString("token",36)
+      ->addDateTime("valid_until");
+
     $queries[] = $sql->createTable("UserToken")
       ->addInt("user_id")
       ->addString("token", 36)

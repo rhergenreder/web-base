@@ -146,7 +146,7 @@ export default class CreateUser extends React.Component {
             this.parent.api.inviteUser(username, email).then((res) => {
                 let errors = this.state.errors.slice();
                 if (!res.success) {
-                    errors.push({ title: "Error inviting User", message: res.msg, type: "error" });
+                    errors.push({ title: "Error inviting User", message: res.msg, type: "danger" });
                     this.setState({ ...this.state, errors: errors });
                 } else {
                     errors.push({ title: "Success", message: "The invitation was successfully sent.", type: "success" });
@@ -157,7 +157,7 @@ export default class CreateUser extends React.Component {
             this.parent.api.createUser(username, email, password, confirmPassword).then((res) => {
                 let errors = this.state.errors.slice();
                 if (!res.success) {
-                    errors.push({ title: "Error creating User", message: res.msg, type: "error" });
+                    errors.push({ title: "Error creating User", message: res.msg, type: "danger" });
                     this.setState({ ...this.state, errors: errors, password: "", confirmPassword: "" });
                 } else {
                     errors.push({ title: "Success", message: "The user was successfully created.", type: "success" });

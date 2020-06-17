@@ -24,10 +24,6 @@ class AdminDashboard extends React.Component {
       dialog: { onClose: () => this.hideDialog() },
       notifications: { }
     };
-    this.controlObj = {
-      showDialog: this.showDialog.bind(this),
-      api: this.api
-    };
   }
 
   onUpdate() {
@@ -71,16 +67,21 @@ class AdminDashboard extends React.Component {
       return <b>Loading… <Icon icon={"spinner"} /></b>
     }
 
+    this.controlObj = {
+      showDialog: this.showDialog.bind(this),
+      api: this.api
+    };
+
     return <Router>
         <Header {...this.controlObj} notifications={this.state.notifications} />
         <Sidebar {...this.controlObj} notifications={this.state.notifications} />
         <div className={"content-wrapper p-2"}>
           <section className={"content"}>
             <Switch>
-              <Route path={"/admin/dashboard"}><Overview {...this.controlObj} /></Route>
+              <Route path={"/admin/dashboard"}><Overview {...this.controlObj} notifications={this.state.notifications} /></Route>
               <Route exact={true} path={"/admin/users"}><UserOverview {...this.controlObj} /></Route>
               <Route exact={true} path={"/admin/users/adduser"}><CreateUser {...this.controlObj} /></Route>
-              <Route path={"/admin/logs"}><Logs {...this.controlObj} /></Route>
+              <Route path={"/admin/logs"}><Logs {...this.controlObj} notifications={this.state.notifications} /></Route>
               <Route path={"*"}><View404 /></Route>
             </Switch>
             <Dialog {...this.state.dialog}/>

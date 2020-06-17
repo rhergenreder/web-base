@@ -6,7 +6,8 @@ export default function Sidebar(props) {
 
     let parent = {
         showDialog: props.showDialog || function() {},
-        api: props.api
+        api: props.api,
+        notifications: props.notifications || [ ]
     };
 
     function onLogout() {
@@ -28,6 +29,10 @@ export default function Sidebar(props) {
             "name": "Users & Groups",
             "icon": "users"
         },
+        "pages": {
+            "name": "Pages & Routes",
+            "icon": "copy",
+        },
         "settings": {
             "name": "Settings",
             "icon": "tools"
@@ -42,7 +47,7 @@ export default function Sidebar(props) {
         },
     };
 
-    let numNotifications = Object.keys(props.notifications).length;
+    let numNotifications = parent.notifications.length;
     if (numNotifications > 0) {
         if (numNotifications > 9) numNotifications = "9+";
         menuItems["logs"]["badge"] = { type: "warning", value: numNotifications };
@@ -88,15 +93,11 @@ export default function Sidebar(props) {
                 <div className={"os-padding"}>
                     <div className={"os-viewport os-viewport-native-scrollbars-invisible"} style={{right: "0px", bottom: "0px"}}>
                         <div className={"os-content"} style={{padding: "0px 0px", height: "100%", width: "100%"}}>
-
-                            {/* LOGGED IN AS */}
                             <div className="user-panel mt-3 pb-3 mb-3 d-flex">
                                 <div className="info">
                                     <a href="#" className="d-block">Logged in as: {parent.api.user.name}</a>
                                 </div>
                             </div>
-
-                            {/* SIDEBAR */}
                             <nav className={"mt-2"}>
                                 <ul className={"nav nav-pills nav-sidebar flex-column"} data-widget={"treeview"} role={"menu"} data-accordion={"false"}>
                                     {li}

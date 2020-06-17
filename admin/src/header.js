@@ -7,13 +7,13 @@ import {Link} from "react-router-dom";
 export default function Header(props) {
 
     const parent = {
-        notifications: props.notifications || { },
+        notifications: props.notifications || [ ],
     };
 
     const [dropdownVisible, showDropdown] = useState(false);
     const mailIcon = <Icon icon={"envelope"} type={"fas"} />;
 
-    let notificationCount = Object.keys(parent.notifications).length;
+    let notificationCount = parent.notifications.length;
     let notificationText  = "No new notifications";
 
     if(notificationCount === 1) {
@@ -23,8 +23,9 @@ export default function Header(props) {
     }
 
     let notificationItems = [];
-    for (let uid in parent.notifications) {
-        const notification = parent.notifications[uid];
+    for (let i = 0; i < parent.notifications.length; i++) {
+        const notification = parent.notifications[i];
+        const uid = notification.uid;
         const createdAt = getPeriodString(notification.created_at);
         notificationItems.push(
             <Link to={"/admin/logs?notification=" + uid} className={"dropdown-item"} key={"notification-" + uid}>

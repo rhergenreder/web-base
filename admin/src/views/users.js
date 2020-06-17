@@ -9,8 +9,7 @@ export default class UserOverview extends React.Component {
     constructor(props) {
         super(props);
         this.parent = {
-            showDialog: props.showDialog || function () {
-            },
+            showDialog: props.showDialog || function () { },
             api: props.api,
         };
         this.state = {

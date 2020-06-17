@@ -34,7 +34,7 @@ class Create extends Request {
     $password = $this->getParam('password');
     $confirmPassword = $this->getParam('confirmPassword');
     if ($password !== $confirmPassword) {
-      return false;
+      return $this->createError("The given passwords do not match.");
     }
 
     $this->success = $this->createUser($username, $email, $password);
@@ -51,14 +51,12 @@ class Create extends Request {
     $this->success = ($res !== FALSE);
     $this->lastError = $sql->getLastError();
 
-    if (!empty($res)) {
+    if ($this->success && !empty($res)) {
       $row = $res[0];
       if (strcasecmp($username, $row['name']) === 0) {
-        $this->lastError = "This username is already in use.";
-        $this->success = false;
+        return $this->createError("This username is already taken.");
       } else if (strcasecmp($username, $row['email']) === 0) {
-        $this->lastError = "This email address is already taken";
-        $this->success = false;
+        return $this->createError("This email address is already in use.");
       }
     }
 
@@ -69,13 +67,12 @@ class Create extends Request {
     $sql = $this->user->getSQL();
     $salt = generateRandomString(16);
     $hash = hash('sha256', $password . $salt);
-    $res = $sql->insert("User", array(
-      'username' => $username,
-      'password' => $hash,
-      'salt' => $salt,
-      'email' => $email
-    ))->execute();
+    $res = $sql->insert("User", array("name", "password", "salt", "email"))
+      ->addRow($username, $hash, $salt, $email)
+      ->execute();
+
     $this->lastError = $sql->getLastError();
-    return $res === TRUE;
+    $this->success = ($res !== FALSE);
+    return $this->success;
   }
 }

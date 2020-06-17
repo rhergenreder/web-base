@@ -7,6 +7,7 @@ import Header from './header.js';
 import Sidebar from './sidebar.js';
 import UserOverview from './views/users.js';
 import Overview from './views/overview.js'
+import CreateUser from "./views/adduser";
 import Icon from "./elements/icon";
 import Dialog from "./elements/dialog";
 import {BrowserRouter as Router, Route, Switch} from 'react-router-dom'
@@ -77,7 +78,8 @@ class AdminDashboard extends React.Component {
           <section className={"content"}>
             <Switch>
               <Route path={"/admin/dashboard"}><Overview {...this.controlObj} /></Route>
-              <Route path={"/admin/users"}><UserOverview {...this.controlObj} /></Route>
+              <Route exact={true} path={"/admin/users"}><UserOverview {...this.controlObj} /></Route>
+              <Route exact={true} path={"/admin/users/adduser"}><CreateUser {...this.controlObj} /></Route>
               <Route path={"/admin/logs"}><Logs {...this.controlObj} /></Route>
               <Route path={"*"}><View404 /></Route>
             </Switch>

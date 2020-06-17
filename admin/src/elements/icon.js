@@ -2,7 +2,7 @@ import * as React from "react";
 
 export default function Icon(props) {
 
-    let classes = props.classes || [];
+    let classes = props.className || [];
     classes = Array.isArray(classes) ? classes : classes.toString().split(" ");
     let type = props.type || "fas";
     let icon = props.icon;
@@ -15,7 +15,6 @@ export default function Icon(props) {
     }
 
     let newProps = {...props, className: classes.join(" ") };
-    delete newProps["classes"];
     delete newProps["type"];
     delete newProps["icon"];
 

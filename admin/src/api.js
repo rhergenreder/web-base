@@ -45,4 +45,12 @@ export default class API {
     async fetchGroups(pageNum = 1) {
         return this.apiCall("groups/fetch", { page: pageNum });
     }
+
+    async inviteUser(username, email) {
+        return this.apiCall("user/invite", { username: username, email: email });
+    }
+
+    async createUser(username, email, password, confirmPassword) {
+        return this.apiCall("user/create", { username: username, email: email, password: password, confirmPassword: confirmPassword });
+    }
 };

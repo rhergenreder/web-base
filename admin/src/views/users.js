@@ -193,6 +193,9 @@ export default class UserOverview extends React.Component {
             <div className={"card-header border-0"}>
                 <h3 className={"card-title"}>Users</h3>
                 <div className={"card-tools"}>
+                    <Link href={"#"} className={"btn btn-tool btn-sm"} to={"/admin/users/adduser"} >
+                        <Icon icon={"plus"}/>
+                    </Link>
                     <a href={"#"} className={"btn btn-tool btn-sm"} onClick={() => this.fetchUsers()}>
                         <Icon icon={"sync"}/>
                     </a>
@@ -274,6 +277,9 @@ export default class UserOverview extends React.Component {
             <div className={"card-header border-0"}>
                 <h3 className={"card-title"}>Groups</h3>
                 <div className={"card-tools"}>
+                    <Link href={"#"} className={"btn btn-tool btn-sm"} to={"/admin/users/addgroup"} >
+                        <Icon icon={"plus"}/>
+                    </Link>
                     <a href={"#"} className={"btn btn-tool btn-sm"} onClick={() => this.fetchGroups()}>
                         <Icon icon={"sync"}/>
                     </a>

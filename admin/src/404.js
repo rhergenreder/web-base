@@ -8,7 +8,7 @@ export default class View404 extends React.Component {
             <h2 className={"headline text-warning"}>404</h2>
             <div className={"error-content"}>
                 <h3>
-                    <Icon icon={"exclamation-triangle"} classes={"text-warning"}/> Oops! Page not found.
+                    <Icon icon={"exclamation-triangle"} className={"text-warning"}/> Oops! Page not found.
                 </h3>
                 <p>
                     We could not find the page you were looking for.

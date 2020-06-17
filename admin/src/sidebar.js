@@ -56,7 +56,7 @@ export default function Sidebar(props) {
         li.push(
             <li key={id} className={"nav-item"}>
                 <NavLink to={"/admin/" + id} className={"nav-link"} activeClassName={"active"}>
-                    <Icon icon={obj.icon} classes={"nav-icon"} /><p>{obj.name}{badge}</p>
+                    <Icon icon={obj.icon} className={"nav-icon"} /><p>{obj.name}{badge}</p>
                 </NavLink>
             </li>
         );
@@ -64,7 +64,7 @@ export default function Sidebar(props) {
 
     li.push(<li className={"nav-item"} key={"logout"}>
         <a href={"#"} onClick={() => onLogout()} className={"nav-link"}>
-            <Icon icon={"arrow-left"} classes={"nav-icon"} />
+            <Icon icon={"arrow-left"} className={"nav-icon"} />
             <p>Logout</p>
         </a>
     </li>);

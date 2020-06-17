@@ -29,6 +29,7 @@ class Invite extends Request {
         return false;
     }
 
+    //add to DB
     $token = generateRandomString(36);
     $valid_until = (new DateTime())->modify("+48 hour");
     $sql = $this->user->getSQL();
@@ -38,6 +39,7 @@ class Invite extends Request {
     $this->success = ($res !== FALSE);
     $this->lastError = $sql->getLastError();
 
+    //send validation mail
     if($this->success) {
         $request = new SendEmail($this->user);
         $this->success = $request->execute(array(

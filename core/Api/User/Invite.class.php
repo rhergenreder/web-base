@@ -4,6 +4,8 @@ namespace Api\User;
 
 use Api\Parameter\StringType;
 use \Api\Request;
+use Api\SendMail;
+use DateTime;
 use Driver\SQL\Condition\Compare;
 
 class Invite extends Request {
@@ -33,17 +35,26 @@ class Invite extends Request {
     $token = generateRandomString(36);
     $valid_until = (new DateTime())->modify("+48 hour");
     $sql = $this->user->getSQL();
-    $res = $sql->insert("UserInvite", array("name", "email","token","valid_until"))
-        ->addRow($username, $email, $token,$valid_until)
+    $res = $sql->insert("UserInvitation", array("username", "email", "token", "valid_until"))
+        ->addRow($username, $email, $token, $valid_until)
         ->execute();
     $this->success = ($res !== FALSE);
     $this->lastError = $sql->getLastError();
 
     //send validation mail
     if($this->success) {
-        $request = new SendEmail($this->user);
+        $request = new SendMail($this->user);
+        $link = "http://localhost/acceptInvitation?token=$token";
         $this->success = $request->execute(array(
-            "from" => "...", "to" => $email));
+            "from" => "webmaster@romanh.de",
+            "to" => $email,
+            "subject" => "Account Invitation for web-base@localhost",
+            "body" =>
+"Hello,<br>
+you were invited to create an account on web-base@localhost. Click on the following link to confirm the registration, it is 48h valid from now.             
+If the invitation was not intended, you can simply ignore this email.<br><br><a href=\"$link\">$link</a>"
+          )
+        );
         $this->lastError  = $request->getLastError();
     }
     return $this->success;

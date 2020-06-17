@@ -94,9 +94,7 @@ class Configuration {
             public function __construct() {
               parent::__construct('$host', $port, '$login', '$password');$properties
             }
-          }
-
-          ?>", false
+          }", false
         );
       } else {
         return false;

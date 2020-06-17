@@ -27,6 +27,10 @@ class SendMail extends Request {
 
     try {
       $mailConfig = $this->user->getConfiguration()->getMail();
+      if (!$mailConfig) {
+        return $this->createError("Mail is not configured yet.");
+      }
+
       $mail = new PHPMailer;
       $mail->IsSMTP();
       $mail->setFrom($this->getParam('from'), $this->getParam('fromName'));

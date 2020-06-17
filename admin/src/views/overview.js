@@ -1,6 +1,9 @@
 import * as React from "react";
 import {Link} from "react-router-dom";
 import Icon from "../elements/icon";
+import { Bar } from 'react-chartjs-2';
+import {Collapse} from 'react-collapse';
+import moment from 'moment';
 
 export default class Overview extends React.Component {
 
@@ -10,6 +13,10 @@ export default class Overview extends React.Component {
             showDialog: props.showDialog,
             notifications: props.notification,
             api: props.api,
+        };
+
+        this.state = {
+            chartVisible : true,
         }
     }
 
@@ -24,6 +31,22 @@ export default class Overview extends React.Component {
         let pageCount = 0;
         let visitorCount = 0;
 
+        const colors = [
+            '#ff4444', '#ffbb33', '#00C851', '#33b5e5',
+            '#ff4444', '#ffbb33', '#00C851', '#33b5e5',
+            '#ff4444', '#ffbb33', '#00C851', '#33b5e5'
+        ];
+
+        let chartOptions = {};
+        let chartData = {
+            labels: moment.monthsShort(),
+            datasets: [{
+                label: 'Unique Visitors ' + moment().year(),
+                borderWidth: 1,
+                data: [ 10, 20, 30, 0, 15, 5, 40, 100, 6, 3, 10, 20 ],
+                backgroundColor: colors,
+            }]
+        };
 
         return <>
             <div className={"content-header"}>
@@ -100,27 +123,29 @@ export default class Overview extends React.Component {
                             <div className="card-header">
                                 <h3 className="card-title">Unique Visitors this year</h3>
                                 <div className="card-tools">
-                                    <button type="button" className="btn btn-tool" data-card-widget="collapse">
+                                    <button type="button" className={"btn btn-tool"} onClick={(e) => {
+                                        e.preventDefault();
+                                        this.setState({ ...this.state, chartVisible: !this.state.chartVisible });
+                                    }}>
                                         <Icon icon={"minus"} />
                                     </button>
-                                    <button type="button" className="btn btn-tool" data-card-widget="remove">
-                                        <Icon icon={"times"} />
-                                    </button>
                                 </div>
                             </div>
-                            <div className="card-body">
-                                <div className="chart">
-                                    <div className="chartjs-size-monitor">
-                                        <div className="chartjs-size-monitor-expand">
-                                            <div/>
+                            <Collapse isOpened={this.state.chartVisible}>
+                                <div className="card-body">
+                                    <div className="chart">
+                                        <div className="chartjs-size-monitor">
+                                            <div className="chartjs-size-monitor-expand">
+                                                <div/>
+                                            </div>
+                                            <div className="chartjs-size-monitor-shrink">
+                                                <div/>
+                                            </div>
                                         </div>
-                                        <div className="chartjs-size-monitor-shrink">
-                                            <div/>
-                                        </div>
+                                        <Bar data={chartData} options={chartOptions} />
                                     </div>
-                                    <BarChart data={data} series={series} axes={axes} tooltip />
                                 </div>
-                            </div>
+                            </Collapse>
                         </div>
                     </div>
                 </div>

@@ -3,6 +3,7 @@ import {Link} from "react-router-dom";
 import Alert from "../elements/alert";
 import Icon from "../elements/icon";
 import ReactTooltip from 'react-tooltip'
+import {Collapse} from "react-collapse/lib/Collapse";
 
 export default class CreateUser extends React.Component {
 
@@ -37,24 +38,6 @@ export default class CreateUser extends React.Component {
         let errors = [];
         for (let i = 0; i < this.state.errors.length; i++) {
             errors.push(<Alert key={"error-" + i} onClose={() => this.removeError(i)} {...this.state.errors[i]}/>)
-        }
-
-        let passwordForm = null;
-        if (!this.state.sendInvite) {
-            passwordForm = <div className={"mt-2"}>
-                <div className={"form-group"}>
-                    <label htmlFor={"password"}>Password</label>
-                    <input type={"password"} className={"form-control"} placeholder={"Password"}
-                           id={"password"} name={"password"} value={this.state.password}
-                           onChange={this.onChangeInput.bind(this)}/>
-                </div>
-                <div className={"form-group"}>
-                    <label htmlFor={"confirmPassword"}>Confirm Password</label>
-                    <input type={"password"} className={"form-control"} placeholder={"Confirm Password"}
-                           id={"confirmPassword"} name={"confirmPassword"} value={this.state.confirmPassword}
-                           onChange={this.onChangeInput.bind(this)}/>
-                </div>
-            </div>
         }
 
         return <>
@@ -102,7 +85,24 @@ export default class CreateUser extends React.Component {
                                           data-type={"info"} data-place={"right"} data-effect={"solid"}/>
                                 </label>
                             </div>
-                            {passwordForm}
+
+                            <Collapse isOpened={!this.state.sendInvite}>
+                                <div className={"mt-2"}>
+                                    <div className={"form-group"}>
+                                        <label htmlFor={"password"}>Password</label>
+                                        <input type={"password"} className={"form-control"} placeholder={"Password"}
+                                               id={"password"} name={"password"} value={this.state.password}
+                                               onChange={this.onChangeInput.bind(this)}/>
+                                    </div>
+                                    <div className={"form-group"}>
+                                        <label htmlFor={"confirmPassword"}>Confirm Password</label>
+                                        <input type={"password"} className={"form-control"} placeholder={"Confirm Password"}
+                                               id={"confirmPassword"} name={"confirmPassword"} value={this.state.confirmPassword}
+                                               onChange={this.onChangeInput.bind(this)}/>
+                                    </div>
+                                </div>
+                            </Collapse>
+
                             <Link to={"/admin/users"} className={"btn btn-info mt-2 mr-2"}>
                                 <Icon icon={"arrow-left"}/>
                                 &nbsp;Back

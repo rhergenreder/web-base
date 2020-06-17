@@ -13,6 +13,7 @@ use \Driver\SQL\Column\DateTimeColumn;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\JsonColumn;
 
+use Driver\SQL\Expression\Add;
 use Driver\SQL\Strategy\Strategy;
 use \Driver\SQL\Strategy\UpdateStrategy;
 
@@ -172,8 +173,13 @@ class MySQL extends SQL {
         if ($value instanceof Column) {
           $columnName = $this->columnName($value->getName());
           $updateValues[] = "$leftColumn=$columnName";
+        } else if($value instanceof Add) {
+          $columnName = $this->columnName($value->getColumn());
+          $operator = $value->getOperator();
+          $value = $value->getValue();
+          $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
         } else {
-          $updateValues[] = "`$leftColumn=" . $this->addValue($value, $params);
+          $updateValues[] = "$leftColumn=" . $this->addValue($value, $params);
         }
       }
 

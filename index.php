@@ -79,6 +79,7 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       $document = new $class($user);
     }
 
+    $user->processVisit();
     $response = $document->getCode();
   }
 }

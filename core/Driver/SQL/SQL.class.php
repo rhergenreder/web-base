@@ -292,6 +292,12 @@ abstract class SQL {
     }
   }
 
+  public function sum($col) {
+    $sumCol = strtolower(str_replace(".","_", $col)) .  "_sum";
+    $col = $this->columnName($col);
+    return new Keyword("SUM($col) AS $sumCol");
+  }
+
   public function distinct($col) {
     $col = $this->columnName($col);
     return new Keyword("DISTINCT($col)");

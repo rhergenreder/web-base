@@ -113,6 +113,12 @@ class CreateDatabase {
       ->primaryKey("uid")
       ->foreignKey("user_id", "User", "uid");
 
+    $queries[] = $sql->createTable("Visitor")
+      ->addInt("month")
+      ->addInt("count", false, 1)
+      ->addString("cookie", 26)
+      ->unique("month", "cookie");
+
     return $queries;
   }
 }

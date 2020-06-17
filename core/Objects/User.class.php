@@ -4,6 +4,9 @@ namespace Objects;
 
 use Api\SetLanguage;
 use Configuration\Configuration;
+use DateTime;
+use Driver\SQL\Expression\Add;
+use Driver\SQL\Strategy\UpdateStrategy;
 use Exception;
 use External\JWT;
 use Driver\SQL\SQL;
@@ -118,6 +121,7 @@ class User extends ApiObject {
     }
 
     $this->language->sendCookie();
+    session_write_close();
   }
 
   public function readData($userId, $sessionId, $sessionUpdate = true) {
@@ -231,5 +235,17 @@ class User extends ApiObject {
     }
 
     return $success;
+  }
+
+  public function processVisit() {
+    if ($this->sql && isset($_COOKIE["PHPSESSID"]) && !empty($_COOKIE["PHPSESSID"])) {
+      $cookie = $_COOKIE["PHPSESSID"];
+      $month = (new DateTime())->format("Ym");
+
+      $this->sql->insert("Visitor", array("cookie", "month"))
+        ->addRow($cookie, $month)
+        ->onDuplicateKeyStrategy(new UpdateStrategy(array("count" => new Add("count", 1))))
+        ->execute();
+    }
   }
 }

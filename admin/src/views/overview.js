@@ -4,32 +4,53 @@ import Icon from "../elements/icon";
 import { Bar } from 'react-chartjs-2';
 import {Collapse} from 'react-collapse';
 import moment from 'moment';
+import Alert from "../elements/alert";
 
 export default class Overview extends React.Component {
 
     constructor(props) {
         super(props);
+
         this.parent = {
             showDialog: props.showDialog,
-            notifications: props.notification,
             api: props.api,
         };
 
         this.state = {
             chartVisible : true,
+            userCount: 0,
+            notificationCount: 0,
+            visitors: { },
+            errors: []
         }
     }
 
-    fetchStats() {
+    removeError(i) {
+        if (i >= 0 && i < this.state.errors.length) {
+            let errors = this.state.errors.slice();
+            errors.splice(i, 1);
+            this.setState({...this.state, errors: errors});
+        }
+    }
 
+    componentDidMount() {
+        this.parent.api.getStats().then((res) => {
+            if(!res.success) {
+                let errors = this.state.errors.slice();
+                errors.push({ message: res.msg, title: "Error fetching Stats" });
+                this.setState({ ...this.state, errors: errors });
+            } else {
+                this.setState({
+                    ...this.state,
+                    userCount: res.userCount,
+                    pageCount: res.pageCount,
+                    visitors: res.visitors,
+                });
+            }
+        });
     }
 
     render() {
-
-        let userCount = 0;
-        let notificationCount = 0;
-        let pageCount = 0;
-        let visitorCount = 0;
 
         const colors = [
             '#ff4444', '#ffbb33', '#00C851', '#33b5e5',
@@ -37,16 +58,31 @@ export default class Overview extends React.Component {
             '#ff4444', '#ffbb33', '#00C851', '#33b5e5'
         ];
 
+        let data = new Array(12).fill(0);
+        let visitorCount = 0;
+        for (let date in this.state.visitors) {
+            let month = parseInt(date) % 100 - 1;
+            if (month >= 0 && month < 12) {
+                data[month] = this.state.visitors[date];
+                visitorCount += this.state.visitors[date];
+            }
+        }
+
         let chartOptions = {};
         let chartData = {
             labels: moment.monthsShort(),
             datasets: [{
                 label: 'Unique Visitors ' + moment().year(),
                 borderWidth: 1,
-                data: [ 10, 20, 30, 0, 15, 5, 40, 100, 6, 3, 10, 20 ],
+                data: data,
                 backgroundColor: colors,
             }]
         };
+
+        let errors = [];
+        for (let i = 0; i < this.state.errors.length; i++) {
+            errors.push(<Alert key={"error-" + i} onClose={() => this.removeError(i)} {...this.state.errors[i]}/>)
+        }
 
         return <>
             <div className={"content-header"}>
@@ -66,11 +102,12 @@ export default class Overview extends React.Component {
             </div>
             <section className={"content"}>
                 <div className={"container-fluid"}>
+                    {errors}
                     <div className={"row"}>
                         <div className={"col-lg-3 col-6"}>
                             <div className="small-box bg-info">
                                 <div className={"inner"}>
-                                    <h3>{userCount}</h3>
+                                    <h3>{this.state.userCount}</h3>
                                     <p>Users registered</p>
                                 </div>
                                 <div className="icon">
@@ -82,7 +119,7 @@ export default class Overview extends React.Component {
                         <div className={"col-lg-3 col-6"}>
                             <div className={"small-box bg-success"}>
                                 <div className={"inner"}>
-                                    <h3>{pageCount}</h3>
+                                    <h3>{this.state.pageCount}</h3>
                                     <p>Routes & Pages</p>
                                 </div>
                                 <div className="icon">
@@ -94,7 +131,7 @@ export default class Overview extends React.Component {
                         <div className={"col-lg-3 col-6"}>
                             <div className={"small-box bg-warning"}>
                                 <div className={"inner"}>
-                                    <h3>{notificationCount}</h3>
+                                    <h3>{this.props.notifications.length}</h3>
                                     <p>new Notifications</p>
                                 </div>
                                 <div className={"icon"}>

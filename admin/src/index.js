@@ -81,7 +81,7 @@ class AdminDashboard extends React.Component {
               <Route path={"/admin/dashboard"}><Overview {...this.controlObj} notifications={this.state.notifications} /></Route>
               <Route exact={true} path={"/admin/users"}><UserOverview {...this.controlObj} /></Route>
               <Route exact={true} path={"/admin/users/adduser"}><CreateUser {...this.controlObj} /></Route>
-              <Route path={"/admin/logs"}><Logs {...this.controlObj} notifications={this.state.notifications} /></Route>
+              <Route path={"/admin/logs"}><Logs {...this.controlObj} /></Route>
               <Route path={"*"}><View404 /></Route>
             </Switch>
             <Dialog {...this.state.dialog}/>

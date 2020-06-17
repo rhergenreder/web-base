@@ -53,4 +53,8 @@ export default class API {
     async createUser(username, email, password, confirmPassword) {
         return this.apiCall("user/create", { username: username, email: email, password: password, confirmPassword: confirmPassword });
     }
+
+    async getStats() {
+        return this.apiCall("stats");
+    }
 };

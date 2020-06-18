@@ -143,7 +143,7 @@ abstract class SQL {
     $returningCol = $insert->getReturning();
     $returning = $this->getReturning($returningCol);
 
-    $query = "INSERT INTO $tableName$columnStr VALUES$values$onDuplicateKey$returning";
+    $query = "INSERT INTO $tableName$columnStr VALUES $values$onDuplicateKey$returning";
     if($insert->dump) { var_dump($query); var_dump($parameters); }
     $res = $this->execute($query, $parameters, !empty($returning));
     $success = ($res !== FALSE);

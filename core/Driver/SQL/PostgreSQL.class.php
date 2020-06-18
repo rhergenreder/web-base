@@ -4,6 +4,7 @@ namespace Driver\SQL;
 
 use \Api\Parameter\Parameter;
 
+use Driver\SQL\Column\Column;
 use \Driver\SQL\Column\IntColumn;
 use \Driver\SQL\Column\SerialColumn;
 use \Driver\SQL\Column\StringColumn;
@@ -12,7 +13,9 @@ use \Driver\SQL\Column\DateTimeColumn;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\JsonColumn;
 
+use Driver\SQL\Expression\Add;
 use Driver\SQL\Strategy\Strategy;
+use Driver\SQL\Strategy\UpdateStrategy;
 
 class PostgreSQL extends SQL {
 
@@ -129,24 +132,31 @@ class PostgreSQL extends SQL {
 
   protected function getOnDuplicateStrategy(?Strategy $strategy, &$params) {
       if (!is_null($strategy)) {
-
-        /*if ($onDuplicateKey instanceof UpdateStrategy) {
+        if ($strategy instanceof UpdateStrategy) {
               $updateValues = array();
-              foreach($onDuplicateKey->getValues() as $key => $value) {
+              foreach($strategy->getValues() as $key => $value) {
+                $leftColumn = $this->columnName($key);
                 if ($value instanceof Column) {
-                  $columnName = $value->getName();
-                  $updateValues[] = "\"$key\"=\"$columnName\"";
+                  $columnName = $this->columnName($value->getName());
+                  $updateValues[] = "$leftColumn=$columnName";
+                } else if ($value instanceof Add) {
+                  $columnName = $this->columnName($value->getColumn());
+                  $operator = $value->getOperator();
+                  $value = $value->getValue();
+                  $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
                 } else {
-                  $updateValues[] = "\"$key\"=" . $this->addValue($value, $parameters);
+                  $updateValues[] = "$leftColumn=" . $this->addValue($value, $parameters);
                 }
               }
 
-              $onDuplicateKey = " ON CONFLICT DO UPDATE SET " . implode(",", $updateValues);
-            } else*/ {
-          $strategyClass = get_class($strategy);
-          $this->lastError = "ON DUPLICATE Strategy $strategyClass is not supported yet.";
-          return false;
-        }
+              $conflictingColumns = $this->columnName($strategy->getConflictingColumns());
+              $updateValues = implode(",", $updateValues);
+              return " ON CONFLICT ($conflictingColumns) DO UPDATE SET $updateValues";
+          } else {
+            $strategyClass = get_class($strategy);
+            $this->lastError = "ON DUPLICATE Strategy $strategyClass is not supported yet.";
+           return false;
+          }
       } else {
         return "";
       }

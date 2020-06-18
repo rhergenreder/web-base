@@ -239,13 +239,28 @@ class User extends ApiObject {
 
   public function processVisit() {
     if ($this->sql && isset($_COOKIE["PHPSESSID"]) && !empty($_COOKIE["PHPSESSID"])) {
+
+      if ($this->isBot()) {
+        return;
+      }
+
       $cookie = $_COOKIE["PHPSESSID"];
       $month = (new DateTime())->format("Ym");
 
       $this->sql->insert("Visitor", array("cookie", "month"))
         ->addRow($cookie, $month)
-        ->onDuplicateKeyStrategy(new UpdateStrategy(array("count" => new Add("count", 1))))
+        ->onDuplicateKeyStrategy(new UpdateStrategy(
+          array("month", "cookie"),
+          array("count" => new Add("Visitor.count", 1))))
         ->execute();
     }
+  }
+
+  private function isBot() {
+    if (!isset($_SERVER["HTTP_USER_AGENT"]) || empty($_SERVER["HTTP_USER_AGENT"])) {
+      return false;
+    }
+
+    return preg_match('/robot|spider|crawler|curl|^$/i', $_SERVER['HTTP_USER_AGENT']) === 1;
   }
 }

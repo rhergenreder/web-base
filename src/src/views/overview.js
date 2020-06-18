@@ -63,8 +63,9 @@ export default class Overview extends React.Component {
         for (let date in this.state.visitors) {
             let month = parseInt(date) % 100 - 1;
             if (month >= 0 && month < 12) {
-                data[month] = this.state.visitors[date];
-                visitorCount += this.state.visitors[date];
+                let count = parseInt(this.state.visitors[date]);
+                data[month] = count;
+                visitorCount += count;
             }
         }
 

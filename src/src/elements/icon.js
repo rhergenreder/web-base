@@ -10,7 +10,7 @@ export default function Icon(props) {
     classes.push(type);
     classes.push("fa-" + icon);
 
-    if (icon === "spinner") {
+    if (icon === "spinner" || icon === "circle-notch") {
         classes.push("fa-spin");
     }
 

@@ -21,7 +21,8 @@ export default class CreateUser extends React.Component {
             username: "",
             email: "",
             password: "",
-            confirmPassword: ""
+            confirmPassword: "",
+            isSubmitting: false
         }
     }
 
@@ -107,7 +108,10 @@ export default class CreateUser extends React.Component {
                                 <Icon icon={"arrow-left"}/>
                                 &nbsp;Back
                             </Link>
-                            <button type={"submit"} className={"btn btn-primary mt-2"}>Submit</button>
+                            { this.state.isSubmitting
+                                ? <button type={"submit"} className={"btn btn-primary mt-2"} disabled>Loading…&nbsp;<Icon icon={"circle-notch"} /></button>
+                                : <button type={"submit"} className={"btn btn-primary mt-2"}>Submit</button>
+                            }
                         </form>
                     </div>
                 </div>
@@ -118,6 +122,10 @@ export default class CreateUser extends React.Component {
 
     submitForm(e) {
         e.preventDefault();
+
+        if (this.state.isSubmitting) {
+            return;
+        }
 
         const requiredFields = (this.state.sendInvite ?
             ["username", "email"] :
@@ -137,6 +145,7 @@ export default class CreateUser extends React.Component {
             return;
         }
 
+        this.setState({ ...this.state, isSubmitting: true });
         const username = this.state.username;
         const email = this.state.email || "";
         const password = this.state.password;
@@ -147,21 +156,29 @@ export default class CreateUser extends React.Component {
                 let errors = this.state.errors.slice();
                 if (!res.success) {
                     errors.push({ title: "Error inviting User", message: res.msg, type: "danger" });
-                    this.setState({ ...this.state, errors: errors });
+                    this.setState({ ...this.state, errors: errors, isSubmitting: false });
                 } else {
                     errors.push({ title: "Success", message: "The invitation was successfully sent.", type: "success" });
-                    this.setState({ ...this.state, errors: errors, username: "", email: "" });
+                    this.setState({ ...this.state, errors: errors, username: "", email: "", isSubmitting: false });
                 }
             });
         } else {
+
+            if (this.state.password !== this.state.confirmPassword) {
+                let errors = this.state.errors.slice();
+                errors.push({ title: "Error creating User", message: "The given passwords do not match", type: "danger" });
+                this.setState({ ...this.state, errors: errors, password: "", confirmPassword: "", isSubmitting: false });
+                return;
+            }
+
             this.parent.api.createUser(username, email, password, confirmPassword).then((res) => {
                 let errors = this.state.errors.slice();
                 if (!res.success) {
                     errors.push({ title: "Error creating User", message: res.msg, type: "danger" });
-                    this.setState({ ...this.state, errors: errors, password: "", confirmPassword: "" });
+                    this.setState({ ...this.state, errors: errors, password: "", confirmPassword: "", isSubmitting: false });
                 } else {
                     errors.push({ title: "Success", message: "The user was successfully created.", type: "success" });
-                    this.setState({ ...this.state, errors: errors, username: "", email: "", password: "", confirmPassword: "" });
+                    this.setState({ ...this.state, errors: errors, username: "", email: "", password: "", confirmPassword: "", isSubmitting: false });
                 }
             });
         }

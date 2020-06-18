@@ -10,7 +10,8 @@ include_once 'core/datetime.php';
 include_once 'core/constants.php';
 
 if (!is_readable(getClassPath(Configuration::class))) {
-  die("Configuration directory is not readable, please check permissions before proceeding");
+  header("Content-Type", "application/json");
+  die(json_encode(array( "success" => false, "msg" => "Configuration directory is not readable, check permissions before proceeding." )));
 }
 
 spl_autoload_extensions(".php");

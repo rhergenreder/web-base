@@ -17,7 +17,7 @@
     "react-tooltip": "^4.2.7"
   },
   "scripts": {
-    "build": "webpack --mode development && cp dist/main.js ../js/admin.min.js"
+    "build": "webpack --mode development && mv dist/main.js ../js/admin.min.js"
   },
   "eslintConfig": {
     "extends": "react-app"

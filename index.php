@@ -1,6 +1,7 @@
 <?php
 
 use Api\Request;
+use Configuration\Configuration;
 use Documents\Document404;
 use Elements\Document;
 
@@ -8,16 +9,21 @@ include_once 'core/core.php';
 include_once 'core/datetime.php';
 include_once 'core/constants.php';
 
+if (!is_readable(getClassPath(Configuration::class))) {
+  die("Configuration directory is not readable, please check permissions before proceeding");
+}
+
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {
-  $full_path = getClassPath($class);
-  if(file_exists($full_path))
+  $full_path = getClassPath($class, true);
+  if(file_exists($full_path)) {
     include_once $full_path;
-  else
+  } else {
     include_once getClassPath($class, false);
+  }
 });
 
-$config = new Configuration\Configuration();
+$config = new Configuration();
 $installation = (!$config->load());
 $user   = new Objects\User($config);
 

@@ -158,8 +158,7 @@ export default class UserOverview extends React.Component {
                 if (user.groups.hasOwnProperty(groupId)) {
                     let groupName = user.groups[groupId];
                     let color = (groupId === "1" ? "danger" : "secondary");
-                    groups.push(<span key={"group-" + groupId}
-                                      className={"mr-1 badge badge-" + color}>{groupName}</span>);
+                    groups.push(<span key={"group-" + groupId} className={"mr-1 badge badge-" + color}>{groupName}</span>);
                 }
             }
 
@@ -181,7 +180,7 @@ export default class UserOverview extends React.Component {
             let active = (this.state.users.page === i ? " active" : "");
             pages.push(
                 <li key={"page-" + i} className={"page-item" + active}>
-                    <a className={"page-link"} href={"#"} onClick={() => this.fetchUsers(i)}>
+                    <a className={"page-link"} href={"#"} onClick={() => { if (this.state.users.page !== i) this.fetchUsers(i) }}>
                         {i}
                     </a>
                 </li>
@@ -265,7 +264,7 @@ export default class UserOverview extends React.Component {
             let active = (this.state.groups.page === i ? " active" : "");
             pages.push(
                 <li key={"page-" + i} className={"page-item" + active}>
-                    <a className={"page-link"} href={"#"} onClick={() => this.fetchGroups(i)}>
+                    <a className={"page-link"} href={"#"} onClick={() => { if (this.state.groups.page !== i) this.fetchGroups(i) }}>
                         {i}
                     </a>
                 </li>

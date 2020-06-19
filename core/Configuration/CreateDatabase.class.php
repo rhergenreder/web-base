@@ -129,7 +129,8 @@ class CreateDatabase {
       ->primaryKey("uid");
 
     $queries[] = $sql->insert("Route", array("request", "action", "target"))
-      ->addRow("/admin(/.*)?", "dynamic", "\\Core\\Documents\\AdminDashboard");
+      ->addRow("/admin(/.*)?", "dynamic", "\\Core\\Documents\\AdminDashboard")
+      ->addRow("/api/(.*)", "dynamic", "\\Core\\Api\\$1");
 
     return $queries;
   }

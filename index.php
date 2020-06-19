@@ -60,7 +60,7 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
     }
   }
 } else {
-  $documentName = $_GET["site"];
+  $documentName = $_GET["site"] ?? "/";
   if ($installation) {
     if ($documentName !== "" && $documentName !== "index.php") {
       $response = "Redirecting to <a href=\"/\">/</a>";
@@ -70,24 +70,47 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       $response = $document->getCode();
     }
   } else {
-    if(empty($documentName) || strcasecmp($documentName, "install") === 0) {
-      $documentName = "home";
-    } else if(!preg_match("/[a-zA-Z]+(\/[a-zA-Z]+)*/", $documentName)) {
-      $documentName = "Document404";
-    }
 
-    $documentName = strtoupper($documentName[0]) . substr($documentName, 1);
-    $documentName = str_replace("/", "\\", $documentName);
-    $class = "\\Documents\\$documentName";
-    $file = getClassPath($class);
-    if(!file_exists($file) || !is_subclass_of($class, Document::class)) {
-      $document = new Document404($user);
+    $req = new \Api\Routes\Find($user);
+    $success = $req->execute(array("request" => $documentName));
+    $response = "";
+    if (!$success) {
+      $response = "Unable to find route: " . $req->getLastError();
     } else {
-      $document = new $class($user);
+      $route = $req->getResult()["route"];
+      if (is_null($route)) {
+        $response = (new Document404($user))->getCode();
+      } else {
+        $target = trim(explode("\n", $route["target"])[0]);
+        switch ($route["action"]) {
+          case "redirect_temporary":
+            http_send_status(307);
+            header("Location: $target");
+            break;
+          case "redirect_permanently":
+            http_send_status(308);
+            header("Location: $target");
+            break;
+          case "static":
+            http_send_status(501);
+            $response = "Not implemented yet.";
+            break;
+          case "dynamic":
+            $view = $route["extra"] ?? "";
+            $file = getClassPath($target);
+            if(!file_exists($file) || !is_subclass_of($target, Document::class)) {
+              $document = new Document404($user);
+            } else {
+              $document = new $target($user);
+            }
+
+            $response = $document->getCode();
+            break;
+        }
+      }
     }
 
     $user->processVisit();
-    $response = $document->getCode();
   }
 }
 

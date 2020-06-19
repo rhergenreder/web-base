@@ -2,8 +2,15 @@ php_flag display_errors on
 Options -Indexes
 
 RedirectMatch 404 /\.git
+RedirectMatch 404 /src
+RedirectMatch 404 /test
 
 RewriteEngine On
-RewriteRule ^api/(.*)?$ index.php?api=$1&$2 [L,QSA]
-RewriteRule ^admin(/(.*)?)?$ index.php?site=admin&$1 [L,QSA]
-RewriteRule ^((?!((js|css|img|fonts|api|docs)($|/)))(.*)?)$ index.php?site=$1&$2 [L,QSA]
+RewriteRule ^api(/.*)?$ /index.php?api=$1 [L,QSA]
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ /index.php?site=$1 [L,QSA]
+</IfModule>

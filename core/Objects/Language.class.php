@@ -2,7 +2,7 @@
 
 namespace Objects {
 
-    use LanguageModule;
+    use Objects\lang\LanguageModule;
 
     class Language extends ApiObject {
 

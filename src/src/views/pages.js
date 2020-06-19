@@ -133,7 +133,7 @@ export default class PageOverview extends React.Component {
                                                   data-tip={"The request, the user is making. Can also be interpreted as a regular expression."}
                                                   data-type={"info"} data-place={"bottom"}/>
                                         </th>
-                                        <th style={{minWidth: "250px"}}>
+                                        <th style={{minWidth: "200px"}}>
                                             Action&nbsp;
                                             <Icon icon={"question-circle"} style={{"color": "#17a2b8"}}
                                                   data-tip={"The action to be taken"}

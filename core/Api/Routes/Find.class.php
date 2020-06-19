@@ -34,7 +34,7 @@ class Find extends Request {
       ->select("uid", "request", "action", "target", "extra")
       ->from("Route")
       ->where(new CondBool("active"))
-      ->where(new Regex("^$request$", new Column("request")))
+      ->where(new Regex($request, new Column("request")))
       ->limit(1)
       ->execute();
 

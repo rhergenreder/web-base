@@ -84,15 +84,15 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
         $target = trim(explode("\n", $route["target"])[0]);
         switch ($route["action"]) {
           case "redirect_temporary":
-            http_send_status(307);
+            http_response_code(307);
             header("Location: $target");
             break;
           case "redirect_permanently":
-            http_send_status(308);
+            http_response_code(308);
             header("Location: $target");
             break;
           case "static":
-            http_send_status(501);
+            http_response_code(501);
             $response = "Not implemented yet.";
             break;
           case "dynamic":

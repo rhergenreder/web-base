@@ -7,8 +7,8 @@ namespace Documents {
   use Elements\Document;
 
   class Document404 extends Document {
-    public function __construct($user) {
-      parent::__construct($user, Head404::class, Body404::class);
+    public function __construct($user, ?string $view = NULL) {
+      parent::__construct($user, Head404::class, Body404::class, $view);
     }
   }
 }

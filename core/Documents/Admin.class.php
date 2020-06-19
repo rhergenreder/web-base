@@ -9,9 +9,9 @@ namespace Documents {
   use Views\LoginBody;
 
   class Admin extends Document {
-    public function __construct(User $user) {
+    public function __construct(User $user, ?string $view = NULL) {
       $body = $user->isLoggedIn() ? AdminDashboardBody::class : LoginBody::class;
-      parent::__construct($user, AdminHead::class, $body);
+      parent::__construct($user, AdminHead::class, $body, $view);
     }
   }
 }

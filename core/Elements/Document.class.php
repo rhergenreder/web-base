@@ -10,18 +10,21 @@ abstract class Document {
   protected Body $body;
   protected User $user;
   protected bool $databaseRequired;
+  private ?string $activeView;
 
-  public function __construct(User $user, $headClass, $bodyClass) {
+  public function __construct(User $user, $headClass, $bodyClass, ?string $view = NULL) {
     $this->head = new $headClass($this);
     $this->body = new $bodyClass($this);
     $this->user = $user;
     $this->databaseRequired = true;
+    $this->activeView = $view;
   }
 
   public function getHead() { return $this->head; }
   public function getBody() { return $this->body; }
   public function getSQL()  { return $this->user->getSQL(); }
   public function getUser() { return $this->user; }
+  public function getView() { return $this->activeView; }
 
   protected function sendHeaders() {
     header("X-Frame-Options: DENY");

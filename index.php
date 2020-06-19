@@ -99,9 +99,9 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
             $view = $route["extra"] ?? "";
             $file = getClassPath($target);
             if(!file_exists($file) || !is_subclass_of($target, Document::class)) {
-              $document = new Document404($user);
+              $document = new Document404($user, $view);
             } else {
-              $document = new $target($user);
+              $document = new $target($user, $view);
             }
 
             $response = $document->getCode();

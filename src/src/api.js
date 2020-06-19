@@ -57,4 +57,8 @@ export default class API {
     async getStats() {
         return this.apiCall("stats");
     }
+
+    async getRoutes() {
+        return this.apiCall("routes/fetch");
+    }
 };

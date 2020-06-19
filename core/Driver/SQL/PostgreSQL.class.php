@@ -290,4 +290,15 @@ class PostgreSQL extends SQL {
   public function currentTimestamp() {
     return new Keyword("CURRENT_TIMESTAMP");
   }
+
+  public function getStatus() {
+    $version = pg_version($this->connection)["client"] ?? "??";
+    $status = pg_connection_status($this->connection);
+    static $statusTexts = array(
+      PGSQL_CONNECTION_OK => "PGSQL_CONNECTION_OK",
+      PGSQL_CONNECTION_BAD => "PGSQL_CONNECTION_BAD",
+    );
+
+    return ($statusTexts[$status] ?? "Unknown") . " (v$version)";
+  }
 }

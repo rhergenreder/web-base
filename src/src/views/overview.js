@@ -5,6 +5,7 @@ import { Bar } from 'react-chartjs-2';
 import {Collapse} from 'react-collapse';
 import moment from 'moment';
 import Alert from "../elements/alert";
+import humanReadableSize from "../global";
 
 export default class Overview extends React.Component {
 
@@ -18,9 +19,11 @@ export default class Overview extends React.Component {
 
         this.state = {
             chartVisible : true,
+            statusVisible : true,
             userCount: 0,
             notificationCount: 0,
             visitors: { },
+            server: { load_avg: ["Unknown"] },
             errors: []
         }
     }
@@ -45,6 +48,7 @@ export default class Overview extends React.Component {
                     userCount: res.userCount,
                     pageCount: res.pageCount,
                     visitors: res.visitors,
+                    server: res.server
                 });
             }
         });
@@ -172,16 +176,36 @@ export default class Overview extends React.Component {
                             <Collapse isOpened={this.state.chartVisible}>
                                 <div className="card-body">
                                     <div className="chart">
-                                        <div className="chartjs-size-monitor">
-                                            <div className="chartjs-size-monitor-expand">
-                                                <div/>
-                                            </div>
-                                            <div className="chartjs-size-monitor-shrink">
-                                                <div/>
-                                            </div>
-                                        </div>
                                         <Bar data={chartData} options={chartOptions} />
                                     </div>
+                                </div>
+                            </Collapse>
+                        </div>
+                    </div>
+                    <div className="col-lg-6 col-12">
+                        <div className="card card-warning">
+                            <div className="card-header">
+                                <h3 className="card-title">Server Status</h3>
+                                <div className="card-tools">
+                                    <button type="button" className={"btn btn-tool"} onClick={(e) => {
+                                        e.preventDefault();
+                                        this.setState({ ...this.state, statusVisible: !this.state.statusVisible });
+                                    }}>
+                                        <Icon icon={"minus"} />
+                                    </button>
+                                </div>
+                            </div>
+                            <Collapse isOpened={this.state.statusVisible}>
+                                <div className="card-body">
+                                    <ul className={"list-unstyled"}>
+                                        <li><b>Server</b>: {this.state.server.server}</li>
+                                        <li><b>Memory Usage</b>: {humanReadableSize(this.state.server.memory_usage)}</li>
+                                        <li><b>Load Average</b>: { this.state.server.load_avg.join(" ") }</li>
+                                        <li><b>Database</b>: { this.state.server.database  }</li>
+                                        <li><b>Mail</b>: { this.state.server.mail === true
+                                            ?  <span>OK<Icon icon={""} className={"ml-2"}/></span>
+                                            :  <Link to={"/admin/settings"}>Not configured</Link>}</li>
+                                    </ul>
                                 </div>
                             </Collapse>
                         </div>

@@ -13,6 +13,7 @@ import Dialog from "./elements/dialog";
 import {BrowserRouter as Router, Route, Switch} from 'react-router-dom'
 import View404 from "./404";
 import Logs from "./views/logs";
+import PageOverview from "./views/pages";
 
 class AdminDashboard extends React.Component {
 
@@ -82,6 +83,7 @@ class AdminDashboard extends React.Component {
               <Route exact={true} path={"/admin/users"}><UserOverview {...this.controlObj} /></Route>
               <Route exact={true} path={"/admin/users/adduser"}><CreateUser {...this.controlObj} /></Route>
               <Route path={"/admin/logs"}><Logs {...this.controlObj} /></Route>
+              <Route path={"/admin/pages"}><PageOverview {...this.controlObj} /></Route>
               <Route path={"*"}><View404 /></Route>
             </Switch>
             <Dialog {...this.state.dialog}/>

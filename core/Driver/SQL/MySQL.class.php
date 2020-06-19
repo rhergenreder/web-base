@@ -300,4 +300,7 @@ class MySQL extends SQL {
     return new Keyword("NOW()");
   }
 
+  public function getStatus() {
+    return mysqli_stat($this->connection);
+  }
 }

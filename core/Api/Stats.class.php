@@ -3,6 +3,7 @@
 namespace Api;
 
 use Driver\SQL\Condition\Compare;
+use Driver\SQL\Condition\CondBool;
 
 class Stats extends Request {
 
@@ -16,14 +17,21 @@ class Stats extends Request {
   private function getUserCount() {
     $sql = $this->user->getSQL();
     $res = $sql->select($sql->count())->from("User")->execute();
-    $this->success = ($res !== FALSE);
+    $this->success = $this->success && ($res !== FALSE);
     $this->lastError = $sql->getLastError();
 
     return ($this->success ? $res[0]["count"] : 0);
   }
 
   private function getPageCount() {
-    return 0;
+    $sql = $this->user->getSQL();
+    $res = $sql->select($sql->count())->from("Route")
+      ->where(new CondBool("active"))
+      ->execute();
+    $this->success = $this->success && ($res !== FALSE);
+    $this->lastError = $sql->getLastError();
+
+    return ($this->success ? $res[0]["count"] : 0);
   }
 
   private function getVisitorStatistics() {
@@ -43,7 +51,7 @@ class Stats extends Request {
       ->ascending()
       ->execute();
 
-    $this->success = ($res !== FALSE);
+    $this->success = $this->success && ($res !== FALSE);
     $this->lastError = $sql->getLastError();
 
     $visitors = array();
@@ -72,6 +80,13 @@ class Stats extends Request {
       $this->result["userCount"] = $userCount;
       $this->result["pageCount"] = $pageCount;
       $this->result["visitors"] = $visitorStatistics;
+      $this->result["server"] = array(
+        "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",
+        "memory_usage" => memory_get_usage(),
+        "load_avg" => sys_getloadavg(),
+        "database" => $this->user->getSQL()->getStatus(),
+        "mail" => $this->user->getConfiguration()->getMail() !== NULL
+      );
     }
 
     return $this->success;

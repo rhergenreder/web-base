@@ -369,4 +369,6 @@ abstract class SQL {
 
     return $sql;
   }
+
+  public abstract function getStatus();
 }

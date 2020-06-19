@@ -119,6 +119,18 @@ class CreateDatabase {
       ->addString("cookie", 26)
       ->unique("month", "cookie");
 
+    $queries[] = $sql->createTable("Route")
+      ->addSerial("uid")
+      ->addString("request", 128)
+      ->addEnum("action", array("redirect_temporary", "redirect_permanently", "static", "dynamic"))
+      ->addString("target", 128)
+      ->addString("extra", 64, true)
+      ->addBool("active", true)
+      ->primaryKey("uid");
+
+    $queries[] = $sql->insert("Route", array("request", "action", "target"))
+      ->addRow("/admin(/.*)?", "dynamic", "\\Core\\Documents\\AdminDashboard");
+
     return $queries;
   }
 }

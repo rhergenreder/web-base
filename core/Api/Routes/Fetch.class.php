@@ -38,7 +38,7 @@ class Fetch extends Request {
           "request" => $row["request"],
           "action"  => $row["action"],
           "target"  => $row["target"],
-          "extra"   => $row["extra"],
+          "extra"   => $row["extra"] ?? "",
           "active"  => intval($row["active"]),
         );
       }

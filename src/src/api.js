@@ -61,4 +61,8 @@ export default class API {
     async getRoutes() {
         return this.apiCall("routes/fetch");
     }
+
+    async saveRoutes(routes) {
+        return this.apiCall("routes/save", { "routes": routes });
+    }
 };

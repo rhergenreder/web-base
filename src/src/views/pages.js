@@ -15,22 +15,31 @@ export default class PageOverview extends React.Component {
 
         this.state = {
             routes: [],
-            errors: []
+            errors: [],
+            isResetting: false,
+            isSaving: false
         };
 
-        this.options = {
+        this.optionMap = {
             "redirect_temporary": "Redirect Temporary",
             "redirect_permanently": "Redirect Permanently",
             "static": "Serve Static",
             "dynamic": "Load Dynamic",
         };
+
+        this.options = [];
+        for (let key in this.optionMap) {
+            this.options.push(this.buildOption(key));
+        }
     }
 
     buildOption(key) {
         if (typeof key === 'object' && key.hasOwnProperty("key") && key.hasOwnProperty("label")) {
             return key;
+        } else if (typeof key === 'string') {
+            return { value: key, label: this.optionMap[key] };
         } else {
-            return { value: key, label: this.options[key] };
+            return this.options[key];
         }
     }
 
@@ -43,15 +52,7 @@ export default class PageOverview extends React.Component {
     }
 
     componentDidMount() {
-        this.parent.api.getRoutes().then((res) => {
-            if (res.success) {
-                this.setState({...this.state, routes: res.routes});
-            } else {
-                let errors = this.state.errors.slice();
-                errors.push({ title: "Error fetching routes", message: res.msg });
-                this.setState({...this.state, errors: errors});
-            }
-        });
+        this.fetchRoutes()
     }
 
     render() {
@@ -63,26 +64,40 @@ export default class PageOverview extends React.Component {
             errors.push(<Alert key={"error-" + i} onClose={() => this.removeError(i)} {...this.state.errors[i]}/>)
         }
 
-        let options = [];
-        for (let key in Object.keys(this.options)) {
-            options.push(this.buildOption(key));
-        }
+        const inputStyle = { fontFamily: "Courier", paddingTop: "14px" };
 
         for (let i = 0; i <  this.state.routes.length; i++) {
             let route = this.state.routes[i];
             rows.push(
                 <tr key={"route-" + i}>
-                    <td className={"align-middle"}>{route.request}</td>
-                    <td className={"text-center"}>
-                        <Select options={options} value={this.buildOption(route.action)} onChange={(selectedOption) => this.changeAction(i, selectedOption)} />
+                    <td className={"align-middle"}>
+                        <input type={"text"} maxLength={128} style={inputStyle} className={"form-control"}
+                               value={route.request} onChange={(e) => this.changeRequest(i, e)} />
                     </td>
-                    <td className={"align-middle"}>{route.target}</td>
-                    <td className={"align-middle"}>{route.extra}</td>
+                    <td className={"text-center"}>
+                        <Select options={this.options} value={this.buildOption(route.action)} onChange={(selectedOption) => this.changeAction(i, selectedOption)} />
+                    </td>
+                    <td className={"align-middle"}>
+                        <input type={"text"} maxLength={128} style={inputStyle} className={"form-control"}
+                               value={route.target} onChange={(e) => this.changeTarget(i, e)} />
+                    </td>
+                    <td className={"align-middle"}>
+                        <input type={"text"} maxLength={64} style={inputStyle} className={"form-control"}
+                               value={route.extra} onChange={(e) => this.changeExtra(i, e)} />
+                    </td>
                     <td className={"text-center"}>
                         <input
                             type={"checkbox"}
                             checked={route.active === 1}
                             onChange={(e) => this.changeActive(i, e)} />
+                    </td>
+                    <td>
+                        <ReactTooltip id={"delete-" + i} />
+                        <Icon icon={"trash"} style={{color: "red", cursor: "pointer"}}
+                              data-tip={"Click to delete this route"}
+                              data-type={"warning"} data-place={"right"}
+                              data-for={"delete-" + i} data-effect={"solid"}
+                              onClick={() => this.removeRoute(i)}/>
                     </td>
                 </tr>
             );
@@ -108,76 +123,152 @@ export default class PageOverview extends React.Component {
                 {errors}
                 <div className={"content-fluid"}>
                     <div className={"row"}>
-                        <div className={"col-lg-8 col-12"}>
+                        <div className={"col-lg-10 col-12"}>
                             <table className={"table"}>
                                 <thead className={"thead-dark"}>
                                     <tr>
-                                        <td>
+                                        <th>
                                             Request&nbsp;
-                                            <Icon icon={"question-circle"} style={{"color": "#0069d9"}}
+                                            <Icon icon={"question-circle"} style={{"color": "#17a2b8"}}
                                                   data-tip={"The request, the user is making. Can also be interpreted as a regular expression."}
-                                                  data-type={"info"} data-place={"bottom"} data-effect={"solid"}/>
-                                        </td>
-                                        <td style={{minWidth: "250px"}}>
+                                                  data-type={"info"} data-place={"bottom"}/>
+                                        </th>
+                                        <th style={{minWidth: "250px"}}>
                                             Action&nbsp;
-                                            <Icon icon={"question-circle"} style={{"color": "#0069d9"}}
+                                            <Icon icon={"question-circle"} style={{"color": "#17a2b8"}}
                                                   data-tip={"The action to be taken"}
-                                                  data-type={"info"} data-place={"bottom"} data-effect={"solid"}/>
-                                        </td>
-                                        <td>
+                                                  data-type={"info"} data-place={"bottom"}/>
+                                        </th>
+                                        <th>
                                             Target&nbsp;
-                                            <Icon icon={"question-circle"} style={{"color": "#0069d9"}}
+                                            <Icon icon={"question-circle"} style={{"color": "#17a2b8"}}
                                                   data-tip={"Any URL if action is redirect or static. Path to a class inheriting from Document, " +
                                                   "if dynamic is chosen"}
-                                                  data-type={"info"} data-place={"bottom"} data-effect={"solid"}/>
-                                        </td>
-                                        <td>
+                                                  data-type={"info"} data-place={"bottom"}/>
+                                        </th>
+                                        <th>
                                             Extra&nbsp;
-                                            <Icon icon={"question-circle"} style={{"color": "#0069d9"}}
+                                            <Icon icon={"question-circle"} style={{"color": "#17a2b8"}}
                                                   data-tip={"If action is dynamic, a view name can be entered here, otherwise leave empty."}
-                                                  data-type={"info"} data-place={"bottom"} data-effect={"solid"}/>
-                                        </td>
-                                        <td className={"text-center"}>
+                                                  data-type={"info"} data-place={"bottom"}/>
+                                        </th>
+                                        <th className={"text-center"}>
                                             Active&nbsp;
-                                            <Icon icon={"question-circle"} style={{"color": "#0069d9"}}
+                                            <Icon icon={"question-circle"} style={{"color": "#17a2b8"}}
                                                   data-tip={"True, if the route is currently active."}
-                                                  data-type={"info"} data-place={"bottom"} data-effect={"solid"}/>
-                                        </td>
+                                                  data-type={"info"} data-place={"bottom"}/>
+                                        </th>
+                                        <th/>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {rows}
                                 </tbody>
                             </table>
+                            <div>
+                                <button className={"btn btn-info"} onClick={() => this.onAddRoute()} disabled={this.state.isResetting || this.state.isSaving}>
+                                    <Icon icon={"plus"}/>&nbsp;Add new Route
+                                </button>
+                                <button className={"btn btn-secondary ml-2"} onClick={() => this.onResetRoutes()} disabled={this.state.isResetting || this.state.isSaving}>
+                                    { this.state.isResetting ? <span>Resetting&nbsp;<Icon icon={"circle-notch"}/></span> : "Reset" }
+                                </button>
+                                <button className={"btn btn-success ml-2"} onClick={() => this.onSaveRoutes()} disabled={this.state.isResetting || this.state.isSaving}>
+                                    { this.state.isSaving ? <span>Saving&nbsp;<Icon icon={"circle-notch"}/></span> : "Save" }
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <ReactTooltip/>
+            <ReactTooltip data-effect={"solid"}/>
         </>
     }
 
-    changeAction(index, selectedOption) {
-        if (index < 0 || index >= this.state.routes.length)
-            return;
+    onResetRoutes() {
+        this.setState({ ...this.state, isResetting: true });
+        this.fetchRoutes();
+    }
 
-        let routes = this.state.routes.slice();
-        routes[index].action = selectedOption;
-        this.setState({
-            ...this.state,
-            routes: routes
+    onSaveRoutes() {
+        this.setState({ ...this.state, isSaving: true });
+
+        let routes = [];
+        for (let i = 0; i < this.state.routes.length; i++) {
+            let route = this.state.routes[i];
+            routes.push({
+                request: route.request,
+                action: typeof route.action === 'object' ? route.action.value : route.action,
+                target: route.target,
+                extra: route.extra ?? "",
+                active: route.active === 1
+            });
+        }
+
+        this.parent.api.saveRoutes(routes).then((res) => {
+            if (res.success) {
+                this.setState({...this.state, isSaving: false});
+            } else {
+                let errors = this.state.errors.slice();
+                errors.push({ title: "Error saving routes", message: res.msg });
+                this.setState({...this.state, errors: errors, isSaving: false});
+            }
         });
     }
 
-    changeActive(index, e) {
+    changeRoute(index, key, value) {
         if (index < 0 || index >= this.state.routes.length)
             return;
 
         let routes = this.state.routes.slice();
-        routes[index].active = e.target.checked ? 1 : 0;
-        this.setState({
-            ...this.state,
-            routes: routes
+        routes[index][key] = value;
+        this.setState({ ...this.state, routes: routes });
+    }
+
+    removeRoute(index) {
+        if (index < 0 || index >= this.state.routes.length)
+            return;
+        let routes = this.state.routes.slice();
+        routes.splice(index, 1);
+        this.setState({ ...this.state, routes: routes });
+    }
+
+
+    onAddRoute() {
+        let routes = this.state.routes.slice();
+        routes.push({ request: "", action: "dynamic", target: "", extra: "", active: 1 });
+        this.setState({ ...this.state, routes: routes });
+    }
+
+    changeAction(index, selectedOption) {
+        this.changeRoute(index, "action", selectedOption);
+    }
+
+    changeActive(index, e) {
+        this.changeRoute(index, "active", e.target.checked ? 1 : 0);
+    }
+
+    changeRequest(index, e) {
+        this.changeRoute(index, "request", e.target.value);
+    }
+
+    changeTarget(index, e) {
+        this.changeRoute(index, "target", e.target.value);
+    }
+
+    changeExtra(index, e) {
+        this.changeRoute(index, "extra", e.target.value);
+    }
+
+    fetchRoutes() {
+        this.parent.api.getRoutes().then((res) => {
+            if (res.success) {
+                this.setState({...this.state, routes: res.routes, isResetting: false});
+                ReactTooltip.rebuild();
+            } else {
+                let errors = this.state.errors.slice();
+                errors.push({ title: "Error fetching routes", message: res.msg });
+                this.setState({...this.state, errors: errors, isResetting: false});
+            }
         });
     }
 }

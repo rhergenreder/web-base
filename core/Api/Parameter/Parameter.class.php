@@ -16,6 +16,8 @@ class Parameter {
 
   // only internal access
   const TYPE_RAW       = 8;
+
+  // only json will work here i guess
   const TYPE_ARRAY     = 9;
 
   const names = array('Integer', 'Float', 'Boolean', 'String', 'Date', 'Time', 'DateTime', 'E-Mail', 'Raw', 'Array');

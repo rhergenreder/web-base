@@ -1,9 +1,11 @@
 php_flag display_errors on
 Options -Indexes
 
+RedirectMatch 404 /\.idea
 RedirectMatch 404 /\.git
 RedirectMatch 404 /src
 RedirectMatch 404 /test
+RedirectMatch 404 /core
 
 RewriteEngine On
 RewriteRule ^api(/.*)?$ /index.php?api=$1 [L,QSA]

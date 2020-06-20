@@ -53,6 +53,10 @@ namespace Documents\Document404 {
       parent::__construct($document);
     }
 
+    public function loadView() {
+      http_response_code(404);
+    }
+
     public function getCode() {
       $html = parent::getCode();
       $html .= "<body>" . (new View404($this->getDocument())) . "</body>";

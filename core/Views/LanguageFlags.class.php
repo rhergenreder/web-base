@@ -2,7 +2,6 @@
 
 namespace Views;
 
-use Api\GetLanguages;
 use Elements\View;
 
 class LanguageFlags extends View {
@@ -17,7 +16,7 @@ class LanguageFlags extends View {
   public function loadView() {
     parent::loadView();
 
-    $request = new GetLanguages($this->getDocument()->getUser());
+    $request = new \Api\Language\Get($this->getDocument()->getUser());
     if($request->execute()) {
 
       $requestUri = $_SERVER["REQUEST_URI"];

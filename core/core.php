@@ -87,7 +87,14 @@
 
   function getClassPath($class, $suffix=true) {
     $path = str_replace('\\', '/', $class);
-    if (startsWith($path, "/")) $path = substr($path, 1);
+    $path = array_values(array_filter(explode("/", $path)));
+
+    if (strcasecmp($path[0], "api") === 0 && count($path) > 2 && strcasecmp($path[1], "Parameter") !== 0) {
+      $path = "Api/" . $path[1] . "API";
+    } else {
+      $path = implode("/", $path);
+    }
+
     $suffix = ($suffix ? ".class" : "");
     return "core/$path$suffix.php";
   }

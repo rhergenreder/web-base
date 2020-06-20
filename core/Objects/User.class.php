@@ -2,7 +2,6 @@
 
 namespace Objects;
 
-use Api\SetLanguage;
 use Configuration\Configuration;
 use DateTime;
 use Driver\SQL\Expression\Add;
@@ -108,7 +107,7 @@ class User extends ApiObject {
 
   public function updateLanguage($lang) {
     if($this->sql) {
-      $request = new SetLanguage($this);
+      $request = new \Api\Language\Set($this);
       return $request->execute(array("langCode" => $lang));
     } else {
         return false;

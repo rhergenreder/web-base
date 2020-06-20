@@ -41,21 +41,35 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       header("400 Bad Request");
       $response = createError("Invalid Method");
     } else {
-      $apiFunction = implode("\\", array_map('ucfirst', explode("/", $apiFunction)));
-      if($apiFunction[0] !== "\\") $apiFunction = "\\$apiFunction";
-      $class = "\\Api$apiFunction";
-      $file = getClassPath($class);
-      if(!file_exists($file)) {
-        header("404 Not Found");
-        $response = createError("Not found");
-      } else if(!is_subclass_of($class, Request::class)) {
-        header("400 Bad Request");
-        $response = createError("Invalid Method");
+      $apiFunction = array_filter(array_map('ucfirst', explode("/", $apiFunction)));
+      if (count($apiFunction) > 1) {
+        $parentClass = "\\Api\\" . reset($apiFunction) . "API";
+        $apiClass = "\\Api\\" . implode("\\", $apiFunction);
       } else {
-        $request = new $class($user, true);
-        $success = $request->execute();
-        $msg = $request->getLastError();
-        $response = $request->getJsonResult();
+        $apiClass = "\\Api\\" . implode("\\", $apiFunction);
+        $parentClass = $apiClass;
+      }
+
+      try {
+        $file = getClassPath($parentClass);
+        if(!file_exists($file)) {
+          header("404 Not Found");
+          $response = createError("Not found");
+        } else {
+          $parentClass = new ReflectionClass($parentClass);
+          $apiClass = new ReflectionClass($apiClass);
+          if(!$apiClass->isSubclassOf(Request::class) || !$apiClass->isInstantiable()) {
+            header("400 Bad Request");
+            $response = createError("Invalid Method");
+          } else {
+            $request = $apiClass->newInstanceArgs(array($user, true));
+            $success = $request->execute();
+            $msg = $request->getLastError();
+            $response = $request->getJsonResult();
+          }
+        }
+      } catch (ReflectionException $e) {
+        $response = createError("Error instantiating class: $e");
       }
     }
   }

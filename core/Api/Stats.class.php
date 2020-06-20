@@ -81,6 +81,7 @@ class Stats extends Request {
       $this->result["pageCount"] = $pageCount;
       $this->result["visitors"] = $visitorStatistics;
       $this->result["server"] = array(
+        "version" => WEBBASE_VERSION,
         "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",
         "memory_usage" => memory_get_usage(),
         "load_avg" => sys_getloadavg(),

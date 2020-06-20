@@ -128,8 +128,12 @@ class CreateDatabase {
       ->addBool("active", true)
       ->primaryKey("uid");
 
-    $queries[] = $sql->insert("Route", array("request", "action", "target"))
-      ->addRow("^/admin(/.*)?$", "dynamic", "\\Documents\\AdminDashboard");
+    $queries[] = $sql->insert("Route", array("request", "action", "target", "extra"))
+      ->addRow("^/admin(/.*)?$", "dynamic", "\\Documents\\AdminDashboard", NULL)
+      ->addRow("^/register(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\Register")
+      ->addRow("^/confirmEmail(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ConfirmEmail")
+      ->addRow("^/acceptInvite(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\AcceptInvite")
+      ->addRow("^/$", "dynamic", "\\Documents\\Welcome", NULL);
 
     return $queries;
   }

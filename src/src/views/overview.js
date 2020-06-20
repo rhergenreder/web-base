@@ -198,6 +198,7 @@ export default class Overview extends React.Component {
                             <Collapse isOpened={this.state.statusVisible}>
                                 <div className="card-body">
                                     <ul className={"list-unstyled"}>
+                                        <li><b>Version</b>: {this.state.server.version}</li>
                                         <li><b>Server</b>: {this.state.server.server}</li>
                                         <li><b>Memory Usage</b>: {humanReadableSize(this.state.server.memory_usage)}</li>
                                         <li><b>Load Average</b>: { this.state.server.load_avg.join(" ") }</li>

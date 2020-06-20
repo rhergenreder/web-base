@@ -332,12 +332,6 @@ abstract class SQL {
         }
         return implode(" AND ", $conditions);
       }
-    } else if ($condition instanceof Regex) {
-      $left = $condition->getLeftExp();
-      $right = $condition->getRightExp();
-      $left = ($left instanceof Column) ? $this->columnName($left->getName()) : $this->addValue($left, $params);
-      $right = ($right instanceof Column) ? $this->columnName($right->getName()) : $this->addValue($right, $params);
-      return $left . " REGEXP " . $right;
     } else {
       $this->lastError = "Unsupported condition type: " . get_class($condition);
       return false;

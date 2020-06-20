@@ -24,14 +24,15 @@ abstract class Document {
   public function getBody() { return $this->body; }
   public function getSQL()  { return $this->user->getSQL(); }
   public function getUser() { return $this->user; }
-  public function getView() { return $this->activeView; }
 
-  protected function sendHeaders() {
-    header("X-Frame-Options: DENY");
-  }
+  public function getView() : ?View {
 
-  public static function createSearchableDocument($documentClass, $user) {
-    return new $documentClass($user);
+    $file = getClassPath($this->activeView);
+    if(!file_exists($file) || !is_subclass_of($this->activeView, View::class)) {
+      return null;
+    }
+
+    return new $this->activeView($this);
   }
 
   function getCode() {
@@ -47,9 +48,10 @@ abstract class Document {
 
     $body = $this->body->getCode();
     $head = $this->head->getCode();
+    $lang = $this->user->getLanguage()->getShortCode();
 
     $html = "<!DOCTYPE html>";
-    $html .= "<html>";
+    $html .= "<html lang=\"$lang\">";
     $html .= $head;
     $html .= $body;
     $html .= "</html>";

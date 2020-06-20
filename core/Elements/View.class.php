@@ -83,7 +83,7 @@ abstract class View extends StaticView {
     if($classes)
       $iconClass .= " $classes";
 
-    return "<i class=\"$iconClass\"></i>";
+    return "<i class=\"$iconClass\" />";
   }
 
   protected function createErrorText($text, $id="", $hidden=false) {

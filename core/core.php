@@ -1,5 +1,7 @@
 <?php
 
+  define("WEBBASE_VERSION", "0.1.0-alpha");
+
   function getSubclassesOf($parent) {
     $result = array();
     foreach (get_declared_classes() as $class) {

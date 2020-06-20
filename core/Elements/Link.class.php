@@ -11,7 +11,6 @@ class Link extends StaticView {
   const BOOTSTRAP   = "/css/bootstrap.min.css";
   const CORE        = "/css/style.css";
   const ADMIN       = "/css/admin.css";
-  const ADMINLTE    = "/css/adminlte.min.css";
 
   private string $type;
   private string $rel;

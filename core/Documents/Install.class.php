@@ -478,7 +478,7 @@ namespace Documents\Install {
 
           case self::SUCCESSFUL:
             $statusIcon  = '<i class="fas fa-check-circle"></i>';
-            $statusText  = "Successfull";
+            $statusText  = "Successful";
             $statusColor = "success";
             break;
 

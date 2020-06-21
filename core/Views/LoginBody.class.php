@@ -37,8 +37,6 @@ class LoginBody extends Body {
     $domain = $_SERVER['HTTP_HOST'];
     $protocol = getProtocol();
 
-    $html .= "<body>";
-
     $accountCreated = "";
     if(isset($_GET["accountCreated"])) {
       $accountCreated =
@@ -48,31 +46,34 @@ class LoginBody extends Body {
     }
 
     $html .= "
-      <div class=\"container mt-4\">
-        <div class=\"title text-center\">
-          <h2>Admin Control Panel</h2>
-        </div>
-        <div class=\"loginContainer m-auto\">
-          <form class=\"loginForm\">
-            <label for=\"username\">$username</label>
-            <input type=\"text\" class=\"form-control\" name=\"username\" id=\"username\" placeholder=\"$username\" required autofocus />
-            <label for=\"password\">$password</label>
-            <input type=\"password\" class=\"form-control\" name=\"password\" id=\"password\" placeholder=\"$password\" required />
-            <div class=\"form-check\">
-              <input type=\"checkbox\" class=\"form-check-input\" id=\"stayLoggedIn\" name=\"stayLoggedIn\">
-              <label class=\"form-check-label\" for=\"stayLoggedIn\">$stayLoggedIn</label>
-            </div>
-            <button class=\"btn btn-lg btn-primary btn-block\" id=\"btnLogin\" type=\"button\">$login</button>
-            <div class=\"alert alert-danger hidden\" role=\"alert\" id=\"loginError\"></div>
-            <span class=\"flags position-absolute\">$flags</span>
-          </form>
-          <div class=\"p-1\">
-            <a href=\"$protocol://$domain\">$iconBack&nbsp;$backToStartPage</a>
+      <body>
+        <div class=\"container mt-4\">
+          <div class=\"title text-center\">
+            <h2>Admin Control Panel</h2>
           </div>
-          $accountCreated
+          <div class=\"row\">
+             <div class=\"col-lg-6 col-12 m-auto\">
+            <form class=\"loginForm\">
+              <label for=\"username\">$username</label>
+              <input type=\"text\" class=\"form-control\" name=\"username\" id=\"username\" placeholder=\"$username\" required autofocus />
+              <label for=\"password\">$password</label>
+              <input type=\"password\" class=\"form-control\" name=\"password\" id=\"password\" placeholder=\"$password\" required />
+              <div class=\"form-check\">
+                <input type=\"checkbox\" class=\"form-check-input\" id=\"stayLoggedIn\" name=\"stayLoggedIn\">
+                <label class=\"form-check-label\" for=\"stayLoggedIn\">$stayLoggedIn</label>
+              </div>
+              <button class=\"btn btn-lg btn-primary btn-block\" id=\"btnLogin\" type=\"button\">$login</button>
+              <div class=\"alert alert-danger hidden\" role=\"alert\" id=\"loginError\"></div>
+              <span class=\"flags position-absolute\">$flags</span>
+            </form>
+            <div class=\"p-1\">
+              <a href=\"$protocol://$domain\">$iconBack&nbsp;$backToStartPage</a>
+            </div>
+            $accountCreated
+          </div>
+          </div>
         </div>
-      </div>
-     </body>";
+      </body>";
 
     return $html;
   }

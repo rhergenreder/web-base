@@ -15,7 +15,7 @@ $(document).ready(function() {
     btn.prop("disabled", true);
     btn.html("Logging in… <i class=\"fa fa-spin fa-circle-notch\"></i>");
     jsCore.apiCall("/user/login", {"username": username, "password": password, "stayLoggedIn": stayLoggedIn }, function(data) {
-      window.location.reload();
+      document.location = "/admin/dashboard";
     }, function(err) {
       btn.html("Login");
       btn.prop("disabled", false);
@@ -23,14 +23,6 @@ $(document).ready(function() {
       createdDiv.hide();
       errorDiv.html(err);
       errorDiv.show();
-    });
-  });
-
-  $("#btnLogout").click(function() {
-    jsCore.apiCall("/user/logout", function(data) {
-      document.location = "/admin/dashboard";
-    }, function(err) {
-      alert(err);
     });
   });
 });

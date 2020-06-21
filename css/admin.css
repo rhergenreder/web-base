@@ -21,3 +21,10 @@
   margin-bottom: 0;
   vertical-align: bottom;
 }
+
+.flags {
+  right: 3px;
+  bottom: -22px;
+  background-color: darkgray;
+  border-radius: 5px;
+}

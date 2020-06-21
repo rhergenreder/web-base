@@ -13,33 +13,34 @@ class LanguageFlags extends View {
     $this->languageFlags = array();
   }
 
-  public function loadView() {
-    parent::loadView();
+  public function getCode() {
 
     $request = new \Api\Language\Get($this->getDocument()->getUser());
-    if($request->execute()) {
+    if ($request->execute()) {
 
       $requestUri = $_SERVER["REQUEST_URI"];
       $queryString = $_SERVER['QUERY_STRING'];
 
       $params = explode("&", $queryString);
       $query = array();
-      foreach($params as $param) {
+      foreach ($params as $param) {
         $aParam = explode("=", $param);
         $key = $aParam[0];
 
-        if($key == "s" && startsWith($requestUri, "/s/"))
+        if ($key === "site" &&
+          (!startsWith($_SERVER["REQUEST_URI"], "/index.php") || $_SERVER["REQUEST_URI"] === "/")) {
           continue;
+        }
 
         $val = (isset($aParam[1]) ? $aParam[1] : "");
-        if(!empty($key)) {
+        if (!empty($key)) {
           $query[$key] = $val;
         }
       }
 
       $url = parse_url($requestUri, PHP_URL_PATH) . "?";
 
-      foreach($request->getResult()['languages'] as $lang) {
+      foreach ($request->getResult()['languages'] as $lang) {
         $langCode = $lang['code'];
         $langName = $lang['name'];
         $query['lang'] = $langCode;
@@ -47,13 +48,11 @@ class LanguageFlags extends View {
 
         $this->languageFlags[] = $this->createLink(
           "$url$queryString",
-          "<img class=\"p-1\" src=\"/img/icons/lang/$langCode.gif\" alt=\"$langName\" title=\"$langName\">"
+          "<img class=\"p-1 clickable\" src=\"/img/icons/lang/$langCode.gif\" alt=\"$langName\" title=\"$langName\">"
         );
       }
-    }
-  }
 
-  public function getCode() {
-    return implode('', $this->languageFlags);
+      return implode('', $this->languageFlags);
+    }
   }
 }

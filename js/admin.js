@@ -1,8 +1,8 @@
 $(document).ready(function() {
 
   // Login
-  $("#username").keypress(function(e) { if(e.which == 13) $("#password").focus(); });
-  $("#password").keypress(function(e) { if(e.which == 13) $("#btnLogin").click(); });
+  $("#username").keypress(function(e) { if(e.which === 13) $("#password").focus(); });
+  $("#password").keypress(function(e) { if(e.which === 13) $("#btnLogin").click(); });
   $("#btnLogin").click(function() {
     const username = $("#username").val();
     const password = $("#password").val();
@@ -26,34 +26,11 @@ $(document).ready(function() {
     });
   });
 
-  $("#userTableRefresh").click(function() {
-    let tbody = $("#userTable > tbody");
-    let page = parseInt($("#userPageNavigation li.active > a").text().trim());
-    tbody.find("tr").remove();
-    tbody.append("<tr><td colspan=\"4\" class=\"text-center\">Loading… " + createLoadingIcon() + "</td></tr>");
-
-    jsCore.apiCall("/user/fetch", { page: page}, function (data) {
-      let pageCount = data["pages"];
-      let users = data["users"];
-      let userRows = [];
-
-      // TODO: .. maybe use ts instead of plain js?
-      for(let userId in users) {
-        let user = users[userId];
-        userRows.push("<tr><td>" + user.name + "</td><td>" + user.email + "</td><td></td><td></td></tr>");
-      }
-
-      tbody.html(userRows.join(""));
-    }, function (err) {
-      alert(err);
-    });
-  });
-
   $("#btnLogout").click(function() {
     jsCore.apiCall("/user/logout", function(data) {
-      document.location = "/admin";
+      document.location = "/admin/dashboard";
     }, function(err) {
-      alert("err");
+      alert(err);
     });
   });
 });

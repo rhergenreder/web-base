@@ -1,10 +1,17 @@
 import * as React from "react";
-import {Link} from "react-router-dom";
+import {Link, useLocation, useHistory} from "react-router-dom";
 import Icon from "./elements/icon";
 
-export default class View404 extends React.Component {
-    render() {
-        return <div className={"error-page"}>
+export default function View404(props) {
+
+    const location = useLocation();
+    const history = useHistory();
+    if (location.pathname === "/admin" || location.pathname === "/admin/") {
+        history.push("/admin/dashboard");
+    }
+
+    return (
+        <div className={"error-page"}>
             <h2 className={"headline text-warning"}>404</h2>
             <div className={"error-content"}>
                 <h3>
@@ -26,5 +33,5 @@ export default class View404 extends React.Component {
                 </form>
             </div>
         </div>
-    }
+    )
 }

@@ -2,6 +2,20 @@
 
 namespace Api {
   abstract class RoutesAPI extends Request {
+
+    protected function formatRegex(string $input, bool $append) : string {
+      $start = startsWith($input, "^");
+      $end = endsWith($input, "$");
+      if ($append) {
+        if (!$start) $input = "^$input";
+        if (!$end) $input = "$input$";
+      } else {
+        if ($start) $input = substr($input, 1);
+        if ($end) $input = substr($input, 0, strlen($input)-1);
+      }
+
+      return $input;
+    }
   }
 }
 
@@ -44,7 +58,7 @@ namespace Api\Routes {
       foreach($res as $row) {
         $routes[] = array(
           "uid"     => intval($row["uid"]),
-          "request" => $row["request"],
+          "request" => $this->formatRegex($row["request"], false),
           "action"  => $row["action"],
           "target"  => $row["target"],
           "extra"   => $row["extra"] ?? "",
@@ -197,6 +211,8 @@ namespace Api\Routes {
           return $this->createError("Target cannot be empty.");
         }
 
+        // add start- and end pattern for database queries
+        $route["request"] = $this->formatRegex($route["request"], true);
         $this->routes[] = $route;
       }
 

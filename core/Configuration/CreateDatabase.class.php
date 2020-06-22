@@ -60,8 +60,9 @@ class CreateDatabase {
     $queries[] = $sql->createTable("UserToken")
       ->addInt("user_id")
       ->addString("token", 36)
-      ->addEnum("token_type", array("password_reset", "confirmation"))
+      ->addEnum("token_type", array("password_reset", "email_confirm"))
       ->addDateTime("valid_until")
+      ->addBool("used", false)
       ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
 
     $queries[] = $sql->createTable("Group")

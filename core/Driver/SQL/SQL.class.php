@@ -281,6 +281,7 @@ abstract class SQL {
   protected abstract function columnName($col);
 
   // Special Keywords and functions
+  public function now() { return $this->currentTimestamp(); }
   public abstract function currentTimestamp();
 
   public function count($col = NULL) {

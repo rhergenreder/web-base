@@ -439,4 +439,35 @@ If the registration was not intended, you can simply ignore this email.<br><br><
   }
 }
 
+class CheckToken extends  UserAPI{
+    public function __construct($user, $externalCall = false) {
+        parent::__construct($user, $externalCall, array(
+            'token' => new StringType('token', 36),
+        ));
+    }
+
+    public function execute($values = array()){
+        parent::execute($values);
+
+        $token = $this->getParam('token');
+        $sql = $this->user->getSQL();
+        $res = $sql->select("token_type")->from("UserToken")
+            ->where(new Compare("token",$token), new Compare("valid_until", $sql->now(), ">"))
+            ->execute();
+        $this->lastError = $sql->getLastError();
+        $this->success = ($res !== FALSE);
+
+        if($this->success) {
+            if(count($res) == 0) {
+                $this->lastError = "This token does not exist or is no longer valid";
+                $this->success = false;
+                return false;
+            }
+            $this->result["token_type"] = $res[0];
+            $this->result["username"] = $this->user->getUsername();
+        }
+        return $this->success;
+    }
+}
+
 }

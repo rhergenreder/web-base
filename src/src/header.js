@@ -35,13 +35,25 @@ export default function Header(props) {
             </Link>);
     }
 
+    function onToggleSidebar() {
+        console.log(document.body.classList);
+        let classes = document.body.classList;
+        if (classes.contains("sidebar-collapse")) {
+            classes.remove("sidebar-collapse");
+            classes.add("sidebar-open");
+        } else {
+            classes.add("sidebar-collapse");
+            classes.remove("sidebar-add");
+        }
+    }
+
     return (
         <nav className={"main-header navbar navbar-expand navbar-white navbar-light"}>
 
             {/*Left navbar links */}
             <ul className={"navbar-nav"}>
                 <li className={"nav-item"}>
-                    <a href={"#"} className={"nav-link"} data-widget={"pushmenu"} role={"button"}>
+                    <a href={"#"} className={"nav-link"} role={"button"} onClick={onToggleSidebar}>
                         <Icon icon={"bars"}/>
                     </a>
                 </li>

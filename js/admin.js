@@ -15,7 +15,7 @@ $(document).ready(function() {
     btn.prop("disabled", true);
     btn.html("Logging in… <i class=\"fa fa-spin fa-circle-notch\"></i>");
     jsCore.apiCall("/user/login", {"username": username, "password": password, "stayLoggedIn": stayLoggedIn }, function(data) {
-      document.location = "/admin/dashboard";
+      document.location.reload();
     }, function(err) {
       btn.html("Login");
       btn.prop("disabled", false);

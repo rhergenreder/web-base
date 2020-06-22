@@ -19,7 +19,12 @@ export default class API {
             body: JSON.stringify(params)
         });
 
-        return await response.json();
+        let res = await response.json();
+        if (!res.success && res.msg === "You are not logged in.") {
+            document.location.reload();
+        }
+
+        return res;
     }
 
     async fetchUser() {

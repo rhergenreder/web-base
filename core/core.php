@@ -108,7 +108,7 @@ function serveStatic(string $webRoot, string $file) {
 
   $pathInfo = pathinfo($path);
 
-  // maybe I will allow more later…
+  // TODO: add more file extensions here
   $allowedExtension = array("html", "htm");
   $ext = $pathInfo["extension"] ?? "";
   if (!in_array($ext, $allowedExtension)) {
@@ -116,7 +116,44 @@ function serveStatic(string $webRoot, string $file) {
     return "<b>Access restricted:</b> Extension '" . htmlspecialchars($ext) . "' not allowed.";
   }
 
+  $size = filesize($path);
   $mimeType = mime_content_type($path);
-  header("Content-Type: $mimeType");
-  readfile($path);
+  header("Content-Type: $mimeType"); // TODO: do we need to check mime type?
+  header("Content-Length: $size");
+  header('Accept-Ranges: bytes');
+
+  if (strcasecmp($_SERVER["REQUEST_METHOD"], "HEAD") !== 0) {
+    $bufferSize = 1024*16;
+    $handle = fopen($path, "rb");
+    if($handle === false) {
+      http_response_code(500);
+      return "<b>Unable to read file:</b> " . htmlspecialchars($path);
+    }
+
+    $offset = 0;
+    $length = $size;
+
+    if (isset($_SERVER['HTTP_RANGE'])) {
+      $partialContent = true;
+      preg_match('/bytes=(\d+)-(\d+)?/', $_SERVER['HTTP_RANGE'], $matches);
+      $offset = intval($matches[1]);
+      $length = intval($matches[2]) - $offset;
+      http_response_code(206);
+      header('Content-Range: bytes ' . $offset . '-' . ($offset + $length) . '/' . $size);
+    }
+
+    if ($offset > 0) {
+      fseek($handle, $offset);
+    }
+
+    $bytesRead = 0;
+    while (!feof($handle) && $bytesRead < $length) {
+      $chunkSize = min($length - $bytesRead, $bufferSize);
+      echo fread($handle, $chunkSize);
+    }
+
+    fclose($handle);
+  }
+
+  return "";
 }

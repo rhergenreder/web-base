@@ -8,9 +8,6 @@ RewriteRule ^api(/.*)?$ /index.php?api=$1 [L,QSA]
 
 RewriteEngine On
 RewriteOptions AllowNoSlash
-RewriteRule ^((\.idea|\.git|src|test|core|static)(/.*)?)$ /index.php?site=$1 [L,QSA]
+RewriteRule ^((\.idea|\.git|src|test|core)(/.*)?)$ /index.php?site=$1 [L,QSA]
 
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ /index.php?site=$1 [L,QSA]
+FallbackResource /index.php

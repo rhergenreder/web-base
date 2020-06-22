@@ -74,9 +74,13 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
     }
   }
 } else {
-  $documentName = $_GET["site"] ?? "/";
+  $requestedUri = $_GET["site"] ?? $_SERVER["REQUEST_URI"];
+  if (startsWith($requestedUri, "/")) {
+    $requestedUri = substr($requestedUri, 1);
+  }
+
   if ($installation) {
-    if ($documentName !== "" && $documentName !== "index.php") {
+    if ($requestedUri !== "" && $requestedUri !== "index.php") {
       $response = "Redirecting to <a href=\"/\">/</a>";
       header("Location: /");
     } else {
@@ -86,7 +90,7 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
   } else {
 
     $req = new \Api\Routes\Find($user);
-    $success = $req->execute(array("request" => $documentName));
+    $success = $req->execute(array("request" => $requestedUri));
     $response = "";
     if (!$success) {
       http_response_code(500);

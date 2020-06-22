@@ -93,7 +93,7 @@ function createError($msg) {
   return json_encode(array("success" => false, "msg" => $msg));
 }
 
-function serveStatic(string $webRoot, string $file): string {
+function serveStatic(string $webRoot, string $file) {
 
   $path = realpath($webRoot . "/" . $file);
   if (!startsWith($path, $webRoot . "/")) {
@@ -106,7 +106,7 @@ function serveStatic(string $webRoot, string $file): string {
     return "<b>Unable to read file:</b> " . htmlspecialchars($path);
   }
 
-  $pathInfo = pathinfo($file);
+  $pathInfo = pathinfo($path);
 
   // maybe I will allow more later…
   $allowedExtension = array("html", "htm");
@@ -116,7 +116,7 @@ function serveStatic(string $webRoot, string $file): string {
     return "<b>Access restricted:</b> Extension '" . htmlspecialchars($ext) . "' not allowed.";
   }
 
-  $mimeType = mime_content_type($file);
+  $mimeType = mime_content_type($path);
   header("Content-Type: $mimeType");
-  return readfile($file);
+  readfile($path);
 }

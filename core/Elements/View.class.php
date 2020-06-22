@@ -2,6 +2,8 @@
 
 namespace Elements;
 
+use External\PHPMailer\Exception;
+
 abstract class View extends StaticView {
 
   private Document $document;
@@ -24,6 +26,21 @@ abstract class View extends StaticView {
   public function getDocument() { return $this->document; }
   public function isSearchable() { return $this->searchable; }
   public function getReference() { return $this->reference; }
+
+  protected function load(string $viewClass) : string {
+    try {
+      $reflectionClass = new \ReflectionClass($viewClass);
+      if ($reflectionClass->isSubclassOf(View::class) && $reflectionClass->isInstantiable()) {
+        $view = $reflectionClass->newInstanceArgs(array($this->getDocument()));
+        $view->loadView();
+        return $view;
+      }
+    } catch(\ReflectionException $e) {
+      error_log($e->getMessage());
+    }
+
+    return "";
+  }
 
   private function loadLanguageModules() {
     $lang = $this->document->getUser()->getLanguage();

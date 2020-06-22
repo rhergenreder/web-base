@@ -11,9 +11,11 @@ class LanguageFlags extends View {
   public function __construct($document) {
     parent::__construct($document);
     $this->languageFlags = array();
+    $this->searchable = false;
   }
 
-  public function getCode() {
+  public function loadView() {
+    parent::loadView();
 
     $request = new \Api\Language\Get($this->getDocument()->getUser());
     if ($request->execute()) {
@@ -51,8 +53,10 @@ class LanguageFlags extends View {
           "<img class=\"p-1 clickable\" src=\"/img/icons/lang/$langCode.gif\" alt=\"$langName\" title=\"$langName\">"
         );
       }
-
-      return implode('', $this->languageFlags);
     }
+  }
+
+  public function getCode() {
+    return implode('', $this->languageFlags);
   }
 }

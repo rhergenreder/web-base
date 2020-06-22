@@ -17,6 +17,7 @@ namespace Documents\Document404 {
 
   use Elements\Body;
   use Elements\Head;
+  use Elements\SimpleBody;
   use Views\View404;
 
   class Head404 extends Head {
@@ -47,7 +48,7 @@ namespace Documents\Document404 {
     }
   }
 
-  class Body404 extends Body {
+  class Body404 extends SimpleBody {
 
     public function __construct($document) {
       parent::__construct($document);
@@ -57,10 +58,8 @@ namespace Documents\Document404 {
       http_response_code(404);
     }
 
-    public function getCode() {
-      $html = parent::getCode();
-      $html .= "<body>" . (new View404($this->getDocument())) . "</body>";
-      return $html;
+    protected function getContent() {
+      return $this->load(View404::class);
     }
   }
 }

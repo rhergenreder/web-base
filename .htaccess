@@ -1,14 +1,16 @@
 php_flag display_errors on
 Options -Indexes
 
+DirectorySlash Off
+
 RewriteEngine On
 RewriteRule ^api(/.*)?$ /index.php?api=$1 [L,QSA]
 
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    DirectorySlash Off
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d [OR]
-    RewriteCond %{REQUEST_URI} "(\.idea|\.git|src|test|core)(/.*)?"
-    RewriteRule ^(.*)$ /index.php?site=$1 [L,QSA]
-</IfModule>
+RewriteEngine On
+RewriteOptions AllowNoSlash
+RewriteRule ^((\.idea|\.git|src|test|core|static)(/.*)?)$ /index.php?site=$1 [L,QSA]
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /index.php?site=$1 [L,QSA]

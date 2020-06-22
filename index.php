@@ -89,6 +89,7 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
     $success = $req->execute(array("request" => $documentName));
     $response = "";
     if (!$success) {
+      http_response_code(500);
       $response = "Unable to find route: " . $req->getLastError();
     } else {
       $route = $req->getResult()["route"];
@@ -106,8 +107,8 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
             header("Location: $target");
             break;
           case "static":
-            http_response_code(501);
-            $response = "Not implemented yet.";
+            $currentDir = dirname(__FILE__);
+            $response = serveStatic($currentDir, $target);
             break;
           case "dynamic":
             $view = $route["extra"] ?? "";

@@ -32,7 +32,7 @@ class LoginBody extends Body {
     $backToStartPage = L("Back to Start Page");
     $stayLoggedIn = L("Stay logged in");
 
-    $flags = new LanguageFlags($this->getDocument());
+    $flags = $this->load(LanguageFlags::class);
     $iconBack = $this->createIcon("arrow-circle-left");
     $domain = $_SERVER['HTTP_HOST'];
     $protocol = getProtocol();

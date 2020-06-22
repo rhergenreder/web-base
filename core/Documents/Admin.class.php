@@ -29,12 +29,7 @@ namespace Documents\Admin {
     }
 
     protected function initSources() {
-//      $this->loadJQuery();
       $this->loadFontawesome();
-//      $this->addJS(Script::CORE);
-//      $this->addCSS(Link::CORE);
-//      $this->addJS(Script::ADMIN);
-//      $this->addCSS(Link::ADMIN);
     }
 
     protected function initMetas() {

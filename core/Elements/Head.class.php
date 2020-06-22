@@ -15,6 +15,7 @@ abstract class Head extends View {
   function __construct($document) {
     parent::__construct($document);
     $this->sources = array();
+    $this->searchable = false;
     $this->metas = $this->initMetas();
     $this->rawFields = $this->initRawFields();
     $this->title = $this->initTitle();

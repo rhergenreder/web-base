@@ -133,7 +133,7 @@ class CreateDatabase {
       ->addRow("^/register(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\Register")
       ->addRow("^/confirmEmail(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ConfirmEmail")
       ->addRow("^/acceptInvite(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\AcceptInvite")
-      ->addRow("^/$", "dynamic", "\\Documents\\Welcome", NULL);
+      ->addRow("^/$", "static", "/static/welcome.html", NULL);
 
     return $queries;
   }

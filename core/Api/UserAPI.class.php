@@ -63,8 +63,9 @@ namespace Api\User {
   use Api\UserAPI;
   use DateTime;
   use Driver\SQL\Condition\Compare;
+    use Views\Account\ConfirmEmail;
 
-  class Create extends UserAPI {
+    class Create extends UserAPI {
 
   public function __construct($user, $externalCall = false) {
     parent::__construct($user, $externalCall, array(
@@ -451,8 +452,10 @@ class CheckToken extends  UserAPI{
 
         $token = $this->getParam('token');
         $sql = $this->user->getSQL();
-        $res = $sql->select("token_type")->from("UserToken")
-            ->where(new Compare("token",$token), new Compare("valid_until", $sql->now(), ">"))
+        $res = $sql->select("UserToken.token_type, User.name, User.email")->from("UserToken")
+            ->innerJoin("user", "UserToken.user_id","User.uid")
+            ->where(new Compare("UserToken.token",$token),
+                new Compare("UserToken.valid_until", $sql->now(), ">"))
             ->execute();
         $this->lastError = $sql->getLastError();
         $this->success = ($res !== FALSE);
@@ -463,11 +466,13 @@ class CheckToken extends  UserAPI{
                 $this->success = false;
                 return false;
             }
-            $this->result["token_type"] = $res[0];
-            $this->result["username"] = $this->user->getUsername();
+            $this->result["token_type"] = $res[0]["UserToken.token_type"];
+            $this->result["username"] = $res[0]["User.username"];
+            $this->result["email"] = $res[0]["User.email"];
         }
         return $this->success;
     }
 }
+
 
 }

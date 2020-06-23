@@ -29,9 +29,9 @@ export default class UserOverview extends React.Component {
                 pageCount: 1,
                 totalCount: 0,
             },
-            errors: []
+            errors: [],
+            rowCount: 0
         };
-        this.rowCount = 0;
     }
 
     fetchGroups(page) {
@@ -46,9 +46,9 @@ export default class UserOverview extends React.Component {
                         pageCount: res.pageCount,
                         page: page,
                         totalCount: res.totalCount,
-                    }
+                    },
+                    rowCount: Math.max(this.state.rowCount, Object.keys(res.groups).length)
                 });
-                this.rowCount = Math.max(this.rowCount, Object.keys(res.groups).length);
             } else {
                 let errors = this.state.errors.slice();
                 errors.push({title: "Error fetching groups", message: res.msg});
@@ -76,9 +76,9 @@ export default class UserOverview extends React.Component {
                         pageCount: res.pageCount,
                         page: page,
                         totalCount: res.totalCount,
-                    }
+                    },
+                    rowCount: Math.max(this.state.rowCount, Object.keys(res.users).length)
                 });
-                this.rowCount = Math.max(this.rowCount, Object.keys(res.users).length);
             } else {
                 let errors = this.state.errors.slice();
                 errors.push({title: "Error fetching users", message: res.msg});
@@ -196,7 +196,7 @@ export default class UserOverview extends React.Component {
             );
         }
 
-        while(userRows.length < this.rowCount) {
+        while(userRows.length < this.state.rowCount) {
             userRows.push(
                 <tr key={"empty-row-" + userRows.length}>
                     <td>&nbsp;</td>
@@ -298,7 +298,7 @@ export default class UserOverview extends React.Component {
             );
         }
 
-        while(groupRows.length < this.rowCount) {
+        while(groupRows.length < this.state.rowCount) {
             groupRows.push(
                 <tr key={"empty-row-" + groupRows.length}>
                     <td>&nbsp;</td>

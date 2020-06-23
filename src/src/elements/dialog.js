@@ -6,6 +6,17 @@ export default function Dialog(props) {
     const classes = "modal fade" + (show ? " show" : "");
     const style = { paddingRight: "12px", display: (show ? "block" : "none") };
     const onClose = props.onClose || function() { };
+    const onOption = props.onOption || function() { };
+    const options = props.options || ["Close"];
+
+    let buttons = [];
+    for (let name of options) {
+        buttons.push(
+            <button type="button" key={"button-" + name} className="btn btn-default" data-dismiss={"modal"} onClick={() => { onClose(); onOption(name); }}>
+                {name}
+            </button>
+        )
+    }
 
     return (
         <div className={classes} id="modal-default" style={style} aria-modal="true" onClick={() => onClose()}>
@@ -20,8 +31,8 @@ export default function Dialog(props) {
                     <div className="modal-body">
                         <p>{props.message}</p>
                     </div>
-                    <div className="modal-footer justify-content-between">
-                        <button type="button" className="btn btn-default" data-dismiss="modal" onClick={() => onClose()}>Close</button>
+                    <div className="modal-footer">
+                        { buttons }
                     </div>
                 </div>
             </div>

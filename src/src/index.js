@@ -34,8 +34,8 @@ class AdminDashboard extends React.Component {
     this.fetchNotifications();
   }
 
-  showDialog(message, title) {
-    const props = { show: true, message: message, title: title };
+  showDialog(message, title, options=["Close"], onOption = null) {
+    const props = { show: true, message: message, title: title, options: options, onOption: onOption };
     this.setState({ ...this.state, dialog: { ...this.state.dialog, ...props } });
   }
 

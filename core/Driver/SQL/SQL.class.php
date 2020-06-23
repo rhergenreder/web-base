@@ -5,6 +5,7 @@ namespace Driver\SQL;
 use Driver\SQL\Column\Column;
 use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondBool;
+use Driver\SQL\Condition\CondIn;
 use Driver\SQL\Condition\CondOr;
 use Driver\SQL\Condition\Regex;
 use Driver\SQL\Constraint\Constraint;
@@ -334,6 +335,14 @@ abstract class SQL {
         }
         return implode(" AND ", $conditions);
       }
+    } else if($condition instanceof CondIn) {
+      $values = array();
+      foreach ($condition->getValues() as $value) {
+        $values[] = $this->addValue($value, $params);
+      }
+
+      $values = implode(",", $values);
+      return $this->columnName($condition->getColumn()) . " IN ($values)";
     } else {
       $this->lastError = "Unsupported condition type: " . get_class($condition);
       return false;

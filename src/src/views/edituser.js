@@ -9,7 +9,8 @@ export default class EditUser extends React.Component {
     constructor(props) {
         super(props);
         this.parent = {
-            api: props.api
+            api: props.api,
+            showDialog: props.showDialog,
         };
 
         this.state = {
@@ -18,6 +19,7 @@ export default class EditUser extends React.Component {
             fetchError: null,
             loaded: false,
             isSaving: false,
+            isDeleting: false,
             groups: { },
             searchString: "",
             searchActive: false
@@ -37,7 +39,13 @@ export default class EditUser extends React.Component {
     componentDidMount() {
         this.parent.api.getUser(this.props.match.params["userId"]).then((res) => {
             if (res.success) {
-                this.setState({ ...this.state, user: {... res.user, password: ""} });
+                this.setState({ ...this.state, user: {
+                        name: res.user.name,
+                        email: res.user.email || "",
+                        groups: res.user.groups,
+                        password: ""
+                    }
+                });
                 this.parent.api.fetchGroups(1, 50).then((res) => {
                     if (res.success) {
                         this.setState({ ...this.state, groups: res.groups, loaded: true });
@@ -88,6 +96,27 @@ export default class EditUser extends React.Component {
             } else {
                 alerts.push({ title: "Error updating user", message: res.msg, type: "danger" });
                 this.setState({ ...this.state, isSaving: false, alerts: alerts, user: { ...this.state.user, password: "" } });
+            }
+        });
+    }
+
+    onDeleteUser(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const id = this.props.match.params["userId"];
+
+        this.parent.showDialog("Are you sure you want to delete this user permanently?", "Delete User?", ["Yes", "No"], (btn) => {
+            if (btn === "Yes") {
+                this.parent.api.deleteUser(id).then((res) => {
+                    if (res.success) {
+                        this.props.history.push("/admin/users");
+                    } else {
+                        let alerts = this.state.alerts.slice();
+                        alerts.push({ title: "Error deleting user", message: res.msg, type: "danger" });
+                        this.setState({ ...this.state, isSaving: false, alerts: alerts, user: { ...this.state.user, password: "" } });
+                    }
+                })
             }
         });
     }
@@ -178,7 +207,7 @@ export default class EditUser extends React.Component {
                 );
             }
 
-            form = <form role={"form"} onSubmit={this.onSubmitForm.bind(this)}>
+            form = <form role={"form"} onSubmit={(e) => e.preventDefault()}>
                 <div className={"form-group"}>
                     <label htmlFor={"username"}>Username</label>
                     <input type={"text"} className={"form-control"} placeholder={"Enter username"}
@@ -238,8 +267,12 @@ export default class EditUser extends React.Component {
                     &nbsp;Back
                 </Link>
                 { this.state.isSaving
-                    ? <button type={"submit"} className={"btn btn-primary mt-2"} disabled>Saving…&nbsp;<Icon icon={"circle-notch"} /></button>
-                    : <button type={"submit"} className={"btn btn-primary mt-2"}>Save</button>
+                    ? <button type={"submit"} className={"btn btn-primary mt-2 mr-2"} disabled>Saving…&nbsp;<Icon icon={"circle-notch"} /></button>
+                    : <button type={"submit"} className={"btn btn-primary mt-2 mr-2"} onClick={this.onSubmitForm.bind(this)}>Save</button>
+                }
+                { this.state.isDeleting
+                    ? <button type={"submit"} className={"btn btn-danger mt-2"} disabled>Deleting…&nbsp;<Icon icon={"circle-notch"} /></button>
+                    : <button type={"submit"} className={"btn btn-danger mt-2"} onClick={this.onDeleteUser.bind(this)}>Delete</button>
                 }
             </form>
         }

@@ -110,6 +110,7 @@ namespace Api\User {
   use Api\UserAPI;
   use DateTime;
   use Driver\SQL\Condition\Compare;
+  use Driver\SQL\Condition\CondIn;
   use Objects\User;
 
   class Create extends UserAPI {
@@ -190,6 +191,28 @@ namespace Api\User {
       return $this->success;
     }
 
+    private function selectIds($page, $count) {
+      $sql = $this->user->getSQL();
+      $res = $sql->select("User.uid")
+        ->from("User")
+        ->limit($count)
+        ->offset(($page - 1) * $count)
+        ->orderBy("User.uid")
+        ->ascending()
+        ->execute();
+
+      $this->success = ($res !== NULL);
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success) {
+        $ids = array();
+        foreach($res as $row) $ids[] = $row["uid"];
+        return $ids;
+      }
+
+      return false;
+    }
+
     public function execute($values = array()) {
       if (!parent::execute($values)) {
         return false;
@@ -209,16 +232,18 @@ namespace Api\User {
         return false;
       }
 
+      $userIds = $this->selectIds($page, $count);
+      if ($userIds === false) {
+        return false;
+      }
+
       $sql = $this->user->getSQL();
       $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at",
         "Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor")
         ->from("User")
         ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
         ->leftJoin("Group", "Group.uid", "UserGroup.group_id")
-        ->orderBy("User.uid")
-        ->ascending()
-        ->limit($count)
-        ->offset(($page - 1) * $count)
+        ->where(new CondIn("User.uid", $userIds))
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -289,10 +314,12 @@ namespace Api\User {
           );
 
           foreach($user as $row) {
-            $this->result["user"]["groups"][$row["groupId"]] = array(
-              "name" => $row["groupName"],
-              "color" => $row["groupColor"],
-            );
+            if (!is_null($row["groupId"])) {
+              $this->result["user"]["groups"][$row["groupId"]] = array(
+                "name" => $row["groupName"],
+                "color" => $row["groupColor"],
+              );
+            }
           }
         }
       }
@@ -629,8 +656,8 @@ If the registration was not intended, you can simply ignore this email.<br><br><
         }
 
         // Check for duplicate username, email
-        $usernameChanged = !is_null($username) ? strcasecmp($username, $this->user->getUsername()) !== 0 : false;
-        $emailChanged = !is_null($email) ? strcasecmp($email, $this->user->getEmail()) !== 0 : false;
+        $usernameChanged = !is_null($username) ? strcasecmp($username, $user[0]["name"]) !== 0 : false;
+        $emailChanged = !is_null($email) ? strcasecmp($email, $user[0]["email"]) !== 0 : false;
         if($usernameChanged || $emailChanged) {
           if (!$this->userExists($usernameChanged ? $username : NULL, $emailChanged ? $email : NULL)) {
             return false;
@@ -661,6 +688,43 @@ If the registration was not intended, you can simply ignore this email.<br><br><
           }
 
           $this->success = ($deleteQuery->execute() !== FALSE) && ($insertQuery->execute() !== FALSE);
+          $this->lastError = $sql->getLastError();
+        }
+      }
+
+      return $this->success;
+    }
+  }
+
+  class Delete extends UserAPI {
+
+    public function __construct(User $user, bool $externalCall) {
+      parent::__construct($user, $externalCall, array(
+        'id' => new Parameter('id', Parameter::TYPE_INT)
+      ));
+
+      $this->requiredGroup = array(USER_GROUP_ADMIN);
+      $this->loginRequired = true;
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $id = $this->getParam("id");
+      if ($id === $this->user->getId()) {
+        return $this->createError("You cannot delete your own user.");
+      }
+
+      $user = $this->getUser($id);
+      if ($this->success) {
+        if (empty($user)) {
+          return $this->createError("User not found");
+        } else {
+          $sql = $this->user->getSQL();
+          $res = $sql->delete("User")->where(new Compare("uid", $id))->execute();
+          $this->success = ($res !== FALSE);
           $this->lastError = $sql->getLastError();
         }
       }

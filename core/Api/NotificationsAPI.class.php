@@ -25,7 +25,7 @@ namespace Api\Notifications {
         'message' =>  new StringType('message', 256),
       ));
       $this->isPublic = false;
-      $this->csrfTokenRequired = true;
+
     }
 
     private function checkUser($userId) {
@@ -148,7 +148,7 @@ namespace Api\Notifications {
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall, array());
       $this->loginRequired = true;
-      $this->csrfTokenRequired = true;
+
     }
 
     private function fetchUserNotifications() {

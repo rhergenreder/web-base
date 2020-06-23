@@ -60,7 +60,7 @@ namespace Api\Language {
         'langId' => new Parameter('langId', Parameter::TYPE_INT, true, NULL),
         'langCode' => new StringType('langCode', 5, true, NULL),
       ));
-      $this->csrfTokenRequired = true;
+
     }
 
     private function checkLanguage() {

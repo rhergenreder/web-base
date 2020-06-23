@@ -15,18 +15,16 @@ namespace Api\Groups {
 
   class Fetch extends GroupsAPI {
 
-    const SELECT_SIZE = 10;
-
     private int $groupCount;
 
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall, array(
-        'page' => new Parameter('page', Parameter::TYPE_INT, true, 1)
+        'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
+        'count' => new Parameter('count', Parameter::TYPE_INT, true, 20)
       ));
 
       $this->loginRequired = true;
-      $this->requiredGroup = USER_GROUP_ADMIN;
-      $this->csrfTokenRequired = true;
+      $this->requiredGroup = array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN);
       $this->groupCount = 0;
     }
 
@@ -54,19 +52,24 @@ namespace Api\Groups {
         return $this->createError("Invalid page count");
       }
 
+      $count = $this->getParam("count");
+      if($count < 1 || $count > 50) {
+        return $this->createError("Invalid fetch count");
+      }
+
       if (!$this->getGroupCount()) {
         return false;
       }
 
       $sql = $this->user->getSQL();
-      $res = $sql->select("Group.uid as groupId", "Group.name as groupName", $sql->count("UserGroup.user_id"))
+      $res = $sql->select("Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor", $sql->count("UserGroup.user_id"))
         ->from("Group")
-        ->innerJoin("UserGroup", "UserGroup.group_id", "Group.uid")
+        ->leftJoin("UserGroup", "UserGroup.group_id", "Group.uid")
         ->groupBy("Group.uid")
         ->orderBy("Group.uid")
         ->ascending()
-        ->limit(Fetch::SELECT_SIZE)
-        ->offset(($page - 1) * Fetch::SELECT_SIZE)
+        ->limit($count)
+        ->offset(($page - 1) * $count)
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -77,13 +80,15 @@ namespace Api\Groups {
         foreach($res as $row) {
           $groupId = intval($row["groupId"]);
           $groupName = $row["groupName"];
+          $groupColor = $row["groupColor"];
           $memberCount = $row["usergroup_user_id_count"];
           $this->result["groups"][$groupId] = array(
             "name" => $groupName,
-            "memberCount" => $memberCount
+            "memberCount" => $memberCount,
+            "color" => $groupColor,
           );
         }
-        $this->result["pageCount"] = intval(ceil($this->groupCount / Fetch::SELECT_SIZE));
+        $this->result["pageCount"] = intval(ceil($this->groupCount / $count));
         $this->result["totalCount"] = $this->groupCount;
       }
 

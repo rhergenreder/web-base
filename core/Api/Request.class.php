@@ -16,7 +16,7 @@ class Request {
   protected bool $variableParamCount;
   protected bool $isDisabled;
   protected bool $apiKeyAllowed;
-  protected int $requiredGroup;
+  protected array $requiredGroup;
   protected bool $csrfTokenRequired;
 
   private array $aDefaultParams;
@@ -36,9 +36,9 @@ class Request {
     $this->variableParamCount = false;
     $this->apiKeyAllowed = true;
     $this->allowedMethods = array("GET", "POST");
-    $this->requiredGroup = 0;
+    $this->requiredGroup = array();
     $this->lastError = "";
-    $this->csrfTokenRequired = false;
+    $this->csrfTokenRequired = true;
   }
 
   protected function forbidMethod($method) {
@@ -118,7 +118,7 @@ class Request {
       return false;
     }
 
-    if($this->loginRequired || $this->requiredGroup > 0) {
+    if($this->loginRequired || !empty($this->requiredGroup)) {
       $apiKeyAuthorized = false;
       if(isset($values['api_key']) && $this->apiKeyAllowed) {
         $apiKey = $values['api_key'];
@@ -129,8 +129,9 @@ class Request {
         $this->lastError = 'You are not logged in.';
         header('HTTP 1.1 401 Unauthorized');
         return false;
-      } else if($this->requiredGroup > 0 && !$this->user->hasGroup($this->requiredGroup)) {
-        $this->lastError = "Insufficient permissions. Required group: ". GroupName($this->requiredGroup);
+      } else if(!empty($this->requiredGroup) && !empty(array_intersect($this->requiredGroup, $this->user->getGroups()))) {
+        $this->lastError = "Insufficient permissions. Required group: "
+          . implode(", ", array_map(function ($group) { return GroupName($group); }, $this->requiredGroup));
         header('HTTP 1.1 401 Unauthorized');
         return false;
       } else if($this->csrfTokenRequired && !$apiKeyAuthorized && $this->externalCall) {
@@ -166,7 +167,9 @@ class Request {
     return false;
   }
 
-  protected function getParam($name) { return isset($this->params[$name]) ? $this->params[$name]->value : NULL; }
+  protected function getParam($name) {
+    return isset($this->params[$name]) ? $this->params[$name]->value : NULL;
+  }
 
   public function isPublic() { return $this->isPublic; }
   public function getLastError() { return $this->lastError; }

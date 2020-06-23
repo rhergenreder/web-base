@@ -33,7 +33,7 @@ namespace Api\Routes {
   public function __construct($user, $externalCall = false) {
     parent::__construct($user, $externalCall, array());
     $this->loginRequired = true;
-    $this->csrfTokenRequired = true;
+
   }
 
   public function execute($values = array()) {
@@ -135,8 +135,7 @@ namespace Api\Routes {
       ));
 
       $this->loginRequired = true;
-      $this->csrfTokenRequired = true;
-      $this->requiredGroup = USER_GROUP_ADMIN;
+      $this->requiredGroup = array(USER_GROUP_ADMIN);
     }
 
     public function execute($values = array()) {

@@ -4,6 +4,8 @@ import {Link} from "react-router-dom";
 import {getPeriodString} from "../global";
 import Alert from "../elements/alert";
 
+const TABLE_SIZE = 10;
+
 export default class UserOverview extends React.Component {
 
     constructor(props) {
@@ -28,12 +30,13 @@ export default class UserOverview extends React.Component {
             },
             errors: []
         };
+        this.rowCount = 0;
     }
 
     fetchGroups(page) {
         page = page || this.state.groups.page;
         this.setState({...this.state, groups: {...this.state.groups, data: {}, page: 1, totalCount: 0}});
-        this.parent.api.fetchGroups(page).then((res) => {
+        this.parent.api.fetchGroups(page, TABLE_SIZE).then((res) => {
             if (res.success) {
                 this.setState({
                     ...this.state,
@@ -44,6 +47,7 @@ export default class UserOverview extends React.Component {
                         totalCount: res.totalCount,
                     }
                 });
+                this.rowCount = Math.max(this.rowCount, Object.keys(res.groups).length);
             } else {
                 let errors = this.state.errors.slice();
                 errors.push({title: "Error fetching groups", message: res.msg});
@@ -61,7 +65,7 @@ export default class UserOverview extends React.Component {
     fetchUsers(page) {
         page = page || this.state.users.page;
         this.setState({...this.state, users: {...this.state.users, data: {}, pageCount: 1, totalCount: 0}});
-        this.parent.api.fetchUsers(page).then((res) => {
+        this.parent.api.fetchUsers(page, TABLE_SIZE).then((res) => {
             if (res.success) {
                 this.setState({
                     ...this.state,
@@ -73,6 +77,7 @@ export default class UserOverview extends React.Component {
                         totalCount: res.totalCount,
                     }
                 });
+                this.rowCount = Math.max(this.rowCount, Object.keys(res.groups).length);
             } else {
                 let errors = this.state.errors.slice();
                 errors.push({title: "Error fetching users", message: res.msg});
@@ -156,9 +161,13 @@ export default class UserOverview extends React.Component {
 
             for (let groupId in user.groups) {
                 if (user.groups.hasOwnProperty(groupId)) {
-                    let groupName = user.groups[groupId];
-                    let color = (groupId === "1" ? "danger" : "secondary");
-                    groups.push(<span key={"group-" + groupId} className={"mr-1 badge badge-" + color}>{groupName}</span>);
+                    let groupName = user.groups[groupId].name;
+                    let groupColor = user.groups[groupId].color;
+                    groups.push(
+                        <span key={"group-" + groupId} className={"mr-1 badge text-white"} style={{backgroundColor: groupColor}}>
+                            {groupName}
+                        </span>
+                    );
                 }
             }
 
@@ -168,6 +177,17 @@ export default class UserOverview extends React.Component {
                     <td>{user.email}</td>
                     <td>{groups}</td>
                     <td>{getPeriodString(user.registered_at)}</td>
+                </tr>
+            );
+        }
+
+        while(userRows.length < this.rowCount) {
+            userRows.push(
+                <tr key={"empty-row-" + userRows.length}>
+                    <td>&nbsp;</td>
+                    <td/>
+                    <td/>
+                    <td/>
                 </tr>
             );
         }
@@ -251,7 +271,22 @@ export default class UserOverview extends React.Component {
             groupRows.push(
                 <tr key={"group-" + uid}>
                     <td>{group.name}</td>
-                    <td>{group.memberCount}</td>
+                    <td className={"text-center"}>{group.memberCount}</td>
+                    <td>
+                        <span className={"badge text-white mr-1"} style={{backgroundColor: group.color}}>
+                            {group.color}
+                        </span>
+                    </td>
+                </tr>
+            );
+        }
+
+        while(groupRows.length < this.rowCount) {
+            groupRows.push(
+                <tr key={"empty-row-" + groupRows.length}>
+                    <td>&nbsp;</td>
+                    <td/>
+                    <td/>
                 </tr>
             );
         }
@@ -288,7 +323,8 @@ export default class UserOverview extends React.Component {
                     <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Members</th>
+                        <th className={"text-center"}>Members</th>
+                        <th>Color</th>
                     </tr>
                     </thead>
                     <tbody>

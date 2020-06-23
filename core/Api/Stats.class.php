@@ -9,9 +9,9 @@ class Stats extends Request {
 
   public function __construct($user, $externalCall = false) {
     parent::__construct($user, $externalCall, array());
-    $this->csrfTokenRequired = true;
+
     $this->loginRequired = true;
-    $this->requiredGroup = USER_GROUP_ADMIN;
+    $this->requiredGroup = array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN);
   }
 
   private function getUserCount() {

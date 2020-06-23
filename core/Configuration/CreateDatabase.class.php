@@ -68,12 +68,14 @@ class CreateDatabase {
     $queries[] = $sql->createTable("Group")
       ->addSerial("uid")
       ->addString("name", 32)
+      ->addString("color", 10)
       ->primaryKey("uid")
       ->unique("name");
 
-    $queries[] = $sql->insert("Group", array("uid", "name"))
-      ->addRow(USER_GROUP_DEFAULT, USER_GROUP_DEFAULT_NAME)
-      ->addRow(USER_GROUP_ADMIN, USER_GROUP_ADMIN_NAME);
+    $queries[] = $sql->insert("Group", array("uid", "name", "color"))
+      ->addRow(USER_GROUP_MODERATOR, USER_GROUP_MODERATOR_NAME, "#007bff")
+      ->addRow(USER_GROUP_SUPPORT, USER_GROUP_SUPPORT_NAME, "#28a745")
+      ->addRow(USER_GROUP_ADMIN, USER_GROUP_ADMIN_NAME, "#dc3545");
 
     $queries[] = $sql->createTable("UserGroup")
       ->addInt("user_id")
@@ -130,7 +132,7 @@ class CreateDatabase {
       ->primaryKey("uid");
 
     $queries[] = $sql->insert("Route", array("request", "action", "target", "extra"))
-      ->addRow("^/admin(/.*)?$", "dynamic", "\\Documents\\AdminDashboard", NULL)
+      ->addRow("^/admin(/.*)?$", "dynamic", "\\Documents\\Admin", NULL)
       ->addRow("^/register(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\Register")
       ->addRow("^/confirmEmail(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ConfirmEmail")
       ->addRow("^/acceptInvite(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\AcceptInvite")

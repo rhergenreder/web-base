@@ -41,7 +41,6 @@ namespace Api\ApiKey {
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall, array());
       $this->apiKeyAllowed = false;
-      $this->csrfTokenRequired = true;
       $this->loginRequired = true;
     }
 
@@ -80,7 +79,6 @@ namespace Api\ApiKey {
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall, array());
       $this->loginRequired = true;
-      $this->csrfTokenRequired = true;
     }
 
     public function execute($values = array()) {
@@ -127,7 +125,6 @@ namespace Api\ApiKey {
         "id" => new Parameter("id", Parameter::TYPE_INT),
       ));
       $this->loginRequired = true;
-      $this->csrfTokenRequired = true;
     }
 
     public function execute($values = array()) {
@@ -163,7 +160,6 @@ namespace Api\ApiKey {
         "id" => new Parameter("id", Parameter::TYPE_INT),
       ));
       $this->loginRequired = true;
-      $this->csrfTokenRequired = true;
     }
 
     public function execute($aValues = array()) {

@@ -43,12 +43,12 @@ export default class API {
         return this.apiCall("notifications/fetch");
     }
 
-    async fetchUsers(pageNum = 1) {
-        return this.apiCall("user/fetch", { page: pageNum });
+    async fetchUsers(pageNum = 1, count = 20) {
+        return this.apiCall("user/fetch", { page: pageNum, count: count });
     }
 
-    async fetchGroups(pageNum = 1) {
-        return this.apiCall("groups/fetch", { page: pageNum });
+    async fetchGroups(pageNum = 1, count = 20) {
+        return this.apiCall("groups/fetch", { page: pageNum, count: count });
     }
 
     async inviteUser(username, email) {

@@ -25,7 +25,7 @@ namespace Api\Notifications {
         'message' =>  new StringType('message', 256),
       ));
       $this->isPublic = false;
-
+      $this->requiredGroup = array(USER_GROUP_ADMIN);
     }
 
     private function checkUser($userId) {
@@ -148,7 +148,6 @@ namespace Api\Notifications {
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall, array());
       $this->loginRequired = true;
-
     }
 
     private function fetchUserNotifications() {

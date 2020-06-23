@@ -129,7 +129,7 @@ class Request {
         $this->lastError = 'You are not logged in.';
         header('HTTP 1.1 401 Unauthorized');
         return false;
-      } else if(!empty($this->requiredGroup) && empty(array_intersect($this->requiredGroup, $this->user->getGroups()))) {
+      } else if(!empty($this->requiredGroup) && empty(array_intersect($this->requiredGroup, array_keys($this->user->getGroups())))) {
         $this->lastError = "Insufficient permissions. Required group: "
           . implode(", ", array_map(function ($group) { return GroupName($group); }, $this->requiredGroup));
         header('HTTP 1.1 401 Unauthorized');

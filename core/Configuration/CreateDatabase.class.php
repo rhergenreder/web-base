@@ -81,8 +81,8 @@ class CreateDatabase {
       ->addInt("user_id")
       ->addInt("group_id")
       ->unique("user_id", "group_id")
-      ->foreignKey("user_id", "User", "uid")
-      ->foreignKey("group_id", "Group", "uid");
+      ->foreignKey("user_id", "User", "uid", new CascadeStrategy())
+      ->foreignKey("group_id", "Group", "uid", new CascadeStrategy());
 
     $queries[] = $sql->createTable("Notification")
       ->addSerial("uid")

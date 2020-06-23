@@ -43,6 +43,10 @@ export default class API {
         return this.apiCall("notifications/fetch");
     }
 
+    async getUser(id) {
+        return this.apiCall("user/get", { id: id });
+    }
+
     async fetchUsers(pageNum = 1, count = 20) {
         return this.apiCall("user/fetch", { page: pageNum, count: count });
     }

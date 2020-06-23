@@ -3,6 +3,7 @@ import Icon from "../elements/icon";
 import {Link} from "react-router-dom";
 import {getPeriodString} from "../global";
 import Alert from "../elements/alert";
+import ReactTooltip from "react-tooltip";
 
 const TABLE_SIZE = 10;
 
@@ -77,7 +78,7 @@ export default class UserOverview extends React.Component {
                         totalCount: res.totalCount,
                     }
                 });
-                this.rowCount = Math.max(this.rowCount, Object.keys(res.groups).length);
+                this.rowCount = Math.max(this.rowCount, Object.keys(res.users).length);
             } else {
                 let errors = this.state.errors.slice();
                 errors.push({title: "Error fetching users", message: res.msg});
@@ -145,6 +146,7 @@ export default class UserOverview extends React.Component {
                     </div>
                 </div>
             </div>
+            <ReactTooltip />
         </>;
     }
 
@@ -176,7 +178,20 @@ export default class UserOverview extends React.Component {
                     <td>{user.name}</td>
                     <td>{user.email}</td>
                     <td>{groups}</td>
-                    <td>{getPeriodString(user.registered_at)}</td>
+                    <td>
+                        <span data-effect={"solid"}
+                              data-tip={user.registered_at}
+                              data-place={"bottom"}>
+                            {getPeriodString(user.registered_at)}
+                        </span>
+                    </td>
+                    <td>
+                        <Link to={"/admin/user/edit/" + uid} className={"text-reset"}>
+                            <Icon icon={"pencil-alt"} data-effect={"solid"}
+                                  data-tip={"Modify user details & group membership"}
+                                  data-type={"info"} data-place={"right"}/>
+                        </Link>
+                    </td>
                 </tr>
             );
         }
@@ -185,6 +200,7 @@ export default class UserOverview extends React.Component {
             userRows.push(
                 <tr key={"empty-row-" + userRows.length}>
                     <td>&nbsp;</td>
+                    <td/>
                     <td/>
                     <td/>
                     <td/>
@@ -211,7 +227,7 @@ export default class UserOverview extends React.Component {
             <div className={"card-header border-0"}>
                 <h3 className={"card-title"}>Users</h3>
                 <div className={"card-tools"}>
-                    <Link href={"#"} className={"btn btn-tool btn-sm"} to={"/admin/users/adduser"} >
+                    <Link href={"#"} className={"btn btn-tool btn-sm"} to={"/admin/user/add"} >
                         <Icon icon={"plus"}/>
                     </Link>
                     <a href={"#"} className={"btn btn-tool btn-sm"} onClick={() => this.fetchUsers()}>
@@ -227,6 +243,7 @@ export default class UserOverview extends React.Component {
                         <th>Email</th>
                         <th>Groups</th>
                         <th>Registered</th>
+                        <th/>
                     </tr>
                     </thead>
                     <tbody>
@@ -273,7 +290,7 @@ export default class UserOverview extends React.Component {
                     <td>{group.name}</td>
                     <td className={"text-center"}>{group.memberCount}</td>
                     <td>
-                        <span className={"badge text-white mr-1"} style={{backgroundColor: group.color}}>
+                        <span className={"badge text-white mr-1"} style={{backgroundColor: group.color, fontFamily: "monospace"}}>
                             {group.color}
                         </span>
                     </td>

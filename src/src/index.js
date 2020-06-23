@@ -16,6 +16,7 @@ import Logs from "./views/logs";
 import PageOverview from "./views/pages";
 import HelpPage from "./views/help";
 import Footer from "./footer";
+import EditUser from "./views/edituser";
 
 class AdminDashboard extends React.Component {
 
@@ -83,7 +84,11 @@ class AdminDashboard extends React.Component {
             <Switch>
               <Route path={"/admin/dashboard"}><Overview {...this.controlObj} notifications={this.state.notifications} /></Route>
               <Route exact={true} path={"/admin/users"}><UserOverview {...this.controlObj} /></Route>
-              <Route exact={true} path={"/admin/users/adduser"}><CreateUser {...this.controlObj} /></Route>
+              <Route path={"/admin/user/add"}><CreateUser {...this.controlObj} /></Route>
+              <Route path={"/admin/user/edit/:userId"} render={(props) => {
+                let newProps = {...props, ...this.controlObj};
+                return <EditUser {...newProps} />
+              }}/>
               <Route path={"/admin/logs"}><Logs {...this.controlObj} /></Route>
               <Route path={"/admin/pages"}><PageOverview {...this.controlObj} /></Route>
               <Route path={"/admin/help"}><HelpPage {...this.controlObj} /></Route>

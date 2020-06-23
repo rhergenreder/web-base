@@ -126,7 +126,7 @@ namespace Api\User {
 
       parent::__construct($user, $externalCall, array(
         'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
-        'count' => new Parameter('count', Parameter::TYPE_INT, true, 20),
+        'count' => new Parameter('count', Parameter::TYPE_INT, true, 20)
       ));
 
       $this->loginRequired = true;
@@ -208,6 +208,64 @@ namespace Api\User {
         }
         $this->result["pageCount"] = intval(ceil($this->userCount / $count));
         $this->result["totalCount"] = $this->userCount;
+      }
+
+      return $this->success;
+    }
+  }
+
+  class Get extends UserAPI {
+
+    public function __construct($user, $externalCall = false) {
+
+      parent::__construct($user, $externalCall, array(
+        'id' => new Parameter('id', Parameter::TYPE_INT)
+      ));
+
+      $this->loginRequired = true;
+      $this->requiredGroup = array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN);
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $id = $this->getParam("id");
+
+      $sql = $this->user->getSQL();
+      $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at",
+        "Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor")
+        ->from("User")
+        ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
+        ->leftJoin("Group", "Group.uid", "UserGroup.group_id")
+        ->where(new Compare("User.uid", $id))
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success) {
+        if (empty($res)) {
+          return $this->createError("User not found");
+        } else {
+          $row = $res[0];
+          $this->result["user"] = array(
+            "uid" => $row["userId"],
+            "name" => $row["name"],
+            "email" => $row["email"],
+            "registered_at" => $row["registered_at"],
+            "groups" => array()
+          );
+
+          foreach($res as $row) {
+            $this->result["user"]["groups"][] = array(
+              "uid" => $row["groupId"],
+              "name" => $row["groupName"],
+              "color" => $row["groupColor"],
+            );
+          }
+        }
       }
 
       return $this->success;

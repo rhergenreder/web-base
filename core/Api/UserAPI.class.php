@@ -148,6 +148,9 @@ namespace Api\User {
         return false;
       }
 
+      // prevent duplicate keys
+      $email = (!is_null($email) && empty($email)) ? null : $email;
+
       $id = $this->insertUser($username, $email, $password);
       if ($this->success) {
         $this->result["userId"] = $id;
@@ -604,6 +607,8 @@ If the registration was not intended, you can simply ignore this email.<br><br><
         $email = $this->getParam("email");
         $password = $this->getParam("password");
         $groups = $this->getParam("groups");
+
+        $email = (!is_null($email) && empty($email)) ? null : $email;
 
         $groupIds = array();
         if (!is_null($groups)) {

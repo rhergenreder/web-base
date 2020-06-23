@@ -170,6 +170,14 @@ export default class EditUser extends React.Component {
                 placeholder = "";
             }
 
+            if (this.state.searchString.length > 0 && possibleOptions.length === 0) {
+                possibleOptions.push(
+                    <li className={"select2-results__option"} role={"option"} key={"group-notfound"} aria-selected={true}>
+                        Group not found
+                    </li>
+                );
+            }
+
             form = <form role={"form"} onSubmit={this.onSubmitForm.bind(this)}>
                 <div className={"form-group"}>
                     <label htmlFor={"username"}>Username</label>

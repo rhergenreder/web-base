@@ -286,8 +286,7 @@ namespace Api\User {
           );
 
           foreach($user as $row) {
-            $this->result["user"]["groups"][] = array(
-              "uid" => $row["groupId"],
+            $this->result["user"]["groups"][$row["groupId"]] = array(
               "name" => $row["groupName"],
               "color" => $row["groupColor"],
             );
@@ -482,7 +481,7 @@ If the invitation was not intended, you can simply ignore this email.<br><br><a 
       $validUntil = (new DateTime())->modify("+48 hour");
       $sql = $this->user->getSQL();
       $res = $sql->insert("UserToken", array("user_id", "token", "token_type", "valid_until"))
-        ->addRow(array($this->userId, $this->token, "confirmation", $validUntil))
+        ->addRow($this->userId, $this->token, "confirmation", $validUntil)
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -606,8 +605,20 @@ If the registration was not intended, you can simply ignore this email.<br><br><
         $password = $this->getParam("password");
         $groups = $this->getParam("groups");
 
+        $groupIds = array();
         if (!is_null($groups)) {
-          if ($id === $this->user->getId() && !in_array(USER_GROUP_ADMIN, $groups)) {
+          $param = new Parameter('groupId', Parameter::TYPE_INT);
+
+          foreach($groups as $groupId) {
+            if (!$param->parseParam($groupId)) {
+              $value = print_r($groupId, true);
+              return $this->createError("Invalid Type for groupId in parameter groups: '$value' (Required: " . $param->getTypeName() . ")");
+            }
+
+            $groupIds[] = $param->value;
+          }
+
+          if ($id === $this->user->getId() && !in_array(USER_GROUP_ADMIN, $groupIds)) {
             return $this->createError("Cannot remove Administrator group from own user.");
           }
         }
@@ -628,18 +639,20 @@ If the registration was not intended, you can simply ignore this email.<br><br><
         if ($emailChanged) $query->set("email", $email);
         if (!is_null($password)) $query->set("password", $this->hashPassword($password));
 
-        $query->where(new Compare("User.uid", $id));
-        $res = $query->execute();
-        $this->lastError = $sql->getLastError();
-        $this->success = ($res !== FALSE);
+        if (!empty($query->getValues())) {
+          $query->where(new Compare("User.uid", $id));
+          $res = $query->execute();
+          $this->lastError = $sql->getLastError();
+          $this->success = ($res !== FALSE);
+        }
 
-        if ($this->success && !is_null($groups)) {
+        if ($this->success && !empty($groupIds)) {
 
           $deleteQuery = $sql->delete("UserGroup")->where(new Compare("user_id", $id));
           $insertQuery = $sql->insert("UserGroup", array("user_id", "group_id"));
 
-          foreach($groups as $groupId) {
-            $insertQuery->addRow(array($id, $groupId));
+          foreach($groupIds as $groupId) {
+            $insertQuery->addRow($id, $groupId);
           }
 
           $this->success = ($deleteQuery->execute() !== FALSE) && ($insertQuery->execute() !== FALSE);

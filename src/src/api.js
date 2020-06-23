@@ -35,6 +35,10 @@ export default class API {
         return data && data.success && data.loggedIn;
     }
 
+    async editUser(id, username, email, password, groups) {
+        return this.apiCall("user/edit", { "id": id, "username": username, "email": email, "password": password, "groups": groups });
+    }
+
     async logout() {
         return this.apiCall("user/logout");
     }

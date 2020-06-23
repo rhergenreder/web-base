@@ -203,12 +203,13 @@ abstract class SQL {
 
   public function executeDelete(Delete $delete) {
 
+    $params = array();
     $table = $this->tableName($delete->getTable());
     $where = $this->getWhereClause($delete->getConditions(), $params);
 
     $query = "DELETE FROM $table$where";
     if($delete->dump) { var_dump($query); }
-    return $this->execute($query);
+    return $this->execute($query, $params);
   }
 
   public function executeTruncate(Truncate $truncate) {
@@ -222,7 +223,7 @@ abstract class SQL {
 
     $valueStr = array();
     foreach($update->getValues() as $key => $val) {
-      $valueStr[] = "$key=" . $this->addValue($val, $params);
+      $valueStr[] =  $this->columnName($key) . "=" . $this->addValue($val, $params);
     }
     $valueStr = implode(",", $valueStr);
 

@@ -6,11 +6,25 @@ namespace Api {
 
   abstract class UserAPI extends Request {
 
-    protected function userExists($username, $email) {
+    protected function userExists(?string $username, ?string $email) {
+
+      $conditions = array();
+      if (!is_null($username) && !empty($username)) {
+        $conditions[] = new Compare("User.name", $username);
+      }
+
+      if (!is_null($email) && !empty($email)) {
+        $conditions[] = new Compare("User.email", $email);
+      }
+
+      if (empty($conditions)) {
+        return true;
+      }
+
       $sql = $this->user->getSQL();
       $res = $sql->select("User.name", "User.email")
         ->from("User")
-        ->where(new Compare("User.name", $username), new Compare("User.email", $email))
+        ->where(...$conditions)
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -70,6 +84,22 @@ namespace Api {
 
       return array();
     }
+
+    protected function getUser($id) {
+      $sql = $this->user->getSQL();
+      $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at",
+        "Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor")
+        ->from("User")
+        ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
+        ->leftJoin("Group", "Group.uid", "UserGroup.group_id")
+        ->where(new Compare("User.uid", $id))
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+
+      return ($this->success && !empty($res) ? $res : array());
+    }
   }
 
 }
@@ -82,6 +112,7 @@ namespace Api\User {
   use Api\UserAPI;
   use DateTime;
   use Driver\SQL\Condition\Compare;
+  use Objects\User;
 
   class Create extends UserAPI {
 
@@ -104,7 +135,7 @@ namespace Api\User {
 
       $username = $this->getParam('username');
       $email = $this->getParam('email');
-      if (!$this->userExists($username, $email) || !$this->success) {
+      if (!$this->userExists($username, $email)) {
         return false;
       }
 
@@ -232,33 +263,21 @@ namespace Api\User {
       }
 
       $id = $this->getParam("id");
-
-      $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at",
-        "Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor")
-        ->from("User")
-        ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
-        ->leftJoin("Group", "Group.uid", "UserGroup.group_id")
-        ->where(new Compare("User.uid", $id))
-        ->execute();
-
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
+      $user = $this->getUser($id);
 
       if ($this->success) {
-        if (empty($res)) {
+        if (empty($user)) {
           return $this->createError("User not found");
         } else {
-          $row = $res[0];
           $this->result["user"] = array(
-            "uid" => $row["userId"],
-            "name" => $row["name"],
-            "email" => $row["email"],
-            "registered_at" => $row["registered_at"],
+            "uid" => $user[0]["userId"],
+            "name" => $user[0]["name"],
+            "email" => $user[0]["email"],
+            "registered_at" => $user[0]["registered_at"],
             "groups" => array()
           );
 
-          foreach($res as $row) {
+          foreach($user as $row) {
             $this->result["user"]["groups"][] = array(
               "uid" => $row["groupId"],
               "name" => $row["groupName"],
@@ -548,5 +567,81 @@ If the registration was not intended, you can simply ignore this email.<br><br><
     }
   }
 
+  class Edit extends UserAPI {
 
+    public function __construct(User $user, bool $externalCall) {
+      parent::__construct($user, $externalCall, array(
+        'id' => new Parameter('id', Parameter::TYPE_INT),
+        'username' => new StringType('username', 32, true, NULL),
+        'email' => new StringType('email', 64, true, NULL),
+        'password' => new StringType('password', -1, true, NULL),
+        'groups' => new Parameter('groups', Parameter::TYPE_ARRAY, true, NULL),
+      ));
+
+      $this->requiredGroup = array(USER_GROUP_ADMIN);
+      $this->loginRequired = true;
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $id = $this->getParam("id");
+      $user = $this->getUser($id);
+
+      if ($this->success) {
+        if (empty($user)) {
+          return $this->createError("User not found");
+        }
+
+        $username = $this->getParam("username");
+        $email = $this->getParam("email");
+        $password = $this->getParam("password");
+        $groups = $this->getParam("groups");
+
+        if (!is_null($groups)) {
+          if ($id === $this->user->getId() && !in_array(USER_GROUP_ADMIN, $groups)) {
+            return $this->createError("Cannot remove Administrator group from own user.");
+          }
+        }
+
+        // Check for duplicate username, email
+        $usernameChanged = !is_null($username) ? strcasecmp($username, $this->user->getUsername()) !== 0 : false;
+        $emailChanged = !is_null($email) ? strcasecmp($email, $this->user->getEmail()) !== 0 : false;
+        if($usernameChanged || $emailChanged) {
+          if (!$this->userExists($usernameChanged ? $username : NULL, $emailChanged ? $email : NULL)) {
+            return false;
+          }
+        }
+
+        $sql = $this->user->getSQL();
+        $query = $sql->update("User");
+
+        if ($usernameChanged) $query->set("name", $username);
+        if ($emailChanged) $query->set("email", $email);
+        if (!is_null($password)) $query->set("password", $this->hashPassword($password, $user[0]["salt"]));
+
+        $query->where(new Compare("User.uid", $id));
+        $res = $query->execute();
+        $this->lastError = $sql->getLastError();
+        $this->success = ($res !== FALSE);
+
+        if ($this->success && !is_null($groups)) {
+
+          $deleteQuery = $sql->delete("UserGroup")->where(new Compare("user_id", $id));
+          $insertQuery = $sql->insert("UserGroup", array("user_id", "group_id"));
+
+          foreach($groups as $groupId) {
+            $insertQuery->addRow(array($id, $groupId));
+          }
+
+          $this->success = ($deleteQuery->execute() !== FALSE) && ($insertQuery->execute() !== FALSE);
+          $this->lastError = $sql->getLastError();
+        }
+      }
+
+      return $this->success;
+    }
+  }
 }

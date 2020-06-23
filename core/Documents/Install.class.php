@@ -313,32 +313,23 @@ namespace Documents\Install {
       if(!$success) {
         $msg = "Please fill out the following inputs:<br>" .
           $this->createUnorderedList($missingInputs);
-      } else if(strlen($username) < 5 || strlen($username) > 32) {
-        $msg = "The username should be between 5 and 32 characters long";
-        $success = false;
-      } else if(strcmp($password, $confirmPassword) !== 0) {
-        $msg = "The given passwords do not match";
-        $success = false;
-      } else if(strlen($password) < 6) {
-        $msg = "The password should be at least 6 characters long";
-        $success = false;
-      } else if($email && Parameter::parseType($email) !== Parameter::TYPE_EMAIL) {
-        $msg = "Invalid email address";
-        $success = false;
       } else {
-        $salt = generateRandomString(16);
-        $hash = hash('sha256', $password . $salt);
         $sql = $user->getSQL();
+        $req = new \Api\User\Create($user);
+        $success = $req->execute(array(
+          'username' => $username,
+          'email' => $email,
+          'password' => $password,
+          'confirmPassword' => $confirmPassword,
+        ));
 
-        $success = $sql->insert("User", array("name", "salt", "password", "email"))
-          ->addRow($username, $salt, $hash, $email)
-          ->returning("uid")
-          ->execute()
-          && $sql->insert("UserGroup", array("group_id", "user_id"))
-          ->addRow(USER_GROUP_ADMIN, $sql->getLastInsertId())
-          ->execute();
-
-        $msg = $sql->getLastError();
+        $msg = $req->getLastError();
+        if ($success) {
+          $success = $sql->insert("UserGroup", array("group_id", "user_id"))
+            ->addRow(USER_GROUP_ADMIN, $req->getResult()["userId"])
+            ->execute();
+          $msg = $sql->getLastError();
+        }
       }
 
       return array("msg" => $msg, "success" => $success);

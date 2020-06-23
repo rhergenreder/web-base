@@ -118,7 +118,8 @@ class Request {
       return false;
     }
 
-    if($this->loginRequired || !empty($this->requiredGroup)) {
+    // TODO: Check this!
+    if($this->externalCall && ($this->loginRequired || !empty($this->requiredGroup))) {
       $apiKeyAuthorized = false;
       if(isset($values['api_key']) && $this->apiKeyAllowed) {
         $apiKey = $values['api_key'];

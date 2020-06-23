@@ -44,10 +44,9 @@ namespace Api {
 
     protected function insertUser($username, $email, $password) {
       $sql = $this->user->getSQL();
-      $salt = generateRandomString(16);
-      $hash = $this->hashPassword($password, $salt);
-      $res = $sql->insert("User", array("name", "password", "salt", "email"))
-        ->addRow($username, $hash, $salt, $email)
+      $hash = $this->hashPassword($password);
+      $res = $sql->insert("User", array("name", "password", "email"))
+        ->addRow($username, $hash, $email)
         ->returning("uid")
         ->execute();
 
@@ -61,9 +60,8 @@ namespace Api {
       return $this->success;
     }
 
-    // TODO: replace this with crypt() in the future
-    protected function hashPassword($password, $salt) {
-      return hash('sha256', $password . $salt);
+    protected function hashPassword($password) {
+      return password_hash($password, PASSWORD_BCRYPT);
     }
 
     protected function checkToken($token) {
@@ -135,17 +133,27 @@ namespace Api\User {
 
       $username = $this->getParam('username');
       $email = $this->getParam('email');
+      $password = $this->getParam('password');
+      $confirmPassword = $this->getParam('confirmPassword');
+
+      if(strlen($username) < 5 || strlen($username) > 32) {
+        return $this->createError("The username should be between 5 and 32 characters long");
+      } else if(strcmp($password, $confirmPassword) !== 0) {
+        return $this->createError("The given passwords do not match");
+      } else if(strlen($password) < 6) {
+        return $this->createError("The password should be at least 6 characters long");
+      }
+
       if (!$this->userExists($username, $email)) {
         return false;
       }
 
-      $password = $this->getParam('password');
-      $confirmPassword = $this->getParam('confirmPassword');
-      if ($password !== $confirmPassword) {
-        return $this->createError("The given passwords do not match.");
+      $id = $this->insertUser($username, $email, $password);
+      if ($this->success) {
+        $this->result["userId"] = $id;
       }
 
-      return $this->insertUser($username, $email, $password) !== FALSE;
+      return $this->success;
     }
   }
 
@@ -405,7 +413,7 @@ If the invitation was not intended, you can simply ignore this email.<br><br><a 
       $stayLoggedIn = $this->getParam('stayLoggedIn');
 
       $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid", "User.password", "User.salt")
+      $res = $sql->select("User.uid", "User.password")
         ->from("User")
         ->where(new Compare("User.name", $username))
         ->execute();
@@ -418,10 +426,8 @@ If the invitation was not intended, you can simply ignore this email.<br><br><a 
           return $this->wrongCredentials();
         } else {
           $row = $res[0];
-          $salt = $row['salt'];
           $uid = $row['uid'];
-          $hash = $this->hashPassword($password, $salt);
-          if ($hash === $row['password']) {
+          if (password_verify($password, $row['password'])) {
             if (!($this->success = $this->user->createSession($uid, $stayLoggedIn))) {
               return $this->createError("Error creating Session: " . $sql->getLastError());
             } else {
@@ -620,7 +626,7 @@ If the registration was not intended, you can simply ignore this email.<br><br><
 
         if ($usernameChanged) $query->set("name", $username);
         if ($emailChanged) $query->set("email", $email);
-        if (!is_null($password)) $query->set("password", $this->hashPassword($password, $user[0]["salt"]));
+        if (!is_null($password)) $query->set("password", $this->hashPassword($password));
 
         $query->where(new Compare("User.uid", $id));
         $res = $query->execute();

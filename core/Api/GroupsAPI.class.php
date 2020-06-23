@@ -26,6 +26,7 @@ namespace Api\Groups {
   use Api\GroupsAPI;
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
+  use Driver\SQL\Condition\Compare;
 
   class Fetch extends GroupsAPI {
 
@@ -156,6 +157,43 @@ namespace Api\Groups {
         $this->result["uid"] = $sql->getLastInsertId();
       }
 
+      return $this->success;
+    }
+  }
+
+  class Delete extends GroupsAPI {
+    public function __construct($user, $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        'uid' => new Parameter('uid', Parameter::TYPE_INT)
+      ));
+
+      $this->loginRequired = true;
+      $this->requiredGroup = array(USER_GROUP_ADMIN);
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $id = $this->getParam("uid");
+      $sql = $this->user->getSQL();
+
+      $res = $sql->select($sql->count())
+        ->from("Group")
+        ->where(new Compare("uid", $id))
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success && $res[0]["count"] === 0) {
+        return $this->createError("This group does not exist.");
+      }
+
+      $res = $sql->delete("Group")->where(new Compare("uid", $id))->execute();
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
       return $this->success;
     }
   }

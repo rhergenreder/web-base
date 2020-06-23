@@ -86,4 +86,8 @@ export default class API {
     async createGroup(name, color) {
         return this.apiCall("groups/create", { name: name, color: color });
     }
+
+    async deleteGroup(id) {
+        return this.apiCall("groups/delete", { uid: id });
+    }
 };

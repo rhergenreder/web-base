@@ -243,7 +243,7 @@ export default class UserOverview extends React.Component {
                         <th>Email</th>
                         <th>Groups</th>
                         <th>Registered</th>
-                        <th/>
+                        <th><Icon icon={"tools"} /></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -294,6 +294,12 @@ export default class UserOverview extends React.Component {
                             {group.color}
                         </span>
                     </td>
+                    <td>
+                        <Icon icon={"trash"} style={{color: "red", cursor: "pointer"}}
+                              onClick={(e) => this.onDeleteGroup(e, uid)} data-effect={"solid"}
+                              data-tip={"Delete"} data-type={"error"}
+                              data-place={"bottom"}/>
+                    </td>
                 </tr>
             );
         }
@@ -302,6 +308,7 @@ export default class UserOverview extends React.Component {
             groupRows.push(
                 <tr key={"empty-row-" + groupRows.length}>
                     <td>&nbsp;</td>
+                    <td/>
                     <td/>
                     <td/>
                 </tr>
@@ -342,6 +349,7 @@ export default class UserOverview extends React.Component {
                         <th>Name</th>
                         <th className={"text-center"}>Members</th>
                         <th>Color</th>
+                        <th><Icon icon={"tools"} /></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -372,5 +380,26 @@ export default class UserOverview extends React.Component {
                 </nav>
             </div>
         </div>;
+    }
+
+    onDeleteGroup(e, uid) {
+        e.stopPropagation();
+        this.parent.showDialog("Are you really sure you want to delete this group?", "Delete Group?", ["Yes", "No"], (btn) => {
+           if (btn === "Yes") {
+               this.parent.api.deleteGroup(uid).then((res) => {
+                    if (!res.success) {
+                        let errors = this.state.errors.slice();
+                        errors.push({title: "Error deleting group", message: res.msg});
+                        this.setState({
+                            ...this.state,
+                            errors: errors
+                        });
+                    } else {
+                        this.setState({ ...this.state, loaded: false });
+                        this.fetchGroups();
+                    }
+               });
+           }
+        });
     }
 }

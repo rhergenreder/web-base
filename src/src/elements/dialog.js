@@ -11,8 +11,12 @@ export default function Dialog(props) {
 
     let buttons = [];
     for (let name of options) {
+        let type = "default";
+        if (name === "Yes") type = "warning";
+        else if(name === "No") type = "danger";
+
         buttons.push(
-            <button type="button" key={"button-" + name} className="btn btn-default" data-dismiss={"modal"} onClick={() => { onClose(); onOption(name); }}>
+            <button type="button" key={"button-" + name} className={"btn btn-" + type} data-dismiss={"modal"} onClick={() => { onClose(); onOption(name); }}>
                 {name}
             </button>
         )

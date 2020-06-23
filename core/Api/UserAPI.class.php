@@ -118,7 +118,7 @@ namespace Api\User {
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall, array(
         'username' => new StringType('username', 32),
-        'email' => new StringType('email', 64, true),
+        'email' => new Parameter('email', Parameter::TYPE_EMAIL, true, NULL),
         'password' => new StringType('password'),
         'confirmPassword' => new StringType('confirmPassword'),
       ));
@@ -501,7 +501,7 @@ If the invitation was not intended, you can simply ignore this email.<br><br><a 
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall, array(
         "username" => new StringType("username", 32),
-        "email" => new StringType("email", 64),
+        'email' => new Parameter('email', Parameter::TYPE_EMAIL),
         "password" => new StringType("password"),
         "confirmPassword" => new StringType("confirmPassword"),
       ));
@@ -608,7 +608,7 @@ If the registration was not intended, you can simply ignore this email.<br><br><
       parent::__construct($user, $externalCall, array(
         'id' => new Parameter('id', Parameter::TYPE_INT),
         'username' => new StringType('username', 32, true, NULL),
-        'email' => new StringType('email', 64, true, NULL),
+        'email' => new Parameter('email', Parameter::TYPE_EMAIL, true, NULL),
         'password' => new StringType('password', -1, true, NULL),
         'groups' => new Parameter('groups', Parameter::TYPE_ARRAY, true, NULL),
       ));

@@ -17,6 +17,7 @@ import PageOverview from "./views/pages";
 import HelpPage from "./views/help";
 import Footer from "./footer";
 import EditUser from "./views/edituser";
+import CreateGroup from "./views/addgroup";
 
 class AdminDashboard extends React.Component {
 
@@ -89,6 +90,7 @@ class AdminDashboard extends React.Component {
                 let newProps = {...props, ...this.controlObj};
                 return <EditUser {...newProps} />
               }}/>
+              <Route path={"/admin/group/add"}><CreateGroup {...this.controlObj} /></Route>
               <Route path={"/admin/logs"}><Logs {...this.controlObj} /></Route>
               <Route path={"/admin/pages"}><PageOverview {...this.controlObj} /></Route>
               <Route path={"/admin/help"}><HelpPage {...this.controlObj} /></Route>

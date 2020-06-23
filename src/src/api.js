@@ -80,6 +80,10 @@ export default class API {
     }
 
     async saveRoutes(routes) {
-        return this.apiCall("routes/save", { "routes": routes });
+        return this.apiCall("routes/save", { routes: routes });
+    }
+
+    async createGroup(name, color) {
+        return this.apiCall("groups/create", { name: name, color: color });
     }
 };

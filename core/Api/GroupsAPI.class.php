@@ -2,8 +2,21 @@
 
 namespace Api {
 
+  use Driver\SQL\Condition\Compare;
+
   class GroupsAPI extends Request {
 
+    protected function groupExists($name) {
+      $sql = $this->user->getSQL();
+      $res = $sql->select($sql->count())
+        ->from("Group")
+        ->where(new Compare("name", $name))
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+      return $this->success && $res[0]["count"] > 0;
+    }
   }
 
 }
@@ -12,6 +25,7 @@ namespace Api\Groups {
 
   use Api\GroupsAPI;
   use Api\Parameter\Parameter;
+  use Api\Parameter\StringType;
 
   class Fetch extends GroupsAPI {
 
@@ -96,4 +110,53 @@ namespace Api\Groups {
     }
   }
 
+  class Create extends GroupsAPI {
+    public function __construct($user, $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        'name' => new StringType('name', 32),
+        'color' => new StringType('color', 10),
+      ));
+
+      $this->loginRequired = true;
+      $this->requiredGroup = array(USER_GROUP_ADMIN);
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $name = $this->getParam("name");
+      if (preg_match("/^[a-zA-Z][a-zA-Z0-9_-]*$/", $name) !== 1) {
+        return $this->createError("Invalid name");
+      }
+
+      $color = $this->getParam("color");
+      if (preg_match("/^#[a-fA-F0-9]{3,6}$/", $color) !== 1) {
+        return $this->createError("Invalid color");
+      }
+
+      $exists = $this->groupExists($name);
+      if (!$this->success) {
+        return false;
+      } else if ($exists) {
+        return $this->createError("A group with this name already exists");
+      }
+
+      $sql = $this->user->getSQL();
+      $res = $sql->insert("Group", array("name", "color"))
+        ->addRow($name, $color)
+        ->returning("uid")
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success) {
+        $this->result["uid"] = $sql->getLastInsertId();
+      }
+
+      return $this->success;
+    }
+  }
 }

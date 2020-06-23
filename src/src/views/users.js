@@ -327,7 +327,7 @@ export default class UserOverview extends React.Component {
             <div className={"card-header border-0"}>
                 <h3 className={"card-title"}>Groups</h3>
                 <div className={"card-tools"}>
-                    <Link href={"#"} className={"btn btn-tool btn-sm"} to={"/admin/users/addgroup"} >
+                    <Link href={"#"} className={"btn btn-tool btn-sm"} to={"/admin/group/add"} >
                         <Icon icon={"plus"}/>
                     </Link>
                     <a href={"#"} className={"btn btn-tool btn-sm"} onClick={() => this.fetchGroups()}>

@@ -20,7 +20,7 @@ class User extends ApiObject {
   private ?Session $session;
   private int $uid;
   private string $username;
-  private string $email;
+  private ?string $email;
   private Language $language;
   private array $groups;
 

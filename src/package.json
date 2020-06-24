@@ -9,6 +9,7 @@
     "chart.js": "^2.9.3",
     "moment": "^2.26.0",
     "porn": "0.0.1",
+    "rc-color-picker": "^1.2.6",
     "react": "^16.13.1",
     "react-chartjs-2": "^2.9.0",
     "react-collapse": "^5.0.1",

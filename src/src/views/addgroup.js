@@ -3,6 +3,8 @@ import {Link} from "react-router-dom";
 import * as React from "react";
 import Icon from "../elements/icon";
 import ReactTooltip from "react-tooltip";
+import 'rc-color-picker/assets/index.css';
+import ColorPicker from 'rc-color-picker';
 
 export default class CreateGroup extends React.Component {
 
@@ -13,7 +15,7 @@ export default class CreateGroup extends React.Component {
             alerts: [],
             isSubmitting: false,
             name: "",
-            color: "#123456"
+            color: "#0F0"
         };
 
         this.parent = {
@@ -41,7 +43,7 @@ export default class CreateGroup extends React.Component {
                 <div className="container-fluid">
                     <div className="row mb-2">
                         <div className="col-sm-6">
-                            <h1 className="m-0 text-dark">Create a new user</h1>
+                            <h1 className="m-0 text-dark">Create a new group</h1>
                         </div>
                         <div className="col-sm-6">
                             <ol className="breadcrumb float-sm-right">
@@ -65,20 +67,32 @@ export default class CreateGroup extends React.Component {
                                        onChange={this.onChangeInput.bind(this)}/>
                             </div>
 
-                            {/* TODO: add color picker */}
                             <div className={"form-group"}>
                                 <label htmlFor={"color"}>Color</label>
-                                <input type={"text"} className={"form-control"} placeholder={"Color"}
-                                       id={"color"} name={"color"} maxLength={64} value={this.state.color}
-                                       onChange={this.onChangeInput.bind(this)}/>
+                                <div className="input-group-prepend">
+                                  <span className="input-group-text" style={{ padding: "0.35rem 0.4rem 0 0.4rem" }}>
+                                      <ColorPicker
+                                          color={this.state.color}
+                                          alpha={100}
+                                          name={"color"}
+                                          onChange={this.onChangeColor.bind(this)}
+                                          placement="topLeft">
+                                        <span className="rc-color-picker-trigger"/>
+                                      </ColorPicker>
+                                  </span>
+                                    <input type={"text"} className={"form-control float-right"} readOnly={true}
+                                           value={this.state.color}/>
+                                </div>
                             </div>
 
                             <Link to={"/admin/users"} className={"btn btn-info mt-2 mr-2"}>
                                 <Icon icon={"arrow-left"}/>
                                 &nbsp;Back
                             </Link>
-                            { this.state.isSubmitting
-                                ? <button type={"submit"} className={"btn btn-primary mt-2"} disabled>Loading…&nbsp;<Icon icon={"circle-notch"} /></button>
+                            {this.state.isSubmitting
+                                ?
+                                <button type={"submit"} className={"btn btn-primary mt-2"} disabled>Loading…&nbsp;<Icon
+                                    icon={"circle-notch"}/></button>
                                 : <button type={"submit"} className={"btn btn-primary mt-2"}>Submit</button>
                             }
                         </form>
@@ -89,26 +103,30 @@ export default class CreateGroup extends React.Component {
         </>;
     }
 
+    onChangeColor(e) {
+        this.setState({...this.state, color: e.color});
+    }
+
     onChangeInput(event) {
         const target = event.target;
         const value = target.value;
         const name = target.name;
-        this.setState({ ...this.state, [name]: value });
+        this.setState({...this.state, [name]: value});
     }
 
     submitForm(e) {
         e.preventDefault();
         const name = this.state.name;
         const color = this.state.color;
-        this.setState({ ...this.state, isSubmitting: true });
+        this.setState({...this.state, isSubmitting: true});
         this.parent.api.createGroup(name, color).then((res) => {
             let alerts = this.state.alerts.slice();
             if (res.success) {
                 alerts.push({message: "Group was successfully created", title: "Success!", type: "success"});
-                this.setState({ ...this.state, name: "", color: "", alerts: alerts, isSubmitting: false });
+                this.setState({...this.state, name: "", color: "", alerts: alerts, isSubmitting: false});
             } else {
                 alerts.push({message: res.msg, title: "Error creating Group", type: "danger"});
-                this.setState({ ...this.state, name: "", color: "", alerts: alerts, isSubmitting: false });
+                this.setState({...this.state, name: "", color: "", alerts: alerts, isSubmitting: false});
             }
         });
     }

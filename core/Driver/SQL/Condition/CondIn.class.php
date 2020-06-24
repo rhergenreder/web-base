@@ -2,8 +2,6 @@
 
 namespace Driver\SQL\Condition;
 
-use Driver\SQL\Column\Column;
-
 class CondIn extends Condition {
 
   private string $column;

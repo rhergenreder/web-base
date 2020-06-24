@@ -13,7 +13,7 @@ use \Driver\SQL\Column\DateTimeColumn;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\JsonColumn;
 
-use Driver\SQL\Condition\Regex;
+use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Expression\Add;
 use Driver\SQL\Strategy\Strategy;
 use \Driver\SQL\Strategy\UpdateStrategy;
@@ -303,17 +303,5 @@ class MySQL extends SQL {
 
   public function getStatus() {
     return mysqli_stat($this->connection);
-  }
-
-  protected function buildCondition($condition, &$params) {
-    if($condition instanceof Regex) {
-      $left = $condition->getLeftExp();
-      $right = $condition->getRightExp();
-      $left = ($left instanceof Column) ? $this->columnName($left->getName()) : $this->addValue($left, $params);
-      $right = ($right instanceof Column) ? $this->columnName($right->getName()) : $this->addValue($right, $params);
-      return $left . " REGEXP " . $right;
-    } else {
-      return parent::buildCondition($condition, $params);
-    }
   }
 }

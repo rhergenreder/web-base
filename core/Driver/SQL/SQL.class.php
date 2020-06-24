@@ -6,8 +6,9 @@ use Driver\SQL\Column\Column;
 use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondBool;
 use Driver\SQL\Condition\CondIn;
+use Driver\SQL\Condition\CondKeyword;
 use Driver\SQL\Condition\CondOr;
-use Driver\SQL\Condition\Regex;
+use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Constraint\Constraint;
 use \Driver\SQL\Constraint\Unique;
 use \Driver\SQL\Constraint\PrimaryKey;
@@ -343,6 +344,13 @@ abstract class SQL {
 
       $values = implode(",", $values);
       return $this->columnName($condition->getColumn()) . " IN ($values)";
+    } else if($condition instanceof CondKeyword) {
+      $left = $condition->getLeftExp();
+      $right = $condition->getRightExp();
+      $keyword = $condition->getKeyword();
+      $left = ($left instanceof Column) ? $this->columnName($left->getName()) : $this->addValue($left, $params);
+      $right = ($right instanceof Column) ? $this->columnName($right->getName()) : $this->addValue($right, $params);
+      return "$left $keyword $right ";
     } else {
       $this->lastError = "Unsupported condition type: " . get_class($condition);
       return false;

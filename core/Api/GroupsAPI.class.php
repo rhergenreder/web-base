@@ -177,8 +177,11 @@ namespace Api\Groups {
       }
 
       $id = $this->getParam("uid");
-      $sql = $this->user->getSQL();
+      if (in_array($id, DEFAULT_GROUPS)) {
+        return $this->createError("You cannot delete a default group.");
+      }
 
+      $sql = $this->user->getSQL();
       $res = $sql->select($sql->count())
         ->from("Group")
         ->where(new Compare("uid", $id))

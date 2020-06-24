@@ -13,7 +13,7 @@ use \Driver\SQL\Column\DateTimeColumn;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\JsonColumn;
 
-use Driver\SQL\Condition\Regex;
+use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Expression\Add;
 use Driver\SQL\Strategy\Strategy;
 use Driver\SQL\Strategy\UpdateStrategy;
@@ -304,7 +304,7 @@ class PostgreSQL extends SQL {
   }
 
   protected function buildCondition($condition, &$params) {
-    if($condition instanceof Regex) {
+    if($condition instanceof CondRegex) {
       $left = $condition->getLeftExp();
       $right = $condition->getRightExp();
       $left = ($left instanceof Column) ? $this->columnName($left->getName()) : $this->addValue($left, $params);

@@ -26,7 +26,7 @@ namespace Api\Routes {
   use Api\RoutesAPI;
   use Driver\SQL\Column\Column;
   use Driver\SQL\Condition\CondBool;
-  use Driver\SQL\Condition\Regex;
+  use Driver\SQL\Condition\CondRegex;
 
   class Fetch extends RoutesAPI {
 
@@ -99,7 +99,7 @@ namespace Api\Routes {
         ->select("uid", "request", "action", "target", "extra")
         ->from("Route")
         ->where(new CondBool("active"))
-        ->where(new Regex($request, new Column("request")))
+        ->where(new CondRegex($request, new Column("request")))
         ->limit(1)
         ->execute();
 

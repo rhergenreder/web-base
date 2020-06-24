@@ -1,26 +1,5 @@
 <?php
 
-function setTimezone($default) {
-  $timezone = "";
-  if (is_link("/etc/localtime")) {
-    $filename = readlink("/etc/localtime");
-    $pos = strpos($filename, "zoneinfo");
-    if ($pos) {
-      $timezone = substr($filename, $pos + strlen("zoneinfo/"));
-    } else {
-      $timezone = $default;
-    }
-  } else {
-    $timezone = file_get_contents("/etc/timezone");
-    if (!strlen($timezone)) {
-      $timezone = $default;
-    }
-  }
-  date_default_timezone_set($timezone);
-}
-
-setTimezone("UTC");
-
 function getFirstWeekDayOfMonth($d = NULL) {
   if(is_null($d)) $d = date('Y-m-d H:i:s');
   $dt = new DateTime($d);

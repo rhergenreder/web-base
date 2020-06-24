@@ -76,6 +76,11 @@ class Stats extends Request {
     $pageCount = $this->getPageCount();
     $visitorStatistics = $this->getVisitorStatistics();
 
+    $loadAvg = "Unknown";
+    if (function_exists("sys_getloadavg")) {
+      $loadAvg = sys_getloadavg();
+    }
+
     if ($this->success) {
       $this->result["userCount"] = $userCount;
       $this->result["pageCount"] = $pageCount;
@@ -84,7 +89,7 @@ class Stats extends Request {
         "version" => WEBBASE_VERSION,
         "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",
         "memory_usage" => memory_get_usage(),
-        "load_avg" => sys_getloadavg(),
+        "load_avg" => $loadAvg,
         "database" => $this->user->getSQL()->getStatus(),
         "mail" => $this->user->getConfiguration()->getMail() !== NULL
       );

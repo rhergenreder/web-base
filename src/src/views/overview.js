@@ -89,6 +89,11 @@ export default class Overview extends React.Component {
             errors.push(<Alert key={"error-" + i} onClose={() => this.removeError(i)} {...this.state.errors[i]}/>)
         }
 
+        let loadAvg = this.state.server.load_avg;
+        if (Array.isArray(this.state.server.load_avg)) {
+            loadAvg = this.state.server.load_avg.join(" ");
+        }
+
         return <>
             <div className={"content-header"}>
                 <div className={"container-fluid"}>
@@ -201,7 +206,7 @@ export default class Overview extends React.Component {
                                         <li><b>Version</b>: {this.state.server.version}</li>
                                         <li><b>Server</b>: {this.state.server.server}</li>
                                         <li><b>Memory Usage</b>: {humanReadableSize(this.state.server.memory_usage)}</li>
-                                        <li><b>Load Average</b>: { this.state.server.load_avg.join(" ") }</li>
+                                        <li><b>Load Average</b>: { loadAvg }</li>
                                         <li><b>Database</b>: { this.state.server.database  }</li>
                                         <li><b>Mail</b>: { this.state.server.mail === true
                                             ?  <span>OK<Icon icon={""} className={"ml-2"}/></span>

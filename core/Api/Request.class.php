@@ -49,14 +49,14 @@ class Request {
 
   public function parseParams($values) {
     foreach($this->params as $name => $param) {
-      $value = (isset($values[$name]) ? $values[$name] : NULL);
+      $value = $values[$name] ?? NULL;
 
-      if(!$param->optional && is_null($value)) {
+      if(!$param->optional && (is_null($value) || empty($value))) {
         $this->lastError = 'Missing parameter: ' . $name;
         return false;
       }
 
-      if(!is_null($value)) {
+      if(!is_null($value) && !empty($value)) {
         if(!$param->parseParam($value)) {
           $value = print_r($value, true);
           $this->lastError = "Invalid Type for parameter: $name '$value' (Required: " . $param->getTypeName() . ")";

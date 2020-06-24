@@ -245,7 +245,7 @@ class User extends ApiObject {
   }
 
   public function processVisit() {
-    if ($this->sql && isset($_COOKIE["PHPSESSID"]) && !empty($_COOKIE["PHPSESSID"])) {
+    if ($this->sql && $this->sql->isConnected() && isset($_COOKIE["PHPSESSID"]) && !empty($_COOKIE["PHPSESSID"])) {
 
       if ($this->isBot()) {
         return;

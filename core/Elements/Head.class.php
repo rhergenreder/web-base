@@ -68,11 +68,6 @@ abstract class Head extends View {
     $this->addJS(Script::BOOTSTRAP);
   }
 
-  public function loadAdminlte() {
-    $this->addCSS(Link::ADMINLTE);
-    $this->addJS(Script::ADMINLTE);
-  }
-
   public function getCode() {
     $header = "<head>";
 

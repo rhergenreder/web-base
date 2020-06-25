@@ -215,7 +215,9 @@ abstract class SQL {
   }
 
   public function executeTruncate(Truncate $truncate) {
-    return $this->execute("TRUNCATE " . $truncate->getTable());
+    $query = "TRUNCATE " . $this->tableName($truncate->getTable());
+    if ($truncate->dump) { var_dump($query); }
+    return $this->execute($query);
   }
 
   public function executeUpdate(Update $update) {
@@ -391,4 +393,8 @@ abstract class SQL {
   }
 
   public abstract function getStatus();
+
+  public function parseBool($val) : bool {
+    return in_array($val, array(true, 1, '1', 't', 'true', 'TRUE'));
+  }
 }

@@ -62,13 +62,11 @@ class Session extends ApiObject {
 
   public function sendCookie() {
     $this->updateMetaData();
-    $jwt = $this->user->getConfiguration()->getJwt();
-    if($jwt) {
-      $token = array('userId' => $this->user->getId(), 'sessionId' => $this->sessionId);
-      $sessionCookie = JWT::encode($token, $jwt->getKey());
-      $secure = strcmp(getProtocol(), "https") === 0;
-      setcookie('session', $sessionCookie, $this->getExpiresTime(), "/", "", $secure);
-    }
+    $settings = $this->user->getConfiguration()->getSettings();
+    $token = array('userId' => $this->user->getId(), 'sessionId' => $this->sessionId);
+    $sessionCookie = JWT::encode($token, $settings->getJwtSecret());
+    $secure = strcmp(getProtocol(), "https") === 0;
+    setcookie('session', $sessionCookie, $this->getExpiresTime(), "/", "", $secure);
   }
 
   public function getExpiresTime() {

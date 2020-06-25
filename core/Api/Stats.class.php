@@ -67,6 +67,17 @@ class Stats extends Request {
     return $visitors;
   }
 
+  private function isMailConfigured() {
+    $req = new \Api\Settings\Get($this->user);
+    $this->success = $req->execute(array("key" => "^mail_enabled$"));
+
+    if ($this->success) {
+      return ($req->getResult()["mail_enabled"] ?? "0") === "1";
+    }
+
+    return $this->success;
+  }
+
   public function execute($values = array()) {
     if(!parent::execute($values)) {
       return false;
@@ -75,25 +86,31 @@ class Stats extends Request {
     $userCount = $this->getUserCount();
     $pageCount = $this->getPageCount();
     $visitorStatistics = $this->getVisitorStatistics();
+    if (!$this->success) {
+      return false;
+    }
 
     $loadAvg = "Unknown";
     if (function_exists("sys_getloadavg")) {
       $loadAvg = sys_getloadavg();
     }
 
-    if ($this->success) {
-      $this->result["userCount"] = $userCount;
-      $this->result["pageCount"] = $pageCount;
-      $this->result["visitors"] = $visitorStatistics;
-      $this->result["server"] = array(
-        "version" => WEBBASE_VERSION,
-        "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",
-        "memory_usage" => memory_get_usage(),
-        "load_avg" => $loadAvg,
-        "database" => $this->user->getSQL()->getStatus(),
-        "mail" => $this->user->getConfiguration()->getMail() !== NULL
-      );
+    $mailConfigured = $this->isMailConfigured();
+    if (!$this->success) {
+      return false;
     }
+
+    $this->result["userCount"] = $userCount;
+    $this->result["pageCount"] = $pageCount;
+    $this->result["visitors"] = $visitorStatistics;
+    $this->result["server"] = array(
+      "version" => WEBBASE_VERSION,
+      "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",
+      "memory_usage" => memory_get_usage(),
+      "load_avg" => $loadAvg,
+      "database" => $this->user->getSQL()->getStatus(),
+      "mail" => $mailConfigured
+    );
 
     return $this->success;
   }

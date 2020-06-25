@@ -139,7 +139,7 @@ class PostgreSQL extends SQL {
                 $leftColumn = $this->columnName($key);
                 if ($value instanceof Column) {
                   $columnName = $this->columnName($value->getName());
-                  $updateValues[] = "$leftColumn=$columnName";
+                  $updateValues[] = "$leftColumn=EXCLUDED.$columnName";
                 } else if ($value instanceof Add) {
                   $columnName = $this->columnName($value->getColumn());
                   $operator = $value->getOperator();

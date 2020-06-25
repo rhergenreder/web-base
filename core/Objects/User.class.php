@@ -43,6 +43,10 @@ class User extends ApiObject {
     $databaseConf = $this->configuration->getDatabase();
     if($databaseConf) {
       $this->sql = SQL::createConnection($databaseConf);
+      if ($this->sql->isConnected()) {
+        $settings = $this->configuration->getSettings();
+        $settings->loadFromDatabase($this);
+      }
     } else {
       $this->sql = null;
     }
@@ -155,7 +159,7 @@ class User extends ApiObject {
         $this->uid = $userId;
         $this->session = new Session($this, $sessionId, $csrfToken);
         $this->session->setData(json_decode($row["data"] ?? '{}'));
-        $this->session->stayLoggedIn($row["stay_logged_in"]);
+        $this->session->stayLoggedIn($this->sql->parseBool(["stay_logged_in"]));
         if($sessionUpdate) $this->session->update();
         $this->loggedIn = true;
 
@@ -175,11 +179,11 @@ class User extends ApiObject {
   private function parseCookies() {
     if(isset($_COOKIE['session'])
       && is_string($_COOKIE['session'])
-      && !empty($_COOKIE['session'])
-      && ($jwt = $this->configuration->getJWT())) {
+      && !empty($_COOKIE['session'])) {
       try {
         $token = $_COOKIE['session'];
-        $decoded = (array)JWT::decode($token, $jwt->getKey());
+        $settings = $this->configuration->getSettings();
+        $decoded = (array)JWT::decode($token, $settings->getJwtSecret());
         if(!is_null($decoded)) {
           $userId = (isset($decoded['userId']) ? $decoded['userId'] : NULL);
           $sessionId = (isset($decoded['sessionId']) ? $decoded['sessionId'] : NULL);

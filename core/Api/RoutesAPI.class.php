@@ -62,7 +62,7 @@ namespace Api\Routes {
           "action"  => $row["action"],
           "target"  => $row["target"],
           "extra"   => $row["extra"] ?? "",
-          "active"  => intval($row["active"]),
+          "active"  => intval($sql->parseBool($row["active"])),
         );
       }
 
@@ -147,7 +147,6 @@ namespace Api\Routes {
         return false;
       }
 
-
       $sql = $this->user->getSQL();
 
       // DELETE old rules
@@ -190,7 +189,7 @@ namespace Api\Routes {
 
           $value = $route[$key];
           $type = Parameter::parseType($value);
-          if ($type !== $expectedType && ($key !== "active" || !is_null($value))) {
+          if ($type !== $expectedType) {
             $expectedTypeName = Parameter::names[$expectedType];
             $gotTypeName = Parameter::names[$type];
             return $this->createError("Route $index has invalid value for key: $key, expected: $expectedTypeName, got: $gotTypeName");
@@ -218,6 +217,5 @@ namespace Api\Routes {
       return true;
     }
   }
-
 }
 

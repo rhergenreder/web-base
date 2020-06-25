@@ -126,7 +126,7 @@ export default class CreateGroup extends React.Component {
                 this.setState({...this.state, name: "", color: "", alerts: alerts, isSubmitting: false});
             } else {
                 alerts.push({message: res.msg, title: "Error creating Group", type: "danger"});
-                this.setState({...this.state, name: "", color: "", alerts: alerts, isSubmitting: false});
+                this.setState({...this.state, alerts: alerts, isSubmitting: false});
             }
         });
     }

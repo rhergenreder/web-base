@@ -8,6 +8,9 @@ use \Driver\SQL\Strategy\CascadeStrategy;
 
 class CreateDatabase {
 
+  // NOTE:
+  // explicit serial ids removed due to postgres' serial implementation
+
   public static function createQueries(SQL $sql) {
     $queries = array();
 
@@ -21,8 +24,8 @@ class CreateDatabase {
       ->unique("name");
 
     $queries[] = $sql->insert("Language", array("uid", "code", "name"))
-      ->addRow(1, "en_US", 'American English')
-      ->addRow(2, "de_DE", 'Deutsch Standard');
+      ->addRow( "en_US", 'American English')
+      ->addRow( "de_DE", 'Deutsch Standard');
 
     $queries[] = $sql->createTable("User")
       ->addSerial("uid")
@@ -72,9 +75,9 @@ class CreateDatabase {
       ->unique("name");
 
     $queries[] = $sql->insert("Group", array("uid", "name", "color"))
-      ->addRow(USER_GROUP_MODERATOR, USER_GROUP_MODERATOR_NAME, "#007bff")
-      ->addRow(USER_GROUP_SUPPORT, USER_GROUP_SUPPORT_NAME, "#28a745")
-      ->addRow(USER_GROUP_ADMIN, USER_GROUP_ADMIN_NAME, "#dc3545");
+      ->addRow(USER_GROUP_MODERATOR_NAME, "#007bff")
+      ->addRow(USER_GROUP_SUPPORT_NAME, "#28a745")
+      ->addRow(USER_GROUP_ADMIN_NAME, "#dc3545");
 
     $queries[] = $sql->createTable("UserGroup")
       ->addInt("user_id")
@@ -136,6 +139,22 @@ class CreateDatabase {
       ->addRow("^/confirmEmail(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ConfirmEmail")
       ->addRow("^/acceptInvite(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\AcceptInvite")
       ->addRow("^/$", "static", "/static/welcome.html", NULL);
+
+    $queries[] = $sql->createTable("Settings")
+      ->addString("name", 32)
+      ->addString("value", 1024, true)
+      ->primaryKey("name");
+
+    $settingsQuery = $sql->insert("Settings", array("name", "value"))
+      // ->addRow("mail_enabled", "0") # this key will be set during installation
+      ->addRow("mail_host", "")
+      ->addRow("mail_port", "")
+      ->addRow("mail_username", "")
+      ->addRow("mail_password", "")
+      ->addRow("mail_from", "");
+
+    (Settings::loadDefaults())->addRows($settingsQuery);
+    $queries[] = $settingsQuery;
 
     return $queries;
   }

@@ -2,53 +2,33 @@
 
 namespace Configuration;
 
-use Error;
 use Objects\ConnectionData;
 
 class Configuration {
 
   private ?ConnectionData $database;
-  private ?ConnectionData $mail;
-  private ?KeyData $jwt;
+  private Settings $settings;
 
   function __construct() {
-  }
+    $this->database = null;
+    $this->settings = Settings::loadDefaults();
 
-  public function load() {
-    try {
-
-      $classes = array(
-        \Configuration\Database::class => &$this->database,
-        \Configuration\Mail::class => &$this->mail,
-        \Configuration\JWT::class => &$this->jwt
-      );
-
-      $success = true;
-      foreach($classes as $class => &$ref) {
-        $path = getClassPath($class);
-        if(!file_exists($path)) {
-          $success = false;
-        } else {
-          include_once $path;
-          if(class_exists($class)) {
-            $ref = new $class();
-          }
-        }
+    $class = \Configuration\Database::class;
+    $path = getClassPath($class, true);
+    if(file_exists($path) && is_readable($path)) {
+      include_once $path;
+      if(class_exists($class)) {
+        $this->database = new \Configuration\Database();
       }
-
-      return $success;
-    } catch(Error $e) {
-      die($e);
     }
   }
 
-  public function getDatabase() { return $this->database; }
-  public function getJWT() { return $this->jwt; }
-  public function getMail() { return $this->mail; }
+  public function getDatabase() : ?ConnectionData {
+    return $this->database;
+  }
 
-  public function isFilePresent($className) {
-    $path = getClassPath("\\Configuration\\$className");
-    return file_exists($path);
+  public function getSettings() : Settings {
+    return $this->settings;
   }
 
   public function create(string $className, $data) {

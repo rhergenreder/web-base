@@ -25,8 +25,10 @@ spl_autoload_register(function($class) {
 });
 
 $config = new Configuration();
-$installation = (!$config->load());
 $user   = new Objects\User($config);
+$sql    = $user->getSQL();
+$settings = $config->getSettings();
+$installation = !$sql || ($sql->isConnected() && !$settings->isInstalled());
 
 if(isset($_GET["api"]) && is_string($_GET["api"])) {
   header("Content-Type: application/json");

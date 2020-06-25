@@ -94,7 +94,7 @@ abstract class View extends StaticView {
   protected function createIcon($icon, $type = "fas", $classes = "") {
     $iconClass = "$type fa-$icon";
 
-    if($icon === "spinner")
+    if($icon === "spinner" || $icon === "circle-notch")
       $iconClass .= " fa-spin";
 
     if($classes)

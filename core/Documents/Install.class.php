@@ -16,8 +16,6 @@ namespace Documents {
 
 namespace Documents\Install {
 
-  use Api\Notifications\Create;
-  use Api\Parameter\Parameter;
   use Configuration\CreateDatabase;
   use Driver\SQL\SQL;
   use Elements\Body;
@@ -113,6 +111,10 @@ namespace Documents\Install {
       }
 
       $sql = $user->getSQL();
+      if(!$sql || !$sql->isConnected()) {
+        return self::DATABASE_CONFIGURATION;
+      }
+
       $countKeyword = $sql->count();
       $res = $sql->select($countKeyword)->from("User")->execute();
       if ($res === FALSE) {
@@ -125,18 +127,27 @@ namespace Documents\Install {
         }
       }
 
-      if($step === self::ADD_MAIL_SERVICE && $config->isFilePresent("Mail")) {
-        $step = self::FINISH_INSTALLATION;
-        if(!$config->isFilePresent("JWT") && !$config->create("JWT", generateRandomString(32))) {
-          $this->errorString = "Unable to create jwt file";
-        } else {
-          $req = new Create($user);
-          $success = $req->execute(array(
-            "title" => "Welcome",
-            "message" => "Your Web-base was successfully installed. Check out the admin dashboard. Have fun!",
-            "groupId" => USER_GROUP_ADMIN)
-          );
+      if ($step === self::ADD_MAIL_SERVICE) {
+        $req = new \Api\Settings\Get($user);
+        $success = $req->execute(array("key" => "^mail_enabled$"));
+        if (!$success) {
+          $this->errorString = $req->getLastError();
+          return self::DATABASE_CONFIGURATION;
+        } else if (isset($req->getResult()["settings"]["mail_enabled"])) {
+          $step = self::FINISH_INSTALLATION;
+
+          $req = new \Api\Settings\Set($user);
+          $success = $req->execute(array("settings" => array("installation_completed" => "1")));
           if (!$success) {
+            $this->errorString = $req->getLastError();
+          } else {
+            $req = new \Api\Notifications\Create($user);
+            $success = $req->execute(array(
+                "title" => "Welcome",
+                "message" => "Your Web-base was successfully installed. Check out the admin dashboard. Have fun!",
+                "groupId" => USER_GROUP_ADMIN
+              )
+            );
             $this->errorString = $req->getLastError();
           }
         }
@@ -264,7 +275,8 @@ namespace Documents\Install {
             }
           }
 
-          if($success && !$this->getDocument()->getUser()->getConfiguration()->create("Database", $connectionData)) {
+          $config = $this->getDocument()->getUser()->getConfiguration();
+          if(!$config->create("Database", $connectionData)) {
             $success = false;
             $msg = "Unable to write file";
           }
@@ -348,10 +360,9 @@ namespace Documents\Install {
       $success = true;
       $msg = $this->errorString;
       if($this->getParameter("skip") === "true") {
-        if(!$user->getConfiguration()->create("Mail", null)) {
-          $success = false;
-          $msg = "Unable to create file";
-        }
+        $req = new \Api\Settings\Set($user);
+        $success = $req->execute(array("settings" => array( "mail_enabled" => "0" )));
+        $msg = $req->getLastError();
       } else {
 
         $address = $this->getParameter("address");
@@ -415,11 +426,15 @@ namespace Documents\Install {
           }
 
           if($success) {
-            $connectionData = new ConnectionData($address, $port, $username, $password);
-            if(!$user->getConfiguration()->create("Mail", $connectionData)) {
-              $success = false;
-              $msg = "Unable to create file";
-            }
+            $req = new \Api\Settings\Set($user);
+            $success = $req->execute(array("settings" => array(
+              "mail_enabled" => "1",
+              "mail_host" => "$address",
+              "mail_port" => "$port",
+              "mail_username" => "$username",
+              "mail_password" => "$password",
+            )));
+            $msg = $req->getLastError();
           }
         }
       }
@@ -461,26 +476,26 @@ namespace Documents\Install {
 
         switch($status) {
           case self::PENDING:
-            $statusIcon  = '<i class="fas fa-spin fa-spinner"></i>';
+            $statusIcon  = $this->createIcon("spinner");
             $statusText  = "Loading…";
             $statusColor = "muted";
             break;
 
           case self::SUCCESSFUL:
-            $statusIcon  = '<i class="fas fa-check-circle"></i>';
+            $statusIcon  = $this->createIcon("check-circle");
             $statusText  = "Successful";
             $statusColor = "success";
             break;
 
           case self::ERROR:
-            $statusIcon  = '<i class="fas fa-times-circle"></i>';
+            $statusIcon  = $this->createIcon("times-circle");
             $statusText  = "Failed";
             $statusColor = "danger";
             break;
 
           case self::NOT_STARTED:
           default:
-            $statusIcon = '<i class="far fa-circle"></i>';
+            $statusIcon = $this->createIcon("circle", "far");
             $statusText = "Pending";
             $statusColor = "muted";
             break;
@@ -797,6 +812,5 @@ namespace Documents\Install {
 
       return $html;
     }
-
   }
 }

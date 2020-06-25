@@ -23,7 +23,7 @@ class CreateDatabase {
       ->unique("code")
       ->unique("name");
 
-    $queries[] = $sql->insert("Language", array("uid", "code", "name"))
+    $queries[] = $sql->insert("Language", array("code", "name"))
       ->addRow( "en_US", 'American English')
       ->addRow( "de_DE", 'Deutsch Standard');
 
@@ -74,7 +74,7 @@ class CreateDatabase {
       ->primaryKey("uid")
       ->unique("name");
 
-    $queries[] = $sql->insert("Group", array("uid", "name", "color"))
+    $queries[] = $sql->insert("Group", array("name", "color"))
       ->addRow(USER_GROUP_MODERATOR_NAME, "#007bff")
       ->addRow(USER_GROUP_SUPPORT_NAME, "#28a745")
       ->addRow(USER_GROUP_ADMIN_NAME, "#dc3545");

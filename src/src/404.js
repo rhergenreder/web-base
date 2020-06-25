@@ -2,7 +2,7 @@ import * as React from "react";
 import {Link, useLocation, useHistory} from "react-router-dom";
 import Icon from "./elements/icon";
 
-export default function View404(props) {
+export default function View404() {
 
     const location = useLocation();
     const history = useHistory();

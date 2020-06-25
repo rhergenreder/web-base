@@ -18,7 +18,6 @@ namespace Api {
       return $this->success && $res[0]["count"] > 0;
     }
   }
-
 }
 
 namespace Api\Groups {

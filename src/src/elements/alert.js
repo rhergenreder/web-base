@@ -1,7 +1,6 @@
 import Icon from "./icon";
 import React from "react";
 
-
 export default function Alert(props) {
 
     const onClose = props.onClose || null;

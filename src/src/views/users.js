@@ -180,9 +180,9 @@ export default class UserOverview extends React.Component {
                     <td>{groups}</td>
                     <td>
                         <span data-effect={"solid"}
-                              data-tip={user.registered_at}
+                              data-tip={user["registered_at"]}
                               data-place={"bottom"}>
-                            {getPeriodString(user.registered_at)}
+                            {getPeriodString(user["registered_at"])}
                         </span>
                     </td>
                     <td>
@@ -288,7 +288,7 @@ export default class UserOverview extends React.Component {
             groupRows.push(
                 <tr key={"group-" + uid}>
                     <td>{group.name}</td>
-                    <td className={"text-center"}>{group.memberCount}</td>
+                    <td className={"text-center"}>{group["memberCount"]}</td>
                     <td>
                         <span className={"badge text-white mr-1"} style={{backgroundColor: group.color, fontFamily: "monospace"}}>
                             {group.color}

@@ -3,7 +3,7 @@ import {Link} from "react-router-dom";
 import Icon from "../elements/icon";
 import {Collapse} from "react-collapse";
 
-export default function HelpPage(props) {
+export default function HelpPage() {
 
     const [firstStepsCollapsed, collapseFirstSteps] = useState(false);
     const [faqCollapsed, collapseFaq] = useState(false);

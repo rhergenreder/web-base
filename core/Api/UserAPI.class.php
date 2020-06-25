@@ -519,15 +519,34 @@ If the invitation was not intended, you can simply ignore this email.<br><br><a 
       return $this->success;
     }
 
+    private function checkSettings() {
+      $req = new \Api\Settings\Get($this->user);
+      $this->success = $req->execute(array("key" => "user_registration_enabled"));
+      $this->lastError = $req->getLastError();
+
+      if ($this->success) {
+        return ($req->getResult()["user_registration_enabled"] ?? "0") === "1";
+      }
+
+      return $this->success;
+    }
+
     public function execute($values = array()) {
       if (!parent::execute($values)) {
         return false;
       }
 
       if ($this->user->isLoggedIn()) {
-        $this->lastError = L('You are already logged in');
-        $this->success = false;
+        return $this->createError(L('You are already logged in'));
+      }
+
+      $registrationAllowed = $this->checkSettings();
+      if (!$this->success) {
         return false;
+      }
+
+      if(!$registrationAllowed) {
+        return $this->createError("User Registration is not enabled.");
       }
 
       $username = $this->getParam("username");

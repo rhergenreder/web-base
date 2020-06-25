@@ -205,10 +205,10 @@ export default class Overview extends React.Component {
                                     <ul className={"list-unstyled"}>
                                         <li><b>Version</b>: {this.state.server.version}</li>
                                         <li><b>Server</b>: {this.state.server.server}</li>
-                                        <li><b>Memory Usage</b>: {humanReadableSize(this.state.server.memory_usage)}</li>
+                                        <li><b>Memory Usage</b>: {humanReadableSize(this.state.server["memory_usage"])}</li>
                                         <li><b>Load Average</b>: { loadAvg }</li>
-                                        <li><b>Database</b>: { this.state.server.database  }</li>
-                                        <li><b>Mail</b>: { this.state.server.mail === true
+                                        <li><b>Database</b>: { this.state.server["database"]  }</li>
+                                        <li><b>Mail</b>: { this.state.server["mail"] === true
                                             ?  <span>OK<Icon icon={""} className={"ml-2"}/></span>
                                             :  <Link to={"/admin/settings"}>Not configured</Link>}</li>
                                     </ul>

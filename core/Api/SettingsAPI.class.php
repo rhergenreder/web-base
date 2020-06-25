@@ -14,6 +14,7 @@ namespace Api\Settings {
   use Api\Parameter\StringType;
   use Api\SettingsAPI;
   use Driver\SQL\Column\Column;
+  use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondLike;
   use Driver\SQL\Condition\CondRegex;
   use Driver\SQL\Strategy\UpdateStrategy;
@@ -42,6 +43,10 @@ namespace Api\Settings {
 
        if (!is_null($key) && !empty($key)) {
          $query->where(new CondRegex($key, new Column("name")));
+       }
+
+       if ($this->isExternalCall()) {
+         $query->where(new Compare("name", "jwt_secret", "!="));
        }
 
        $res = $query->execute();

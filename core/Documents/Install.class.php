@@ -142,7 +142,7 @@ namespace Documents\Install {
             $this->errorString = $req->getLastError();
           } else {
             $req = new \Api\Notifications\Create($user);
-            $success = $req->execute(array(
+            $req->execute(array(
                 "title" => "Welcome",
                 "message" => "Your Web-base was successfully installed. Check out the admin dashboard. Have fun!",
                 "groupId" => USER_GROUP_ADMIN
@@ -732,7 +732,6 @@ namespace Documents\Install {
       return $html;
     }
 
-
     function getCode() {
       $html = parent::getCode();
 
@@ -779,6 +778,7 @@ namespace Documents\Install {
 
       $progressSidebar = $this->createProgressSidebar();
       $progressMainview = $this->createProgessMainview();
+
       $errorStyle = ($this->errorString ? '' : ' style="display:none"');
       $errorClass = ($this->errorString ? ' alert-danger' : '');
 

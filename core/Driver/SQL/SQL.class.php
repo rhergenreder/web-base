@@ -395,6 +395,6 @@ abstract class SQL {
   public abstract function getStatus();
 
   public function parseBool($val) : bool {
-    return in_array($val, array(true, 1, '1', 't', 'true', 'TRUE'));
+    return in_array($val, array(true, 1, '1', 't', 'true', 'TRUE'), true);
   }
 }

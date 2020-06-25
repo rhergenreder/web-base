@@ -74,7 +74,7 @@ class PostgreSQL extends SQL {
   public function getLastError() {
     $lastError = parent::getLastError();
     if (empty($lastError)) {
-      $lastError = pg_last_error($this->connection) . " " . pg_last_error($this->connection);
+      $lastError = trim(pg_last_error($this->connection) . " " . pg_last_error($this->connection));
     }
 
     return $lastError;

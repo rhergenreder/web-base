@@ -156,6 +156,7 @@ namespace Api\Routes {
       // INSERT new routes
       if ($this->success) {
         $stmt = $sql->insert("Route", array("request", "action", "target", "extra", "active"));
+
         foreach($this->routes as $route) {
           $stmt->addRow($route["request"], $route["action"], $route["target"], $route["extra"], $route["active"]);
         }

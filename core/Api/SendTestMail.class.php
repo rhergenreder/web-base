@@ -11,6 +11,8 @@ class SendTestMail extends Request {
     parent::__construct($user, $externalCall, array(
       "receiver" => new Parameter("receiver", Parameter::TYPE_EMAIL)
     ));
+
+    $this->requiredGroup = array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT);
   }
 
   public function execute($values = array()) {

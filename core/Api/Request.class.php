@@ -121,28 +121,41 @@ class Request {
     }
 
     // TODO: Check this!
-    if($this->externalCall && ($this->loginRequired || !empty($this->requiredGroup))) {
+    if($this->externalCall) {
       $apiKeyAuthorized = false;
-      if(isset($values['api_key']) && $this->apiKeyAllowed) {
-        $apiKey = $values['api_key'];
-        $apiKeyAuthorized = $this->user->authorize($apiKey);
+
+      // Logged in or api key authorized?
+      if ($this->loginRequired) {
+        if(isset($values['api_key']) && $this->apiKeyAllowed) {
+          $apiKey = $values['api_key'];
+          $apiKeyAuthorized = $this->user->authorize($apiKey);
+        }
+
+        if(!$this->user->isLoggedIn() && !$apiKeyAuthorized) {
+          $this->lastError = 'You are not logged in.';
+          header('HTTP 1.1 401 Unauthorized');
+          return false;
+        }
       }
 
-      if(!$this->user->isLoggedIn() && !$apiKeyAuthorized) {
-        $this->lastError = 'You are not logged in.';
-        header('HTTP 1.1 401 Unauthorized');
-        return false;
-      } else if(!empty($this->requiredGroup) && empty(array_intersect($this->requiredGroup, array_keys($this->user->getGroups())))) {
-        $this->lastError = "Insufficient permissions. Required group: "
-          . implode(", ", array_map(function ($group) { return GroupName($group); }, $this->requiredGroup));
-        header('HTTP 1.1 401 Unauthorized');
-        return false;
-      } else if($this->csrfTokenRequired && !$apiKeyAuthorized && $this->externalCall) {
+      // CSRF Token
+      if($this->csrfTokenRequired && !$apiKeyAuthorized) {
         // csrf token required + external call
         // if it's not a call with API_KEY, check for csrf_token
         if (!isset($values["csrf_token"]) || strcmp($values["csrf_token"], $this->user->getSession()->getCsrfToken()) !== 0) {
           $this->lastError = "CSRF-Token mismatch";
           header('HTTP 1.1 403 Forbidden');
+          return false;
+        }
+      }
+
+      // Check for permission
+      if (!($this instanceof PermissionAPI)) {
+        $req = new \Api\Permission\Check($this->user);
+        $this->success = $req->execute(array("method" => $this->getMethod()));
+        $this->lastError = $req->getLastError();
+        if (!$this->success) {
+          header('HTTP 1.1 401 Unauthorized');
           return false;
         }
       }
@@ -180,6 +193,12 @@ class Request {
   public function success() { return $this->success; }
   public function loginRequired() { return $this->loginRequired; }
   public function isExternalCall() { return $this->externalCall; }
+
+  private function getMethod() {
+    $class = str_replace("\\", "/", get_class($this));
+    $class = substr($class, strlen("api/"));
+    return $class;
+  }
 
   public function getJsonResult() {
     $this->result['success'] = $this->success;

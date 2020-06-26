@@ -171,6 +171,43 @@ class CreateDatabase {
       ->addDateTime("created_at", false, $sql->currentTimestamp())
       ->primaryKey("uid");
 
+    $queries[] = $sql->createTable("ApiPermission")
+      ->addString("method", 32)
+      ->addJson("groups", true, '[]')
+      ->primaryKey("method");
+
+    $queries[] = $sql->insert("ApiPermission", array("method", "groups"))
+      ->addRow("ApiKey/create", array())
+      ->addRow("ApiKey/fetch", array())
+      ->addRow("ApiKey/refresh", array())
+      ->addRow("ApiKey/revoke", array())
+      ->addRow("Contact/request", array())
+      ->addRow("Groups/fetch", array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN))
+      ->addRow("Groups/create", array(USER_GROUP_ADMIN))
+      ->addRow("Groups/delete", array(USER_GROUP_ADMIN))
+      ->addRow("Language/get", array())
+      ->addRow("Language/set", array())
+      ->addRow("Notifications/create", array(USER_GROUP_ADMIN))
+      ->addRow("Notifications/fetch", array())
+      ->addRow("Notifications/seen", array())
+      ->addRow("Routes/fetch", array(USER_GROUP_ADMIN))
+      ->addRow("Routes/save", array(USER_GROUP_ADMIN))
+      ->addRow("sendTestMail", array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN))
+      ->addRow("Settings/get", array(USER_GROUP_ADMIN))
+      ->addRow("Settings/set", array(USER_GROUP_ADMIN))
+      ->addRow("Stats", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT))
+      ->addRow("User/create", array(USER_GROUP_ADMIN))
+      ->addRow("User/fetch", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT))
+      ->addRow("User/get", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT))
+      ->addRow("User/info", array())
+      ->addRow("User/invite", array(USER_GROUP_ADMIN))
+      ->addRow("User/login", array())
+      ->addRow("User/logout", array())
+      ->addRow("User/register", array())
+      ->addRow("User/checkToken", array())
+      ->addRow("User/edit", array(USER_GROUP_ADMIN))
+      ->addRow("User/delete", array(USER_GROUP_ADMIN));
+
     return $queries;
   }
 

@@ -102,6 +102,10 @@ class MySQL extends SQL {
           $value = $value->format('Y-m-d H:i:s');
           $sqlParams[0] .= 's';
           break;
+        case Parameter::TYPE_ARRAY:
+          $value = json_encode($value);
+          $sqlParams[0] .= 's';
+          break;
         case Parameter::TYPE_EMAIL:
         default:
           $sqlParams[0] .= 's';

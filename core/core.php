@@ -3,7 +3,7 @@
 define("WEBBASE_VERSION", "0.1.0-alpha");
 
 function getProtocol() {
-  return stripos($_SERVER['SERVER_PROTOCOL'], 'https') === 0 ? 'https' : 'http';
+  return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
 }
 
 function generateRandomString($length): string {

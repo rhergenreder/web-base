@@ -98,6 +98,18 @@ namespace Api {
 
       return ($this->success && !empty($res) ? $res : array());
     }
+
+    protected function getMessageTemplate($key) {
+      $req = new \Api\Settings\Get($this->user);
+      $this->success = $req->execute(array("key" => $key));
+      $this->lastError = $req->getLastError();
+
+      if ($this->success) {
+        return $req->getResult()["settings"][$key] ?? "{{link}}";
+      }
+
+      return $this->success;
+    }
   }
 
 }
@@ -386,19 +398,39 @@ namespace Api\User {
 
       //send validation mail
       if ($this->success) {
-        $request = new SendMail($this->user);
-        $link = "http://localhost/acceptInvitation?token=$token";
-        $this->success = $request->execute(array(
-            "from" => "webmaster@romanh.de",
+
+        $settings = $this->user->getConfiguration()->getSettings();
+        $baseUrl = htmlspecialchars($settings->getBaseUrl());
+        $siteName = htmlspecialchars($settings->getSiteName());
+        $body = $this->getMessageTemplate("message_accept_invite");
+
+        if ($this->success) {
+
+          $replacements = array(
+            "link" => "$baseUrl/acceptInvite?token=$token",
+            "site_name" => $siteName,
+            "base_url" => $baseUrl,
+            "username" => htmlspecialchars($username)
+          );
+
+          foreach($replacements as $key => $value) {
+            $body = str_replace("{{{$key}}}", $value, $body);
+          }
+
+          $request = new SendMail($this->user);
+          $this->success = $request->execute(array(
             "to" => $email,
-            "subject" => "Account Invitation for web-base@localhost",
-            "body" =>
-              "Hello,<br>
-you were invited to create an account on web-base@localhost. Click on the following link to confirm the registration, it is 48h valid from now.             
-If the invitation was not intended, you can simply ignore this email.<br><br><a href=\"$link\">$link</a>"
-          )
-        );
-        $this->lastError = $request->getLastError();
+            "subject" => "[$siteName] Account Invitation",
+            "body" => $body
+          ));
+
+          $this->lastError = $request->getLastError();
+        }
+
+        if (!$this->success) {
+          $this->lastError = "The invitation was created but the confirmation email could not be sent. " .
+            "Please contact the server administration. Reason: " . $this->lastError;
+        }
       }
       return $this->success;
     }
@@ -573,22 +605,36 @@ If the invitation was not intended, you can simply ignore this email.<br><br><a 
         return false;
       }
 
-      $request = new SendMail($this->user);
-      $link = "http://localhost/confirmEmail?token=$this->token";
-      $this->success = $request->execute(array(
-          "from" => "webmaster@romanh.de",
-          "to" => $email,
-          "subject" => "E-Mail Confirmation for web-base@localhost",
-          "body" =>
-            "Hello,<br>
-you recently registered an account on web-base@localhost. Click on the following link to confirm the registration, it is 48h valid from now.             
-If the registration was not intended, you can simply ignore this email.<br><br><a href=\"$link\">$link</a>"
-        )
-      );
+      $settings = $this->user->getConfiguration()->getSettings();
+      $baseUrl = htmlspecialchars($settings->getBaseUrl());
+      $siteName = htmlspecialchars($settings->getSiteName());
+      $body = $this->getMessageTemplate("message_confirm_email");
+
+      if ($this->success) {
+
+        $replacements = array(
+          "link" => "$baseUrl/confirmEmail?token=$this->token",
+          "site_name" => $siteName,
+          "base_url" => $baseUrl,
+          "username" => htmlspecialchars($username)
+        );
+
+        foreach($replacements as $key => $value) {
+          $body = str_replace("{{{$key}}}", $value, $body);
+        }
+
+        $request = new SendMail($this->user);
+        $this->success = $request->execute(array(
+            "to" => $email,
+            "subject" => "[$siteName] E-Mail Confirmation",
+            "body" => $body
+        ));
+        $this->lastError = $request->getLastError();
+      }
 
       if (!$this->success) {
         $this->lastError = "Your account was registered but the confirmation email could not be sent. " .
-          "Please contact the server administration. Reason: " . $request->getLastError();
+          "Please contact the server administration. Reason: " . $this->lastError;
       }
 
       return $this->success;

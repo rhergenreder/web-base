@@ -3,11 +3,13 @@ import {Link} from "react-router-dom";
 import Alert from "../elements/alert";
 import {Collapse} from "react-collapse/lib/Collapse";
 import Icon from "../elements/icon";
-import { EditorState, ContentState, convertFromHTML, convertToRaw } from 'draft-js'
+import { EditorState, ContentState, convertToRaw } from 'draft-js'
 import { Editor } from 'react-draft-wysiwyg'
 import draftToHtml from 'draftjs-to-html';
 import htmlToDraft from 'html-to-draftjs';
+import sanitizeHtml from 'sanitize-html'
 import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
+import ReactTooltip from "react-tooltip";
 
 export default class Settings extends React.Component {
 
@@ -302,11 +304,16 @@ export default class Settings extends React.Component {
                     <div className={"form-group"} key={"group-" + key}>
                         <label htmlFor={key}>
                             { title }
+                            <ReactTooltip id={"tooltip-" + key} />
                             <Icon icon={"times"} className={"ml-2 text-danger"} style={{cursor: "pointer"}}
-                                  onClick={() => this.closeEditor(false)}
+                                  onClick={() => this.closeEditor(false)} data-type={"error"}
+                                  data-tip={"Discard Changes"} data-place={"top"} data-effect={"solid"}
+                                  data-for={"tooltip-" + key}
                             />
-                            <Icon icon={"check"} className={"ml-1 text-success"} style={{cursor: "pointer"}}
-                                  onClick={() => this.closeEditor(true)}
+                            <Icon icon={"check"} className={"ml-2 text-success"} style={{cursor: "pointer"}}
+                                  onClick={() => this.closeEditor(true)} data-type={"success"}
+                                  data-tip={"Save Changes"} data-place={"top"} data-effect={"solid"}
+                                  data-for={"tooltip-" + key}
                             />
                         </label>
                         { editor }
@@ -315,15 +322,16 @@ export default class Settings extends React.Component {
             } else {
                 formGroups.push(
                     <div className={"form-group"} key={"group-" + key}>
+                        <ReactTooltip id={"tooltip-" + key} />
                         <label htmlFor={key}>
                             { title }
                             <Icon icon={"pencil-alt"} className={"ml-2"} style={{cursor: "pointer"}}
-                                  onClick={() => this.openEditor(key)}
+                                  onClick={() => this.openEditor(key)} data-type={"info"}
+                                  data-tip={"Edit Template"} data-place={"top"} data-effect={"solid"}
+                                  data-for={"tooltip-" + key}
                             />
                         </label>
-                        <textarea rows={6} className={"form-control"} disabled={true}
-                                  value={this.state.settings[key] ?? ""} id={key} name={key}
-                        />
+                        <div className={"p-2 text-black"} style={{backgroundColor: "#d2d6de"}} dangerouslySetInnerHTML={{ __html: sanitizeHtml(this.state.settings[key] ?? "") }} />
                     </div>
                 );
             }
@@ -332,77 +340,10 @@ export default class Settings extends React.Component {
         return formGroups;
     }
 
-    /*
-
-    getUncategorisedCard() {
-
-        let keys = [];
-        let tr = [];
-        for (let key in this.state.settings) {
-            if (this.state.settings.hasOwnProperty(key)) {
-                if (!this.generalKeys.includes(key) && !this.mailKeys.includes(key)) {
-                    keys.push(key);
-                    tr.push(<tr key={"tr-" + key}>
-                        <td>{key}</td>
-                        <td>{this.state.settings[key]}</td>
-                    </tr>);
-                }
-            }
-        }
-
-        let errors = [];
-        for (let i = 0; i < this.state.etcErrors.length; i++) {
-            errors.push(<Alert key={"error-" + i} onClose={() => this.removeError("etcErrors", i)} {...this.state.etcErrors[i]}/>)
-        }
-
-        return <>
-            <div className={"card-header"} style={{cursor: "pointer"}}
-                 onClick={() => this.toggleCollapse("etcOpened")}>
-                <h4 className={"card-title"}>
-                    <Icon className={"mr-2"} icon={"cogs"}/>
-                    General Settings
-                </h4>
-                <div className={"card-tools"}>
-                    <span className={"btn btn-tool btn-sm"}>
-                        <Icon icon={this.state.etcOpened ? "angle-up" : "angle-down"}/>
-                    </span>
-                </div>
-            </div>
-            <Collapse isOpened={this.state.etcOpened}>
-                <div className={"card-body"}>
-                    <div className={"row"}>
-                        <div className={"col-12 col-lg-6"}>
-                            {errors}
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Key</th>
-                                        <th>Value</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {tr}
-                                </tbody>
-                            </table>
-                            <div>
-                                <button className={"btn btn-secondary ml-2"} onClick={() => this.onReset("etcErrors", keys)}
-                                        disabled={this.state.isResetting || this.state.isSaving}>
-                                    {this.state.isResetting ?
-                                        <span>Resetting&nbsp;<Icon icon={"circle-notch"}/></span> : "Reset"}
-                                </button>
-                                <button className={"btn btn-success ml-2"} onClick={() => this.onSave("etcErrors", keys)}
-                                        disabled={this.state.isResetting || this.state.isSaving}>
-                                    {this.state.isSaving ?
-                                        <span>Saving&nbsp;<Icon icon={"circle-notch"}/></span> : "Save"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </Collapse>
-        </>
+    getUncategorizedForm() {
+        return <b>Coming soon…</b>
     }
-*/
+
     render() {
 
         let errors = [];
@@ -415,7 +356,7 @@ export default class Settings extends React.Component {
             "general": {color: "primary", icon: "cogs", title: "General Settings", content: this.createGeneralForm()},
             "mail": {color: "warning", icon: "envelope", title: "Mail Settings", content: this.createMailForm()},
             "messages": {color: "info", icon: "copy", title: "Message Templates", content: this.getMessagesForm()},
-            "uncategorised": {color: "secondary", icon: "stream", title: "Uncategorised", content: <></>},
+            "uncategorised": {color: "secondary", icon: "stream", title: "Uncategorised", content: this.getUncategorizedForm()},
         };
 
         let cards = [];
@@ -446,10 +387,11 @@ export default class Settings extends React.Component {
                     {cards}
                 </div>
             </div>
+            <ReactTooltip />
         </>
     }
 
-    onEditorStateChange(editorState, key) {
+    onEditorStateChange(editorState) {
         this.setState({
             ...this.state,
             messages: {

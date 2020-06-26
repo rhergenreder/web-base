@@ -68,4 +68,12 @@ class Settings {
       ->addRow("installation_completed", $this->installationComplete ? "1" : "0", true)
       ->addRow("jwt_secret", $this->jwtSecret, true);
   }
+
+  public function getSiteName() {
+    return $this->siteName;
+  }
+
+  public function getBaseUrl() {
+    return $this->baseUrl;
+  }
 }

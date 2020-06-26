@@ -179,7 +179,7 @@ class CreateDatabase {
   private static function MessageAcceptInvite() : string {
     return str_replace("\n", "", intendCode(
       "Hello {{username}},<br>
-            You were invited to create an account on {{site_name}}. Please click on the following link to 
+            You were invited to create an account on {{site_name}}. Please click on the following link to
             confirm your email address and complete your registration by choosing a new password. 
             If you want to decline the invitation, you can simply ignore this email. The link is valid for the next 48 hours:<br><br>
             <a href=\"{{link}}\">{{link}}</a><br><br>
@@ -191,7 +191,7 @@ class CreateDatabase {
   private static function MessageResetPassword() : string {
     return str_replace("\n", "", intendCode(
       "Hello {{username}},<br>
-            you requested a password reset on {{sitename}}. Please click on the following link to 
+            you requested a password reset on {{sitename}}. Please click on the following link to
             choose a new password. If this request was not intended, you can simply ignore the email. The Link is valid for one hour:<br><br>
             <a href=\"{{link}}\">{{link}}</a><br><br>
             Best Regards<br>

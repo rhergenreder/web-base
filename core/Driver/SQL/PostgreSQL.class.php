@@ -68,7 +68,7 @@ class PostgreSQL extends SQL {
     if(is_null($this->connection))
       return;
 
-    pg_close($this->connection);
+    @pg_close($this->connection);
   }
 
   public function getLastError() {
@@ -98,6 +98,9 @@ class PostgreSQL extends SQL {
             break;
           case Parameter::TYPE_DATE_TIME:
             $value = $value->format("Y-m-d H:i:s");
+            break;
+          case Parameter::TYPE_ARRAY:
+            $value = json_encode($value);
             break;
           default:
             break;

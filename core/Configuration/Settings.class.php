@@ -26,7 +26,7 @@ class Settings {
   }
 
   public static function loadDefaults() : Settings {
-    $hostname = php_uname("n");
+    $hostname = $_SERVER["SERVER_NAME"];
     $protocol = getProtocol();
     $jwt = generateRandomString(32);
 

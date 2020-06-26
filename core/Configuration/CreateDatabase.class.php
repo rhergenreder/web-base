@@ -138,24 +138,64 @@ class CreateDatabase {
       ->addRow("^/register(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\Register")
       ->addRow("^/confirmEmail(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ConfirmEmail")
       ->addRow("^/acceptInvite(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\AcceptInvite")
+      ->addRow("^/resetPassword(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ResetPassword")
       ->addRow("^/$", "static", "/static/welcome.html", NULL);
 
     $queries[] = $sql->createTable("Settings")
       ->addString("name", 32)
       ->addString("value", 1024, true)
+      ->addBool("private", false)
       ->primaryKey("name");
 
-    $settingsQuery = $sql->insert("Settings", array("name", "value"))
+    $settingsQuery = $sql->insert("Settings", array("name", "value", "private"))
       // ->addRow("mail_enabled", "0") # this key will be set during installation
-      ->addRow("mail_host", "")
-      ->addRow("mail_port", "")
-      ->addRow("mail_username", "")
-      ->addRow("mail_password", "")
-      ->addRow("mail_from", "");
+      ->addRow("mail_host", "", false)
+      ->addRow("mail_port", "", false)
+      ->addRow("mail_username", "", false)
+      ->addRow("mail_password", "", true)
+      ->addRow("mail_from", "", false)
+      ->addRow("message_confirm_email", self::MessageConfirmEmail(), false)
+      ->addRow("message_accept_invite", self::MessageAcceptInvite(), false)
+      ->addRow("message_reset_password", self::MessageResetPassword(), false);
 
     (Settings::loadDefaults())->addRows($settingsQuery);
     $queries[] = $settingsQuery;
 
     return $queries;
+  }
+
+  private static function MessageConfirmEmail() : string {
+    return str_replace("\n", "", intendCode(
+      "Hello {{username}},<br>
+            You recently created an account on {{site_name}}. Please click on the following link to 
+            confirm your email address and complete your registration. If you haven't registered an
+            account, you can simply ignore this email. The link is valid for the next 48 hours:<br><br>
+            <a href=\"{{link}}\">{{confirm_link}}</a><br><br>
+            Best Regards<br>
+            {{site_name}} Administration", false
+    ));
+  }
+
+  private static function MessageAcceptInvite() : string {
+    return str_replace("\n", "", intendCode(
+      "Hello {{username}},<br>
+            You were invited to create an account on {{site_name}}. Please click on the following link to 
+            confirm your email address and complete your registration by choosing a new password. 
+            If you want to decline the invitation, you can simply ignore this email. The link is valid for the next 48 hours:<br><br>
+            <a href=\"{{link}}\">{{link}}</a><br><br>
+            Best Regards<br>
+            {{site_name}} Administration", false
+    ));
+  }
+
+  private static function MessageResetPassword() : string {
+    return str_replace("\n", "", intendCode(
+      "Hello {{username}},<br>
+            you requested a password reset on {{sitename}}. Please click on the following link to 
+            choose a new password. If this request was not intended, you can simply ignore the email. The Link is valid for one hour:<br><br>
+            <a href=\"{{link}}\">{{link}}</a><br><br>
+            Best Regards<br>
+            {{site_name}} Administration", false
+    ));
   }
 }

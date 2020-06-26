@@ -16,6 +16,7 @@ namespace Api\Settings {
   use Driver\SQL\Column\Column;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondLike;
+  use Driver\SQL\Condition\CondNot;
   use Driver\SQL\Condition\CondRegex;
   use Driver\SQL\Strategy\UpdateStrategy;
   use Objects\User;
@@ -42,11 +43,12 @@ namespace Api\Settings {
        $query = $sql->select("name", "value") ->from("Settings");
 
        if (!is_null($key) && !empty($key)) {
-         $query->where(new CondRegex($key, new Column("name")));
+         $query->where(new CondRegex(new Column("name"), $key));
        }
 
+       // filter sensitive values, if called from outside
        if ($this->isExternalCall()) {
-         $query->where(new Compare("name", "jwt_secret", "!="));
+         $query->where(new CondNot("private"));
        }
 
        $res = $query->execute();

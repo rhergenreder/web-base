@@ -6,7 +6,9 @@ use Driver\SQL\Column\Column;
 use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondBool;
 use Driver\SQL\Condition\CondIn;
+use Driver\SQL\Condition\Condition;
 use Driver\SQL\Condition\CondKeyword;
+use Driver\SQL\Condition\CondNot;
 use Driver\SQL\Condition\CondOr;
 use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Constraint\Constraint;
@@ -339,6 +341,9 @@ abstract class SQL {
         return implode(" AND ", $conditions);
       }
     } else if($condition instanceof CondIn) {
+
+      $value = $condition->getValues();
+
       $values = array();
       foreach ($condition->getValues() as $value) {
         $values[] = $this->addValue($value, $params);
@@ -353,6 +358,15 @@ abstract class SQL {
       $left = ($left instanceof Column) ? $this->columnName($left->getName()) : $this->addValue($left, $params);
       $right = ($right instanceof Column) ? $this->columnName($right->getName()) : $this->addValue($right, $params);
       return "$left $keyword $right ";
+    } else if($condition instanceof CondNot) {
+      $expression = $condition->getExpression();
+      if ($expression instanceof Condition) {
+        $expression = $this->buildCondition($expression, $params);
+      } else {
+        $expression = $this->columnName($expression);
+      }
+
+      return "NOT $expression";
     } else {
       $this->lastError = "Unsupported condition type: " . get_class($condition);
       return false;

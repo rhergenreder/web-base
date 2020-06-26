@@ -11,12 +11,9 @@ class SendMail extends Request {
 
   public function __construct($user, $externalCall = false) {
     parent::__construct($user, $externalCall, array(
-      'from' => new Parameter('from', Parameter::TYPE_EMAIL),
       'to' => new Parameter('to', Parameter::TYPE_EMAIL),
       'subject'  => new StringType('subject', -1),
       'body' => new StringType('body', -1),
-      'fromName' => new StringType('fromName', -1, true, ''),
-      'replyTo' => new Parameter('to', Parameter::TYPE_EMAIL, true, ''),
     ));
     $this->isPublic = false;
   }
@@ -28,6 +25,7 @@ class SendMail extends Request {
 
     if ($this->success) {
       $settings = $req->getResult()["settings"];
+
       if (!isset($settings["mail_enabled"]) || $settings["mail_enabled"] !== "1") {
         $this->createError("Mail is not configured yet.");
         return null;
@@ -37,7 +35,9 @@ class SendMail extends Request {
       $port = intval($settings["mail_port"] ?? "25");
       $login = $settings["mail_username"] ?? "";
       $password = $settings["mail_password"] ?? "";
-      return new ConnectionData($host, $port, $login, $password);
+      $connectionData = new ConnectionData($host, $port, $login, $password);
+      $connectionData->setProperty("from", $settings["mail_from"] ?? "");
+      return $connectionData;
     }
 
     return null;
@@ -56,7 +56,7 @@ class SendMail extends Request {
     try {
       $mail = new PHPMailer;
       $mail->IsSMTP();
-      $mail->setFrom($this->getParam('from'), $this->getParam('fromName'));
+      $mail->setFrom($mailConfig->getProperty("from"));
       $mail->addAddress($this->getParam('to'));
       $mail->Subject = $this->getParam('subject');
       $mail->SMTPDebug = 0;
@@ -69,11 +69,6 @@ class SendMail extends Request {
       $mail->IsHTML(true);
       $mail->CharSet = 'UTF-8';
       $mail->Body = $this->getParam('body');
-
-      $replyTo = $this->getParam('replyTo');
-      if(!is_null($replyTo) && !empty($replyTo)) {
-        $mail->AddReplyTo($replyTo, $this->getParam('fromName'));
-      }
 
       $this->success = @$mail->Send();
       if (!$this->success) {

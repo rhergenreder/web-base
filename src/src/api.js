@@ -94,4 +94,13 @@ export default class API {
     async getSettings(key = "") {
         return this.apiCall("settings/get", { key: key });
     }
+
+    async saveSettings(settings) {
+        return this.apiCall("settings/set", { settings: settings });
+    }
+
+    async sendTestMail(receiver) {
+        return this.apiCall("sendTestMail", { receiver: receiver });
+
+    }
 };

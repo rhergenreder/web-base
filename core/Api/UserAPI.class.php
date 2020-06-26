@@ -461,7 +461,8 @@ If the invitation was not intended, you can simply ignore this email.<br><br><a 
               return $this->createError("Error creating Session: " . $sql->getLastError());
             } else {
               $this->result["loggedIn"] = true;
-              $this->result['logoutIn'] = $this->user->getSession()->getExpiresSeconds();
+              $this->result["logoutIn"] = $this->user->getSession()->getExpiresSeconds();
+              $this->result["csrf_token"] = $this->user->getSession()->getCsrfToken();
               $this->success = true;
             }
           } else {

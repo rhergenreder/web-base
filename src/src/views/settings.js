@@ -50,18 +50,80 @@ export default class Settings extends React.Component {
                 isOpen: true,
                 isSaving: false,
                 isResetting: false,
+                settings: []
             },
         };
 
         this.parent = {
-            api: props.api
+            api: props.api,
+            showDialog: props.showDialog
         };
+
+        this.hiddenKeys = [
+          "mail_password",
+          "jwt_secret"
+        ];
+    }
+
+    isDefaultKey(key) {
+        key = key.trim();
+        return this.state.general.keys.includes(key)
+            || this.state.mail.keys.includes(key)
+            || this.state.messages.keys.includes(key)
+            || this.hiddenKeys.includes(key);
+    }
+
+    getUncategorisedValues(res) {
+        let uncategorised = [];
+        for(let key in res.settings) {
+            if (res.settings.hasOwnProperty(key) && !this.isDefaultKey(key)) {
+                uncategorised.push({key: key, value: res.settings[key]});
+            }
+        }
+
+        return uncategorised;
+    }
+
+    onDeleteUncategorisedProp(index) {
+        if (index < 0 || index >= this.state.uncategorised.settings.length) {
+            return;
+        }
+
+        let props = this.state.uncategorised.settings.slice();
+        props.splice(index, 1);
+        this.setState({ ...this.state, uncategorised: { ...this.state.uncategorised, settings: props }});
+    }
+
+    onChangeUncategorisedValue(event, index, isKey) {
+        if (index < 0 || index >= this.state.uncategorised.settings.length) {
+            return;
+        }
+
+        let props = this.state.uncategorised.settings.slice();
+        if (isKey) {
+            props[index].key = event.target.value;
+        } else {
+            props[index].value = event.target.value;
+        }
+        this.setState({ ...this.state, uncategorised: { ...this.state.uncategorised, settings: props }});
+    }
+
+    onAddUncategorisedProperty() {
+        let props = this.state.uncategorised.settings.slice();
+        props.push({key: "", value: ""});
+        this.setState({ ...this.state, uncategorised: { ...this.state.uncategorised, settings: props }});
     }
 
     componentDidMount() {
         this.parent.api.getSettings().then((res) => {
             if (res.success) {
-                this.setState({ ...this.state, settings: res.settings });
+                let newState = {
+                    ...this.state,
+                    settings: res.settings,
+                    uncategorised: { ...this.state.uncategorised, settings: this.getUncategorisedValues(res) }
+                };
+
+                this.setState(newState);
             } else {
                 let errors = this.state.errors.slice();
                 errors.push({title: "Error fetching settings", message: res.msg});
@@ -341,7 +403,52 @@ export default class Settings extends React.Component {
     }
 
     getUncategorizedForm() {
-        return <b>Coming soon…</b>
+        let tr = [];
+
+        for(let i = 0; i < this.state.uncategorised.settings.length; i++) {
+            let key = this.state.uncategorised.settings[i].key;
+            let value = this.state.uncategorised.settings[i].value;
+            tr.push(
+                <tr key={"uncategorised-" + i} className={(i % 2 === 0) ? "even" : "odd"}>
+                    <td>
+                        <input className={"form-control"} type={"text"} value={key} maxLength={32} placeholder={"Key"}
+                               onChange={(e) => this.onChangeUncategorisedValue(e, i, true)} />
+                    </td>
+                    <td>
+                        <input className={"form-control"} type={"text"} value={value} placeholder={"value"}
+                               onChange={(e) => this.onChangeUncategorisedValue(e, i, false)} />
+                    </td>
+                    <td className={"text-center align-middle"}>
+                        <ReactTooltip id={"tooltip-uncategorised-" + i} />
+                        <Icon icon={"trash"} className={"text-danger"} style={{cursor: "pointer"}}
+                            onClick={() => this.onDeleteUncategorisedProp(i)}  data-type={"error"}
+                              data-tip={"Delete property"} data-place={"right"} data-effect={"solid"}
+                              data-for={"tooltip-uncategorised-" + i}
+                        />
+                    </td>
+                </tr>
+            );
+        }
+
+        return <>
+            <table className={"table table-bordered table-hover dataTable dtr-inline"}>
+                <thead>
+                    <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                        <th className={"text-center"}><Icon icon={"tools"}/></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {tr}
+                </tbody>
+            </table>
+            <div className={"mt-2 mb-3"}>
+                <button className={"btn btn-info"} onClick={() => this.onAddUncategorisedProperty()} >
+                    <Icon icon={"plus"} className={"mr-2"} /> Add property
+                </button>
+            </div>
+        </>
     }
 
     render() {
@@ -427,11 +534,6 @@ export default class Settings extends React.Component {
     onReset(category) {
         this.setState({...this.state, [category]: {...this.state[category], isResetting: true}});
 
-        let values = {};
-        for (let key of this.state[category].keys) {
-            values[key] = this.state.settings[key];
-        }
-
         this.parent.api.getSettings().then((res) => {
             if (!res.success) {
                 let alerts = this.state[category].alerts.slice();
@@ -441,23 +543,32 @@ export default class Settings extends React.Component {
                     [category]: {...this.state[category], alerts: alerts, isResetting: false}
                 });
             } else {
-                let newSettings = {...this.state.settings};
+                let newState = { ...this.state };
                 let categoryUpdated = {...this.state[category], isResetting: false};
+                let newSettings = {...this.state.settings};
 
-                for (let key of this.state[category].keys) {
-                    newSettings[key] = res.settings[key] ?? "";
+                if (category === "uncategorised") {
+                    categoryUpdated.settings = this.getUncategorisedValues(res);
+                    for (let key in res.settings) {
+                        if (res.settings.hasOwnProperty(key) && !this.isDefaultKey(key)) {
+                            newSettings[key] = res.settings[key] ?? "";
+                        }
+                    }
+                } else {
+                    for (let key of this.state[category].keys) {
+                        newSettings[key] = res.settings[key] ?? "";
+                    }
+
+                    if (category === "mail") {
+                        categoryUpdated.unsavedMailSettings = false;
+                    } else if (category === "messages") {
+                        categoryUpdated.isEditing = null;
+                    }
                 }
 
-                if (category === "mail") {
-                    categoryUpdated.unsavedMailSettings = false;
-                } else if (category === "messages") {
-                    categoryUpdated.isEditing = null;
-                }
-
-                this.setState({
-                    ...this.state, settings: newSettings,
-                    [category]: categoryUpdated
-                });
+                newState.settings = newSettings;
+                newState[category] = categoryUpdated;
+                this.setState(newState);
             }
         });
     }
@@ -470,12 +581,31 @@ export default class Settings extends React.Component {
         }
 
         let values = {};
-        for (let key of this.state[category].keys) {
-            if (key === "mail_password" && !this.state.settings[key]) {
-                continue;
+        if (category === "uncategorised") {
+            for (let prop of this.state.uncategorised.settings) {
+                if (prop.key) {
+                    values[prop.key] = prop.value;
+                    if (this.isDefaultKey(prop.key)) {
+                        this.parent.showDialog("You cannot use this key as property key: " + prop.key, "System specific key");
+                        this.setState({...this.state, [category]: {...this.state[category], isSaving: false}});
+                        return;
+                    }
+                }
             }
 
-            values[key] = this.state.settings[key];
+            for (let key in this.state.settings) {
+                if (this.state.settings.hasOwnProperty(key) && !this.isDefaultKey(key) && !values.hasOwnProperty(key)) {
+                    values[key] = null;
+                }
+            }
+        } else {
+            for (let key of this.state[category].keys) {
+                if (this.hiddenKeys.includes(key) && !this.state.settings[key]) {
+                    continue;
+                }
+
+                values[key] = this.state.settings[key];
+            }
         }
 
         this.parent.api.saveSettings(values).then((res) => {

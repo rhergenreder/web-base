@@ -145,18 +145,19 @@ class CreateDatabase {
       ->addString("name", 32)
       ->addString("value", 1024, true)
       ->addBool("private", false)
+      ->addBool("readonly", false)
       ->primaryKey("name");
 
-    $settingsQuery = $sql->insert("Settings", array("name", "value", "private"))
+    $settingsQuery = $sql->insert("Settings", array("name", "value", "private", "readonly"))
       // ->addRow("mail_enabled", "0") # this key will be set during installation
-      ->addRow("mail_host", "", false)
-      ->addRow("mail_port", "", false)
-      ->addRow("mail_username", "", false)
-      ->addRow("mail_password", "", true)
-      ->addRow("mail_from", "", false)
-      ->addRow("message_confirm_email", self::MessageConfirmEmail(), false)
-      ->addRow("message_accept_invite", self::MessageAcceptInvite(), false)
-      ->addRow("message_reset_password", self::MessageResetPassword(), false);
+      ->addRow("mail_host", "", false, false)
+      ->addRow("mail_port", "", false, false)
+      ->addRow("mail_username", "", false, false)
+      ->addRow("mail_password", "", true, false)
+      ->addRow("mail_from", "", false, false)
+      ->addRow("message_confirm_email", self::MessageConfirmEmail(), false, false)
+      ->addRow("message_accept_invite", self::MessageAcceptInvite(), false, false)
+      ->addRow("message_reset_password", self::MessageResetPassword(), false, false);
 
     (Settings::loadDefaults())->addRows($settingsQuery);
     $queries[] = $settingsQuery;

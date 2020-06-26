@@ -62,11 +62,11 @@ class Settings {
   }
 
   public function addRows(Insert $query) {
-    $query->addRow("site_name", $this->siteName, false)
-      ->addRow("base_url", $this->baseUrl, false)
-      ->addRow("user_registration_enabled", $this->registrationAllowed ? "1" : "0", false)
-      ->addRow("installation_completed", $this->installationComplete ? "1" : "0", true)
-      ->addRow("jwt_secret", $this->jwtSecret, true);
+    $query->addRow("site_name", $this->siteName, false, false)
+      ->addRow("base_url", $this->baseUrl, false, false)
+      ->addRow("user_registration_enabled", $this->registrationAllowed ? "1" : "0", false, false)
+      ->addRow("installation_completed", $this->installationComplete ? "1" : "0", true, true)
+      ->addRow("jwt_secret", $this->jwtSecret, true, true);
   }
 
   public function getSiteName() {

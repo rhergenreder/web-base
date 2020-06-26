@@ -54,7 +54,7 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
 
       try {
         $file = getClassPath($parentClass);
-        if(!file_exists($file)) {
+        if(!file_exists($file) || !class_exists($parentClass) || !class_exists($apiClass)) {
           header("404 Not Found");
           $response = createError("Not found");
         } else {

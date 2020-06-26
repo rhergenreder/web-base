@@ -28,7 +28,7 @@ class AdminDashboard extends React.Component {
     this.state = {
       loaded: false,
       dialog: { onClose: () => this.hideDialog() },
-      notifications: { }
+      notifications: [ ]
     };
   }
 
@@ -75,6 +75,7 @@ class AdminDashboard extends React.Component {
 
     this.controlObj = {
       showDialog: this.showDialog.bind(this),
+      fetchNotifications: this.fetchNotifications.bind(this),
       api: this.api
     };
 
@@ -92,7 +93,7 @@ class AdminDashboard extends React.Component {
                 return <EditUser {...newProps} />
               }}/>
               <Route path={"/admin/group/add"}><CreateGroup {...this.controlObj} /></Route>
-              <Route path={"/admin/logs"}><Logs {...this.controlObj} /></Route>
+              <Route path={"/admin/logs"}><Logs {...this.controlObj} notifications={this.state.notifications} /></Route>
               <Route path={"/admin/settings"}><Settings {...this.controlObj} /></Route>
               <Route path={"/admin/pages"}><PageOverview {...this.controlObj} /></Route>
               <Route path={"/admin/help"}><HelpPage {...this.controlObj} /></Route>

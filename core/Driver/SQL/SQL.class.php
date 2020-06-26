@@ -10,7 +10,6 @@ use Driver\SQL\Condition\Condition;
 use Driver\SQL\Condition\CondKeyword;
 use Driver\SQL\Condition\CondNot;
 use Driver\SQL\Condition\CondOr;
-use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Constraint\Constraint;
 use \Driver\SQL\Constraint\Unique;
 use \Driver\SQL\Constraint\PrimaryKey;
@@ -18,6 +17,7 @@ use \Driver\SQL\Constraint\ForeignKey;
 use Driver\SQL\Query\CreateTable;
 use Driver\SQL\Query\Delete;
 use Driver\SQL\Query\Insert;
+use Driver\SQL\Query\Query;
 use Driver\SQL\Query\Select;
 use Driver\SQL\Query\Truncate;
 use Driver\SQL\Query\Update;
@@ -50,27 +50,27 @@ abstract class SQL {
   }
 
   public function createTable($tableName) {
-    return new Query\CreateTable($this, $tableName);
+    return new CreateTable($this, $tableName);
   }
 
   public function insert($tableName, $columns=array()) {
-    return new Query\Insert($this, $tableName, $columns);
+    return new Insert($this, $tableName, $columns);
   }
 
   public function select(...$columNames) {
-    return new Query\Select($this, $columNames);
+    return new Select($this, $columNames);
   }
 
   public function truncate($table) {
-    return new Query\Truncate($this, $table);
+    return new Truncate($this, $table);
   }
 
   public function delete($table) {
-    return new Query\Delete($this, $table);
+    return new Delete($this, $table);
   }
 
   public function update($table) {
-    return new Query\Update($this, $table);
+    return new Update($this, $table);
   }
 
   // ####################
@@ -86,6 +86,53 @@ abstract class SQL {
   public abstract function disconnect();
 
   // Querybuilder
+  protected function buildQuery(Query $query, array &$params) {
+    if ($query instanceof Select) {
+      $select = $query;
+      $columns = $this->columnName($select->getColumns());
+      $tables = $select->getTables();
+
+      if (!$tables) {
+        return $this->execute("SELECT $columns", $params, true);
+      }
+
+      $tables = $this->tableName($tables);
+      $where = $this->getWhereClause($select->getConditions(), $params);
+
+      $joinStr = "";
+      $joins = $select->getJoins();
+      if (!empty($joins)) {
+        foreach($joins as $join) {
+          $type = $join->getType();
+          $joinTable = $this->tableName($join->getTable());
+          $columnA = $this->columnName($join->getColumnA());
+          $columnB = $this->columnName($join->getColumnB());
+          $joinStr .= " $type JOIN $joinTable ON $columnA=$columnB";
+        }
+      }
+
+      $groupBy = "";
+      $groupColumns = $select->getGroupBy();
+      if (!empty($groupColumns)) {
+        $groupBy = " GROUP BY " . $this->columnName($groupColumns);
+      }
+
+      $orderBy = "";
+      $orderColumns = $select->getOrderBy();
+      if (!empty($orderColumns)) {
+        $orderBy = " ORDER BY " . $this->columnName($orderColumns);
+        $orderBy .= ($select->isOrderedAscending() ? " ASC" : " DESC");
+      }
+
+      $limit = ($select->getLimit() > 0 ? (" LIMIT " . $select->getLimit()) : "");
+      $offset = ($select->getOffset() > 0 ? (" OFFSET " . $select->getOffset()) : "");
+      return "SELECT $columns FROM $tables$joinStr$where$groupBy$orderBy$limit$offset";
+    } else {
+      $this->lastError = "buildQuery() not implemented for type: " . get_class($query);
+      return FALSE;
+    }
+  }
+
   public function executeCreateTable(CreateTable $createTable) {
     $tableName = $this->tableName($createTable->getTableName());
     $ifNotExists = $createTable->ifNotExists() ? " IF NOT EXISTS": "";
@@ -161,46 +208,8 @@ abstract class SQL {
   }
 
   public function executeSelect(Select $select) {
-
-    $columns = $this->columnName($select->getColumns());
-    $tables = $select->getTables();
     $params = array();
-
-    if (!$tables) {
-      return $this->execute("SELECT $columns", $params, true);
-    }
-
-    $tables = $this->tableName($tables);
-    $where = $this->getWhereClause($select->getConditions(), $params);
-
-    $joinStr = "";
-    $joins = $select->getJoins();
-    if (!empty($joins)) {
-      foreach($joins as $join) {
-        $type = $join->getType();
-        $joinTable = $this->tableName($join->getTable());
-        $columnA = $this->columnName($join->getColumnA());
-        $columnB = $this->columnName($join->getColumnB());
-        $joinStr .= " $type JOIN $joinTable ON $columnA=$columnB";
-      }
-    }
-
-    $groupBy = "";
-    $groupColumns = $select->getGroupBy();
-    if (!empty($groupColumns)) {
-      $groupBy = " GROUP BY " . $this->columnName($groupColumns);
-    }
-
-    $orderBy = "";
-    $orderColumns = $select->getOrderBy();
-    if (!empty($orderColumns)) {
-      $orderBy = " ORDER BY " . $this->columnName($orderColumns);
-      $orderBy .= ($select->isOrderedAscending() ? " ASC" : " DESC");
-    }
-
-    $limit = ($select->getLimit() > 0 ? (" LIMIT " . $select->getLimit()) : "");
-    $offset = ($select->getOffset() > 0 ? (" OFFSET " . $select->getOffset()) : "");
-    $query = "SELECT $columns FROM $tables$joinStr$where$groupBy$orderBy$limit$offset";
+    $query = $this->buildQuery($select, $params);
     if($select->dump) { var_dump($query); var_dump($params); }
     return $this->execute($query, $params, true);
   }
@@ -342,14 +351,21 @@ abstract class SQL {
       }
     } else if($condition instanceof CondIn) {
 
-      $value = $condition->getValues();
+      $expression = $condition->getExpression();
+      if (is_array($expression)) {
+        $values = array();
+        foreach ($expression as $value) {
+          $values[] = $this->addValue($value, $params);
+        }
 
-      $values = array();
-      foreach ($condition->getValues() as $value) {
-        $values[] = $this->addValue($value, $params);
+        $values = implode(",", $values);
+      } else if($expression instanceof Select) {
+        $values = $this->buildQuery($expression, $params);
+      } else {
+        $this->lastError = "Unsupported in-expression value: " . get_class($condition);
+        return false;
       }
 
-      $values = implode(",", $values);
       return $this->columnName($condition->getColumn()) . " IN ($values)";
     } else if($condition instanceof CondKeyword) {
       $left = $condition->getLeftExp();

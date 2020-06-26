@@ -32,8 +32,8 @@ export default function HelpPage() {
                         <div className="col-12 col-md-8 col-lg-4">
                             <p>
                                 WebBase is a php framework to simplify user management, pages and routing.
-                                It can easily be modified and extended by writing document classes or
-                                access the database with the available abstracted scheme. It also includes
+                                It can easily be modified and extended by writing document classes and the database
+                                can be accessed through the available abstracted scheme. It also includes
                                 a REST API with access control, parameter type checking and more.
                             </p>
                         </div>

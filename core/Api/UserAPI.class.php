@@ -120,6 +120,7 @@ namespace Api\User {
   use Api\Parameter\StringType;
   use Api\SendMail;
   use Api\UserAPI;
+  use Api\VerifyCaptcha;
   use DateTime;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondIn;
@@ -531,13 +532,20 @@ namespace Api\User {
     private ?int $userId;
     private string $token;
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(User $user, bool $externalCall = false) {
+      $parameters = array(
         "username" => new StringType("username", 32),
         'email' => new Parameter('email', Parameter::TYPE_EMAIL),
         "password" => new StringType("password"),
         "confirmPassword" => new StringType("confirmPassword"),
-      ));
+      );
+
+      $settings = $user->getConfiguration()->getSettings();
+      if ($settings->isRecaptchaEnabled()) {
+        $parameters["captcha"] = new StringType("captcha");
+      }
+
+      parent::__construct($user, $externalCall, $parameters);
     }
 
     private function insertToken() {
@@ -580,6 +588,15 @@ namespace Api\User {
 
       if(!$registrationAllowed) {
         return $this->createError("User Registration is not enabled.");
+      }
+
+      $settings = $this->user->getConfiguration()->getSettings();
+      if ($settings->isRecaptchaEnabled()) {
+        $captcha = $this->getParam("captcha");
+        $req = new VerifyCaptcha($this->user);
+        if (!$req->execute(array("captcha" => $captcha, "action" => "register"))) {
+          return $this->createError($req->getLastError());
+        }
       }
 
       $username = $this->getParam("username");

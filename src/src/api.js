@@ -43,8 +43,12 @@ export default class API {
         return this.apiCall("user/logout");
     }
 
-    async getNotifications() {
-        return this.apiCall("notifications/fetch");
+    async getNotifications(onlyNew = true) {
+        return this.apiCall("notifications/fetch", { new: onlyNew });
+    }
+
+    async markNotificationsSeen() {
+        return this.apiCall("notifications/seen");
     }
 
     async getUser(id) {
@@ -101,6 +105,5 @@ export default class API {
 
     async sendTestMail(receiver) {
         return this.apiCall("sendTestMail", { receiver: receiver });
-
     }
 };

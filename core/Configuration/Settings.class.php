@@ -16,6 +16,9 @@ class Settings {
   private string $jwtSecret;
   private bool $installationComplete;
   private bool $registrationAllowed;
+  private bool $recaptchaEnabled;
+  private string $recaptchaPublicKey;
+  private string $recaptchaPrivateKey;
 
   public function getJwtSecret(): string {
     return $this->jwtSecret;
@@ -36,6 +39,9 @@ class Settings {
     $settings->jwtSecret = $jwt;
     $settings->installationComplete = false;
     $settings->registrationAllowed = false;
+    $settings->recaptchaPublicKey = "";
+    $settings->recaptchaPrivateKey = "";
+    $settings->recaptchaEnabled = false;
     return $settings;
   }
 
@@ -49,6 +55,9 @@ class Settings {
       $this->registrationAllowed = $result["user_registration_enabled"] ?? $this->registrationAllowed;
       $this->installationComplete = $result["installation_completed"] ?? $this->installationComplete;
       $this->jwtSecret = $result["jwt_secret"] ?? $this->jwtSecret;
+      $this->recaptchaEnabled = $result["recaptcha_enabled"] ?? $this->recaptchaEnabled;
+      $this->recaptchaPublicKey = $result["recaptcha_public_key"] ?? $this->recaptchaPublicKey;
+      $this->recaptchaPrivateKey = $result["recaptcha_private_key"] ?? $this->recaptchaPrivateKey;
 
       if (!isset($result["jwt_secret"])) {
         $req = new \Api\Settings\Set($user);
@@ -66,7 +75,10 @@ class Settings {
       ->addRow("base_url", $this->baseUrl, false, false)
       ->addRow("user_registration_enabled", $this->registrationAllowed ? "1" : "0", false, false)
       ->addRow("installation_completed", $this->installationComplete ? "1" : "0", true, true)
-      ->addRow("jwt_secret", $this->jwtSecret, true, true);
+      ->addRow("jwt_secret", $this->jwtSecret, true, true)
+      ->addRow("recaptcha_enabled", $this->recaptchaEnabled ? "1" : "0", false, false)
+      ->addRow("recaptcha_public_key", $this->recaptchaPublicKey, false, false)
+      ->addRow("recaptcha_private_key", $this->recaptchaPrivateKey, true, false);
   }
 
   public function getSiteName() {
@@ -75,5 +87,17 @@ class Settings {
 
   public function getBaseUrl() {
     return $this->baseUrl;
+  }
+
+  public function isRecaptchaEnabled() {
+    return $this->recaptchaEnabled;
+  }
+
+  public function getRecaptchaSiteKey() {
+    return $this->recaptchaPublicKey;
+  }
+
+  public function getRecaptchaSecretKey() {
+    return $this->recaptchaPrivateKey;
   }
 }

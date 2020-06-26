@@ -45,6 +45,13 @@ export default class Settings extends React.Component {
                 isEditing: null,
                 keys: ["message_confirm_email", "message_accept_invite", "message_reset_password"]
             },
+            recaptcha: {
+                alerts: [],
+                isOpen: true,
+                isSaving: false,
+                isResetting: false,
+                keys: ["recaptcha_enabled", "recaptcha_public_key", "recaptcha_private_key"]
+            },
             uncategorised: {
                 alerts: [],
                 isOpen: true,
@@ -60,8 +67,9 @@ export default class Settings extends React.Component {
         };
 
         this.hiddenKeys = [
-          "mail_password",
-          "jwt_secret"
+            "recaptcha_private_key",
+            "mail_password",
+            "jwt_secret"
         ];
     }
 
@@ -164,7 +172,7 @@ export default class Settings extends React.Component {
             <div className={"card-header"} style={{cursor: "pointer"}}
                  onClick={() => this.toggleCollapse(category)}>
                 <h4 className={"card-title"}>
-                    <Icon className={"mr-2"} icon={icon}/>
+                    <Icon className={"mr-2"} icon={icon} type={icon==="google"?"fab":"fas"} />
                     {title}
                 </h4>
                 <div className={"card-tools"}>
@@ -402,6 +410,49 @@ export default class Settings extends React.Component {
         return formGroups;
     }
 
+    getRecaptchaForm() {
+        return <>
+            <div className={"form-group mt-2"}>
+                <div className={"form-check"}>
+                    <input type={"checkbox"} className={"form-check-input"}
+                           name={"recaptcha_enabled"} id={"recaptcha_enabled"}
+                           checked={(this.state.settings["recaptcha_enabled"] ?? "0") === "1"}
+                           onChange={this.onChangeValue.bind(this)}/>
+                    <label className={"form-check-label"} htmlFor={"recaptcha_enabled"}>
+                        Enable Google's reCaptcha
+                    </label>
+                </div>
+            </div>
+            <hr className={"m-2"}/>
+            <label htmlFor={"recaptcha_public_key"} className={"mt-2"}>reCaptcha Site Key</label>
+            <div className={"input-group"}>
+                <div className={"input-group-prepend"}>
+                    <span className={"input-group-text"}>
+                        <Icon icon={"unlock"}/>
+                    </span>
+                </div>
+                <input type={"text"} className={"form-control"}
+                       value={this.state.settings["recaptcha_public_key"] ?? ""}
+                       placeholder={"Enter site key"} name={"recaptcha_public_key"}
+                       id={"recaptcha_public_key"} onChange={this.onChangeValue.bind(this)}
+                       disabled={(this.state.settings["recaptcha_enabled"] ?? "0") !== "1"}/>
+            </div>
+            <label htmlFor={"recaptcha_private_key"} className={"mt-2"}>reCaptcha Secret Key</label>
+            <div className={"input-group mb-3"}>
+                <div className={"input-group-prepend"}>
+                    <span className={"input-group-text"}>
+                        <Icon icon={"lock"}/>
+                    </span>
+                </div>
+                <input type={"password"} className={"form-control"}
+                       value={this.state.settings["recaptcha_private_key"] ?? ""}
+                       placeholder={"(unchanged)"} name={"recaptcha_private_key"}
+                       id={"mail_password"} onChange={this.onChangeValue.bind(this)}
+                       disabled={(this.state.settings["recaptcha_enabled"] ?? "0") !== "1"}/>
+            </div>
+          </>
+    }
+
     getUncategorizedForm() {
         let tr = [];
 
@@ -463,6 +514,7 @@ export default class Settings extends React.Component {
             "general": {color: "primary", icon: "cogs", title: "General Settings", content: this.createGeneralForm()},
             "mail": {color: "warning", icon: "envelope", title: "Mail Settings", content: this.createMailForm()},
             "messages": {color: "info", icon: "copy", title: "Message Templates", content: this.getMessagesForm()},
+            "recaptcha": {color: "danger", icon: "google", title: "Google reCaptcha", content: this.getRecaptchaForm()},
             "uncategorised": {color: "secondary", icon: "stream", title: "Uncategorised", content: this.getUncategorizedForm()},
         };
 

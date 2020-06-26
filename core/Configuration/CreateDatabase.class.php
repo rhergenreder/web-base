@@ -88,6 +88,7 @@ class CreateDatabase {
 
     $queries[] = $sql->createTable("Notification")
       ->addSerial("uid")
+      ->addEnum("type", array("default","message","warning"), false, "default")
       ->addDateTime("created_at", false, $sql->currentTimestamp())
       ->addString("title", 32)
       ->addString("message", 256)
@@ -96,7 +97,7 @@ class CreateDatabase {
     $queries[] = $sql->createTable("UserNotification")
       ->addInt("user_id")
       ->addInt("notification_id")
-      ->addBool("seen")
+      ->addBool("seen", false)
       ->foreignKey("user_id", "User", "uid")
       ->foreignKey("notification_id", "Notification", "uid")
       ->unique("user_id", "notification_id");
@@ -104,7 +105,7 @@ class CreateDatabase {
     $queries[] = $sql->createTable("GroupNotification")
       ->addInt("group_id")
       ->addInt("notification_id")
-      ->addBool("seen")
+      ->addBool("seen", false)
       ->foreignKey("group_id", "Group", "uid")
       ->foreignKey("notification_id", "Notification", "uid")
       ->unique("group_id", "notification_id");
@@ -144,8 +145,8 @@ class CreateDatabase {
     $queries[] = $sql->createTable("Settings")
       ->addString("name", 32)
       ->addString("value", 1024, true)
-      ->addBool("private", false)
-      ->addBool("readonly", false)
+      ->addBool("private", false) // these values are not returned from '/api/settings/get', but can be changed
+      ->addBool("readonly", false) // these values are neither returned, nor can be changed from outside
       ->primaryKey("name");
 
     $settingsQuery = $sql->insert("Settings", array("name", "value", "private", "readonly"))
@@ -161,6 +162,14 @@ class CreateDatabase {
 
     (Settings::loadDefaults())->addRows($settingsQuery);
     $queries[] = $settingsQuery;
+
+    $queries[] = $sql->createTable("ContactRequest")
+      ->addSerial("uid")
+      ->addString("from_name", 32)
+      ->addString("from_email", 64)
+      ->addString("message", 512)
+      ->addDateTime("created_at", false, $sql->currentTimestamp())
+      ->primaryKey("uid");
 
     return $queries;
   }

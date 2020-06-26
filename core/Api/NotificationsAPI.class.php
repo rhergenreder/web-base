@@ -1,11 +1,9 @@
 <?php
 
 namespace Api {
-
   class NotificationsAPI extends Request {
 
   }
-
 }
 
 namespace Api\Notifications {
@@ -14,6 +12,9 @@ namespace Api\Notifications {
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
   use Driver\SQL\Condition\Compare;
+  use Driver\SQL\Condition\CondIn;
+  use Driver\SQL\Query\Select;
+  use Objects\User;
 
   class Create extends NotificationsAPI {
 
@@ -144,67 +145,67 @@ namespace Api\Notifications {
   class Fetch extends NotificationsAPI {
 
     private array $notifications;
+    private array $notificationids;
 
     public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array());
+      parent::__construct($user, $externalCall, array(
+        'new' => new Parameter('new', Parameter::TYPE_BOOLEAN, true, true)
+      ));
       $this->loginRequired = true;
     }
 
     private function fetchUserNotifications() {
+      $onlyNew = $this->getParam('new');
       $userId = $this->user->getId();
       $sql = $this->user->getSQL();
-      $res = $sql->select($sql->distinct("Notification.uid"), "created_at", "title", "message")
+      $query = $sql->select($sql->distinct("Notification.uid"), "created_at", "title", "message", "type")
         ->from("Notification")
         ->innerJoin("UserNotification", "UserNotification.notification_id", "Notification.uid")
         ->where(new Compare("UserNotification.user_id", $userId))
-        ->where(new Compare("UserNotification.seen", false))
-        ->orderBy("created_at")->descending()
-        ->execute();
+        ->orderBy("created_at")->descending();
 
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-
-      if ($this->success) {
-        foreach($res as $row) {
-          $id = $row["uid"];
-          if (!isset($this->notifications[$id])) {
-            $this->notifications[$id] = array(
-              "uid" => $id,
-              "title" => $row["title"],
-              "message" => $row["message"],
-              "created_at" => $row["created_at"],
-            );
-          }
-        }
+      if ($onlyNew) {
+        $query->where(new Compare("UserNotification.seen", false));
       }
 
-      return $this->success;
+      return $this->fetchNotifications($query);
     }
 
     private function fetchGroupNotifications() {
+      $onlyNew = $this->getParam('new');
       $userId = $this->user->getId();
       $sql = $this->user->getSQL();
-      $res = $sql->select($sql->distinct("Notification.uid"), "created_at", "title", "message")
+      $query = $sql->select($sql->distinct("Notification.uid"), "created_at", "title", "message", "type")
         ->from("Notification")
         ->innerJoin("GroupNotification", "GroupNotification.notification_id", "Notification.uid")
         ->innerJoin("UserGroup", "GroupNotification.group_id", "UserGroup.group_id")
         ->where(new Compare("UserGroup.user_id", $userId))
-        ->where(new Compare("GroupNotification.seen", false))
-        ->orderBy("created_at")->descending()
-        ->execute();
+        ->orderBy("created_at")->descending();
 
+      if ($onlyNew) {
+        $query->where(new Compare("GroupNotification.seen", false));
+      }
+
+      return $this->fetchNotifications($query);
+    }
+
+    private function fetchNotifications(Select $query) {
+      $sql = $this->user->getSQL();
+      $res = $query->execute();
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
         foreach($res as $row) {
           $id = $row["uid"];
-          if (!isset($this->notifications[$id])) {
+          if (!in_array($id, $this->notificationids)) {
+            $this->notificationids[] = $id;
             $this->notifications[] = array(
               "uid" => $id,
               "title" => $row["title"],
               "message" => $row["message"],
               "created_at" => $row["created_at"],
+              "type" => $row["type"]
             );
           }
         }
@@ -219,6 +220,7 @@ namespace Api\Notifications {
       }
 
       $this->notifications = array();
+      $this->notificationids = array();
       if ($this->fetchUserNotifications() && $this->fetchGroupNotifications()) {
         $this->result["notifications"] = $this->notifications;
       }
@@ -227,4 +229,41 @@ namespace Api\Notifications {
     }
   }
 
+  class Seen extends NotificationsAPI {
+
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array());
+      $this->loginRequired = true;
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $sql = $this->user->getSQL();
+      $res = $sql->update("UserNotification")
+        ->set("seen", true)
+        ->where(new Compare("user_id", $this->user->getId()))
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success) {
+        $res = $sql->update("GroupNotification")
+          ->set("seen", true)
+          ->where(new CondIn("group_id",
+            $sql->select("group_id")
+              ->from("UserGroup")
+              ->where(new Compare("user_id", $this->user->getId()))))
+          ->execute();
+
+        $this->success = ($res !== FALSE);
+        $this->lastError = $sql->getLastError();
+      }
+
+      return $this->success;
+    }
+  }
 }

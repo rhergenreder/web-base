@@ -19,6 +19,7 @@ import Footer from "./footer";
 import EditUser from "./views/edituser";
 import CreateGroup from "./views/addgroup";
 import Settings from "./views/settings";
+import PermissionSettings from "./views/permissions";
 
 class AdminDashboard extends React.Component {
 
@@ -92,6 +93,7 @@ class AdminDashboard extends React.Component {
                 let newProps = {...props, ...this.controlObj};
                 return <EditUser {...newProps} />
               }}/>
+              <Route path={"/admin/user/permissions"}><PermissionSettings {...this.controlObj}/></Route>
               <Route path={"/admin/group/add"}><CreateGroup {...this.controlObj} /></Route>
               <Route path={"/admin/logs"}><Logs {...this.controlObj} notifications={this.state.notifications} /></Route>
               <Route path={"/admin/settings"}><Settings {...this.controlObj} /></Route>

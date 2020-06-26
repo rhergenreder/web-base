@@ -144,6 +144,14 @@ export default class UserOverview extends React.Component {
                             {this.createGroupCard()}
                         </div>
                     </div>
+                    <div className={"row"}>
+                        <div className={"col-12"}>
+                            <Link to={"/admin/user/permissions"} className={"btn btn-primary"}>
+                                <Icon icon={"user-check"} className={"mr-2"}/>
+                                Edit Permissions
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </div>
             <ReactTooltip />

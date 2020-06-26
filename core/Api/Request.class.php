@@ -120,7 +120,6 @@ class Request {
       return false;
     }
 
-    // TODO: Check this!
     if($this->externalCall) {
       $apiKeyAuthorized = false;
 
@@ -136,16 +135,16 @@ class Request {
           header('HTTP 1.1 401 Unauthorized');
           return false;
         }
-      }
 
-      // CSRF Token
-      if($this->csrfTokenRequired && !$apiKeyAuthorized) {
-        // csrf token required + external call
-        // if it's not a call with API_KEY, check for csrf_token
-        if (!isset($values["csrf_token"]) || strcmp($values["csrf_token"], $this->user->getSession()->getCsrfToken()) !== 0) {
-          $this->lastError = "CSRF-Token mismatch";
-          header('HTTP 1.1 403 Forbidden');
-          return false;
+        // CSRF Token
+        if($this->csrfTokenRequired && !$apiKeyAuthorized) {
+          // csrf token required + external call
+          // if it's not a call with API_KEY, check for csrf_token
+          if (!isset($values["csrf_token"]) || strcmp($values["csrf_token"], $this->user->getSession()->getCsrfToken()) !== 0) {
+            $this->lastError = "CSRF-Token mismatch";
+            header('HTTP 1.1 403 Forbidden');
+            return false;
+          }
         }
       }
 

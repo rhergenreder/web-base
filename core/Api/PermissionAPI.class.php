@@ -18,7 +18,11 @@ namespace Api\Permission {
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
   use Api\PermissionAPI;
+  use Driver\SQL\Column\Column;
   use Driver\SQL\Condition\Compare;
+  use Driver\SQL\Condition\CondIn;
+  use Driver\SQL\Condition\CondNot;
+  use Driver\SQL\Strategy\UpdateStrategy;
   use Objects\User;
 
   class Check extends PermissionAPI {
@@ -57,6 +61,7 @@ namespace Api\Permission {
         }
 
         if (!$this->user->isLoggedIn() || empty(array_intersect($groups, array_keys($this->user->getGroups())))) {
+          header('HTTP 1.1 401 Unauthorized');
           return $this->createError("Permission denied.");
         }
       }
@@ -75,7 +80,7 @@ namespace Api\Permission {
 
     private function fetchGroups() {
       $sql = $this->user->getSQL();
-      $res = $sql->select("uid", "name")
+      $res = $sql->select("uid", "name", "color")
         ->from("Group")
         ->orderBy("uid")
         ->ascending()
@@ -89,7 +94,8 @@ namespace Api\Permission {
         foreach($res as $row) {
           $groupId = $row["uid"];
           $groupName = $row["name"];
-          $this->groups[$groupId] = $groupName;
+          $groupColor = $row["color"];
+          $this->groups[$groupId] = array("name" => $groupName, "color" => $groupColor);
         }
       }
 
@@ -110,7 +116,7 @@ namespace Api\Permission {
       }
 
       $sql = $this->user->getSQL();
-      $res = $sql->select("method", "groups")
+      $res = $sql->select("method", "groups", "description")
         ->from("ApiPermission")
         ->execute();
 
@@ -121,8 +127,13 @@ namespace Api\Permission {
         $permissions = array();
         foreach ($res as $row) {
           $method = $row["method"];
+          $description = $row["description"];
           $groups = json_decode($row["groups"]);
-          $permissions[] = array("method" => $method, "groups" => $groups);
+          $permissions[] = array(
+            "method" => $method,
+            "groups" => $groups,
+            "description" => $description
+          );
         }
         $this->result["permissions"] = $permissions;
         $this->result["groups"] = $this->groups;
@@ -149,7 +160,52 @@ namespace Api\Permission {
         return false;
       }
 
+      $permissions = $this->getParam("permissions");
+      $sql = $this->user->getSQL();
+      $methodParam = new StringType('method', 32);
+      $groupsParam = new Parameter('groups', Parameter::TYPE_ARRAY);
 
+      $updateQuery = $sql->insert("ApiPermission", array("method", "groups"))
+        ->onDuplicateKeyStrategy(new UpdateStrategy(array("method"), array( "groups" => new Column("groups") )));
+
+      $insertedMethods = array();
+
+      foreach($permissions as $permission) {
+        if (!is_array($permission)) {
+          return $this->createError("Invalid data type found in parameter: permissions, expected: object");
+        } else if(!isset($permission["method"]) || !array_key_exists("groups", $permission)) {
+          return $this->createError("Invalid object found in parameter: permissions, expected keys 'method' and 'groups'");
+        } else if (!$methodParam->parseParam($permission["method"])) {
+          $expectedType = $methodParam->getTypeName();
+          return $this->createError("Invalid data type found for attribute 'method', expected: $expectedType");
+        } else if(!$groupsParam->parseParam($permission["groups"])) {
+          $expectedType = $groupsParam->getTypeName();
+          return $this->createError("Invalid data type found for attribute 'groups', expected: $expectedType");
+        } else if(empty(trim($methodParam->value))) {
+          return $this->createError("Method cannot be empty.");
+        } else {
+          $method = $methodParam->value;
+          $groups = $groupsParam->value;
+          $updateQuery->addRow($method, $groups);
+          $insertedMethods[] = $method;
+        }
+      }
+
+      if (!empty($permissions)) {
+        $res = $updateQuery->execute();
+        $this->success = ($res !== FALSE);
+        $this->lastError = $sql->getLastError();
+      }
+
+      if ($this->success) {
+        $res = $sql->delete("ApiPermission")
+          ->where(new Compare("description", "")) // only delete non default permissions
+          ->where(new CondNot(new CondIn("method", $insertedMethods)))
+          ->execute();
+
+        $this->success = ($res !== FALSE);
+        $this->lastError = $sql->getLastError();
+      }
 
       return $this->success;
     }

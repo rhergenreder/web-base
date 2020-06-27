@@ -78,6 +78,7 @@ export default class Settings extends React.Component {
         return this.state.general.keys.includes(key)
             || this.state.mail.keys.includes(key)
             || this.state.messages.keys.includes(key)
+            || this.state.recaptcha.keys.includes(key)
             || this.hiddenKeys.includes(key);
     }
 

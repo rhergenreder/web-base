@@ -81,23 +81,27 @@ class Settings {
       ->addRow("recaptcha_private_key", $this->recaptchaPrivateKey, true, false);
   }
 
-  public function getSiteName() {
+  public function getSiteName() : string {
     return $this->siteName;
   }
 
-  public function getBaseUrl() {
+  public function getBaseUrl() : string {
     return $this->baseUrl;
   }
 
-  public function isRecaptchaEnabled() {
+  public function isRecaptchaEnabled() : bool {
     return $this->recaptchaEnabled;
   }
 
-  public function getRecaptchaSiteKey() {
+  public function getRecaptchaSiteKey() : string {
     return $this->recaptchaPublicKey;
   }
 
-  public function getRecaptchaSecretKey() {
+  public function getRecaptchaSecretKey() : string {
     return $this->recaptchaPrivateKey;
+  }
+
+  public function isRegistrationAllowed() : bool {
+    return $this->registrationAllowed;
   }
 }

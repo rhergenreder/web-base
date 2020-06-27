@@ -118,7 +118,6 @@ namespace Api\User {
 
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
-  use Api\SendMail;
   use Api\UserAPI;
   use Api\VerifyCaptcha;
   use DateTime;
@@ -137,7 +136,6 @@ namespace Api\User {
       ));
 
       $this->loginRequired = true;
-      $this->requiredGroup = array(USER_GROUP_ADMIN);
     }
 
     public function execute($values = array()) {
@@ -179,15 +177,10 @@ namespace Api\User {
     private int $userCount;
 
     public function __construct($user, $externalCall = false) {
-
       parent::__construct($user, $externalCall, array(
         'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
         'count' => new Parameter('count', Parameter::TYPE_INT, true, 20)
       ));
-
-      $this->loginRequired = true;
-      $this->requiredGroup = array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN);
-      $this->userCount = 0;
     }
 
     private function getUserCount() {
@@ -297,13 +290,9 @@ namespace Api\User {
   class Get extends UserAPI {
 
     public function __construct($user, $externalCall = false) {
-
       parent::__construct($user, $externalCall, array(
         'id' => new Parameter('id', Parameter::TYPE_INT)
       ));
-
-      $this->loginRequired = true;
-      $this->requiredGroup = array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN);
     }
 
     public function execute($values = array()) {
@@ -373,7 +362,6 @@ namespace Api\User {
       ));
 
       $this->loginRequired = true;
-      $this->requiredGroup = array(USER_GROUP_ADMIN);
     }
 
     public function execute($values = array()) {
@@ -418,7 +406,7 @@ namespace Api\User {
             $body = str_replace("{{{$key}}}", $value, $body);
           }
 
-          $request = new SendMail($this->user);
+          $request = new \Api\Mail\Send($this->user);
           $this->success = $request->execute(array(
             "to" => $email,
             "subject" => "[$siteName] Account Invitation",
@@ -560,18 +548,6 @@ namespace Api\User {
       return $this->success;
     }
 
-    private function checkSettings() {
-      $req = new \Api\Settings\Get($this->user);
-      $this->success = $req->execute(array("key" => "user_registration_enabled"));
-      $this->lastError = $req->getLastError();
-
-      if ($this->success) {
-        return ($req->getResult()["user_registration_enabled"] ?? "0") === "1";
-      }
-
-      return $this->success;
-    }
-
     public function execute($values = array()) {
       if (!parent::execute($values)) {
         return false;
@@ -581,11 +557,7 @@ namespace Api\User {
         return $this->createError(L('You are already logged in'));
       }
 
-      $registrationAllowed = $this->checkSettings();
-      if (!$this->success) {
-        return false;
-      }
-
+      $registrationAllowed = $this->user->getConfiguration()->getSettings()->isRegistrationAllowed();
       if(!$registrationAllowed) {
         return $this->createError("User Registration is not enabled.");
       }
@@ -640,7 +612,7 @@ namespace Api\User {
           $body = str_replace("{{{$key}}}", $value, $body);
         }
 
-        $request = new SendMail($this->user);
+        $request = new \Api\Mail\Send($this->user);
         $this->success = $request->execute(array(
             "to" => $email,
             "subject" => "[$siteName] E-Mail Confirmation",
@@ -696,7 +668,6 @@ namespace Api\User {
         'groups' => new Parameter('groups', Parameter::TYPE_ARRAY, true, NULL),
       ));
 
-      $this->requiredGroup = array(USER_GROUP_ADMIN);
       $this->loginRequired = true;
     }
 
@@ -786,7 +757,6 @@ namespace Api\User {
         'id' => new Parameter('id', Parameter::TYPE_INT)
       ));
 
-      $this->requiredGroup = array(USER_GROUP_ADMIN);
       $this->loginRequired = true;
     }
 

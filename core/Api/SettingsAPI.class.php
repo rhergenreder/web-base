@@ -25,11 +25,8 @@ namespace Api\Settings {
 
     public function __construct(User $user, bool $externalCall = false) {
       parent::__construct($user, $externalCall, array(
-        'key' => new StringType('key', 32, true, NULL)
+        'key' => new StringType('key', -1, true, NULL)
       ));
-
-      $this->requiredGroup = array(USER_GROUP_ADMIN);
-      $this->loginRequired = true;
     }
 
     public function execute($values = array()) {
@@ -73,9 +70,6 @@ namespace Api\Settings {
       parent::__construct($user, $externalCall, array(
         'settings' => new Parameter('settings', Parameter::TYPE_ARRAY)
       ));
-
-      $this->requiredGroup = array(USER_GROUP_ADMIN);
-      $this->loginRequired = true;
     }
 
     public function execute($values = array()) {

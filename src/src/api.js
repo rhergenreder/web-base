@@ -104,6 +104,14 @@ export default class API {
     }
 
     async sendTestMail(receiver) {
-        return this.apiCall("sendTestMail", { receiver: receiver });
+        return this.apiCall("mail/test", { receiver: receiver });
+    }
+
+    async fetchPermissions() {
+        return this.apiCall("permission/fetch");
+    }
+
+    async savePermissions(permissions) {
+        return this.apiCall("permission/save", { permissions: permissions });
     }
 };

@@ -7,7 +7,7 @@ class UpdateStrategy extends Strategy {
   private array $values;
   private array $conflictingColumns;
 
-  public function __construct($conflictingColumns, $values) {
+  public function __construct(array $conflictingColumns, array $values) {
     $this->conflictingColumns = $conflictingColumns;
     $this->values = $values;
   }

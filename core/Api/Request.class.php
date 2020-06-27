@@ -16,7 +16,6 @@ class Request {
   protected bool $variableParamCount;
   protected bool $isDisabled;
   protected bool $apiKeyAllowed;
-  protected array $requiredGroup;
   protected bool $csrfTokenRequired;
 
   private array $aDefaultParams;
@@ -36,7 +35,6 @@ class Request {
     $this->variableParamCount = false;
     $this->apiKeyAllowed = true;
     $this->allowedMethods = array("GET", "POST");
-    $this->requiredGroup = array();
     $this->lastError = "";
     $this->csrfTokenRequired = true;
   }
@@ -54,15 +52,13 @@ class Request {
 
       $isEmpty = (is_string($value) || is_array($value)) && empty($value);
       if(!$param->optional && (is_null($value) || $isEmpty)) {
-        $this->lastError = 'Missing parameter: ' . $name;
-        return false;
+        return $this->createError("Missing parameter: $name");
       }
 
       if(!is_null($value) && !$isEmpty) {
         if(!$param->parseParam($value)) {
           $value = print_r($value, true);
-          $this->lastError = "Invalid Type for parameter: $name '$value' (Required: " . $param->getTypeName() . ")";
-          return false;
+          return $this->createError("Invalid Type for parameter: $name '$value' (Required: " . $param->getTypeName() . ")");
         }
       }
     }
@@ -135,26 +131,25 @@ class Request {
           header('HTTP 1.1 401 Unauthorized');
           return false;
         }
+      }
 
-        // CSRF Token
-        if($this->csrfTokenRequired && !$apiKeyAuthorized) {
-          // csrf token required + external call
-          // if it's not a call with API_KEY, check for csrf_token
-          if (!isset($values["csrf_token"]) || strcmp($values["csrf_token"], $this->user->getSession()->getCsrfToken()) !== 0) {
-            $this->lastError = "CSRF-Token mismatch";
-            header('HTTP 1.1 403 Forbidden');
-            return false;
-          }
+      // CSRF Token
+      if($this->csrfTokenRequired && $this->user->isLoggedIn()) {
+        // csrf token required + external call
+        // if it's not a call with API_KEY, check for csrf_token
+        if (!isset($values["csrf_token"]) || strcmp($values["csrf_token"], $this->user->getSession()->getCsrfToken()) !== 0) {
+          $this->lastError = "CSRF-Token mismatch";
+          header('HTTP 1.1 403 Forbidden');
+          return false;
         }
       }
 
       // Check for permission
-      if (!($this instanceof PermissionAPI)) {
+      if (!($this instanceof \Api\Permission\Save)) {
         $req = new \Api\Permission\Check($this->user);
         $this->success = $req->execute(array("method" => $this->getMethod()));
         $this->lastError = $req->getLastError();
         if (!$this->success) {
-          header('HTTP 1.1 401 Unauthorized');
           return false;
         }
       }

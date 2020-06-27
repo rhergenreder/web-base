@@ -209,8 +209,26 @@ export default class Overview extends React.Component {
                                         <li><b>Load Average</b>: { loadAvg }</li>
                                         <li><b>Database</b>: { this.state.server["database"]  }</li>
                                         <li><b>Mail</b>: { this.state.server["mail"] === true
-                                            ?  <span>OK<Icon icon={""} className={"ml-2"}/></span>
-                                            :  <Link to={"/admin/settings"}>Not configured</Link>}</li>
+                                            ? <span>
+                                                    OK
+                                                    <Icon icon={"check-circle"} className={"ml-2 text-success"}/>
+                                               </span>
+                                            :  <span>
+                                                    <Link to={"/admin/settings"}>Not configured</Link>
+                                                    <Icon icon={"times-circle"} className={"ml-2 text-danger"}/>
+                                               </span>}
+                                        </li>
+                                        <li>
+                                            <b>Google reCaptcha</b>: { this.state.server["reCaptcha"] === true
+                                            ? <span>
+                                                    OK
+                                                    <Icon icon={"check-circle"} className={"ml-2 text-success"}/>
+                                               </span>
+                                            :  <span>
+                                                    <Link to={"/admin/settings"}>Not configured</Link>
+                                                    <Icon icon={"times-circle"} className={"ml-2 text-danger"}/>
+                                               </span>}
+                                         </li>
                                     </ul>
                                 </div>
                             </Collapse>

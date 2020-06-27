@@ -32,8 +32,6 @@ namespace Api\Routes {
 
   public function __construct($user, $externalCall = false) {
     parent::__construct($user, $externalCall, array());
-    $this->loginRequired = true;
-    $this->requiredGroup = array(USER_GROUP_ADMIN);
   }
 
   public function execute($values = array()) {
@@ -133,9 +131,6 @@ namespace Api\Routes {
       parent::__construct($user, $externalCall, array(
         'routes' => new Parameter('routes',Parameter::TYPE_ARRAY, false)
       ));
-
-      $this->loginRequired = true;
-      $this->requiredGroup = array(USER_GROUP_ADMIN);
     }
 
     public function execute($values = array()) {

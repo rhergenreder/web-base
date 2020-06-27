@@ -37,8 +37,6 @@ namespace Api\Groups {
         'count' => new Parameter('count', Parameter::TYPE_INT, true, 20)
       ));
 
-      $this->loginRequired = true;
-      $this->requiredGroup = array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN);
       $this->groupCount = 0;
     }
 
@@ -116,9 +114,6 @@ namespace Api\Groups {
         'name' => new StringType('name', 32),
         'color' => new StringType('color', 10),
       ));
-
-      $this->loginRequired = true;
-      $this->requiredGroup = array(USER_GROUP_ADMIN);
     }
 
     public function execute($values = array()) {
@@ -165,9 +160,6 @@ namespace Api\Groups {
       parent::__construct($user, $externalCall, array(
         'uid' => new Parameter('uid', Parameter::TYPE_INT)
       ));
-
-      $this->loginRequired = true;
-      $this->requiredGroup = array(USER_GROUP_ADMIN);
     }
 
     public function execute($values = array()) {

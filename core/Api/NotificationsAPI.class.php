@@ -26,7 +26,6 @@ namespace Api\Notifications {
         'message' =>  new StringType('message', 256),
       ));
       $this->isPublic = false;
-      $this->requiredGroup = array(USER_GROUP_ADMIN);
     }
 
     private function checkUser($userId) {

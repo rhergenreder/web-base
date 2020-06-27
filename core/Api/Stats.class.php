@@ -7,11 +7,11 @@ use Driver\SQL\Condition\CondBool;
 
 class Stats extends Request {
 
+  private bool $mailConfigured;
+  private bool $recaptchaConfigured;
+
   public function __construct($user, $externalCall = false) {
     parent::__construct($user, $externalCall, array());
-
-    $this->loginRequired = true;
-    $this->requiredGroup = array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN);
   }
 
   private function getUserCount() {
@@ -67,12 +67,15 @@ class Stats extends Request {
     return $visitors;
   }
 
-  private function isMailConfigured() {
+  private function checkSettings() {
     $req = new \Api\Settings\Get($this->user);
-    $this->success = $req->execute(array("key" => "^mail_enabled$"));
+    $this->success = $req->execute(array("key" => "^(mail_enabled|recaptcha_enabled)$"));
+    $this->lastError = $req->getLastError();
 
     if ($this->success) {
-      return ($req->getResult()["mail_enabled"] ?? "0") === "1";
+      $settings = $req->getResult()["settings"];
+      $this->mailConfigured = ($settings["mail_enabled"] ?? "0") === "1";
+      $this->recaptchaConfigured = ($settings["recaptcha_enabled"] ?? "0") === "1";
     }
 
     return $this->success;
@@ -95,8 +98,7 @@ class Stats extends Request {
       $loadAvg = sys_getloadavg();
     }
 
-    $mailConfigured = $this->isMailConfigured();
-    if (!$this->success) {
+    if (!$this->checkSettings()) {
       return false;
     }
 
@@ -109,7 +111,8 @@ class Stats extends Request {
       "memory_usage" => memory_get_usage(),
       "load_avg" => $loadAvg,
       "database" => $this->user->getSQL()->getStatus(),
-      "mail" => $mailConfigured
+      "mail" => $this->mailConfigured,
+      "reCaptcha" => $this->recaptchaConfigured
     );
 
     return $this->success;

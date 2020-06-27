@@ -237,7 +237,7 @@ class MySQL extends SQL {
 
     $notNull = $column->notNull() ? " NOT NULL" : "";
     if (!is_null($defaultValue) || !$column->notNull()) {
-      $defaultValue = " DEFAULT " . $this->getValueDefinition($column->getDefaultValue());
+      $defaultValue = " DEFAULT " . $this->getValueDefinition($defaultValue);
     } else {
       $defaultValue = "";
     }

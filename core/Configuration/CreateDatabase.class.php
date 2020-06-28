@@ -224,7 +224,7 @@ class CreateDatabase {
 
   private static function MessageResetPassword() : string {
     return "Hello {{username}},<br>" .
-      "you requested a password reset on {{sitename}}. Please click on the following link to " .
+      "you requested a password reset on {{site_name}}. Please click on the following link to " .
       "choose a new password. If this request was not intended, you can simply ignore the email. The Link is valid for one hour:<br><br>" .
       "<a href=\"{{link}}\">{{link}}</a><br><br>" .
       "Best Regards<br>" .

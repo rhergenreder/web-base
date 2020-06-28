@@ -666,7 +666,7 @@ export default class Settings extends React.Component {
             let categoryUpdated = {...this.state[category], isSaving: false};
 
             if (!res.success) {
-                alerts.push({title: "Error fetching settings", message: res.msg});
+                alerts.push({title: "Error saving settings", message: res.msg});
             } else {
                 alerts.push({title: "Success", message: "Settings were successfully saved.", type: "success"});
                 if (category === "mail") categoryUpdated.unsavedMailSettings = false;

@@ -421,6 +421,12 @@ export default class Settings extends React.Component {
                            onChange={this.onChangeValue.bind(this)}/>
                     <label className={"form-check-label"} htmlFor={"recaptcha_enabled"}>
                         Enable Google's reCaptcha
+                        <span className={"ml-2"}>
+                            (<a href={"https://www.google.com/recaptcha/intro/v3.html"} target={"_blank"}>
+                                More Info
+                                <sup><small><Icon icon={"external-link-alt"} className={"ml-1"}/></small></sup>
+                            </a>)
+                        </span>
                     </label>
                 </div>
             </div>

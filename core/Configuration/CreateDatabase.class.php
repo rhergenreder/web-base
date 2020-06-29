@@ -32,6 +32,7 @@ class CreateDatabase {
       ->addString("email", 64, true)
       ->addString("name", 32)
       ->addString("password", 128)
+      ->addBool("confirmed", false)
       ->addInt("language_id", true, 1)
       ->addDateTime("registered_at", false, $sql->currentTimestamp())
       ->primaryKey("uid")
@@ -53,20 +54,13 @@ class CreateDatabase {
       ->primaryKey("uid", "user_id")
       ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
 
-    $queries[] = $sql->createTable("UserInvitation")
-      ->addString("username",32)
-      ->addString("email",32)
-      ->addString("token",36)
-      ->addDateTime("valid_until");
-
     $queries[] = $sql->createTable("UserToken")
       ->addInt("user_id")
       ->addString("token", 36)
-      ->addEnum("token_type", array("password_reset", "email_confirm"))
+      ->addEnum("token_type", array("password_reset", "email_confirm", "invite"))
       ->addDateTime("valid_until")
       ->addBool("used", false)
       ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
-
     $queries[] = $sql->createTable("Group")
       ->addSerial("uid")
       ->addString("name", 32)
@@ -216,7 +210,7 @@ class CreateDatabase {
     return "Hello {{username}},<br>" .
       "You were invited to create an account on {{site_name}}. Please click on the following link to " .
       "confirm your email address and complete your registration by choosing a new password. " .
-      "If you want to decline the invitation, you can simply ignore this email. The link is valid for the next 48 hours:<br><br>" .
+      "If you want to decline the invitation, you can simply ignore this email. The link is valid for the next 7 days:<br><br>" .
       "<a href=\"{{link}}\">{{link}}</a><br><br>" .
       "Best Regards<br>" .
       "{{site_name}} Administration";

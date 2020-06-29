@@ -42,11 +42,29 @@ namespace Api {
       return $this->success;
     }
 
-    protected function insertUser($username, $email, $password) {
+    protected function checkPasswordRequirements($password, $confirmPassword) {
+      if(strcmp($password, $confirmPassword) !== 0) {
+        return $this->createError("The given passwords do not match");
+      } else if(strlen($password) < 6) {
+        return $this->createError("The password should be at least 6 characters long");
+      }
+
+      return true;
+    }
+
+    protected function checkRequirements($username, $password, $confirmPassword) {
+      if(strlen($username) < 5 || strlen($username) > 32) {
+        return $this->createError("The username should be between 5 and 32 characters long");
+      }
+
+      return $this->checkPasswordRequirements($password, $confirmPassword);
+    }
+
+    protected function insertUser($username, $email, $password, $confirmed) {
       $sql = $this->user->getSQL();
       $hash = $this->hashPassword($password);
-      $res = $sql->insert("User", array("name", "password", "email"))
-        ->addRow($username, $hash, $email)
+      $res = $sql->insert("User", array("name", "password", "email", "confirmed"))
+        ->addRow($username, $hash, $email, $confirmed)
         ->returning("uid")
         ->execute();
 
@@ -62,25 +80,6 @@ namespace Api {
 
     protected function hashPassword($password) {
       return password_hash($password, PASSWORD_BCRYPT);
-    }
-
-    protected function checkToken($token) {
-      $sql = $this->user->getSQL();
-      $res = $sql->select("UserToken.token_type", "User.name", "User.email")
-        ->from("UserToken")
-        ->innerJoin("User", "UserToken.user_id", "User.uid")
-        ->where(new Compare("UserToken.token", $token))
-        ->where(new Compare("UserToken.valid_until", $sql->now(), ">"))
-        ->where(new Compare("UserToken.used", 0))
-        ->execute();
-      $this->lastError = $sql->getLastError();
-      $this->success = ($res !== FALSE);
-
-      if ($this->success && !empty($res)) {
-        return $res[0];
-      }
-
-      return array();
     }
 
     protected function getUser($id) {
@@ -101,11 +100,17 @@ namespace Api {
 
     protected function getMessageTemplate($key) {
       $req = new \Api\Settings\Get($this->user);
-      $this->success = $req->execute(array("key" => $key));
+      $this->success = $req->execute(array("key" => "^($key|mail_enabled)$"));
       $this->lastError = $req->getLastError();
 
       if ($this->success) {
-        return $req->getResult()["settings"][$key] ?? "{{link}}";
+        $settings = $req->getResult()["settings"];
+        $isEnabled = ($settings["mail_enabled"] ?? "0") === "1";
+        if (!$isEnabled) {
+          return $this->createError("Mail is not enabled.");
+        }
+
+        return $settings[$key] ?? "{{link}}";
       }
 
       return $this->success;
@@ -122,6 +127,7 @@ namespace Api\User {
   use Api\VerifyCaptcha;
   use DateTime;
   use Driver\SQL\Condition\Compare;
+  use Driver\SQL\Condition\CondBool;
   use Driver\SQL\Condition\CondIn;
   use Objects\User;
 
@@ -148,12 +154,8 @@ namespace Api\User {
       $password = $this->getParam('password');
       $confirmPassword = $this->getParam('confirmPassword');
 
-      if(strlen($username) < 5 || strlen($username) > 32) {
-        return $this->createError("The username should be between 5 and 32 characters long");
-      } else if(strcmp($password, $confirmPassword) !== 0) {
-        return $this->createError("The given passwords do not match");
-      } else if(strlen($password) < 6) {
-        return $this->createError("The password should be at least 6 characters long");
+      if (!$this->checkRequirements($username, $password, $confirmPassword)) {
+        return false;
       }
 
       if (!$this->userExists($username, $email)) {
@@ -163,7 +165,7 @@ namespace Api\User {
       // prevent duplicate keys
       $email = (!is_null($email) && empty($email)) ? null : $email;
 
-      $id = $this->insertUser($username, $email, $password);
+      $id = $this->insertUser($username, $email, $password, true);
       if ($this->success) {
         $this->result["userId"] = $id;
       }
@@ -375,12 +377,23 @@ namespace Api\User {
         return false;
       }
 
-      //add to DB
+      $messageBody = $this->getMessageTemplate("message_accept_invite");
+      if ($messageBody === false) {
+        return false;
+      }
+
+      // Create user
+      $id = $this->insertUser($username, $email, "", false);
+      if (!$this->success) {
+        return false;
+      }
+
+      // Create Token
       $token = generateRandomString(36);
-      $valid_until = (new DateTime())->modify("+48 hour");
+      $valid_until = (new DateTime())->modify("+7 day");
       $sql = $this->user->getSQL();
-      $res = $sql->insert("UserInvitation", array("username", "email", "token", "valid_until"))
-        ->addRow($username, $email, $token, $valid_until)
+      $res = $sql->insert("UserToken", array("user_id", "token", "token_type", "valid_until"))
+        ->addRow($id, $token, "invite", $valid_until)
         ->execute();
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
@@ -391,37 +404,156 @@ namespace Api\User {
         $settings = $this->user->getConfiguration()->getSettings();
         $baseUrl = htmlspecialchars($settings->getBaseUrl());
         $siteName = htmlspecialchars($settings->getSiteName());
-        $body = $this->getMessageTemplate("message_accept_invite");
 
-        if ($this->success) {
+        $replacements = array(
+          "link" => "$baseUrl/acceptInvite?token=$token",
+          "site_name" => $siteName,
+          "base_url" => $baseUrl,
+          "username" => htmlspecialchars($username)
+        );
 
-          $replacements = array(
-            "link" => "$baseUrl/acceptInvite?token=$token",
-            "site_name" => $siteName,
-            "base_url" => $baseUrl,
-            "username" => htmlspecialchars($username)
-          );
-
-          foreach($replacements as $key => $value) {
-            $body = str_replace("{{{$key}}}", $value, $body);
-          }
-
-          $request = new \Api\Mail\Send($this->user);
-          $this->success = $request->execute(array(
-            "to" => $email,
-            "subject" => "[$siteName] Account Invitation",
-            "body" => $body
-          ));
-
-          $this->lastError = $request->getLastError();
+        foreach($replacements as $key => $value) {
+          $messageBody = str_replace("{{{$key}}}", $value, $messageBody);
         }
+
+        $request = new \Api\Mail\Send($this->user);
+        $this->success = $request->execute(array(
+          "to" => $email,
+          "subject" => "[$siteName] Account Invitation",
+          "body" => $messageBody
+        ));
+
+        $this->lastError = $request->getLastError();
 
         if (!$this->success) {
           $this->lastError = "The invitation was created but the confirmation email could not be sent. " .
             "Please contact the server administration. Reason: " . $this->lastError;
         }
       }
+
       return $this->success;
+    }
+  }
+
+  class AcceptInvite extends UserAPI {
+    public function __construct($user, $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        'token' => new StringType('token', 36),
+        'password' => new StringType('password'),
+        'confirmPassword' => new StringType('confirmPassword'),
+      ));
+    }
+
+    private function updateUser($uid, $password) {
+      $sql = $this->user->getSQL();
+      $res = $sql->update("User")
+        ->set("password", $this->hashPassword($password))
+        ->set("confirmed", true)
+        ->where(new Compare("uid", $uid))
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      if ($this->user->isLoggedIn()) {
+        return $this->createError("You are already logged in.");
+      }
+
+      $token = $this->getParam("token");
+      $password = $this->getParam("password");
+      $confirmPassword = $this->getParam("confirmPassword");
+
+      $req = new CheckToken($this->user);
+      $this->success = $req->execute(array("token" => $token));
+      $this->lastError = $req->getLastError();
+
+      if (!$this->success) {
+        return false;
+      }
+
+      $result = $req->getResult();
+      if (strcasecmp($result["token"]["type"], "invite") !== 0) {
+        return $this->createError("Invalid token type");
+      } else if($result["user"]["confirmed"]) {
+        return $this->createError("Your email address is already confirmed.");
+      } else if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
+        return false;
+      } else if (!$this->updateUser($result["user"]["uid"], $password)) {
+        return false;
+      } else {
+
+        // Invalidate token
+        $this->user->getSQL()
+          ->update("UserToken")
+          ->set("used", true)
+          ->where(new Compare("token", $token))
+          ->execute();
+
+        return true;
+      }
+    }
+  }
+
+  class ConfirmEmail extends UserAPI {
+
+    public function __construct($user, $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        'token' => new StringType('token', 36)
+      ));
+    }
+
+    private function updateUser($uid) {
+      $sql = $this->user->getSQL();
+      $res = $sql->update("User")
+        ->set("confirmed", true)
+        ->where(new Compare("uid", $uid))
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      if ($this->user->isLoggedIn()) {
+        return $this->createError("You are already logged in.");
+      }
+
+      $token = $this->getParam("token");
+
+      $req = new CheckToken($this->user);
+      $this->success = $req->execute(array("token" => $token));
+      $this->lastError = $req->getLastError();
+
+      $result = $req->getResult();
+      if (strcasecmp($result["token"]["type"], "invite") !== 0) {
+        return $this->createError("Invalid token type");
+      } else if($result["user"]["confirmed"]) {
+        return $this->createError("Your email address is already confirmed.");
+      } else if (!$this->updateUser($result["user"]["uid"])) {
+        return false;
+      } else {
+
+        // Invalidate token
+        $this->user->getSQL()
+          ->update("UserToken")
+          ->set("used", true)
+          ->where(new Compare("token", $token))
+          ->execute();
+
+        return true;
+      }
     }
   }
 
@@ -463,7 +595,7 @@ namespace Api\User {
       $stayLoggedIn = $this->getParam('stayLoggedIn');
 
       $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid", "User.password")
+      $res = $sql->select("User.uid", "User.password", "User.confirmed")
         ->from("User")
         ->where(new Compare("User.name", $username))
         ->execute();
@@ -477,8 +609,11 @@ namespace Api\User {
         } else {
           $row = $res[0];
           $uid = $row['uid'];
+          $confirmed = $sql->parseBool($row["confirmed"]);
           if (password_verify($password, $row['password'])) {
-            if (!($this->success = $this->user->createSession($uid, $stayLoggedIn))) {
+            if (!$confirmed) {
+              return $this->createError("Your email address has not been confirmed yet.");
+            } else if (!($this->success = $this->user->createSession($uid, $stayLoggedIn))) {
               return $this->createError("Error creating Session: " . $sql->getLastError());
             } else {
               $this->result["loggedIn"] = true;
@@ -573,17 +708,22 @@ namespace Api\User {
 
       $username = $this->getParam("username");
       $email = $this->getParam('email');
+      $password = $this->getParam("password");
+      $confirmPassword = $this->getParam("confirmPassword");
       if (!$this->userExists($username, $email)) {
         return false;
       }
 
-      $password = $this->getParam("password");
-      $confirmPassword = $this->getParam("confirmPassword");
-      if (strcmp($password, $confirmPassword) !== 0) {
-        return $this->createError("The given passwords don't match");
+      if(!$this->checkRequirements($username, $password, $confirmPassword)) {
+        return false;
       }
 
-      $id = $this->insertUser($username, $email, $password);
+      $messageBody = $this->getMessageTemplate("message_confirm_email");
+      if ($messageBody === false) {
+        return false;
+      }
+
+      $id = $this->insertUser($username, $email, $password, false);
       if ($id === FALSE) {
         return false;
       }
@@ -597,7 +737,6 @@ namespace Api\User {
       $settings = $this->user->getConfiguration()->getSettings();
       $baseUrl = htmlspecialchars($settings->getBaseUrl());
       $siteName = htmlspecialchars($settings->getSiteName());
-      $body = $this->getMessageTemplate("message_confirm_email");
 
       if ($this->success) {
 
@@ -609,14 +748,14 @@ namespace Api\User {
         );
 
         foreach($replacements as $key => $value) {
-          $body = str_replace("{{{$key}}}", $value, $body);
+          $messageBody = str_replace("{{{$key}}}", $value, $messageBody);
         }
 
         $request = new \Api\Mail\Send($this->user);
         $this->success = $request->execute(array(
             "to" => $email,
             "subject" => "[$siteName] E-Mail Confirmation",
-            "body" => $body
+            "body" => $messageBody
         ));
         $this->lastError = $request->getLastError();
       }
@@ -631,10 +770,30 @@ namespace Api\User {
   }
 
   class CheckToken extends UserAPI {
+
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall, array(
         'token' => new StringType('token', 36),
       ));
+    }
+
+    private function checkToken($token) {
+      $sql = $this->user->getSQL();
+      $res = $sql->select("UserToken.token_type", "User.uid", "User.name", "User.email", "User.confirmed")
+        ->from("UserToken")
+        ->innerJoin("User", "UserToken.user_id", "User.uid")
+        ->where(new Compare("UserToken.token", $token))
+        ->where(new Compare("UserToken.valid_until", $sql->now(), ">"))
+        ->where(new Compare("UserToken.used", 0))
+        ->execute();
+      $this->lastError = $sql->getLastError();
+      $this->success = ($res !== FALSE);
+
+      if ($this->success && !empty($res)) {
+        return $res[0];
+      }
+
+      return array();
     }
 
     public function execute($values = array()) {
@@ -647,8 +806,16 @@ namespace Api\User {
 
       if ($this->success) {
         if (!empty($tokenEntry)) {
-          $this->result["token"] = array("type" => $tokenEntry["token_type"]);
-          $this->result["user"] = array("name" => $tokenEntry["name"], "email" => $tokenEntry["email"]);
+          $this->result["token"] = array(
+            "type" => $tokenEntry["token_type"]
+          );
+
+          $this->result["user"] = array(
+            "name" => $tokenEntry["name"],
+            "email" => $tokenEntry["email"],
+            "confirmed" => $this->user->getSQL()->parseBool($tokenEntry["confirmed"]),
+            "uid" => $tokenEntry["uid"]
+          );
         } else {
           return $this->createError("This token does not exist or is no longer valid");
         }
@@ -783,6 +950,177 @@ namespace Api\User {
       }
 
       return $this->success;
+    }
+  }
+
+  class RequestResetPassword extends UserAPI {
+    public function __construct(User $user, $externalCall = false) {
+      $parameters = array(
+        'email' => new Parameter('email', Parameter::TYPE_EMAIL),
+      );
+
+      $settings = $user->getConfiguration()->getSettings();
+      if ($settings->isRecaptchaEnabled()) {
+        $parameters["captcha"] = new StringType("captcha");
+      }
+
+      parent::__construct($user, $externalCall, $parameters);
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      if ($this->user->isLoggedIn()) {
+        return $this->createError("You already logged in.");
+      }
+
+      $settings = $this->user->getConfiguration()->getSettings();
+      if ($settings->isRecaptchaEnabled()) {
+        $captcha = $this->getParam("captcha");
+        $req = new VerifyCaptcha($this->user);
+        if (!$req->execute(array("captcha" => $captcha, "action" => "resetPassword"))) {
+          return $this->createError($req->getLastError());
+        }
+      }
+
+      $messageBody = $this->getMessageTemplate("message_reset_password");
+      if ($messageBody === false) {
+        return false;
+      }
+
+      $email = $this->getParam("email");
+      $user = $this->findUser($email);
+      if ($user === false) {
+        return false;
+      }
+
+      if ($user !== null) {
+        $token = generateRandomString(36);
+        if (!$this->insertToken($user["uid"], $token)) {
+          return false;
+        }
+
+        $baseUrl = htmlspecialchars($settings->getBaseUrl());
+        $siteName = htmlspecialchars($settings->getSiteName());
+
+        $replacements = array(
+          "link" => "$baseUrl/confirmEmail?token=$token",
+          "site_name" => $siteName,
+          "base_url" => $baseUrl,
+          "username" => htmlspecialchars($user["name"])
+        );
+
+        foreach($replacements as $key => $value) {
+          $messageBody = str_replace("{{{$key}}}", $value, $messageBody);
+        }
+
+        $request = new \Api\Mail\Send($this->user);
+        $this->success = $request->execute(array(
+          "to" => $email,
+          "subject" => "[$siteName] Password Reset",
+          "body" => $messageBody
+        ));
+        $this->lastError = $request->getLastError();
+      }
+
+      return $this->success;
+    }
+
+    private function findUser($email) {
+      $sql = $this->user->getSQL();
+      $res = $sql->select("User.uid", "User.name")
+        ->where(new Compare("User.email", $email))
+        ->where(new CondBool("User.confirmed"))
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+      if ($this->success) {
+        if (empty($res)) {
+          return null;
+        } else {
+          return $res[0];
+        }
+      }
+
+      return $this->success;
+    }
+
+    private function insertToken(int $id, string $token) {
+      $validUntil = (new DateTime())->modify("+1 hour");
+      $sql = $this->user->getSQL();
+      $res = $sql->insert("UserToken", array("user_id", "token", "token_type", "valid_until"))
+        ->addRow($id, $token, "password_reset", $validUntil)
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
+  }
+
+  class ResetPassword extends UserAPI {
+
+    public function __construct(User $user, $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        'token' => new StringType('token', 36),
+        'password' => new StringType('password'),
+        'confirmPassword' => new StringType('confirmPassword'),
+      ));
+    }
+
+    private function updateUser($uid, $password) {
+      $sql = $this->user->getSQL();
+      $res = $sql->update("User")
+        ->set("password", $this->hashPassword($password))
+        ->where(new Compare("uid", $uid))
+        ->execute();
+
+      $this->success = ($res !== FALSE);
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      if ($this->user->isLoggedIn()) {
+        return $this->createError("You are already logged in.");
+      }
+
+      $token = $this->getParam("token");
+      $password = $this->getParam("password");
+      $confirmPassword = $this->getParam("confirmPassword");
+
+      $req = new CheckToken($this->user);
+      $this->success = $req->execute(array("token" => $token));
+      $this->lastError = $req->getLastError();
+      if (!$this->success) {
+        return false;
+      }
+
+      $result = $req->getResult();
+      if (strcasecmp($result["token"]["type"], "reset_password") !== 0) {
+        return $this->createError("Invalid token type");
+      } else if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
+        return false;
+      } else if (!$this->updateUser($result["user"]["uid"], $password)) {
+        return false;
+      } else {
+
+        // Invalidate token
+        $this->user->getSQL()
+          ->update("UserToken")
+          ->set("used", true)
+          ->where(new Compare("token", $token))
+          ->execute();
+
+        return true;
+      }
     }
   }
 }

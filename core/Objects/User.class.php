@@ -219,7 +219,7 @@ class User extends ApiObject {
     if($this->loggedIn)
       return true;
 
-    $res = $this->sql->select("ApiKey.user_id as uid", "User.name", "User.email",
+    $res = $this->sql->select("ApiKey.user_id as uid", "User.name", "User.email", "User.confirmed",
       "Language.uid as langId", "Language.code as langCode", "Language.name as langName")
       ->from("ApiKey")
       ->innerJoin("User", "ApiKey.user_id", "User.uid")
@@ -235,6 +235,10 @@ class User extends ApiObject {
         $success = false;
       } else {
         $row = $res[0];
+        if (!$this->sql->parseBool($row["confirmed"])) {
+          return false;
+        }
+
         $this->uid = $row['uid'];
         $this->username = $row['name'];
         $this->email = $row['email'];

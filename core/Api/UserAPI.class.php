@@ -115,6 +115,14 @@ namespace Api {
 
       return $this->success;
     }
+
+    protected function invalidateToken($token) {
+      $this->user->getSQL()
+        ->update("UserToken")
+        ->set("used", true)
+        ->where(new Compare("token", $token))
+        ->execute();
+    }
   }
 
 }
@@ -544,14 +552,7 @@ namespace Api\User {
       } else if (!$this->updateUser($result["user"]["uid"])) {
         return false;
       } else {
-
-        // Invalidate token
-        $this->user->getSQL()
-          ->update("UserToken")
-          ->set("used", true)
-          ->where(new Compare("token", $token))
-          ->execute();
-
+        $this->invalidateToken($token);
         return true;
       }
     }
@@ -1111,14 +1112,7 @@ namespace Api\User {
       } else if (!$this->updateUser($result["user"]["uid"], $password)) {
         return false;
       } else {
-
-        // Invalidate token
-        $this->user->getSQL()
-          ->update("UserToken")
-          ->set("used", true)
-          ->where(new Compare("token", $token))
-          ->execute();
-
+        $this->invalidateToken($token);
         return true;
       }
     }

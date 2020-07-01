@@ -13,9 +13,9 @@ use \Driver\SQL\Column\DateTimeColumn;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\JsonColumn;
 
-use \Driver\SQL\Strategy\CascadeStrategy;
-use \Driver\SQL\Strategy\SetDefaultStrategy;
-use \Driver\SQL\Strategy\SetNullStrategy;
+use Driver\SQL\Condition\CondRegex;
+use Driver\SQL\Expression\Add;
+use Driver\SQL\Strategy\Strategy;
 use \Driver\SQL\Strategy\UpdateStrategy;
 
 class MySQL extends SQL {
@@ -32,7 +32,7 @@ class MySQL extends SQL {
     return 'mysqli';
   }
 
-  // Connection Managment
+  // Connection Management
   public function connect() {
 
     if(!is_null($this->connection)) {
@@ -47,7 +47,7 @@ class MySQL extends SQL {
       $this->connectionData->getPort()
     );
 
-    if (mysqli_connect_errno($this->connection)) {
+    if (mysqli_connect_errno()) {
       $this->lastError = "Failed to connect to MySQL: " . mysqli_connect_error();
       $this->connection = NULL;
       return false;
@@ -63,6 +63,7 @@ class MySQL extends SQL {
     }
 
     mysqli_close($this->connection);
+    return true;
   }
 
   public function getLastError() {
@@ -81,6 +82,8 @@ class MySQL extends SQL {
       switch($paramType) {
         case Parameter::TYPE_BOOLEAN:
           $value = $value ? 1 : 0;
+          $sqlParams[0] .= 'i';
+          break;
         case Parameter::TYPE_INT:
           $sqlParams[0] .= 'i';
           break;
@@ -97,6 +100,10 @@ class MySQL extends SQL {
           break;
         case Parameter::TYPE_DATE_TIME:
           $value = $value->format('Y-m-d H:i:s');
+          $sqlParams[0] .= 's';
+          break;
+        case Parameter::TYPE_ARRAY:
+          $value = json_encode($value);
           $sqlParams[0] .= 's';
           break;
         case Parameter::TYPE_EMAIL:
@@ -161,64 +168,39 @@ class MySQL extends SQL {
     return ($success && $returnValues) ? $resultRows : $success;
   }
 
-  public function executeInsert($insert) {
-    $tableName = $this->tableName($insert->getTableName());
-    $columns = $insert->getColumns();
-    $rows = $insert->getRows();
-    $onDuplicateKey = $insert->onDuplicateKey() ?? "";
+  protected function getOnDuplicateStrategy(?Strategy $strategy, &$params) {
+    if (is_null($strategy)) {
+      return "";
+    } else if ($strategy instanceof UpdateStrategy) {
+      $updateValues = array();
+      foreach($strategy->getValues() as $key => $value) {
+        $leftColumn = $this->columnName($key);
+        if ($value instanceof Column) {
+          $columnName = $this->columnName($value->getName());
+          $updateValues[] = "$leftColumn=VALUES($columnName)";
+        } else if($value instanceof Add) {
+          $columnName = $this->columnName($value->getColumn());
+          $operator = $value->getOperator();
+          $value = $value->getValue();
+          $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
+        } else {
+          $updateValues[] = "$leftColumn=" . $this->addValue($value, $params);
+        }
+      }
 
-    if (empty($rows)) {
-      $this->lastError = "No rows to insert given.";
+      return " ON DUPLICATE KEY UPDATE " . implode(",", $updateValues);
+    } else {
+      $strategyClass = get_class($strategy);
+      $this->lastError = "ON DUPLICATE Strategy $strategyClass is not supported yet.";
       return false;
     }
-
-    if (is_null($columns) || empty($columns)) {
-      $columns = "";
-      $numColumns = count($rows[0]);
-    } else {
-      $numColumns = count($columns);
-      $columns = " (" . $this->columnName($columns) . ")";
-    }
-
-    $numRows = count($rows);
-    $parameters = array();
-    $values = implode(",", array_fill(0, $numRows, "(" . implode(",", array_fill(0, $numColumns, "?")) . ")"));
-
-    foreach($rows as $row) {
-      $parameters = array_merge($parameters, $row);
-    }
-
-    if ($onDuplicateKey) {
-      if ($onDuplicateKey instanceof UpdateStrategy) {
-        $updateValues = array();
-        foreach($onDuplicateKey->getValues() as $key => $value) {
-          if ($value instanceof Column) {
-            $columnName = $value->getName();
-            $updateValues[] = "`$key`=`$columnName`";
-          } else {
-            $updateValues[] = "`$key`=" . $this->addValue($value, $parameters);
-          }
-        }
-
-        $onDuplicateKey = " ON DUPLICATE KEY UPDATE " . implode(",", $updateValues);
-      } else {
-        $strategy = get_class($onDuplicateKey);
-        $this->lastError = "ON DUPLICATE Strategy $strategy is not supported yet.";
-        return false;
-      }
-    }
-
-    $query = "INSERT INTO $tableName$columns VALUES$values$onDuplicateKey";
-    $success = $this->execute($query, $parameters);
-
-    if($success) {
-      $this->lastInsertId = mysqli_insert_id($this->connection);
-    }
-
-    return $success;
   }
 
-  public function getColumnDefinition($column) {
+  protected function fetchReturning($res, string $returningCol) {
+    $this->lastInsertId = mysqli_insert_id($this->connection);
+  }
+
+  public function getColumnDefinition(Column $column) {
     $columnName = $this->columnName($column->getName());
     $defaultValue = $column->getDefaultValue();
 
@@ -255,7 +237,7 @@ class MySQL extends SQL {
 
     $notNull = $column->notNull() ? " NOT NULL" : "";
     if (!is_null($defaultValue) || !$column->notNull()) {
-      $defaultValue = " DEFAULT " . $this->getValueDefinition($column->getDefaultValue());
+      $defaultValue = " DEFAULT " . $this->getValueDefinition($defaultValue);
     } else {
       $defaultValue = "";
     }
@@ -323,4 +305,7 @@ class MySQL extends SQL {
     return new Keyword("NOW()");
   }
 
-};
+  public function getStatus() {
+    return mysqli_stat($this->connection);
+  }
+}

@@ -2,28 +2,34 @@
 
 namespace Objects;
 
+use DateTime;
 use \Driver\SQL\Condition\Compare;
+use Exception;
+use External\JWT;
 
 class Session extends ApiObject {
 
-  const DURATION = 120;
+  # in minutes
+  const DURATION = 60*24;
 
-  private $sessionId;
-  private $user;
-  private $expires;
-  private $ipAddress;
-  private $os;
-  private $browser;
-  private $stayLoggedIn;
+  private ?int $sessionId;
+  private User $user;
+  private int $expires;
+  private string $ipAddress;
+  private ?string $os;
+  private ?string $browser;
+  private bool $stayLoggedIn;
+  private string $csrfToken;
 
-  public function __construct($user, $sessionId) {
+  public function __construct(User $user, ?int $sessionId, ?string $csrfToken) {
     $this->user = $user;
     $this->sessionId = $sessionId;
     $this->stayLoggedIn = true;
+    $this->csrfToken = $csrfToken ?? generateRandomString(16);
   }
 
   public static function create($user, $stayLoggedIn) {
-    $session = new Session($user, null);
+    $session = new Session($user, null, null);
     if($session->insert($stayLoggedIn)) {
       return $session;
     }
@@ -38,7 +44,7 @@ class Session extends ApiObject {
       $userAgent = @get_browser($_SERVER['HTTP_USER_AGENT'], true);
       $this->os = $userAgent['platform'] ?? "Unknown";
       $this->browser = $userAgent['parent'] ?? "Unknown";
-    } catch(\Exception $ex) {
+    } catch(Exception $ex) {
       $this->os = "Unknown";
       $this->browser = "Unknown";
     }
@@ -56,13 +62,11 @@ class Session extends ApiObject {
 
   public function sendCookie() {
     $this->updateMetaData();
-    $jwt = $this->user->getConfiguration()->getJwt();
-    if($jwt) {
-      $token = array('userId' => $this->user->getId(), 'sessionId' => $this->sessionId);
-      $sessionCookie = \External\JWT::encode($token, $jwt->getKey());
-      $secure = strcmp(getProtocol(), "https") === 0;
-      setcookie('session', $sessionCookie, $this->getExpiresTime(), "/", "", $secure);
-    }
+    $settings = $this->user->getConfiguration()->getSettings();
+    $token = array('userId' => $this->user->getId(), 'sessionId' => $this->sessionId);
+    $sessionCookie = JWT::encode($token, $settings->getJwtSecret());
+    $secure = strcmp(getProtocol(), "https") === 0;
+    setcookie('session', $sessionCookie, $this->getExpiresTime(), "/", "", $secure);
   }
 
   public function getExpiresTime() {
@@ -81,6 +85,7 @@ class Session extends ApiObject {
       'ipAddress' => $this->ipAddress,
       'os' => $this->os,
       'browser' => $this->browser,
+      'csrf_token' => $this->csrfToken
     );
   }
 
@@ -88,19 +93,20 @@ class Session extends ApiObject {
     $this->updateMetaData();
     $sql = $this->user->getSQL();
 
-    $hours = Session::DURATION;
-    $columns = array("expires", "user_id", "ipAddress", "os", "browser", "data", "stay_logged_in");
+    $minutes = Session::DURATION;
+    $columns = array("expires", "user_id", "ipAddress", "os", "browser", "data", "stay_logged_in", "csrf_token");
 
     $success = $sql
       ->insert("Session", $columns)
       ->addRow(
-        (new \DateTime)->modify("+$hours hour"),
+        (new DateTime())->modify("+$minutes minute"),
         $this->user->getId(),
         $this->ipAddress,
         $this->os,
         $this->browser,
         json_encode($_SESSION),
-        $stayLoggedIn)
+        $stayLoggedIn,
+        $this->csrfToken)
       ->returning("uid")
       ->execute();
 
@@ -113,32 +119,31 @@ class Session extends ApiObject {
   }
 
   public function destroy() {
-    $success = $this->user->getSQL()->update("Session")
+    return $this->user->getSQL()->update("Session")
       ->set("active", false)
       ->where(new Compare("Session.uid", $this->sessionId))
       ->where(new Compare("Session.user_id", $this->user->getId()))
       ->execute();
-
-    return $success;
   }
 
   public function update() {
     $this->updateMetaData();
-    $hours = Session::DURATION;
+    $minutes = Session::DURATION;
 
     $sql = $this->user->getSQL();
-    $success = $sql->update("Session")
-      ->set("Session.expires", (new \DateTime)->modify("+$hours hour"))
+    return $sql->update("Session")
+      ->set("Session.expires", (new DateTime())->modify("+$minutes minute"))
       ->set("Session.ipAddress", $this->ipAddress)
       ->set("Session.os", $this->os)
       ->set("Session.browser", $this->browser)
       ->set("Session.data", json_encode($_SESSION))
+      ->set("Session.csrf_token", $this->csrfToken)
       ->where(new Compare("Session.uid", $this->sessionId))
       ->where(new Compare("Session.user_id", $this->user->getId()))
       ->execute();
+  }
 
-    return $success;
+  public function getCsrfToken(): string {
+    return $this->csrfToken;
   }
 }
-
-?>

@@ -2,19 +2,20 @@
 
 namespace Elements;
 
-abstract class Head extends \View {
+abstract class Head extends View {
 
-  protected $sources;
-  protected $title;
-  protected $metas;
-  protected $rawFields;
-  protected $keywords;
-  protected $description;
-  protected $baseUrl;
+  protected array $sources;
+  protected string $title;
+  protected array $metas;
+  protected array $rawFields;
+  protected array $keywords;
+  protected string $description;
+  protected string $baseUrl;
 
   function __construct($document) {
     parent::__construct($document);
     $this->sources = array();
+    $this->searchable = false;
     $this->metas = $this->initMetas();
     $this->rawFields = $this->initRawFields();
     $this->title = $this->initTitle();
@@ -45,26 +46,13 @@ abstract class Head extends \View {
   public function addKeywords($keywords) { array_merge($this->keywords, $keywords); }
   public function getTitle() { return $this->title; }
 
-  public function addCSS($href, $type = Link::MIME_TEXT_CSS)  { $this->sources[] = new Link("stylesheet", $href, $type); }
+  public function addCSS($href, $type = Link::MIME_TEXT_CSS)  { $this->sources[] = new Link(Link::STYLESHEET, $href, $type); }
   public function addStyle($style) { $this->sources[] = new Style($style); }
   public function addJS($url) { $this->sources[] = new Script(Script::MIME_TEXT_JAVASCRIPT, $url, ""); }
   public function addJSCode($code) { $this->sources[] = new Script(Script::MIME_TEXT_JAVASCRIPT, "", $code); }
 
   public function loadFontawesome() {
     $this->addCSS(Link::FONTAWESOME);
-  }
-
-  public function loadSyntaxHighlighting() {
-    $this->addJS(Script::HIGHLIGHT);
-    $this->addJSCode(Script::HIGHLIGHT_JS_LOADER);
-    $this->addCSS(Link::HIGHLIGHT);
-    $this->addCSS(Link::HIGHLIGHT_THEME);
-  }
-
-  public function loadJQueryTerminal($unixFormatting = true) {
-    $this->addJS(Script::JQUERY_TERMINAL);
-    if($unixFormatting) $this->addJS(Script::JQUERY_TERMINAL_UNIX);
-    $this->addCSS(Link::JQUERY_TERMINAL);
   }
 
   public function loadGoogleRecaptcha($siteKey) {
@@ -78,11 +66,6 @@ abstract class Head extends \View {
   public function loadBootstrap() {
     $this->addCSS(Link::BOOTSTRAP);
     $this->addJS(Script::BOOTSTRAP);
-  }
-
-  public function loadChartJS() {
-    $this->addJS(Script::MOMENT);
-    $this->addJS(Script::CHART);
   }
 
   public function getCode() {
@@ -123,4 +106,3 @@ abstract class Head extends \View {
     return $header;
   }
 }
-?>

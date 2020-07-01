@@ -1,9 +1,8 @@
 <?php
 
-abstract class CLanguageModule {
+namespace Objects\lang;
 
-  public abstract static function getEntries($langCode);
+abstract class LanguageModule {
 
+  public abstract function getEntries(string $langCode);
 }
-
-?>

@@ -1,9 +1,14 @@
 <?php
 
 namespace Documents {
-  class Install extends \Elements\Document {
+
+  use Documents\Install\InstallBody;
+  use Documents\Install\InstallHead;
+  use Elements\Document;
+
+  class Install extends Document {
     public function __construct($user) {
-      parent::__construct($user, Install\Head::class, Install\Body::class);
+      parent::__construct($user, InstallHead::class, InstallBody::class);
       $this->databaseRequired = false;
     }
   }
@@ -11,7 +16,17 @@ namespace Documents {
 
 namespace Documents\Install {
 
-  class Head extends \Elements\Head {
+  use Configuration\CreateDatabase;
+  use Driver\SQL\SQL;
+  use Elements\Body;
+  use Elements\Head;
+  use Elements\Link;
+  use Elements\Script;
+  use External\PHPMailer\Exception;
+  use External\PHPMailer\PHPMailer;
+  use Objects\ConnectionData;
+
+  class InstallHead extends Head {
 
     public function __construct($document) {
       parent::__construct($document);
@@ -21,9 +36,9 @@ namespace Documents\Install {
       $this->loadJQuery();
       $this->loadBootstrap();
       $this->loadFontawesome();
-      $this->addJS(\Elements\Script::CORE);
-      $this->addCSS(\Elements\Link::CORE);
-      $this->addJS(\Elements\Script::INSTALL);
+      $this->addJS(Script::CORE);
+      $this->addCSS(Link::CORE);
+      $this->addJS(Script::INSTALL);
     }
 
     protected function initMetas() {
@@ -46,27 +61,31 @@ namespace Documents\Install {
 
   }
 
-  class Body extends \Elements\Body {
+  class InstallBody extends Body {
 
     // Status enum
     const NOT_STARTED = 0;
     const PENDING = 1;
-    const SUCCESFULL = 2;
+    const SUCCESSFUL = 2;
     const ERROR = 3;
 
     // Step enum
-    const CHECKING_REQUIRMENTS = 1;
+    const CHECKING_REQUIREMENTS = 1;
     const DATABASE_CONFIGURATION = 2;
     const CREATE_USER = 3;
     const ADD_MAIL_SERVICE = 4;
     const FINISH_INSTALLATION = 5;
 
     //
-    private $errorString;
+    private string $errorString;
+    private int $currentStep;
+    private array $steps;
 
     function __construct($document) {
       parent::__construct($document);
       $this->errorString = "";
+      $this->currentStep = InstallBody::CHECKING_REQUIREMENTS;
+      $this->steps = array();
     }
 
     private function getParameter($name) {
@@ -80,7 +99,7 @@ namespace Documents\Install {
     private function getCurrentStep() {
 
       if(!$this->checkRequirements()["success"]) {
-        return self::CHECKING_REQUIRMENTS;
+        return self::CHECKING_REQUIREMENTS;
       }
 
       $user = $this->getDocument()->getUser();
@@ -92,6 +111,10 @@ namespace Documents\Install {
       }
 
       $sql = $user->getSQL();
+      if(!$sql || !$sql->isConnected()) {
+        return self::DATABASE_CONFIGURATION;
+      }
+
       $countKeyword = $sql->count();
       $res = $sql->select($countKeyword)->from("User")->execute();
       if ($res === FALSE) {
@@ -104,18 +127,27 @@ namespace Documents\Install {
         }
       }
 
-      if($step === self::ADD_MAIL_SERVICE && $config->isFilePresent("Mail")) {
-        $step = self::FINISH_INSTALLATION;
-        if(!$config->isFilePresent("JWT") && !$config->create("JWT", generateRandomString(32))) {
-          $this->errorString = "Unable to create jwt file";
-        } else {
-          $req = new \Api\Notifications\Create($user);
-          $success = $req->execute(array(
-            "title" => "Welcome",
-            "message" => "Your Web-base was successfully installed. Check out the admin dashboard. Have fun!",
-            "groupId" => USER_GROUP_ADMIN)
-          );
+      if ($step === self::ADD_MAIL_SERVICE) {
+        $req = new \Api\Settings\Get($user);
+        $success = $req->execute(array("key" => "^mail_enabled$"));
+        if (!$success) {
+          $this->errorString = $req->getLastError();
+          return self::DATABASE_CONFIGURATION;
+        } else if (isset($req->getResult()["settings"]["mail_enabled"])) {
+          $step = self::FINISH_INSTALLATION;
+
+          $req = new \Api\Settings\Set($user);
+          $success = $req->execute(array("settings" => array("installation_completed" => "1")));
           if (!$success) {
+            $this->errorString = $req->getLastError();
+          } else {
+            $req = new \Api\Notifications\Create($user);
+            $req->execute(array(
+                "title" => "Welcome",
+                "message" => "Your Web-base was successfully installed. Check out the admin dashboard. Have fun!",
+                "groupId" => USER_GROUP_ADMIN
+              )
+            );
             $this->errorString = $req->getLastError();
           }
         }
@@ -145,8 +177,8 @@ namespace Documents\Install {
         }
       }
 
-      if(version_compare(PHP_VERSION, '7.1', '<')) {
-          $failedRequirements[] = "PHP Version <b>>= 7.1</b> is required. Got: <b>" . PHP_VERSION . "</b>";
+      if(version_compare(PHP_VERSION, '7.4', '<')) {
+          $failedRequirements[] = "PHP Version <b>>= 7.4</b> is required. Got: <b>" . PHP_VERSION . "</b>";
           $success = false;
       }
 
@@ -213,16 +245,16 @@ namespace Documents\Install {
         $msg = "Unsupported database type. Must be one of: " . implode(", ", $supportedTypes);
         $success = false;
       } else {
-        $connectionData = new \Objects\ConnectionData($host, $port, $username, $password);
+        $connectionData = new ConnectionData($host, $port, $username, $password);
         $connectionData->setProperty('database', $database);
         $connectionData->setProperty('encoding', $encoding);
         $connectionData->setProperty('type', $type);
-        $sql = \Driver\SQL\SQL::createConnection($connectionData);
+        $sql = SQL::createConnection($connectionData);
         $success = false;
-        if(!($sql instanceof \Driver\SQL\SQL)) {
-          $msg = "Error connecting to database: " . str($sql);
+        if(is_string($sql)) {
+          $msg = "Error connecting to database: $sql";
         } else if(!$sql->isConnected()) {
-          if (!$sql->checkRequirements()["success"]) {
+          if (!$sql->checkRequirements()) {
             $driverName = $sql->getDriverName();
             $installLink = "https://www.php.net/manual/en/$driverName.setup.php";
             $link = $this->createExternalLink($installLink);
@@ -234,7 +266,7 @@ namespace Documents\Install {
 
           $msg = "";
           $success = true;
-          $queries = \Configuration\CreateDatabase::createQueries($sql);
+          $queries = CreateDatabase::createQueries($sql);
           foreach($queries as $query) {
             if (!($res = $query->execute())) {
               $msg = "Error creating tables: " . $sql->getLastError();
@@ -243,7 +275,8 @@ namespace Documents\Install {
             }
           }
 
-          if($success && !$this->getDocument()->getUser()->getConfiguration()->create("Database", $connectionData)) {
+          $config = $this->getDocument()->getUser()->getConfiguration();
+          if(!$config->create("Database", $connectionData)) {
             $success = false;
             $msg = "Unable to write file";
           }
@@ -269,8 +302,8 @@ namespace Documents\Install {
       $username = $this->getParameter("username");
       $password = $this->getParameter("password");
       $confirmPassword = $this->getParameter("confirmPassword");
+      $email = $this->getParameter("email") ?? "";
 
-      $msg = $this->errorString;
       $success = true;
       $missingInputs = array();
 
@@ -292,29 +325,23 @@ namespace Documents\Install {
       if(!$success) {
         $msg = "Please fill out the following inputs:<br>" .
           $this->createUnorderedList($missingInputs);
-      } else if(strlen($username) < 5 || strlen($username) > 32) {
-        $msg = "The username should be between 5 and 32 characters long";
-        $success = false;
-      } else if(strcmp($password, $confirmPassword) !== 0) {
-        $msg = "The given passwords do not match";
-        $success = false;
-      } else if(strlen($password) < 6) {
-        $msg = "The password should be at least 6 characters long";
-        $success = false;
       } else {
-        $salt = generateRandomString(16);
-        $hash = hash('sha256', $password . $salt);
         $sql = $user->getSQL();
+        $req = new \Api\User\Create($user);
+        $success = $req->execute(array(
+          'username' => $username,
+          'email' => $email,
+          'password' => $password,
+          'confirmPassword' => $confirmPassword,
+        ));
 
-        $success = $sql->insert("User", array("name", "salt", "password"))
-          ->addRow($username, $salt, $hash)
-          ->returning("uid")
-          ->execute()
-          && $sql->insert("UserGroup", array("group_id", "user_id"))
-          ->addRow(USER_GROUP_ADMIN, $sql->getLastInsertId())
-          ->execute();
-
-        $msg = $sql->getLastError();
+        $msg = $req->getLastError();
+        if ($success) {
+          $success = $sql->insert("UserGroup", array("group_id", "user_id"))
+            ->addRow(USER_GROUP_ADMIN, $req->getResult()["userId"])
+            ->execute();
+          $msg = $sql->getLastError();
+        }
       }
 
       return array("msg" => $msg, "success" => $success);
@@ -333,10 +360,9 @@ namespace Documents\Install {
       $success = true;
       $msg = $this->errorString;
       if($this->getParameter("skip") === "true") {
-        if(!$user->getConfiguration()->create("Mail", null)) {
-          $success = false;
-          $msg = "Unable to create file";
-        }
+        $req = new \Api\Settings\Set($user);
+        $success = $req->execute(array("settings" => array( "mail_enabled" => "0" )));
+        $msg = $req->getLastError();
       } else {
 
         $address = $this->getParameter("address");
@@ -375,7 +401,7 @@ namespace Documents\Install {
         } else {
           $success = false;
 
-          $mail = new \External\PHPMailer\PHPMailer(true);
+          $mail = new PHPMailer(true);
           $mail->IsSMTP();
           $mail->SMTPAuth = true;
           $mail->Username = $username;
@@ -395,16 +421,20 @@ namespace Documents\Install {
               $msg = "";
               $mail->smtpClose();
             }
-          } catch(\External\PHPMailer\Exception $error) {
+          } catch(Exception $error) {
             $msg = "Could not connect to SMTP Server: " . $error->errorMessage();
           }
 
           if($success) {
-            $connectionData = new \Objects\ConnectionData($address, $port, $username, $password);
-            if(!$user->getConfiguration()->create("Mail", $connectionData)) {
-              $success = false;
-              $msg = "Unable to create file";
-            }
+            $req = new \Api\Settings\Set($user);
+            $success = $req->execute(array("settings" => array(
+              "mail_enabled" => "1",
+              "mail_host" => "$address",
+              "mail_port" => "$port",
+              "mail_username" => "$username",
+              "mail_password" => "$password",
+            )));
+            $msg = $req->getLastError();
           }
         }
       }
@@ -416,7 +446,7 @@ namespace Documents\Install {
 
       switch($this->currentStep) {
 
-        case self::CHECKING_REQUIRMENTS:
+        case self::CHECKING_REQUIREMENTS:
           return $this->checkRequirements();
 
         case self::DATABASE_CONFIGURATION:
@@ -446,26 +476,26 @@ namespace Documents\Install {
 
         switch($status) {
           case self::PENDING:
-            $statusIcon  = '<i class="fas fa-spin fa-spinner"></i>';
+            $statusIcon  = $this->createIcon("spinner");
             $statusText  = "Loading…";
             $statusColor = "muted";
             break;
 
-          case self::SUCCESFULL:
-            $statusIcon  = '<i class="fas fa-check-circle"></i>';
-            $statusText  = "Successfull";
+          case self::SUCCESSFUL:
+            $statusIcon  = $this->createIcon("check-circle");
+            $statusText  = "Successful";
             $statusColor = "success";
             break;
 
           case self::ERROR:
-            $statusIcon  = '<i class="fas fa-times-circle"></i>';
+            $statusIcon  = $this->createIcon("times-circle");
             $statusText  = "Failed";
             $statusColor = "danger";
             break;
 
           case self::NOT_STARTED:
           default:
-            $statusIcon = '<i class="far fa-circle"></i>';
+            $statusIcon = $this->createIcon("circle", "far");
             $statusText = "Pending";
             $statusColor = "muted";
             break;
@@ -552,7 +582,7 @@ namespace Documents\Install {
     private function createProgessMainview() {
 
       $views = array(
-        self::CHECKING_REQUIRMENTS => array(
+        self::CHECKING_REQUIREMENTS => array(
           "title" => "Application Requirements",
           "progressText" => "Checking requirements, please wait a moment…"
         ),
@@ -585,6 +615,7 @@ namespace Documents\Install {
           "title" => "Create a User",
           "form" => array(
             array("title" => "Username", "name"  => "username", "type"  => "text", "required" => true),
+            array("title" => "Email", "name"  => "email", "type"  => "text"),
             array("title" => "Password", "name"  => "password", "type"  => "password", "required" => true),
             array("title" => "Confirm Password", "name"  => "confirmPassword", "type"  => "password", "required" => true),
           ),
@@ -661,7 +692,7 @@ namespace Documents\Install {
       );
 
       if($this->currentStep != self::FINISH_INSTALLATION) {
-        if ($this->currentStep == self::CHECKING_REQUIRMENTS) {
+        if ($this->currentStep == self::CHECKING_REQUIREMENTS) {
           $buttons[] = array("title" => "Retry", "type" => "success", "id" => "btnRetry", "float" => "right");
         } else {
           $buttons[] = array("title" => "Submit", "type" => "success", "id" => "btnSubmit", "float" => "right");
@@ -683,7 +714,7 @@ namespace Documents\Install {
         $id = $button["id"];
         $float = $button["float"];
         $disabled = (isset($button["disabled"]) && $button["disabled"]) ? " disabled" : "";
-        $button = "<button type=\"button\" id=\"$id\" class=\"btn btn-$type margin-xs\"$disabled>$title</button>";
+        $button = "<button type=\"button\" id=\"$id\" class=\"btn btn-$type m-1\"$disabled>$title</button>";
 
         if($float === "left") {
           $buttonsLeft .= $button;
@@ -701,12 +732,11 @@ namespace Documents\Install {
       return $html;
     }
 
-
     function getCode() {
       $html = parent::getCode();
 
       $this->steps = array(
-        self::CHECKING_REQUIRMENTS => array(
+        self::CHECKING_REQUIREMENTS => array(
           "title" => "Checking requirements",
           "status" => self::ERROR
         ),
@@ -731,12 +761,12 @@ namespace Documents\Install {
       $this->currentStep = $this->getCurrentStep();
 
       // set status
-      for($step = self::CHECKING_REQUIRMENTS; $step < $this->currentStep; $step++) {
-        $this->steps[$step]["status"] = self::SUCCESFULL;
+      for($step = self::CHECKING_REQUIREMENTS; $step < $this->currentStep; $step++) {
+        $this->steps[$step]["status"] = self::SUCCESSFUL;
       }
 
       if($this->currentStep == self::FINISH_INSTALLATION) {
-        $this->steps[$this->currentStep]["status"] = self::SUCCESFULL;
+        $this->steps[$this->currentStep]["status"] = self::SUCCESSFUL;
       }
 
       // POST
@@ -748,6 +778,7 @@ namespace Documents\Install {
 
       $progressSidebar = $this->createProgressSidebar();
       $progressMainview = $this->createProgessMainview();
+
       $errorStyle = ($this->errorString ? '' : ' style="display:none"');
       $errorClass = ($this->errorString ? ' alert-danger' : '');
 
@@ -773,7 +804,7 @@ namespace Documents\Install {
             </div>
             <div class=\"col-md-8 order-md-1\">
               $progressMainview
-              <div class=\"alert$errorClass margin-top-m\" id=\"status\"$errorStyle>$this->errorString</div>
+              <div class=\"alert$errorClass mt-4\" id=\"status\"$errorStyle>$this->errorString</div>
             </div>
           </div>
         </div>
@@ -781,9 +812,5 @@ namespace Documents\Install {
 
       return $html;
     }
-
   }
-
 }
-
-?>

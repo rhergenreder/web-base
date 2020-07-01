@@ -9,5 +9,3 @@ class SerialColumn extends Column {
   }
 
 }
-
-?>

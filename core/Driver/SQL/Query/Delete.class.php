@@ -2,10 +2,12 @@
 
 namespace Driver\SQL\Query;
 
+use Driver\SQL\Condition\CondOr;
+
 class Delete extends Query {
 
-  private $table;
-  private $conditions;
+  private string $table;
+  private array $conditions;
 
   public function __construct($sql, $table) {
     parent::__construct($sql);
@@ -14,7 +16,7 @@ class Delete extends Query {
   }
 
   public function where(...$conditions) {
-    $this->conditions = array_merge($this->conditions, $conditions);
+    $this->conditions[] = (count($conditions) === 1 ? $conditions : new CondOr($conditions));
     return $this;
   }
 
@@ -24,6 +26,4 @@ class Delete extends Query {
 
   public function getTable() { return $this->table; }
   public function getConditions() { return $this->conditions; }
-};
-
-?>
+}

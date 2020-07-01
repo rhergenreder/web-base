@@ -4,13 +4,11 @@ namespace Driver\SQL\Constraint;
 
 abstract class Constraint {
 
-  private $columnName;
+  private array $columnNames;
 
-  public function __construct($columnName) {
-    $this->columnName = $columnName;
+  public function __construct($columnNames) {
+    $this->columnNames = (!is_array($columnNames) ? array($columnNames) : $columnNames);
   }
 
-  public function getColumnName() { return $this->columnName; }
-};
-
-?>
+  public function getColumnNames() { return $this->columnNames; }
+}

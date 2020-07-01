@@ -4,10 +4,10 @@ namespace Api\Parameter;
 
 class StringType extends Parameter {
 
-  public $maxLength;
+  public int $maxLength;
   public function __construct($name, $maxLength = -1, $optional = FALSE, $defaultValue = NULL) {
-    parent::__construct($name, Parameter::TYPE_STRING, $optional, $defaultValue);
     $this->maxLength = $maxLength;
+    parent::__construct($name, Parameter::TYPE_STRING, $optional, $defaultValue);
   }
 
   public function parseParam($value) {
@@ -39,5 +39,3 @@ class StringType extends Parameter {
     return $str;
   }
 }
-
-?>

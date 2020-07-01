@@ -4,13 +4,13 @@ namespace Driver\SQL;
 
 class Join {
 
-  private $type;
-  private $table;
-  private $columnA;
-  private $columnB;
+  private string $type;
+  private string $table;
+  private string $columnA;
+  private string $columnB;
 
   public function __construct($type, $table, $columnA, $columnB) {
-    $this->tpye = $type;
+    $this->type = $type;
     $this->table = $table;
     $this->columnA = $columnA;
     $this->columnB = $columnB;
@@ -22,5 +22,3 @@ class Join {
   public function getColumnB() { return $this->columnB; }
 
 }
-
-?>

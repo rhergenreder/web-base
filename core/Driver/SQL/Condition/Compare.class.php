@@ -4,6 +4,10 @@ namespace Driver\SQL\Condition;
 
 class Compare extends Condition {
 
+  private string $operator;
+  private string $column;
+  private $value;
+
   public function __construct($col, $val, $operator='=') {
     $this->operator = $operator;
     $this->column = $col;
@@ -15,5 +19,3 @@ class Compare extends Condition {
   public function getOperator() { return $this->operator; }
 
 }
-
-?>

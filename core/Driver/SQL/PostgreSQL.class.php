@@ -4,7 +4,7 @@ namespace Driver\SQL;
 
 use \Api\Parameter\Parameter;
 
-use \Driver\SQL\Column\Column;
+use Driver\SQL\Column\Column;
 use \Driver\SQL\Column\IntColumn;
 use \Driver\SQL\Column\SerialColumn;
 use \Driver\SQL\Column\StringColumn;
@@ -13,10 +13,10 @@ use \Driver\SQL\Column\DateTimeColumn;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\JsonColumn;
 
-use \Driver\SQL\Strategy\CascadeStrategy;
-use \Driver\SQL\Strategy\SetDefaultStrategy;
-use \Driver\SQL\Strategy\SetNullStrategy;
-use \Driver\SQL\Strategy\UpdateStrategy;
+use Driver\SQL\Condition\CondRegex;
+use Driver\SQL\Expression\Add;
+use Driver\SQL\Strategy\Strategy;
+use Driver\SQL\Strategy\UpdateStrategy;
 
 class PostgreSQL extends SQL {
 
@@ -32,7 +32,7 @@ class PostgreSQL extends SQL {
     return 'pgsql';
   }
 
-  // Connection Managment
+  // Connection Management
   public function connect() {
     if(!is_null($this->connection)) {
       return true;
@@ -68,13 +68,13 @@ class PostgreSQL extends SQL {
     if(is_null($this->connection))
       return;
 
-    pg_close($this->connection);
+    @pg_close($this->connection);
   }
 
   public function getLastError() {
     $lastError = parent::getLastError();
     if (empty($lastError)) {
-      $lastError = pg_last_error($this->connection) . " " . pg_last_error($this->connection);
+      $lastError = trim(pg_last_error($this->connection) . " " . pg_last_error($this->connection));
     }
 
     return $lastError;
@@ -98,6 +98,9 @@ class PostgreSQL extends SQL {
             break;
           case Parameter::TYPE_DATE_TIME:
             $value = $value->format("Y-m-d H:i:s");
+            break;
+          case Parameter::TYPE_ARRAY:
+            $value = json_encode($value);
             break;
           default:
             break;
@@ -131,76 +134,48 @@ class PostgreSQL extends SQL {
     }
   }
 
-  // Querybuilder
-  public function executeInsert($insert) {
+  protected function getOnDuplicateStrategy(?Strategy $strategy, &$params) {
+      if (!is_null($strategy)) {
+        if ($strategy instanceof UpdateStrategy) {
+              $updateValues = array();
+              foreach($strategy->getValues() as $key => $value) {
+                $leftColumn = $this->columnName($key);
+                if ($value instanceof Column) {
+                  $columnName = $this->columnName($value->getName());
+                  $updateValues[] = "$leftColumn=EXCLUDED.$columnName";
+                } else if ($value instanceof Add) {
+                  $columnName = $this->columnName($value->getColumn());
+                  $operator = $value->getOperator();
+                  $value = $value->getValue();
+                  $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
+                } else {
+                  $updateValues[] = "$leftColumn=" . $this->addValue($value, $parameters);
+                }
+              }
 
-    $tableName = $this->tableName($insert->getTableName());
-    $columns = $insert->getColumns();
-    $rows = $insert->getRows();
-    $onDuplicateKey = $insert->onDuplicateKey() ?? "";
-
-    if (empty($rows)) {
-      $this->lastError = "No rows to insert given.";
-      return false;
-    }
-
-    if (is_null($columns) || empty($columns)) {
-      $columnStr = "";
-    } else {
-      $columnStr = " (" . $this->columnName($columns) . ")";
-    }
-
-    $numRows = count($rows);
-    $parameters = array();
-
-    $values = array();
-    foreach($rows as $row) {
-      $rowPlaceHolder = array();
-      foreach($row as $val) {
-        $rowPlaceHolder[] = $this->addValue($val, $parameters);
-      }
-
-      $values[] = "(" . implode(",", $rowPlaceHolder) . ")";
-    }
-
-    $values = implode(",", $values);
-
-    if ($onDuplicateKey) {
-      /*if ($onDuplicateKey instanceof UpdateStrategy) {
-        $updateValues = array();
-        foreach($onDuplicateKey->getValues() as $key => $value) {
-          if ($value instanceof Column) {
-            $columnName = $value->getName();
-            $updateValues[] = "\"$key\"=\"$columnName\"";
+              $conflictingColumns = $this->columnName($strategy->getConflictingColumns());
+              $updateValues = implode(",", $updateValues);
+              return " ON CONFLICT ($conflictingColumns) DO UPDATE SET $updateValues";
           } else {
-            $updateValues[] = "\"$key\"=" . $this->addValue($value, $parameters);
+            $strategyClass = get_class($strategy);
+            $this->lastError = "ON DUPLICATE Strategy $strategyClass is not supported yet.";
+           return false;
           }
-        }
-
-        $onDuplicateKey = " ON CONFLICT DO UPDATE SET " . implode(",", $updateValues);
-      } else*/ {
-        $strategy = get_class($onDuplicateKey);
-        $this->lastError = "ON DUPLICATE Strategy $strategy is not supported yet.";
-        return false;
+      } else {
+        return "";
       }
-    }
+  }
 
-    $returningCol = $insert->getReturning();
-    $returning = $returningCol ? (" RETURNING " . $this->columnName($returningCol)) : "";
+  protected function getReturning(?string $columns) {
+    return $columns ? (" RETURNING " . $this->columnName($columns)) : "";
+  }
 
-    $query = "INSERT INTO $tableName$columnStr VALUES$values$onDuplicateKey$returning";
-    $res = $this->execute($query, $parameters, !empty($returning));
-    $success = ($res !== FALSE);
-
-    if($success && !empty($returning)) {
-      $this->lastInsertId = $res[0][$returningCol];
-    }
-
-    return $success;
+  protected function fetchReturning($res, string $returningCol) {
+    $this->lastInsertId = $res[0][$returningCol];
   }
 
   // UGLY but.. what should i do?
-  private function createEnum($enumColumn) {
+  private function createEnum(EnumColumn $enumColumn) {
     $typeName = $enumColumn->getName();
     if(!endsWith($typeName, "_type")) {
       $typeName = "${typeName}_type";
@@ -319,5 +294,27 @@ class PostgreSQL extends SQL {
   public function currentTimestamp() {
     return new Keyword("CURRENT_TIMESTAMP");
   }
+
+  public function getStatus() {
+    $version = pg_version($this->connection)["client"] ?? "??";
+    $status = pg_connection_status($this->connection);
+    static $statusTexts = array(
+      PGSQL_CONNECTION_OK => "PGSQL_CONNECTION_OK",
+      PGSQL_CONNECTION_BAD => "PGSQL_CONNECTION_BAD",
+    );
+
+    return ($statusTexts[$status] ?? "Unknown") . " (v$version)";
+  }
+
+  protected function buildCondition($condition, &$params) {
+    if($condition instanceof CondRegex) {
+      $left = $condition->getLeftExp();
+      $right = $condition->getRightExp();
+      $left = ($left instanceof Column) ? $this->columnName($left->getName()) : $this->addValue($left, $params);
+      $right = ($right instanceof Column) ? $this->columnName($right->getName()) : $this->addValue($right, $params);
+      return $left . " ~ " . $right;
+    } else {
+      return parent::buildCondition($condition, $params);
+    }
+  }
 }
-?>

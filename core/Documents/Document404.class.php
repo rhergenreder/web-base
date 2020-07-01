@@ -1,27 +1,32 @@
 <?php
 
 namespace Documents {
-  class Document404 extends \Elements\Document {
-    public function __construct($user) {
-      parent::__construct($user, Document404\Head404::class, Document404\Body404::class);
+
+  use Documents\Document404\Body404;
+  use Documents\Document404\Head404;
+  use Elements\Document;
+
+  class Document404 extends Document {
+    public function __construct($user, ?string $view = NULL) {
+      parent::__construct($user, Head404::class, Body404::class, $view);
     }
   }
 }
 
 namespace Documents\Document404 {
 
-  class Head404 extends \Elements\Head {
+  use Elements\Body;
+  use Elements\Head;
+  use Elements\SimpleBody;
+  use Views\View404;
+
+  class Head404 extends Head {
 
     public function __construct($document) {
       parent::__construct($document);
     }
 
     protected function initSources() {
-      // $this->loadJQuery();
-      // $this->loadBootstrap();
-      // $this->loadFontawesome();
-      // $this->addJS(\Elements\Script::CORE);
-      // $this->addCSS(\Elements\Link::CORE);
     }
 
     protected function initMetas() {
@@ -43,18 +48,18 @@ namespace Documents\Document404 {
     }
   }
 
-  class Body404 extends \Elements\Body {
+  class Body404 extends SimpleBody {
 
     public function __construct($document) {
       parent::__construct($document);
     }
 
-    public function getCode() {
-      $html = parent::getCode();
-      $html .= "<b>404 Not Found</b>";
-      return $html;
+    public function loadView() {
+      http_response_code(404);
+    }
+
+    protected function getContent() {
+      return $this->load(View404::class);
     }
   }
 }
-
-?>

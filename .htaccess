@@ -1,8 +1,13 @@
 php_flag display_errors on
 Options -Indexes
 
-RedirectMatch 404 /\.git
+DirectorySlash Off
 
 RewriteEngine On
-RewriteRule ^api/(.*)?$ index.php?api=$1&$2 [L,QSA]
-RewriteRule ^((?!((js|css|img|fonts|api)($|\/)))(.*)?)$ index.php?site=$1&$2 [L,QSA]
+RewriteRule ^api(/.*)?$ /index.php?api=$1 [L,QSA]
+
+RewriteEngine On
+RewriteOptions AllowNoSlash
+RewriteRule ^((\.idea|\.git|src|test|core)(/.*)?)$ /index.php?site=$1 [L,QSA]
+
+FallbackResource /index.php

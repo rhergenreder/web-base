@@ -2,18 +2,22 @@
 
 namespace Elements;
 
+use Objects\User;
+
 abstract class Document {
 
-  protected $head;
-  protected $body;
-  protected $user;
-  protected $databaseRequired;
+  protected Head $head;
+  protected Body $body;
+  protected User $user;
+  protected bool $databaseRequired;
+  private ?string $activeView;
 
-  public function __construct($user, $headClass, $bodyClass) {
+  public function __construct(User $user, $headClass, $bodyClass, ?string $view = NULL) {
     $this->head = new $headClass($this);
     $this->body = new $bodyClass($this);
     $this->user = $user;
     $this->databaseRequired = true;
+    $this->activeView = $view;
   }
 
   public function getHead() { return $this->head; }
@@ -21,36 +25,14 @@ abstract class Document {
   public function getSQL()  { return $this->user->getSQL(); }
   public function getUser() { return $this->user; }
 
-  protected function sendHeaders() {
-    header("X-Frame-Options: DENY");
-  }
+  public function getView() : ?View {
 
-  public static function createSearchableDocument($documentClass, $user) {
-    return new $documentClass($user);
-  }
-
-  public static function createDocument($class) {
-    // TODO: check instance, configuration, ..
-
-    require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/sql.php';
-    // require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/conf/config.php';
-    // require_once realpath($_SERVER['DOCUMENT_ROOT']) . "/php/pages/$file.php";
-    require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/api/objects/User.php';
-
-    $connectionData = getSqlData($database);
-    $sql = connectSQL($connectionData);
-    if(!$sql->isConnected()) {
-      http_response_code(500);
-      die('Internal Database error');
+    $file = getClassPath($this->activeView);
+    if(!file_exists($file) || !is_subclass_of($this->activeView, View::class)) {
+      return null;
     }
 
-    $user = new CUser($sql);
-    $document = new $class($user);
-    $code = $document->getCode();
-
-    $document->sendHeaders();
-    $user->sendCookies();
-    die($code);
+    return new $this->activeView($this);
   }
 
   function getCode() {
@@ -66,15 +48,14 @@ abstract class Document {
 
     $body = $this->body->getCode();
     $head = $this->head->getCode();
+    $lang = $this->user->getLanguage()->getShortCode();
 
     $html = "<!DOCTYPE html>";
-    $html .= "<html>";
+    $html .= "<html lang=\"$lang\">";
     $html .= $head;
     $html .= $body;
     $html .= "</html>";
     return $html;
   }
 
-};
-
-?>
+}

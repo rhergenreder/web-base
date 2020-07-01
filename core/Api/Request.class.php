@@ -2,36 +2,41 @@
 
 namespace Api;
 
+use Objects\User;
+
 class Request {
 
-  protected $user;
-  protected $params;
-  protected $lastError;
-  protected $result;
-  protected $success;
-  protected $isPublic;
-  protected $loginRequired;
-  protected $variableParamCount;
-  protected $isDisabled;
-  protected $apiKeyAllowed;
+  protected User $user;
+  protected array $params;
+  protected string $lastError;
+  protected array $result;
+  protected bool $success;
+  protected bool $isPublic;
+  protected bool $loginRequired;
+  protected bool $variableParamCount;
+  protected bool $isDisabled;
+  protected bool $apiKeyAllowed;
+  protected bool $csrfTokenRequired;
 
-  private $aDefaultParams;
-  private $allowedMethods;
-  private $externCall;
+  private array $aDefaultParams;
+  private array $allowedMethods;
+  private bool $externalCall;
 
-  public function __construct($user, $externCall = false, $params = array()) {
+  public function __construct(User $user, bool $externalCall = false, array $params = array()) {
     $this->user = $user;
     $this->aDefaultParams = $params;
-    $this->lastError = '';
+
     $this->success = false;
     $this->result = array();
-    $this->externCall = $externCall;
+    $this->externalCall = $externalCall;
     $this->isPublic = true;
     $this->isDisabled = false;
     $this->loginRequired = false;
     $this->variableParamCount = false;
     $this->apiKeyAllowed = true;
     $this->allowedMethods = array("GET", "POST");
+    $this->lastError = "";
+    $this->csrfTokenRequired = true;
   }
 
   protected function forbidMethod($method) {
@@ -40,33 +45,20 @@ class Request {
     }
   }
 
-  public function getParamsString() {
-    $str = "";
-    $count = count($this->params);
-    $i = 0;
-    foreach($this->params as $param) {
-      $str .= $param->toString();
-      if($i < $count - 1) $str .= ", ";
-      $i++;
-    }
-
-    return "($str)";
-  }
-
   public function parseParams($values) {
-    foreach($this->params as $name => $param) {
-      $value = (isset($values[$name]) ? $values[$name] : NULL);
 
-      if(!$param->optional && is_null($value)) {
-        $this->lastError = 'Missing parameter: ' . $name;
-        return false;
+    foreach($this->params as $name => $param) {
+      $value = $values[$name] ?? NULL;
+
+      $isEmpty = (is_string($value) || is_array($value)) && empty($value);
+      if(!$param->optional && (is_null($value) || $isEmpty)) {
+        return $this->createError("Missing parameter: $name");
       }
 
-      if(!is_null($value)) {
+      if(!is_null($value) && !$isEmpty) {
         if(!$param->parseParam($value)) {
           $value = print_r($value, true);
-          $this->lastError = "Invalid Type for parameter: $name '$value' (Required: " . $param->getTypeName() . ")";
-          return false;
+          return $this->createError("Invalid Type for parameter: $name '$value' (Required: " . $param->getTypeName() . ")");
         }
       }
     }
@@ -93,11 +85,17 @@ class Request {
       $this->result['logoutIn'] = $this->user->getSession()->getExpiresSeconds();
     }
 
-    if($this->externCall) {
+    if($this->externalCall) {
       $values = $_REQUEST;
       if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER["CONTENT_TYPE"]) && in_array("application/json", explode(";", $_SERVER["CONTENT_TYPE"]))) {
         $jsonData = json_decode(file_get_contents('php://input'), true);
-        $values = array_merge($values, $jsonData);
+        if ($jsonData) {
+          $values = array_merge($values, $jsonData);
+        } else {
+          $this->lastError = 'Invalid request body.';
+          header('HTTP 1.1 400 Bad Request');
+          return false;
+        }
       }
     }
 
@@ -106,7 +104,7 @@ class Request {
       return false;
     }
 
-    if($this->externCall && !$this->isPublic) {
+    if($this->externalCall && !$this->isPublic) {
       $this->lastError = 'This function is private.';
       header('HTTP 1.1 403 Forbidden');
       return false;
@@ -118,18 +116,42 @@ class Request {
       return false;
     }
 
+    if($this->externalCall) {
+      $apiKeyAuthorized = false;
 
-    if($this->loginRequired) {
-      $authorized = false;
-      if(isset($values['api_key']) && $this->apiKeyAllowed) {
-        $apiKey = $values['api_key'];
-        $authorized = $this->user->authorize($apiKey);
+      // Logged in or api key authorized?
+      if ($this->loginRequired) {
+        if(isset($values['api_key']) && $this->apiKeyAllowed) {
+          $apiKey = $values['api_key'];
+          $apiKeyAuthorized = $this->user->authorize($apiKey);
+        }
+
+        if(!$this->user->isLoggedIn() && !$apiKeyAuthorized) {
+          $this->lastError = 'You are not logged in.';
+          header('HTTP 1.1 401 Unauthorized');
+          return false;
+        }
       }
 
-      if(!$this->user->isLoggedIn() && !$authorized) {
-        $this->lastError = 'You are not logged in.';
-        header('HTTP 1.1 401 Unauthorized');
-        return false;
+      // CSRF Token
+      if($this->csrfTokenRequired && $this->user->isLoggedIn()) {
+        // csrf token required + external call
+        // if it's not a call with API_KEY, check for csrf_token
+        if (!isset($values["csrf_token"]) || strcmp($values["csrf_token"], $this->user->getSession()->getCsrfToken()) !== 0) {
+          $this->lastError = "CSRF-Token mismatch";
+          header('HTTP 1.1 403 Forbidden');
+          return false;
+        }
+      }
+
+      // Check for permission
+      if (!($this instanceof \Api\Permission\Save)) {
+        $req = new \Api\Permission\Check($this->user);
+        $this->success = $req->execute(array("method" => $this->getMethod()));
+        $this->lastError = $req->getLastError();
+        if (!$this->success) {
+          return false;
+        }
       }
     }
 
@@ -149,47 +171,32 @@ class Request {
     return true;
   }
 
-  protected function isValidString($str, $regex) {
-    return preg_replace($regex, "", $str) === $str;
-  }
-
   protected function createError($err) {
     $this->success = false;
     $this->lastError = $err;
     return false;
   }
-  //
-  // public static function callDirectly($class, $db) {
-  //   header('Content-Type: application/json');
-  //   require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/api/objects/User.php';
-  //   require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/sql.php';
-  //   require_once realpath($_SERVER['DOCUMENT_ROOT']) . '/php/conf/sql.php';
-  //
-  //   $sql = connectSQL(getSqlData($db));
-  //   $user = new CUser($sql);
-  //   $request = new $class($user, true);
-  //   $request->execute();
-  //   $sql->close();
-  //   $user->sendCookies();
-  //   return $request->getJsonResult();
-  // }
 
-  protected function getParam($name) { return isset($this->params[$name]) ? $this->params[$name]->value : NULL; }
+  protected function getParam($name) {
+    return isset($this->params[$name]) ? $this->params[$name]->value : NULL;
+  }
+
   public function isPublic() { return $this->isPublic; }
-  public function getDescription() { return ''; }
-  public function getSection() { return 'Default'; }
   public function getLastError() { return $this->lastError; }
   public function getResult() { return $this->result; }
   public function success() { return $this->success; }
   public function loginRequired() { return $this->loginRequired; }
-  public function isExternCall() { return $this->externCall; }
+  public function isExternalCall() { return $this->externalCall; }
+
+  private function getMethod() {
+    $class = str_replace("\\", "/", get_class($this));
+    $class = substr($class, strlen("api/"));
+    return $class;
+  }
 
   public function getJsonResult() {
     $this->result['success'] = $this->success;
     $this->result['msg'] = $this->lastError;
     return json_encode($this->result);
   }
-};
-
-
-?>
+}

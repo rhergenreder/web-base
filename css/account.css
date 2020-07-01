@@ -1,0 +1,30 @@
+.loginForm {
+  padding: 25px;
+  border: 1px solid #bbb;
+  border-radius: 5px;
+  background-color: #bbb;
+  color: black;
+  position: relative;
+}
+
+.loginForm input {
+  margin-bottom: 10px;
+}
+
+.loginForm button, .loginForm div {
+  margin-top: 15px;
+  margin-bottom: 0;
+}
+
+.loginForm input[type="checkbox"] {
+  padding: 0;
+  margin-bottom: 0;
+  vertical-align: bottom;
+}
+
+.flags {
+  right: 3px;
+  bottom: -22px;
+  background-color: darkgray;
+  border-radius: 5px;
+}

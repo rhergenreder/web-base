@@ -58,8 +58,8 @@ function formatPeriod($d1, $d2) {
 
 function now() { return new DateTime(); }
 function getTime($d = NULL) { return dateFunction('H:i', $d); }
-function getHour($d = NULL){ return dateFunction('H', $d); }
-function getMinute($d = NULL){ return dateFunction('i', $d); }
+function getHour($d = NULL) { return dateFunction('H', $d); }
+function getMinute($d = NULL) { return dateFunction('i', $d); }
 function getYear($d = NULL) { return intval(dateFunction('Y', $d)); }
 function getMonth($d = NULL) { return intval(dateFunction('n', $d)); }
 function getDay($d = NULL) { return intval(dateFunction('d', $d)); }
@@ -118,4 +118,55 @@ function dateFunction($str, $d = NULL) {
   return $d->format($str);
 }
 
-?>
+function getPeriodString($d) {
+
+  try {
+    $d = new DateTime($d);
+  } catch(Exception $e) {
+    return L("Unknown");
+  }
+
+  $diff = datetimeDiff(new DateTime(), $d);
+  $diff = abs($diff);
+
+
+  if ($diff < 60) {
+    $str = "< %d min";
+    $diff = 1;
+  } else if($diff < 60*60) {
+    $diff = intval($diff / 60);
+    $str = "%d min.";
+  } else if($diff < 60*60*24) {
+    $diff = intval($diff / (60*60));
+    $str = "%d h.";
+  } else {
+    $diff = intval($diff / (60*60*24));
+    $str = "%d d.";
+  }
+
+  return L(sprintf($str, $diff));
+}
+
+function formatDateTime($d) {
+  $format = L("Y/m/d H:i:s");
+  return apply_format($d, $format);
+}
+
+function formatTime($d) {
+  $format = L("H:i:s");
+  return apply_format($d, $format);
+}
+
+function formatDate($d) {
+  $format = L("Y/m/d");
+  return apply_format($d, $format);
+}
+
+function apply_format($d, $fmt) {
+  try {
+    $dt = new DateTime($d);
+    return $dt->format($fmt);
+  } catch(Exception $e) {
+    return L("Unknown");
+  }
+}

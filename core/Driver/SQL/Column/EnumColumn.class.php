@@ -4,7 +4,7 @@ namespace Driver\SQL\Column;
 
 class EnumColumn extends Column {
 
-  private $values;
+  private array $values;
 
   public function __construct($name, $values, $nullable=false, $defaultValue=NULL) {
     parent::__construct($name, $nullable, $defaultValue);
@@ -13,5 +13,3 @@ class EnumColumn extends Column {
 
   public function getValues() { return $this->values; }
 }
-
-?>

@@ -2,53 +2,61 @@
 
 namespace Views;
 
-class LanguageFlags extends \View {
+use Elements\View;
+
+class LanguageFlags extends View {
+
+  private array $languageFlags;
 
   public function __construct($document) {
     parent::__construct($document);
+    $this->languageFlags = array();
+    $this->searchable = false;
   }
 
-  public function getCode() {
+  public function loadView() {
+    parent::loadView();
 
-    $requestUri = $_SERVER["REQUEST_URI"];
-    $queryString = $_SERVER['QUERY_STRING'];
+    $request = new \Api\Language\Get($this->getDocument()->getUser());
+    if ($request->execute()) {
 
-    $flags = array();
-    $request = new \Api\GetLanguages($this->getDocument()->getUser());
-    $params = explode("&", $queryString);
-    $query = array();
-    foreach($params as $param) {
-      $aParam = explode("=", $param);
-      $key = $aParam[0];
+      $requestUri = $_SERVER["REQUEST_URI"];
+      $queryString = $_SERVER['QUERY_STRING'];
 
-      if($key == "s" && startsWith($requestUri, "/s/"))
-        continue;
+      $params = explode("&", $queryString);
+      $query = array();
+      foreach ($params as $param) {
+        $aParam = explode("=", $param);
+        $key = $aParam[0];
 
-      $val = (isset($aParam[1]) ? $aParam[1] : "");
-      if(!empty($key)) {
-        $query[$key] = $val;
+        if ($key === "site" &&
+          (!startsWith($_SERVER["REQUEST_URI"], "/index.php") || $_SERVER["REQUEST_URI"] === "/")) {
+          continue;
+        }
+
+        $val = (isset($aParam[1]) ? $aParam[1] : "");
+        if (!empty($key)) {
+          $query[$key] = $val;
+        }
       }
-    }
 
-    $url = parse_url($requestUri, PHP_URL_PATH) . "?";
-    if($request->execute()) {
-      foreach($request->getResult()['languages'] as $lang) {
+      $url = parse_url($requestUri, PHP_URL_PATH) . "?";
+
+      foreach ($request->getResult()['languages'] as $lang) {
         $langCode = $lang['code'];
         $langName = $lang['name'];
         $query['lang'] = $langCode;
         $queryString = http_build_query($query);
 
-        $flags[] = $this->createLink(
+        $this->languageFlags[] = $this->createLink(
           "$url$queryString",
-          "<img src=\"/img/icons/lang/$langCode.gif\" alt=\"$langName\" title=\"$langName\">"
+          "<img class=\"p-1 clickable\" src=\"/img/icons/lang/$langCode.gif\" alt=\"$langName\" title=\"$langName\">"
         );
       }
-    } else {
-      $flags[] = $this->createErrorText($request->getLastError());
     }
+  }
 
-    return implode('', $flags);
+  public function getCode() {
+    return implode('', $this->languageFlags);
   }
 }
-
-?>

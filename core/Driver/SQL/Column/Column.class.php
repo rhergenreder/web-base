@@ -4,8 +4,8 @@ namespace Driver\SQL\Column;
 
 class Column {
 
-  private $name;
-  private $nullable;
+  private string $name;
+  private bool $nullable;
   private $defaultValue;
 
   public function __construct($name, $nullable = false, $defaultValue = NULL) {
@@ -19,5 +19,3 @@ class Column {
   public function getDefaultValue() { return $this->defaultValue; }
 
 }
-
-?>

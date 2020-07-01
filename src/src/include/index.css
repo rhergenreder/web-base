@@ -1,0 +1,6 @@
+.page-link { color: #222629; }
+.page-link:hover { color: black; }
+
+.ReactCollapse--collapse {
+    transition: height 500ms;
+}

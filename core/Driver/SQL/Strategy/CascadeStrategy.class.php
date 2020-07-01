@@ -7,6 +7,4 @@ class CascadeStrategy extends Strategy {
   public function __construct() {
   }
 
-};
-
-?>
+}

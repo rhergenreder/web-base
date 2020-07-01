@@ -1,31 +1,34 @@
 <?php
 
-function getClassPath($class, $suffix=true) {
-  $path = str_replace('\\', '/', $class);
-  $suffix = ($suffix ? ".class" : "");
-  return "core/$path$suffix.php";
-}
-
-function createError($msg) {
-  return json_encode(array("success" => false, "msg" => $msg));
-}
-
-spl_autoload_extensions(".php");
-spl_autoload_register(function($class) {
-  $full_path = getClassPath($class);
-  if(file_exists($full_path))
-    include_once $full_path;
-  else
-    include_once getClassPath($class, false);
-});
+use Api\Request;
+use Configuration\Configuration;
+use Documents\Document404;
+use Elements\Document;
 
 include_once 'core/core.php';
 include_once 'core/datetime.php';
 include_once 'core/constants.php';
 
-$config = new Configuration\Configuration();
-$installation = (!$config->load());
+if (!is_readable(getClassPath(Configuration::class))) {
+  header("Content-Type: application/json");
+  die(json_encode(array( "success" => false, "msg" => "Configuration directory is not readable, check permissions before proceeding." )));
+}
+
+spl_autoload_extensions(".php");
+spl_autoload_register(function($class) {
+  $full_path = getClassPath($class, true);
+  if(file_exists($full_path)) {
+    include_once $full_path;
+  } else {
+    include_once getClassPath($class, false);
+  }
+});
+
+$config = new Configuration();
 $user   = new Objects\User($config);
+$sql    = $user->getSQL();
+$settings = $config->getSettings();
+$installation = !$sql || ($sql->isConnected() && !$settings->isInstalled());
 
 if(isset($_GET["api"]) && is_string($_GET["api"])) {
   header("Content-Type: application/json");
@@ -40,28 +43,54 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       header("400 Bad Request");
       $response = createError("Invalid Method");
     } else {
-      $apiFunction = implode("\\", array_map('ucfirst', explode("/", $apiFunction)));
-      if($apiFunction[0] !== "\\") $apiFunction = "\\$apiFunction";
-      $class = "\\Api$apiFunction";
-      $file = getClassPath($class);
-      if(!file_exists($file)) {
-        header("404 Not Found");
-        $response = createError("Not found");
-      } else if(!is_subclass_of($class, \Api\Request::class)) {
-        header("400 Bad Request");
-        $response = createError("Inalid Method");
+      $apiFunction = array_filter(array_map('ucfirst', explode("/", $apiFunction)));
+      if (count($apiFunction) > 1) {
+        $parentClass = "\\Api\\" . reset($apiFunction) . "API";
+        $apiClass = "\\Api\\" . implode("\\", $apiFunction);
       } else {
-        $request = new $class($user, true);
-        $success = $request->execute();
-        $msg = $request->getLastError();
-        $response = $request->getJsonResult();
+        $apiClass = "\\Api\\" . implode("\\", $apiFunction);
+        $parentClass = $apiClass;
+      }
+
+      try {
+        $file = getClassPath($parentClass);
+        if(!file_exists($file) || !class_exists($parentClass) || !class_exists($apiClass)) {
+          header("404 Not Found");
+          $response = createError("Not found");
+        } else {
+          $parentClass = new ReflectionClass($parentClass);
+          $apiClass = new ReflectionClass($apiClass);
+          if(!$apiClass->isSubclassOf(Request::class) || !$apiClass->isInstantiable()) {
+            header("400 Bad Request");
+            $response = createError("Invalid Method");
+          } else {
+            $request = $apiClass->newInstanceArgs(array($user, true));
+            $success = $request->execute();
+            $msg = $request->getLastError();
+            $response = $request->getJsonResult();
+          }
+        }
+      } catch (ReflectionException $e) {
+        $response = createError("Error instantiating class: $e");
       }
     }
   }
 } else {
-  $documentName = $_GET["site"];
+  $requestedUri = $_GET["site"] ?? $_SERVER["REQUEST_URI"];
+  if (($index = strpos($requestedUri, "?")) !== false) {
+    $requestedUri = substr($requestedUri, 0, $index);
+  }
+
+  if (($index = strpos($requestedUri, "#")) !== false) {
+    $requestedUri = substr($requestedUri, 0, $index);
+  }
+
+  if (startsWith($requestedUri, "/")) {
+    $requestedUri = substr($requestedUri, 1);
+  }
+
   if ($installation) {
-    if ($documentName !== "" && $documentName !== "index.php") {
+    if ($requestedUri !== "" && $requestedUri !== "index.php") {
       $response = "Redirecting to <a href=\"/\">/</a>";
       header("Location: /");
     } else {
@@ -69,26 +98,50 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       $response = $document->getCode();
     }
   } else {
-    if(empty($documentName) || strcasecmp($documentName, "install") === 0) {
-      $documentName = "home";
-    } else if(!preg_match("/[a-zA-Z]+(\/[a-zA-Z]+)*/", $documentName)) {
-      $documentName = "Document404";
-    }
 
-    $documentName = strtoupper($documentName[0]) . substr($documentName, 1);
-    $documentName = str_replace("/", "\\", $documentName);
-    $class = "\\Documents\\$documentName";
-    $file = getClassPath($class);
-    if(!file_exists($file) || !is_subclass_of($class, \Elements\Document::class)) {
-      $document = new \Documents\Document404($user);
+    $req = new \Api\Routes\Find($user);
+    $success = $req->execute(array("request" => $requestedUri));
+    $response = "";
+    if (!$success) {
+      http_response_code(500);
+      $response = "Unable to find route: " . $req->getLastError();
     } else {
-      $document = new $class($user);
+      $route = $req->getResult()["route"];
+      if (is_null($route)) {
+        $response = (new Document404($user))->getCode();
+      } else {
+        $target = trim(explode("\n", $route["target"])[0]);
+        switch ($route["action"]) {
+          case "redirect_temporary":
+            http_response_code(307);
+            header("Location: $target");
+            break;
+          case "redirect_permanently":
+            http_response_code(308);
+            header("Location: $target");
+            break;
+          case "static":
+            $currentDir = dirname(__FILE__);
+            $response = serveStatic($currentDir, $target);
+            break;
+          case "dynamic":
+            $view = $route["extra"] ?? "";
+            $file = getClassPath($target);
+            if(!file_exists($file) || !is_subclass_of($target, Document::class)) {
+              $document = new Document404($user, $view);
+            } else {
+              $document = new $target($user, $view);
+            }
+
+            $response = $document->getCode();
+            break;
+        }
+      }
     }
 
-    $response = $document->getCode();
+    $user->processVisit();
   }
 }
 
 $user->sendCookies();
 die($response);
-?>

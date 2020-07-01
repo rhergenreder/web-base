@@ -2,12 +2,11 @@
 
 namespace Elements;
 
-class Style extends Source {
+class Style extends StaticView {
 
-  private $style;
+  private string $style;
 
   function __construct($style) {
-    parent::__construct('style', '');
     $this->style = $style;
   }
 
@@ -15,5 +14,3 @@ class Style extends Source {
     return "<style>$this->style</style>";
   }
 }
-
-?>

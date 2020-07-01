@@ -8,5 +8,3 @@ class DateTimeColumn extends Column {
     parent::__construct($name, $nullable, $defaultValue);
   }
 }
-
-?>

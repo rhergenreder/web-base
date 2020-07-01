@@ -4,11 +4,11 @@ namespace Objects;
 
 class ConnectionData {
 
-  private $host;
-  private $port;
-  private $login;
-  private $password;
-  private $properties;
+  private string $host;
+  private int $port;
+  private string $login;
+  private string $password;
+  private array $properties;
 
   public function __construct($host, $port, $login, $password) {
     $this->host = $host;
@@ -32,6 +32,7 @@ class ConnectionData {
     }
 
     $this->properties[$key] = $val;
+    return true;
   }
 
   public function getHost() { return $this->host; }
@@ -39,5 +40,3 @@ class ConnectionData {
   public function getLogin() { return $this->login; }
   public function getPassword() { return $this->password; }
 }
-
-?>

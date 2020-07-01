@@ -34,7 +34,7 @@ namespace Api {
         $row = $res[0];
         if (strcasecmp($username, $row['name']) === 0) {
           return $this->createError("This username is already taken.");
-        } else if (strcasecmp($username, $row['email']) === 0) {
+        } else if (strcasecmp($email, $row['email']) === 0) {
           return $this->createError("This email address is already in use.");
         }
       }
@@ -670,13 +670,14 @@ namespace Api\User {
       }
 
       parent::__construct($user, $externalCall, $parameters);
+      $this->csrfTokenRequired = false;
     }
 
     private function insertToken() {
       $validUntil = (new DateTime())->modify("+48 hour");
       $sql = $this->user->getSQL();
       $res = $sql->insert("UserToken", array("user_id", "token", "token_type", "valid_until"))
-        ->addRow($this->userId, $this->token, "confirmation", $validUntil)
+        ->addRow($this->userId, $this->token, "email_confirm", $validUntil)
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -732,33 +733,31 @@ namespace Api\User {
       $this->userId = $id;
       $this->token = generateRandomString(36);
       if ($this->insertToken()) {
-        return false;
-      }
+        $settings = $this->user->getConfiguration()->getSettings();
+        $baseUrl = htmlspecialchars($settings->getBaseUrl());
+        $siteName = htmlspecialchars($settings->getSiteName());
 
-      $settings = $this->user->getConfiguration()->getSettings();
-      $baseUrl = htmlspecialchars($settings->getBaseUrl());
-      $siteName = htmlspecialchars($settings->getSiteName());
+        if ($this->success) {
 
-      if ($this->success) {
+          $replacements = array(
+            "link" => "$baseUrl/confirmEmail?token=$this->token",
+            "site_name" => $siteName,
+            "base_url" => $baseUrl,
+            "username" => htmlspecialchars($username)
+          );
 
-        $replacements = array(
-          "link" => "$baseUrl/confirmEmail?token=$this->token",
-          "site_name" => $siteName,
-          "base_url" => $baseUrl,
-          "username" => htmlspecialchars($username)
-        );
+          foreach($replacements as $key => $value) {
+            $messageBody = str_replace("{{{$key}}}", $value, $messageBody);
+          }
 
-        foreach($replacements as $key => $value) {
-          $messageBody = str_replace("{{{$key}}}", $value, $messageBody);
-        }
-
-        $request = new \Api\Mail\Send($this->user);
-        $this->success = $request->execute(array(
+          $request = new \Api\Mail\Send($this->user);
+          $this->success = $request->execute(array(
             "to" => $email,
             "subject" => "[$siteName] E-Mail Confirmation",
             "body" => $messageBody
-        ));
-        $this->lastError = $request->getLastError();
+          ));
+          $this->lastError = $request->getLastError();
+        }
       }
 
       if (!$this->success) {

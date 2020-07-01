@@ -11,6 +11,7 @@ class Script extends StaticView {
   const JQUERY    = "/js/jquery.min.js";
   const INSTALL   = "/js/install.js";
   const BOOTSTRAP = "/js/bootstrap.bundle.min.js";
+  const ACCOUNT   = "/js/account.js";
 
   private string $type;
   private string $content;

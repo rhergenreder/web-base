@@ -14,16 +14,6 @@ class Register extends AccountView {
     $this->icon = "user-plus";
   }
 
-  public function loadView() {
-    parent::loadView();
-
-    $document = $this->getDocument();
-    $settings = $document->getUser()->getConfiguration()->getSettings();
-    if ($settings->isRecaptchaEnabled()) {
-      $document->getHead()->loadGoogleRecaptcha($settings->getRecaptchaSiteKey());
-    }
-  }
-
   public function getAccountContent() {
 
     $settings = $this->getDocument()->getUser()->getConfiguration()->getSettings();

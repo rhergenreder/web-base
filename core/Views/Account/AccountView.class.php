@@ -16,6 +16,16 @@ abstract class AccountView extends View {
     $this->icon = "image";
   }
 
+  public function loadView() {
+    parent::loadView();
+
+    $document = $this->getDocument();
+    $settings = $document->getUser()->getConfiguration()->getSettings();
+    if ($settings->isRecaptchaEnabled()) {
+      $document->getHead()->loadGoogleRecaptcha($settings->getRecaptchaSiteKey());
+    }
+  }
+
   public function getCode() {
     $html = parent::getCode();
 
@@ -37,6 +47,12 @@ abstract class AccountView extends View {
           </div>
         </div>
       </div>";
+
+    $settings = $this->getDocument()->getUser()->getConfiguration()->getSettings();
+    if ($settings->isRecaptchaEnabled()) {
+      $siteKey = $settings->getRecaptchaSiteKey();
+      $html .= "<input type='hidden' value='$siteKey' id='siteKey' />";
+    }
 
     return $html;
   }

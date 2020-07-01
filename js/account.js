@@ -11,6 +11,21 @@ $(document).ready(function () {
         $("#alertMessage").hide();
     }
 
+    function submitForm(btn, method, params, onSuccess) {
+        let textBefore = btn.text();
+        btn.prop("disabled", true);
+        btn.html("Submitting… <i class='fas fa-spin fa-spinner'></i>")
+        jsCore.apiCall(method, params, (res) => {
+            btn.prop("disabled", false);
+            btn.text(textBefore);
+            if (!res.success) {
+                showAlert("danger", res.msg);
+            } else {
+                onSuccess();
+            }
+        });
+    }
+
     // Login
     $("#btnLogin").click(function() {
         const username = $("#username").val();
@@ -44,27 +59,30 @@ $(document).ready(function () {
         let email = $("#email").val().trim();
         let password = $("#password").val();
         let confirmPassword = $("#confirmPassword").val();
+        let siteKey = $("#siteKey").val().trim();
 
         if (username === '' || email === '' || password === '' || confirmPassword === '') {
             showAlert("danger", "Please fill out every field.");
         } else if(password !== confirmPassword) {
             showAlert("danger", "Your passwords did not match.");
         } else {
-            let textBefore = btn.text();
             let params = { username: username, email: email, password: password, confirmPassword: confirmPassword };
-
-            btn.prop("disabled", true);
-            btn.html("Submitting… <i class='fas fa-spin fa-spinner'></i>")
-            jsCore.apiCall("user/register", params, (res) => {
-                btn.prop("disabled", false);
-                btn.text(textBefore);
-                if (!res.success) {
-                    showAlert("danger", res.msg);
-                } else {
+            if (typeof grecaptcha !== 'undefined') {
+                grecaptcha.ready(function() {
+                    grecaptcha.execute(siteKey, {action: 'register'}).then(function(captcha) {
+                        params["captcha"] = captcha;
+                        submitForm(btn, "user/register", params, () => {
+                            showAlert("success", "Account successfully created, check your emails.");
+                            $("input").val("");
+                        });
+                    });
+                });
+            } else {
+                submitForm(btn, "user/register", params, () => {
                     showAlert("success", "Account successfully created, check your emails.");
                     $("input").val("");
-                }
-            });
+                });
+            }
         }
     });
 
@@ -105,19 +123,23 @@ $(document).ready(function () {
         let btn = $(this);
         let email = $("#email").val();
 
-        let textBefore = btn.text();
-        btn.prop("disabled", true);
-        btn.html("Submitting… <i class='fas fa-spin fa-spinner'></i>")
-        jsCore.apiCall("user/requestPasswordReset", { email: email }, (res) => {
-            btn.prop("disabled", false);
-            btn.text(textBefore);
-            if (!res.success) {
-                showAlert("danger", res.msg);
-            } else {
+        let params = { email: email };
+        if (typeof grecaptcha !== 'undefined') {
+            grecaptcha.ready(function() {
+                grecaptcha.execute(siteKey, {action: 'resetPassword'}).then(function(captcha) {
+                    params["captcha"] = captcha;
+                    submitForm(btn, "user/requestPasswordReset", params, () => {
+                        showAlert("success", "If the e-mail address exists and is linked to a account, you will receive a password reset token.");
+                        $("input").val("");
+                    });
+                });
+            });
+        } else {
+            submitForm(btn, "user/requestPasswordReset", params, () => {
                 showAlert("success", "If the e-mail address exists and is linked to a account, you will receive a password reset token.");
                 $("input").val("");
-            }
-        });
+            });
+        }
     });
 
     $("#btnResetPassword").click(function (e) {

@@ -544,17 +544,21 @@ namespace Api\User {
       $this->success = $req->execute(array("token" => $token));
       $this->lastError = $req->getLastError();
 
-      $result = $req->getResult();
-      if (strcasecmp($result["token"]["type"], "invite") !== 0) {
-        return $this->createError("Invalid token type");
-      } else if($result["user"]["confirmed"]) {
-        return $this->createError("Your email address is already confirmed.");
-      } else if (!$this->updateUser($result["user"]["uid"])) {
-        return false;
-      } else {
-        $this->invalidateToken($token);
-        return true;
+      if ($this->success) {
+        $result = $req->getResult();
+        if (strcasecmp($result["token"]["type"], "email_confirm") !== 0) {
+          return $this->createError("Invalid token type");
+        } else if($result["user"]["confirmed"]) {
+          return $this->createError("Your email address is already confirmed.");
+        } else if (!$this->updateUser($result["user"]["uid"])) {
+          return false;
+        } else {
+          $this->invalidateToken($token);
+          return true;
+        }
       }
+
+      return $this->success;
     }
   }
 

@@ -8,17 +8,19 @@ use Elements\View;
 abstract class AccountView extends View {
 
   protected string $description;
+  protected string $icon;
 
   public function __construct(Document $document, $loadView = true) {
     parent::__construct($document, $loadView);
     $this->description = "";
+    $this->icon = "image";
   }
 
   public function getCode() {
     $html = parent::getCode();
 
     $content = $this->getAccountContent();
-    $icon = $this->createIcon("user-plus", "fas", "fa-3x");
+    $icon = $this->createIcon($this->icon, "fas", "fa-3x");
 
     $html .= "<div class=\"container mt-5\">
         <div class=\"row\">

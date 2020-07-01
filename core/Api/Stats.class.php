@@ -2,7 +2,6 @@
 
 namespace Api;
 
-use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondBool;
 
 class Stats extends Request {

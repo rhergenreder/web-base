@@ -77,6 +77,14 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
   }
 } else {
   $requestedUri = $_GET["site"] ?? $_SERVER["REQUEST_URI"];
+  if (($index = strpos($requestedUri, "?")) !== false) {
+    $requestedUri = substr($requestedUri, 0, $index);
+  }
+
+  if (($index = strpos($requestedUri, "#")) !== false) {
+    $requestedUri = substr($requestedUri, 0, $index);
+  }
+
   if (startsWith($requestedUri, "/")) {
     $requestedUri = substr($requestedUri, 1);
   }

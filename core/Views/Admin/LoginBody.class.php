@@ -1,10 +1,11 @@
 <?php
 
-namespace Views;
+namespace Views\Admin;
 
 use Elements\Body;
 use Elements\Link;
 use Elements\Script;
+use Views\LanguageFlags;
 
 class LoginBody extends Body {
 
@@ -19,8 +20,8 @@ class LoginBody extends Body {
     $head->loadBootstrap();
     $head->addJS(Script::CORE);
     $head->addCSS(Link::CORE);
-    $head->addJS(Script::ADMIN);
-    $head->addCSS(Link::ADMIN);
+    $head->addJS(Script::ACCOUNT);
+    $head->addCSS(Link::ACCOUNT);
   }
 
   public function getCode() {
@@ -36,14 +37,6 @@ class LoginBody extends Body {
     $iconBack = $this->createIcon("arrow-circle-left");
     $domain = $_SERVER['HTTP_HOST'];
     $protocol = getProtocol();
-
-    $accountCreated = "";
-    if(isset($_GET["accountCreated"])) {
-      $accountCreated =
-        '<div class="alert alert-success mt-3" id="accountCreated">
-          Your account was successfully created, you may now login with your credentials
-        </div>';
-    }
 
     $html .= "
       <body>
@@ -63,13 +56,12 @@ class LoginBody extends Body {
                 <label class=\"form-check-label\" for=\"stayLoggedIn\">$stayLoggedIn</label>
               </div>
               <button class=\"btn btn-lg btn-primary btn-block\" id=\"btnLogin\" type=\"button\">$login</button>
-              <div class=\"alert alert-danger hidden\" role=\"alert\" id=\"loginError\"></div>
+              <div class=\"alert alert-danger\" style='display:none' role=\"alert\" id=\"alertMessage\"></div>
               <span class=\"flags position-absolute\">$flags</span>
             </form>
             <div class=\"p-1\">
               <a href=\"$protocol://$domain\">$iconBack&nbsp;$backToStartPage</a>
             </div>
-            $accountCreated
           </div>
           </div>
         </div>

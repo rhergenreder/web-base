@@ -6,7 +6,7 @@ namespace Documents {
   use Elements\Document;
   use Objects\User;
   use Views\Admin\AdminDashboardBody;
-  use Views\LoginBody;
+  use Views\Admin\LoginBody;
 
   class Admin extends Document {
     public function __construct(User $user, ?string $view = NULL) {

@@ -3,9 +3,7 @@
 
 namespace Views\Account;
 
-
 use Elements\Document;
-use Elements\View;
 
 class Register extends AccountView {
 

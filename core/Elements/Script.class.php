@@ -7,7 +7,6 @@ class Script extends StaticView {
   const MIME_TEXT_JAVASCRIPT    = "text/javascript";
 
   const CORE      = "/js/script.js";
-  const ADMIN     = "/js/admin.js";
   const JQUERY    = "/js/jquery.min.js";
   const INSTALL   = "/js/install.js";
   const BOOTSTRAP = "/js/bootstrap.bundle.min.js";

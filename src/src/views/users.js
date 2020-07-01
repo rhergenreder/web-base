@@ -167,6 +167,8 @@ export default class UserOverview extends React.Component {
             }
 
             let user = this.state.users.data[uid];
+            let confirmedIcon = <Icon icon={user["confirmed"] ? "check" : "times"}/>;
+
             let groups = [];
 
             for (let groupId in user.groups) {
@@ -193,6 +195,7 @@ export default class UserOverview extends React.Component {
                             {getPeriodString(user["registered_at"])}
                         </span>
                     </td>
+                    <td className={"text-center"}>{confirmedIcon}</td>
                     <td>
                         <Link to={"/admin/user/edit/" + uid} className={"text-reset"}>
                             <Icon icon={"pencil-alt"} data-effect={"solid"}
@@ -208,6 +211,7 @@ export default class UserOverview extends React.Component {
             userRows.push(
                 <tr key={"empty-row-" + userRows.length}>
                     <td>&nbsp;</td>
+                    <td/>
                     <td/>
                     <td/>
                     <td/>
@@ -251,6 +255,7 @@ export default class UserOverview extends React.Component {
                         <th>Email</th>
                         <th>Groups</th>
                         <th>Registered</th>
+                        <th className={"text-center"}>Confirmed</th>
                         <th><Icon icon={"tools"} /></th>
                     </tr>
                     </thead>

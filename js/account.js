@@ -11,6 +11,30 @@ $(document).ready(function () {
         $("#alertMessage").hide();
     }
 
+    // Login
+    $("#btnLogin").click(function() {
+        const username = $("#username").val();
+        const password = $("#password").val();
+        const createdDiv = $("#accountCreated");
+        const stayLoggedIn = $("#stayLoggedIn").is(":checked");
+        const btn = $(this);
+
+        hideAlert();
+        btn.prop("disabled", true);
+        btn.html("Logging in… <i class=\"fa fa-spin fa-circle-notch\"></i>");
+        jsCore.apiCall("/user/login", {"username": username, "password": password, "stayLoggedIn": stayLoggedIn }, function(res) {
+            if (res.success) {
+                document.location.reload();
+            } else {
+                btn.html("Login");
+                btn.prop("disabled", false);
+                $("#password").val("");
+                createdDiv.hide();
+                showAlert(res.msg);
+            }
+        });
+    });
+
     $("#btnRegister").click(function (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -38,6 +62,88 @@ $(document).ready(function () {
                     showAlert("danger", res.msg);
                 } else {
                     showAlert("success", "Account successfully created, check your emails.");
+                    $("input").val("");
+                }
+            });
+        }
+    });
+
+    $("#btnAcceptInvite").click(function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let btn = $(this);
+        let token = $("#token").val();
+        let password = $("#password").val();
+        let confirmPassword = $("#confirmPassword").val();
+
+        if(password !== confirmPassword) {
+            showAlert("danger", "Your passwords did not match.");
+        } else {
+            let textBefore = btn.text();
+            let params = { token: token, password: password, confirmPassword: confirmPassword };
+
+            btn.prop("disabled", true);
+            btn.html("Submitting… <i class='fas fa-spin fa-spinner'></i>")
+            jsCore.apiCall("user/acceptInvite", params, (res) => {
+                btn.prop("disabled", false);
+                btn.text(textBefore);
+                if (!res.success) {
+                    showAlert("danger", res.msg);
+                } else {
+                    showAlert("success", "Account successfully created. You may now login.");
+                    $("input").val("");
+                }
+            });
+        }
+    });
+
+    $("#btnRequestPasswordReset").click(function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let btn = $(this);
+        let email = $("#email").val();
+
+        let textBefore = btn.text();
+        btn.prop("disabled", true);
+        btn.html("Submitting… <i class='fas fa-spin fa-spinner'></i>")
+        jsCore.apiCall("user/requestPasswordReset", { email: email }, (res) => {
+            btn.prop("disabled", false);
+            btn.text(textBefore);
+            if (!res.success) {
+                showAlert("danger", res.msg);
+            } else {
+                showAlert("success", "If the e-mail address exists and is linked to a account, you will receive a password reset token.");
+                $("input").val("");
+            }
+        });
+    });
+
+    $("#btnResetPassword").click(function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let btn = $(this);
+        let token = $("#token").val();
+        let password = $("#password").val();
+        let confirmPassword = $("#confirmPassword").val();
+
+        if(password !== confirmPassword) {
+            showAlert("danger", "Your passwords did not match.");
+        } else {
+            let textBefore = btn.text();
+            let params = { token: token, password: password, confirmPassword: confirmPassword };
+
+            btn.prop("disabled", true);
+            btn.html("Submitting… <i class='fas fa-spin fa-spinner'></i>")
+            jsCore.apiCall("user/resetPassword", params, (res) => {
+                btn.prop("disabled", false);
+                btn.text(textBefore);
+                if (!res.success) {
+                    showAlert("danger", res.msg);
+                } else {
+                    showAlert("success", "Your password was successfully changed. You may now login.");
                     $("input").val("");
                 }
             });

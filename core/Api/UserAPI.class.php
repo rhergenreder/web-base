@@ -84,7 +84,7 @@ namespace Api {
 
     protected function getUser($id) {
       $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at",
+      $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at", "User.confirmed",
         "Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor")
         ->from("User")
         ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
@@ -254,7 +254,7 @@ namespace Api\User {
       }
 
       $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at",
+      $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at", "User.confirmed",
         "Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor")
         ->from("User")
         ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
@@ -278,6 +278,7 @@ namespace Api\User {
               "name" => $row["name"],
               "email" => $row["email"],
               "registered_at" => $row["registered_at"],
+              "confirmed" => $sql->parseBool($row["confirmed"]),
               "groups" => array(),
             );
           }
@@ -310,6 +311,7 @@ namespace Api\User {
         return false;
       }
 
+      $sql = $this->user->getSQL();
       $id = $this->getParam("id");
       $user = $this->getUser($id);
 
@@ -322,6 +324,7 @@ namespace Api\User {
             "name" => $user[0]["name"],
             "email" => $user[0]["email"],
             "registered_at" => $user[0]["registered_at"],
+            "confirmed" => $sql->parseBool($user["0"]["confirmed"]),
             "groups" => array()
           );
 
@@ -450,6 +453,7 @@ namespace Api\User {
         'password' => new StringType('password'),
         'confirmPassword' => new StringType('confirmPassword'),
       ));
+      $this->csrfTokenRequired = false;
     }
 
     private function updateUser($uid, $password) {
@@ -783,7 +787,7 @@ namespace Api\User {
 
     private function checkToken($token) {
       $sql = $this->user->getSQL();
-      $res = $sql->select("UserToken.token_type", "User.uid", "User.name", "User.email", "User.confirmed")
+      $res = $sql->select("UserToken.token_type", "User.uid", "User.name", "User.email")
         ->from("UserToken")
         ->innerJoin("User", "UserToken.user_id", "User.uid")
         ->where(new Compare("UserToken.token", $token))
@@ -817,7 +821,6 @@ namespace Api\User {
           $this->result["user"] = array(
             "name" => $tokenEntry["name"],
             "email" => $tokenEntry["email"],
-            "confirmed" => $this->user->getSQL()->parseBool($tokenEntry["confirmed"]),
             "uid" => $tokenEntry["uid"]
           );
         } else {
@@ -837,6 +840,7 @@ namespace Api\User {
         'email' => new Parameter('email', Parameter::TYPE_EMAIL, true, NULL),
         'password' => new StringType('password', -1, true, NULL),
         'groups' => new Parameter('groups', Parameter::TYPE_ARRAY, true, NULL),
+        'confirmed' => new Parameter('confirmed', Parameter::TYPE_BOOLEAN, true, NULL)
       ));
 
       $this->loginRequired = true;
@@ -859,6 +863,7 @@ namespace Api\User {
         $email = $this->getParam("email");
         $password = $this->getParam("password");
         $groups = $this->getParam("groups");
+        $confirmed = $this->getParam("confirmed");
 
         $email = (!is_null($email) && empty($email)) ? null : $email;
 
@@ -895,6 +900,14 @@ namespace Api\User {
         if ($usernameChanged) $query->set("name", $username);
         if ($emailChanged) $query->set("email", $email);
         if (!is_null($password)) $query->set("password", $this->hashPassword($password));
+
+        if (!is_null($confirmed)) {
+          if ($id === $this->user->getId() && $confirmed === false) {
+            return $this->createError("Cannot make own account unconfirmed.");
+          } else {
+            $query->set("confirmed", $confirmed);
+          }
+        }
 
         if (!empty($query->getValues())) {
           $query->where(new Compare("User.uid", $id));
@@ -957,7 +970,7 @@ namespace Api\User {
     }
   }
 
-  class RequestResetPassword extends UserAPI {
+  class RequestPasswordReset extends UserAPI {
     public function __construct(User $user, $externalCall = false) {
       $parameters = array(
         'email' => new Parameter('email', Parameter::TYPE_EMAIL),
@@ -969,6 +982,7 @@ namespace Api\User {
       }
 
       parent::__construct($user, $externalCall, $parameters);
+      $this->csrfTokenRequired = false;
     }
 
     public function execute($values = array()) {
@@ -1010,7 +1024,7 @@ namespace Api\User {
         $siteName = htmlspecialchars($settings->getSiteName());
 
         $replacements = array(
-          "link" => "$baseUrl/confirmEmail?token=$token",
+          "link" => "$baseUrl/resetPassword?token=$token",
           "site_name" => $siteName,
           "base_url" => $baseUrl,
           "username" => htmlspecialchars($user["name"])
@@ -1035,6 +1049,7 @@ namespace Api\User {
     private function findUser($email) {
       $sql = $this->user->getSQL();
       $res = $sql->select("User.uid", "User.name")
+        ->from("User")
         ->where(new Compare("User.email", $email))
         ->where(new CondBool("User.confirmed"))
         ->execute();
@@ -1073,6 +1088,8 @@ namespace Api\User {
         'password' => new StringType('password'),
         'confirmPassword' => new StringType('confirmPassword'),
       ));
+
+      $this->csrfTokenRequired = false;
     }
 
     private function updateUser($uid, $password) {
@@ -1108,7 +1125,7 @@ namespace Api\User {
       }
 
       $result = $req->getResult();
-      if (strcasecmp($result["token"]["type"], "reset_password") !== 0) {
+      if (strcasecmp($result["token"]["type"], "password_reset") !== 0) {
         return $this->createError("Invalid token type");
       } else if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
         return false;

@@ -10,7 +10,7 @@ class Link extends StaticView {
   const FONTAWESOME = "/css/fontawesome.min.css";
   const BOOTSTRAP   = "/css/bootstrap.min.css";
   const CORE        = "/css/style.css";
-  const ADMIN       = "/css/admin.css";
+  const ACCOUNT       = "/css/account.css";
 
   private string $type;
   private string $rel;

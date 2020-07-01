@@ -43,7 +43,8 @@ export default class EditUser extends React.Component {
                         name: res.user.name,
                         email: res.user.email || "",
                         groups: res.user.groups,
-                        password: ""
+                        password: "",
+                        confirmed: res.user.confirmed
                     }
                 });
                 this.parent.api.fetchGroups(1, 50).then((res) => {
@@ -61,11 +62,15 @@ export default class EditUser extends React.Component {
 
     onChangeInput(event) {
         const target = event.target;
-        const value = target.value;
+        let value = target.value;
         const name = target.name;
 
+        if (target.type === "checkbox") {
+            value = !!target.checked;
+        }
+
         if (name === "search") {
-            this.setState({ ...this.state, searchString: value });
+            this.setState({...this.state, searchString: value});
         } else {
             this.setState({ ...this.state, user: { ...this.state.user, [name]: value } });
         }
@@ -85,9 +90,10 @@ export default class EditUser extends React.Component {
         const email = this.state.user["email"];
         let password = this.state.user["password"].length > 0 ? this.state.user["password"] : null;
         let groups = Object.keys(this.state.user.groups);
+        let confirmed = this.state.user["confirmed"];
 
         this.setState({ ...this.state, isSaving: true});
-        this.parent.api.editUser(id, username, email, password, groups).then((res) => {
+        this.parent.api.editUser(id, username, email, password, groups, confirmed).then((res) => {
             let alerts = this.state.alerts.slice();
 
             if (res.success) {
@@ -260,6 +266,15 @@ export default class EditUser extends React.Component {
                             </span>
                         </span>
                     </span>
+                </div>
+
+                <div className={"form-check"}>
+                    <input type={"checkbox"} className={"form-check-input"}
+                           onChange={this.onChangeInput.bind(this)}
+                           id={"confirmed"} name={"confirmed"} checked={this.state.user.confirmed}/>
+                    <label className={"form-check-label"} htmlFor={"confirmed"}>
+                        Confirmed
+                    </label>
                 </div>
 
                 <Link to={"/admin/users"} className={"btn btn-info mt-2 mr-2"}>

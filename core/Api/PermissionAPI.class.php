@@ -107,10 +107,6 @@ namespace Api\Permission {
         return false;
       }
 
-      if (!$this->checkStaticPermission()) {
-        return false;
-      }
-
       if (!$this->fetchGroups()) {
         return false;
       }

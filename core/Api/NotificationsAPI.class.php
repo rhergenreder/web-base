@@ -1,7 +1,7 @@
 <?php
 
 namespace Api {
-  class NotificationsAPI extends Request {
+  abstract class NotificationsAPI extends Request {
 
   }
 }

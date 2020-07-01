@@ -25,6 +25,10 @@ export default function Sidebar(props) {
             "name": "Dashboard",
             "icon": "tachometer-alt"
         },
+        "visitors": {
+            "name": "Visitor Statistics",
+            "icon": "chart-bar",
+        },
         "users": {
             "name": "Users & Groups",
             "icon": "users"

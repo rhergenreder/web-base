@@ -1,7 +1,7 @@
 <?php
 
 namespace Api {
-  class MailAPI extends Request {
+  abstract class MailAPI extends Request {
 
   }
 }

@@ -34,39 +34,6 @@ class Stats extends Request {
     return ($this->success ? $res[0]["count"] : 0);
   }
 
-  private function getVisitorStatistics() {
-
-    $currentYear = getYear();
-    $firstMonth = $currentYear * 100 + 01;
-    $latsMonth  = $currentYear * 100 + 12;
-
-    $sql = $this->user->getSQL();
-    $res = $sql->select($sql->count(), "month")
-      ->from("Visitor")
-      ->where(new Compare("month", $firstMonth, ">="))
-      ->where(new Compare("month", $latsMonth, "<="))
-      ->where(new Compare("count", 1, ">"))
-      ->groupBy("month")
-      ->orderBy("month")
-      ->ascending()
-      ->execute();
-
-    $this->success = $this->success && ($res !== FALSE);
-    $this->lastError = $sql->getLastError();
-
-    $visitors = array();
-
-    if ($this->success) {
-      foreach($res as $row) {
-        $month = $row["month"];
-        $count = $row["count"];
-        $visitors[$month] = $count;
-      }
-    }
-
-    return $visitors;
-  }
-
   private function checkSettings() {
     $req = new \Api\Settings\Get($this->user);
     $this->success = $req->execute(array("key" => "^(mail_enabled|recaptcha_enabled)$"));
@@ -88,11 +55,14 @@ class Stats extends Request {
 
     $userCount = $this->getUserCount();
     $pageCount = $this->getPageCount();
-    $visitorStatistics = $this->getVisitorStatistics();
+    $req = new \Api\Visitors\Stats($this->user);
+    $this->success = $req->execute(array("type"=>"monthly"));
+    $this->lastError = $req->getLastError();
     if (!$this->success) {
       return false;
     }
 
+    $visitorStatistics = $req->getResult()["visitors"];
     $loadAvg = "Unknown";
     if (function_exists("sys_getloadavg")) {
       $loadAvg = sys_getloadavg();

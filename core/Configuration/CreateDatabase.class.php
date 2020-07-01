@@ -114,10 +114,10 @@ class CreateDatabase {
       ->foreignKey("user_id", "User", "uid");
 
     $queries[] = $sql->createTable("Visitor")
-      ->addInt("month")
+      ->addInt("day")
       ->addInt("count", false, 1)
       ->addString("cookie", 26)
-      ->unique("month", "cookie");
+      ->unique("day", "cookie");
 
     $queries[] = $sql->createTable("Route")
       ->addSerial("uid")
@@ -191,7 +191,8 @@ class CreateDatabase {
       ->addRow("User/invite", array(USER_GROUP_ADMIN), "Allows users to create a new user and send them an invitation link")
       ->addRow("User/edit", array(USER_GROUP_ADMIN), "Allows users to edit details and group memberships of any user")
       ->addRow("User/delete", array(USER_GROUP_ADMIN), "Allows users to delete any other user")
-      ->addRow("Permission/fetch", array(USER_GROUP_ADMIN), "Allows users to list all API permissions");
+      ->addRow("Permission/fetch", array(USER_GROUP_ADMIN), "Allows users to list all API permissions")
+      ->addRow("Visitors/stats", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allowes users to see visitor statistics");
 
     return $queries;
   }

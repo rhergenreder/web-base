@@ -62,22 +62,26 @@ export default class Overview extends React.Component {
             '#ff4444', '#ffbb33', '#00C851', '#33b5e5'
         ];
 
-        let data = new Array(12).fill(0);
+        const numDays = moment().daysInMonth();
+        let data = new Array(numDays).fill(0);
         let visitorCount = 0;
         for (let date in this.state.visitors) {
-            let month = parseInt(date) % 100 - 1;
-            if (month >= 0 && month < 12) {
-                let count = parseInt(this.state.visitors[date]);
-                data[month] = count;
-                visitorCount += count;
+            if (this.state.visitors.hasOwnProperty(date)) {
+                let day = parseInt(date.split("/")[2]) - 1;
+                if (day >= 0 && day < numDays) {
+                    let count = parseInt(this.state.visitors[date]);
+                    data[day] = count;
+                    visitorCount += count;
+                }
             }
         }
 
+        let labels = Array.from(Array(numDays), (_, i) => i + 1);
         let chartOptions = {};
         let chartData = {
-            labels: moment.monthsShort(),
+            labels: labels,
             datasets: [{
-                label: 'Unique Visitors ' + moment().year(),
+                label: 'Unique Visitors ' + moment().format("MMMM"),
                 borderWidth: 1,
                 data: data,
                 backgroundColor: colors,
@@ -159,7 +163,7 @@ export default class Overview extends React.Component {
                                 <div className="icon">
                                     <Icon icon={"chart-line"} />
                                 </div>
-                                <Link to={"/admin/statistics"} className="small-box-footer">More info <Icon icon={"arrow-circle-right"}/></Link>
+                                <Link to={"/admin/visitors"} className="small-box-footer">More info <Icon icon={"arrow-circle-right"}/></Link>
                             </div>
                         </div>
                     </div>
@@ -168,7 +172,7 @@ export default class Overview extends React.Component {
                     <div className="col-lg-6 col-12">
                         <div className="card card-info">
                             <div className="card-header">
-                                <h3 className="card-title">Unique Visitors this year</h3>
+                                <h3 className="card-title">Unique Visitors this month</h3>
                                 <div className="card-tools">
                                     <button type="button" className={"btn btn-tool"} onClick={(e) => {
                                         e.preventDefault();

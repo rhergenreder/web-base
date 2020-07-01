@@ -2,7 +2,7 @@
 
 namespace Api {
 
-  class SettingsAPI extends Request {
+  abstract class SettingsAPI extends Request {
 
   }
 

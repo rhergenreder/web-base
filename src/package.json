@@ -12,6 +12,7 @@
     "react": "^16.13.1",
     "react-chartjs-2": "^2.9.0",
     "react-collapse": "^5.0.1",
+    "react-datepicker": "^3.0.0",
     "react-dom": "^16.13.1",
     "react-draft-wysiwyg": "^1.14.5",
     "react-router-dom": "^5.2.0",

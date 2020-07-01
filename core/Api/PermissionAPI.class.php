@@ -2,7 +2,7 @@
 
 namespace Api {
 
-  class PermissionAPI extends Request {
+  abstract class PermissionAPI extends Request {
     protected function checkStaticPermission() {
       if (!$this->user->isLoggedIn() || !$this->user->hasGroup(USER_GROUP_ADMIN)) {
         return $this->createError("Permission denied.");

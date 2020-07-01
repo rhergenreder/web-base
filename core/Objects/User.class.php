@@ -260,10 +260,10 @@ class User extends ApiObject {
       }
 
       $cookie = $_COOKIE["PHPSESSID"];
-      $month = (new DateTime())->format("Ym");
+      $day = (new DateTime())->format("Ymd");
 
-      $this->sql->insert("Visitor", array("cookie", "month"))
-        ->addRow($cookie, $month)
+      $this->sql->insert("Visitor", array("cookie", "day"))
+        ->addRow($cookie, $day)
         ->onDuplicateKeyStrategy(new UpdateStrategy(
           array("month", "cookie"),
           array("count" => new Add("Visitor.count", 1))))

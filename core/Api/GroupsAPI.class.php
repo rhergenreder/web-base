@@ -4,7 +4,7 @@ namespace Api {
 
   use Driver\SQL\Condition\Compare;
 
-  class GroupsAPI extends Request {
+  abstract class GroupsAPI extends Request {
 
     protected function groupExists($name) {
       $sql = $this->user->getSQL();

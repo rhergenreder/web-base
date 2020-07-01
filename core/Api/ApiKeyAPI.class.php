@@ -4,7 +4,7 @@ namespace Api {
 
   use Driver\SQL\Condition\Compare;
 
-  class ApiKeyAPI extends Request {
+  abstract class ApiKeyAPI extends Request {
 
     protected function apiKeyExists($id) {
       $sql = $this->user->getSQL();

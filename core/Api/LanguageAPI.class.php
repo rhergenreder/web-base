@@ -2,7 +2,7 @@
 
 namespace Api {
 
-  class LanguageAPI extends Request {
+  abstract class LanguageAPI extends Request {
 
   }
 

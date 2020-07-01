@@ -1,7 +1,7 @@
 <?php
 
 namespace Api {
-  class ContactAPI extends Request {
+  abstract class ContactAPI extends Request {
 
   }
 }

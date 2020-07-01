@@ -114,4 +114,8 @@ export default class API {
     async savePermissions(permissions) {
         return this.apiCall("permission/save", { permissions: permissions });
     }
+
+    async getVisitors(type, date) {
+        return this.apiCall("visitors/stats", { type: type, date: date });
+    }
 };

@@ -122,6 +122,7 @@ $(document).ready(function () {
 
         let btn = $(this);
         let email = $("#email").val();
+        let siteKey = $("#siteKey").val().trim();
 
         let params = { email: email };
         if (typeof grecaptcha !== 'undefined') {

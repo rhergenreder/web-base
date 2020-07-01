@@ -22,7 +22,7 @@
     "sanitize-html": "^1.27.0"
   },
   "scripts": {
-    "build": "webpack --mode development && mv dist/main.js ../js/admin.min.js"
+    "build": "webpack --mode production && mv dist/main.js ../js/admin.min.js"
   },
   "eslintConfig": {
     "extends": "react-app"

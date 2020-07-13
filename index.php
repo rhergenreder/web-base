@@ -111,6 +111,20 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
         $response = (new Document404($user))->getCode();
       } else {
         $target = trim(explode("\n", $route["target"])[0]);
+
+        $pattern = str_replace("/","\\/", $route["request"]);
+        $pattern = "/$pattern/";
+        if (!startsWith($requestedUri, '/')) {
+          $requestedUri = "/$requestedUri";
+        }
+
+        @preg_match("$pattern", $requestedUri, $match);
+        if (is_array($match) && !empty($match)) {
+          foreach($match as $index => $value) {
+            $target = str_replace("$$index", $value, $target);
+          }
+        }
+
         switch ($route["action"]) {
           case "redirect_temporary":
             http_response_code(307);

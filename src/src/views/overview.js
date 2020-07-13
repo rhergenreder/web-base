@@ -56,13 +56,13 @@ export default class Overview extends React.Component {
 
     render() {
 
-        const colors = [
-            '#ff4444', '#ffbb33', '#00C851', '#33b5e5',
-            '#ff4444', '#ffbb33', '#00C851', '#33b5e5',
-            '#ff4444', '#ffbb33', '#00C851', '#33b5e5'
-        ];
-
         const numDays = moment().daysInMonth();
+
+        let colors =  [ '#ff4444', '#ffbb33', '#00C851', '#33b5e5' ];
+        while (colors.length < numDays) {
+            colors = colors.concat(colors);
+        }
+
         let data = new Array(numDays).fill(0);
         let visitorCount = 0;
         for (let date in this.state.visitors) {

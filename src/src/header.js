@@ -83,7 +83,7 @@ export default function Header(props) {
                 <li className={"nav-item dropdown"} onClick={() => showDropdown(!dropdownVisible)}>
                     <a href={"#"} className={"nav-link"} data-toggle={"dropdown"}>
                         <Icon icon={"bell"} type={"far"} />
-                        <span className={"badge badge-warning navbar-badge"}>
+                        <span className={"badge badge-warning navbar-badge"} style={{display: (notificationCount > 0 ? "block" : "none")}}>
                             {notificationCount}
                         </span>
                     </a>

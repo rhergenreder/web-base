@@ -9,7 +9,7 @@ let Core = function () {
     params = typeof params !== 'undefined' ? params : {};
     callback = typeof callback !== 'undefined' ? callback : function (data) {};
 
-    const path = '/api/' + (func.startsWith('/') ? '' : '/') + func;
+    const path = '/api' + (func.startsWith('/') ? '' : '/') + func;
     $.post(path, params, function (data) {
       console.log(func + "(): success=" + data.success + " msg=" + data.msg);
       callback.call(this, data);

@@ -111,9 +111,10 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
         $response = (new Document404($user))->getCode();
       } else {
         $target = trim(explode("\n", $route["target"])[0]);
+        $extra = $route["extra"] ?? "";
 
         $pattern = str_replace("/","\\/", $route["request"]);
-        $pattern = "/$pattern/";
+        $pattern = "/$pattern/i";
         if (!startsWith($requestedUri, '/')) {
           $requestedUri = "/$requestedUri";
         }
@@ -122,6 +123,7 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
         if (is_array($match) && !empty($match)) {
           foreach($match as $index => $value) {
             $target = str_replace("$$index", $value, $target);
+            $extra  = str_replace("$$index", $value, $extra);
           }
         }
 
@@ -139,7 +141,7 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
             $response = serveStatic($currentDir, $target);
             break;
           case "dynamic":
-            $view = $route["extra"] ?? "";
+            $view = parseClass($extra);
             $file = getClassPath($target);
             if(!file_exists($file) || !is_subclass_of($target, Document::class)) {
               $document = new Document404($user, $view);

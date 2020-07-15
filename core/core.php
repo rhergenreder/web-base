@@ -1,6 +1,6 @@
 <?php
 
-define("WEBBASE_VERSION", "1.0.1");
+define("WEBBASE_VERSION", "1.0.2");
 
 function getProtocol() {
   return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
@@ -156,4 +156,14 @@ function serveStatic(string $webRoot, string $file) {
   }
 
   return "";
+}
+
+function parseClass($class) {
+  if (!startsWith($class, "\\")) {
+    $class = "\\$class";
+  }
+
+  $parts = explode("\\", $class);
+  $parts = array_map('ucfirst', $parts);
+  return implode("\\", $parts);
 }

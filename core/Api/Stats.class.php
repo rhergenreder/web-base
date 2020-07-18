@@ -58,6 +58,7 @@ class Stats extends Request {
       ->from("Visitor")
       ->where(new Compare("day", $monthStart, ">="))
       ->where(new Compare("day", $monthEnd, "<"))
+      ->where(new Compare("count", 2, ">="))
       ->execute();
 
     $this->success = ($res !== false);

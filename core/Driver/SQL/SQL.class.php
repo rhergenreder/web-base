@@ -303,6 +303,8 @@ abstract class SQL {
   public function count($col = NULL) {
     if (is_null($col)) {
       return new Keyword("COUNT(*) AS count");
+    } else if($col instanceof Keyword) {
+      return new Keyword("COUNT(" . $col->getValue() . ") AS count");
     } else {
       $countCol = strtolower(str_replace(".","_", $col)) .  "_count";
       $col = $this->columnName($col);

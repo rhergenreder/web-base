@@ -22,6 +22,7 @@ export default class Overview extends React.Component {
             statusVisible : true,
             userCount: 0,
             notificationCount: 0,
+            visitorsTotal: 0,
             visitors: { },
             server: { load_avg: ["Unknown"] },
             errors: []
@@ -48,6 +49,7 @@ export default class Overview extends React.Component {
                     userCount: res.userCount,
                     pageCount: res.pageCount,
                     visitors: res.visitors,
+                    visitorsTotal: res.visitorsTotal,
                     server: res.server
                 });
             }
@@ -157,7 +159,7 @@ export default class Overview extends React.Component {
                         <div className={"col-lg-3 col-6"}>
                             <div className={"small-box bg-danger"}>
                                 <div className={"inner"}>
-                                    <h3>{visitorCount}</h3>
+                                    <h3>{this.state.visitorsTotal}</h3>
                                     <p>Unique Visitors</p>
                                 </div>
                                 <div className="icon">

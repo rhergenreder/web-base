@@ -2,6 +2,8 @@
 
 namespace Api;
 
+use DateTime;
+use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondBool;
 
 class Stats extends Request {
@@ -47,6 +49,22 @@ class Stats extends Request {
     return $this->success;
   }
 
+  private function getVisitorCount() {
+    $sql = $this->user->getSQL();
+    $date = new DateTime();
+    $monthStart = $date->format("Ym00");
+    $monthEnd = $date->modify("+1 month")->format("Ym00");
+    $res = $sql->select($sql->count($sql->distinct("cookie")))
+      ->from("Visitor")
+      ->where(new Compare("day", $monthStart, ">="))
+      ->where(new Compare("day", $monthEnd, "<"))
+      ->execute();
+
+    $this->success = ($res !== false);
+    $this->lastError = $sql->getLastError();
+    return ($this->success ? $res[0]["count"] : $this->success);
+  }
+
   public function execute($values = array()) {
     if(!parent::execute($values)) {
       return false;
@@ -62,6 +80,11 @@ class Stats extends Request {
     }
 
     $visitorStatistics = $req->getResult()["visitors"];
+    $visitorCount = $this->getVisitorCount();
+    if (!$this->success) {
+      return false;
+    }
+
     $loadAvg = "Unknown";
     if (function_exists("sys_getloadavg")) {
       $loadAvg = sys_getloadavg();
@@ -74,6 +97,7 @@ class Stats extends Request {
     $this->result["userCount"] = $userCount;
     $this->result["pageCount"] = $pageCount;
     $this->result["visitors"] = $visitorStatistics;
+    $this->result["visitorsTotal"] = $visitorCount;
     $this->result["server"] = array(
       "version" => WEBBASE_VERSION,
       "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",

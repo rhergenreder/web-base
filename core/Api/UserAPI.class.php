@@ -787,7 +787,7 @@ namespace Api\User {
 
     private function checkToken($token) {
       $sql = $this->user->getSQL();
-      $res = $sql->select("UserToken.token_type", "User.uid", "User.name", "User.email")
+      $res = $sql->select("UserToken.token_type", "User.uid", "User.name", "User.email", "User.confirmed")
         ->from("UserToken")
         ->innerJoin("User", "UserToken.user_id", "User.uid")
         ->where(new Compare("UserToken.token", $token))
@@ -821,7 +821,8 @@ namespace Api\User {
           $this->result["user"] = array(
             "name" => $tokenEntry["name"],
             "email" => $tokenEntry["email"],
-            "uid" => $tokenEntry["uid"]
+            "uid" => $tokenEntry["uid"],
+            "confirmed" => $tokenEntry["confirmed"]
           );
         } else {
           return $this->createError("This token does not exist or is no longer valid");

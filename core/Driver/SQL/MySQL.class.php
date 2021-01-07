@@ -4,6 +4,7 @@ namespace Driver\SQL;
 
 use \Api\Parameter\Parameter;
 
+use DateTime;
 use \Driver\SQL\Column\Column;
 use \Driver\SQL\Column\IntColumn;
 use \Driver\SQL\Column\SerialColumn;
@@ -91,15 +92,21 @@ class MySQL extends SQL {
           $sqlParams[0] .= 'd';
           break;
         case Parameter::TYPE_DATE:
-          $value = $value->format('Y-m-d');
+          if ($value instanceof DateTime) {
+            $value = $value->format('Y-m-d');
+          }
           $sqlParams[0] .= 's';
           break;
         case Parameter::TYPE_TIME:
-          $value = $value->format('H:i:s');
+          if ($value instanceof DateTime) {
+            $value = $value->format('H:i:s');
+          }
           $sqlParams[0] .= 's';
           break;
         case Parameter::TYPE_DATE_TIME:
-          $value = $value->format('Y-m-d H:i:s');
+          if ($value instanceof DateTime) {
+            $value = $value->format('Y-m-d H:i:s');
+          }
           $sqlParams[0] .= 's';
           break;
         case Parameter::TYPE_ARRAY:

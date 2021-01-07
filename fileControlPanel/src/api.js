@@ -1,6 +1,7 @@
 import 'babel-polyfill';
 
 export default class API {
+
     constructor() {
         this.loggedIn = false;
         this.user = { };
@@ -19,12 +20,7 @@ export default class API {
             body: JSON.stringify(params)
         });
 
-        let res = await response.json();
-        if (!res.success && res.msg === "You are not logged in.") {
-            document.location.reload();
-        }
-
-        return res;
+        return await response.json();
     }
 
     async fetchUser() {

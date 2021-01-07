@@ -13,6 +13,17 @@ class FileControlPanel extends React.Component {
     }
 
     render() {
+
+        if (!this.state.loadend) {
+            this.api.fetchUser().then(() => {
+                this.setState({ ...this.state, loaded: true });
+            });
+        } else if (this.state.user.loggedIn) {
+
+        } else {
+
+        }
+
         return <></>;
     }
 

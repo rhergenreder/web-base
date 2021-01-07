@@ -14,8 +14,37 @@ namespace Api\Visitors {
   use Api\VisitorsAPI;
   use DateTime;
   use Driver\SQL\Condition\Compare;
+  use Driver\SQL\Expression\Add;
   use Driver\SQL\Query\Select;
+  use Driver\SQL\Strategy\UpdateStrategy;
   use Objects\User;
+
+  class ProcessVisit extends VisitorsAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "cookie" => new StringType("cookie")
+      ));
+      $this->isPublic = false;
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $sql = $this->user->getSQL();
+      $cookie = $this->getParam("cookie");
+      $day = (new DateTime())->format("Ymd");
+      $sql->insert("Visitor", array("cookie", "day"))
+        ->addRow($cookie, $day)
+        ->onDuplicateKeyStrategy(new UpdateStrategy(
+          array("day", "cookie"),
+          array("count" => new Add("Visitor.count", 1))))
+        ->execute();
+
+      return $this->success;
+    }
+  }
 
   class Stats extends VisitorsAPI {
     public function __construct(User $user, bool $externalCall = false) {

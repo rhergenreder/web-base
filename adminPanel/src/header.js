@@ -36,7 +36,6 @@ export default function Header(props) {
     }
 
     function onToggleSidebar() {
-        console.log(document.body.classList);
         let classes = document.body.classList;
         if (classes.contains("sidebar-collapse")) {
             classes.remove("sidebar-collapse");

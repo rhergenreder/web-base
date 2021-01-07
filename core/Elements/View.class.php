@@ -2,8 +2,6 @@
 
 namespace Elements;
 
-use External\PHPMailer\Exception;
-
 abstract class View extends StaticView {
 
   private Document $document;
@@ -81,9 +79,10 @@ abstract class View extends StaticView {
     return $this->createList($items, "ul");
   }
 
-  protected function createLink($link, $title=null) {
+  protected function createLink($link, $title=null, $classes="") {
     if(is_null($title)) $title=$link;
-    return "<a href=\"$link\">$title</a>";
+    if(!empty($classes)) $classes = " class=\"$classes\"";
+    return "<a href=\"$link\"$classes>$title</a>";
   }
 
   protected function createExternalLink($link, $title=null) {
@@ -123,14 +122,91 @@ abstract class View extends StaticView {
     return $this->createStatusText("info", $text, $id, $hidden);
   }
 
-  protected function createStatusText($type, $text, $id="", $hidden=false) {
+  protected function createStatusText($type, $text, $id="", $hidden=false, $classes="") {
     if(strlen($id) > 0) $id = " id=\"$id\"";
-    $hidden = ($hidden?" hidden" : "");
-    return "<div class=\"alert alert-$type$hidden\" role=\"alert\"$id>$text</div>";
+    if($hidden) $classes .= " hidden";
+    if(strlen($classes) > 0) $classes = " $classes";
+    return "<div class=\"alert alert-$type$hidden$classes\" role=\"alert\"$id>$text</div>";
   }
 
   protected function createBadge($type, $text) {
     $text = htmlspecialchars($text);
     return "<span class=\"badge badge-$type\">$text</span>";
+  }
+
+  protected function createJumbotron(string $content, bool $fluid=false, $class="") {
+    $jumbotronClass = "jumbotron" . ($fluid ? "-fluid" : "");
+    if (!empty($class)) $jumbotronClass .= " $class";
+
+    return "
+      <div class=\"row\">
+        <div class=\"col-12\">
+          <div class=\"$jumbotronClass\">
+            $content
+          </div>
+        </div>
+      </div>";
+  }
+
+  public function createSimpleParagraph(string $content, string $class="") {
+    if($class) $class = " class=\"$class\"";
+    return "<p$class>$content</p>";
+  }
+
+  public function createParagraph($title, $id, $content) {
+    $id = replaceCssSelector($id);
+    $iconId = urlencode("$id-icon");
+    return "
+      <div class=\"row mt-4\">
+        <div class=\"col-12\">
+          <h2 id=\"$id\" data-target=\"$iconId\" class=\"inlineLink\">$title</h2>
+          <hr/>
+          $content
+        </div>
+      </div>";
+  }
+
+  protected function createBootstrapTable($data, string $classes="") {
+    $classes = empty($classes) ? "" : " $classes";
+    $code = "<div class=\"container$classes\">";
+    foreach($data as $row) {
+      $code .= "<div class=\"row mt-2 mb-2\">";
+      $columnCount = count($row);
+      if($columnCount > 0) {
+        $remainingSize = 12;
+        $columnSize = 12 / $columnCount;
+        foreach($row as $col) {
+          $size = ($columnSize <= $remainingSize ? $columnSize : $remainingSize);
+          $content = $col;
+          $class = "";
+          $code .= "<div";
+
+          if(is_array($col)) {
+            $content = "";
+            foreach($col as $key => $val) {
+              if(strcmp($key, "content") === 0) {
+                $content = $val;
+              } else if(strcmp($key, "class") === 0) {
+                $class = " " . $col["class"];
+              } else if(strcmp($key, "cols") === 0 && is_numeric($val)) {
+                $size = intval($val);
+              } else {
+                $code .= " $key=\"$val\"";
+              }
+            }
+
+            if(isset($col["class"])) $class = " " . $col["class"];
+          }
+
+          if($size <= 6) $class .= " col-md-" . intval($size * 2);
+          $code .= " class=\"col-lg-$size$class\">$content</div>";
+          $remainingSize -= $size;
+        }
+      }
+      $code .= "</div>";
+    }
+
+    $code .= "</div>";
+    return $code;
   }
 }

@@ -39,7 +39,7 @@ namespace Api\Settings {
 
        $query = $sql->select("name", "value") ->from("Settings");
 
-       if (!is_null($key) && !empty($key)) {
+       if (!is_null($key)) {
          $query->where(new CondRegex(new Column("name"), $key));
        }
 

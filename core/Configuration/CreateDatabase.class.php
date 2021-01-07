@@ -6,7 +6,7 @@ use Driver\SQL\SQL;
 use \Driver\SQL\Strategy\SetNullStrategy;
 use \Driver\SQL\Strategy\CascadeStrategy;
 
-class CreateDatabase {
+class CreateDatabase extends DatabaseScript {
 
   // NOTE:
   // explicit serial ids removed due to postgres' serial implementation
@@ -192,7 +192,10 @@ class CreateDatabase {
       ->addRow("User/edit", array(USER_GROUP_ADMIN), "Allows users to edit details and group memberships of any user")
       ->addRow("User/delete", array(USER_GROUP_ADMIN), "Allows users to delete any other user")
       ->addRow("Permission/fetch", array(USER_GROUP_ADMIN), "Allows users to list all API permissions")
-      ->addRow("Visitors/stats", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to see visitor statistics");
+      ->addRow("Visitors/stats", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to see visitor statistics")
+      ->addRow("PatchSQL", array(USER_GROUP_ADMIN), "Allows users to import database patches");
+
+    self::loadPatches($queries, $sql);
 
     return $queries;
   }
@@ -224,5 +227,23 @@ class CreateDatabase {
       "<a href=\"{{link}}\">{{link}}</a><br><br>" .
       "Best Regards<br>" .
       "{{site_name}} Administration";
+  }
+
+  private static function loadPatches(&$queries, $sql) {
+    $patchDirectory = './core/Configuration/Patch/';
+    if (file_exists($patchDirectory) && is_dir($patchDirectory)) {
+      $scan_arr = scandir($patchDirectory);
+      $files_arr = array_diff($scan_arr, array('.','..'));
+      foreach ($files_arr as $file) {
+        $suffix = ".class.php";
+        if (endsWith($file, $suffix)) {
+          $className = substr($file, 0, strlen($file) - strlen($suffix));
+          $className = "\\Configuration\\Patch\\$className";
+          $method = "$className::createQueries";
+          $patchQueries = call_user_func($method, $sql);
+          foreach($patchQueries as $query) $queries[] = $query;
+        }
+      }
+    }
   }
 }

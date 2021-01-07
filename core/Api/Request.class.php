@@ -187,6 +187,7 @@ class Request {
   public function success() { return $this->success; }
   public function loginRequired() { return $this->loginRequired; }
   public function isExternalCall() { return $this->externalCall; }
+  public function clearError() { $this->success = true; $this->lastError = ""; }
 
   private function getMethod() {
     $class = str_replace("\\", "/", get_class($this));

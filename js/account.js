@@ -27,6 +27,8 @@ $(document).ready(function () {
     }
 
     // Login
+    $("#username").keypress(function (e) { if(e.which == 13) $("#password").focus(); });
+    $("#password").keypress(function (e) { if(e.which == 13) $("#btnLogin").click(); });
     $("#btnLogin").click(function() {
         const username = $("#username").val();
         const password = $("#password").val();
@@ -45,7 +47,7 @@ $(document).ready(function () {
                 btn.prop("disabled", false);
                 $("#password").val("");
                 createdDiv.hide();
-                showAlert(res.msg);
+                showAlert("danger", res.msg);
             }
         });
     });

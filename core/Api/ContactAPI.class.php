@@ -53,6 +53,7 @@ namespace Api\Contact {
       }
 
       $this->createNotification();
+      $this->sendMail();
 
       if (!$this->success) {
         return $this->createError("The contact request was saved, but the server was unable to create a notification.");
@@ -109,6 +110,17 @@ namespace Api\Contact {
       }
 
       return $this->success;
+    }
+
+    private function sendMail() {
+      /*$email = $this->getParam("fromEmail");
+      $settings = $this->user->getConfiguration()->getSettings();
+      $request = new \Api\Mail\Send($this->user);
+      $this->success = $request->execute(array(
+        "to" => $settings->get,
+        "subject" => "[$siteName] Account Invitation",
+        "body" => $messageBody
+      ));*/
     }
   }
 

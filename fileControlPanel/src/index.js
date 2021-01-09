@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import API from "../../adminPanel/src/api";
+import API from "./api";
+
+
 
 class FileControlPanel extends React.Component {
 
@@ -14,7 +16,7 @@ class FileControlPanel extends React.Component {
 
     render() {
 
-        if (!this.state.loadend) {
+        if (!this.state.loaded) {
             this.api.fetchUser().then(() => {
                 this.setState({ ...this.state, loaded: true });
             });

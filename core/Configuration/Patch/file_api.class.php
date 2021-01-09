@@ -29,7 +29,7 @@ class file_api extends DatabaseScript {
       ->addRow("File/CreateUploadToken", array(USER_GROUP_ADMIN), "Allows users to create a token to upload files to the virtual filesystem assigned to the users account")
       ->addRow("File/CreateDownloadToken", array(USER_GROUP_ADMIN), "Allows users to create a token to download files from the virtual filesystem assigned to the users account");
 
-    $queries[] = $sql->, array("request", "action", "target", "extra"))
+    $queries[] = $sql->insert("Route", array("request", "action", "target", "extra"))
       ->onDuplicateKeyStrategy(new UpdateStrategy(array("request"), array("request" => new Column("request"))))
       ->addRow("^/files(/.*)?$", "dynamic", "\\Documents\\Files", NULL);
 

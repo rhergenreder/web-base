@@ -49,10 +49,8 @@ class FileControlPanel extends React.Component {
 
         if (!this.state.loaded) {
             this.api.fetchUser().then((isLoggedIn) => {
-                console.log(`api.fetchUser => ${isLoggedIn}`);
                 if (isLoggedIn) {
                     this.api.listFiles().then((res) => {
-                        console.log(`api.listFiles => ${res.success}`);
                         this.setState({ ...this.state, loaded: true, user: this.api.user, files: res.files });
                     });
                 } else {
@@ -63,7 +61,7 @@ class FileControlPanel extends React.Component {
         } else if (this.api.loggedIn || this.state.token.valid) {
             let tokenList = (this.api.loggedIn) ?
                 <div className={"row"}>
-                    <div className={"col-lg-6 col-md-8 col-sm-10 col-xs-12 mx-auto"}>
+                    <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
                         <TokenList api={this.api} />
                     </div>
                 </div> :
@@ -71,9 +69,9 @@ class FileControlPanel extends React.Component {
 
             return <div className={"container mt-4"}>
                 <div className={"row"}>
-                    <div className={"col-lg-6 col-md-8 col-sm-10 col-xs-12 mx-auto"}>
+                    <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
                         <h2>File Control Panel</h2>
-                        <FileBrowser files={this.state.files}/>
+                        <FileBrowser files={this.state.files} token={this.state.token} api={this.api}  />
                     </div>
                 </div>
                 { tokenList }
@@ -81,7 +79,7 @@ class FileControlPanel extends React.Component {
         } else {
             return <div className={"container mt-4"}>
                 <div className={"row"}>
-                    <div className={"col-lg-6 col-md-8 col-sm-10 col-xs-12 mx-auto"}>
+                    <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
                         <h2>File Control Panel</h2>
                         <form onSubmit={(e) => e.preventDefault()}>
                             <label htmlFor={"token"}>Enter a file token to download or upload files</label>

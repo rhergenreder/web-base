@@ -215,7 +215,7 @@ namespace Api\File {
           foreach ($files as &$dir) {
             if ($dir["isDirectory"]) {
               $target =& $this->findDirectory($dir["items"], $id);
-              if ($target !== $dir) {
+              if ($target !== $dir["items"]) {
                 return $target;
               }
             }
@@ -476,6 +476,7 @@ namespace Api\File {
         $sha1Hash = @hash_file('sha1', $tmpPath);
         $filePath =  $uploadDir . "/" . $md5Hash . $sha1Hash;
         if (move_uploaded_file($tmpPath, $filePath)) {
+
           $res = $sql->insert("UserFile", array("name", "directory", "path", "user_id", "parent_id"))
             ->addRow($fileName, false, $filePath, $userId, $parentId)
             ->returning("uid")
@@ -582,6 +583,7 @@ namespace Api\File {
         return false;
       }
 
+      // TODO:
 
       return $this->success;
     }

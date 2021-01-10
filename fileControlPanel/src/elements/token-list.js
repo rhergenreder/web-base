@@ -1,4 +1,5 @@
 import * as React from "react";
+import Icon from "./icon";
 
 export class TokenList extends React.Component {
 
@@ -25,6 +26,7 @@ export class TokenList extends React.Component {
                         <td>{token.token}</td>
                         <td>{token.type}</td>
                         <td>{token.valid_until}</td>
+                        <td><Icon icon={"times"} className={"text-danger"}/></td>
                     </tr>
                 );
             }
@@ -38,12 +40,19 @@ export class TokenList extends React.Component {
                         <th>Token</th>
                         <th>Type</th>
                         <th>Valid Until</th>
+                        <th/>
                     </tr>
                 </thead>
                 <tbody>
                     { rows }
                 </tbody>
             </table>
+            <div>
+                <button type={"button"} className={"btn btn-success m-2"}>
+                    <Icon icon={"plus"} className={"mr-1"}/>
+                    Create Token
+                </button>
+            </div>
         </>;
     }
 }

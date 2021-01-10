@@ -1,0 +1,53 @@
+.file-row td {
+    padding: 0;
+    border: none;
+    vertical-align: middle;
+}
+
+.file-control-buttons {
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-template-columns: auto auto;
+}
+
+.file-control-buttons > button {
+    margin: 15px;
+}
+
+.file-upload-container {
+    border: dotted;
+    margin: 18px;
+    padding: 15px;
+    min-height: 150px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.file-upload-container > div > div {
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+}
+
+.uploaded-file {
+    max-width: 120px;
+    position: relative;
+}
+
+.uploaded-file > img {
+    width: 50px;
+    height: 56px;
+    border: 1px solid black;
+}
+
+.uploaded-file > span {
+    display: block;
+    word-wrap: break-word;
+}
+
+.uploaded-file > i {
+    color: red;
+    position: absolute;
+    top: -9px;
+    right: 25px;
+    cursor: pointer;
+}

@@ -48,4 +48,8 @@ export default class API {
     listTokens() {
         return this.apiCall("file/listTokens");
     }
+
+    delete(id) {
+        return this.apiCall("file/delete", { id: id })
+    }
 };

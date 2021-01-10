@@ -100,7 +100,7 @@ namespace Api\File {
       $res = $sql->select("UserFile.uid", "valid_until", "token_type", "maxFiles", "maxSize", "extensions", "name", "path", "directory")
         ->from("UserFileToken")
         ->leftJoin("UserFileTokenFile", "UserFileToken.uid", "token_id")
-        ->innerJoin("UserFile", "UserFile.uid", "file_id")
+        ->leftJoin("UserFile", "UserFile.uid", "file_id")
         ->where(new Compare("token", $token))
         ->where(new Compare("valid_until", $sql->now(), ">"))
         ->execute();
@@ -120,20 +120,22 @@ namespace Api\File {
 
           $this->result["files"] = array();
           foreach ($res as $row) {
-            $file = array(
-              "isDirectory" => $row["directory"],
-              "name" => $row["name"],
-              "uid" => $row["uid"]
-            );
+            if ($row["uid"]) {
+              $file = array(
+                "isDirectory" => $row["directory"],
+                "name" => $row["name"],
+                "uid" => $row["uid"]
+              );
 
-            if ($file["isDirectory"]) {
-              $file["items"] = array();
-            } else {
-              $file["size"] = @filesize($row["path"]);
-              $file["mimeType"] = @mime_content_type($row["path"]);
+              if ($file["isDirectory"]) {
+                $file["items"] = array();
+              } else {
+                $file["size"] = @filesize($row["path"]);
+                $file["mimeType"] = @mime_content_type($row["path"]);
+              }
+
+              $this->result["files"][] = $file;
             }
-
-            $this->result["files"][] = $file;
           }
 
           if ($row["token_type"] === "upload") {
@@ -314,6 +316,8 @@ namespace Api\File {
             unset($row["maxSize"]);
             unset($row["extensions"]);
           }
+          unset($row["token_type"]);
+          $row["type"] = $tokenType;
           $this->result["tokens"][] = $row;
         }
       }
@@ -464,8 +468,12 @@ namespace Api\File {
       foreach ($_FILES as $key => $file) {
         $fileName = $file["name"];
         $tmpPath = $file["tmp_name"];
-        $md5Hash = hash_file('md5', $tmpPath);
-        $sha1Hash = hash_file('sha1', $tmpPath);
+        if (!$tmpPath) {
+          return $this->createError("Error uploading file: $fileName");
+        }
+
+        $md5Hash = @hash_file('md5', $tmpPath);
+        $sha1Hash = @hash_file('sha1', $tmpPath);
         $filePath =  $uploadDir . "/" . $md5Hash . $sha1Hash;
         if (move_uploaded_file($tmpPath, $filePath)) {
           $res = $sql->insert("UserFile", array("name", "directory", "path", "user_id", "parent_id"))

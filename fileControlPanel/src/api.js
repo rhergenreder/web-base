@@ -13,7 +13,9 @@ export default class API {
 
     async apiCall(method, params) {
         params = params || { };
-        params.csrf_token = this.csrfToken();
+
+        const csrf_token = this.csrfToken();
+        if (csrf_token) params.csrf_token = csrf_token;
         let response = await fetch("/api/" + method, {
             method: 'post',
             headers: {'Content-Type': 'application/json'},
@@ -33,5 +35,17 @@ export default class API {
 
     async logout() {
         return this.apiCall("user/logout");
+    }
+
+    validateToken(token) {
+        return this.apiCall("file/validateToken", { token: token });
+    }
+
+    listFiles() {
+        return this.apiCall("file/listFiles");
+    }
+
+    listTokens() {
+        return this.apiCall("file/listTokens");
     }
 };

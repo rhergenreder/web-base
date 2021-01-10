@@ -17,6 +17,7 @@ namespace Documents {
 namespace Documents\Files {
 
   use Elements\Head;
+  use Elements\Script;
   use Elements\SimpleBody;
 
   class FilesHead extends Head {
@@ -54,6 +55,7 @@ namespace Documents\Files {
     protected function getContent() {
       $html = "<noscript>" . $this->createErrorText("Javascript is required for this site to render.") . "</noscript>";
       $html .= "<div id=\"root\"></div>";
+      $html .= new Script(Script::MIME_TEXT_JAVASCRIPT, Script::FILES);
       return $html;
     }
   }

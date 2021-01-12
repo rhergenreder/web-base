@@ -551,7 +551,7 @@ namespace Api\File {
 
       $sql = $this->user->getSQL();
       $fileIds = $this->getParam("id");
-      $query =  $sql->select("uid", "path", "name")->from("UserFile");
+      $query =  $sql->select("UserFile.uid", "path", "name")->from("UserFile");
       $this->filterFiles($sql, $query, $fileIds, $token);
 
       $res = $query->execute();

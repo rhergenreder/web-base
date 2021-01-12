@@ -31,6 +31,7 @@
 .uploaded-file {
     max-width: 120px;
     position: relative;
+    margin-bottom: 15px;
 }
 
 .uploaded-file > img {
@@ -44,10 +45,25 @@
     word-wrap: break-word;
 }
 
-.uploaded-file > i {
+.uploaded-file > i:nth-child(3) {
     color: red;
     position: absolute;
     top: -9px;
     right: 25px;
     cursor: pointer;
+}
+
+.clickable { cursor: pointer; }
+.token-revoked td { text-decoration: line-through; }
+
+.token-table td:not(:first-child), .token-table th:not(:first-child) {
+    text-align: center;
+}
+
+.file-table td:nth-child(n+3), .file-table th:nth-child(n+3) {
+    text-align: center;
+}
+
+.file-table tr, .file-table td {
+    height: 40px;
 }

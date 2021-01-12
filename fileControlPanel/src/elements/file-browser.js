@@ -13,35 +13,80 @@ export class FileBrowser extends React.Component {
             files: props.files,
             token: props.token,
             filesToUpload: [],
+            alerts: []
         }
     }
 
-    svgMiddle(indentation, size=64) {
-        let style = (indentation > 1 ? { marginLeft: ((indentation-1)*size) + "px" } : {});
-        return <svg width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={style}>
+    svgMiddle(indentation, scale=1.0) {
+        let width = 48 * scale;
+        let height = 64 * scale;
+        let style = (indentation > 1 ? { marginLeft: ((indentation-1)*width) + "px" } : {});
+
+        return <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg" style={style}>
             <g>
-                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2="0" x2={size/2}
-                      y1={size} x1={size/2} strokeWidth="1.5" stroke="#000" fill="none"/>
-                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2={size/2} x2={size}
-                      y1={size/2} x1={size/2} fillOpacity="null" strokeOpacity="null" strokeWidth="1.5"
+                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2="0" x2={width/2}
+                      y1={height} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
+                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2={height/2} x2={width}
+                      y1={height/2} x1={width/2} fillOpacity="null" strokeOpacity="null" strokeWidth="1.5"
                       stroke="#000" fill="none"/>
             </g>
         </svg>;
     }
 
-    svgEnd(indentation, size=64) {
-        let style = (indentation > 1 ? { marginLeft: ((indentation-1)*size) + "px" } : {});
-        return <svg width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={style}>
+    svgEnd(indentation, scale=1.0) {
+        let width = 48 * scale;
+        let height = 64 * scale;
+        let style = (indentation > 1 ? { marginLeft: ((indentation-1)*width) + "px" } : {});
+
+        return <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg" style={style}>
             <g>
                 { /* vertical line */}
-                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2="0" x2={size/2}
-                      y1={size/2} x1={size/2} strokeWidth="1.5" stroke="#000" fill="none"/>
+                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2="0" x2={width/2}
+                      y1={height/2} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
                 { /* horizontal line */}
-                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2={size/2} x2={size}
-                      y1={size/2} x1={size/2} fillOpacity="null" strokeOpacity="null" strokeWidth="1.5"
+                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2={height/2} x2={width}
+                      y1={height/2} x1={width/2} fillOpacity="null" strokeOpacity="null" strokeWidth="1.5"
                       stroke="#000" fill="none"/>
             </g>
         </svg>;
+    }
+
+    createFileIcon(mimeType, size=2) {
+        let icon = "";
+        if (mimeType !== null) {
+            mimeType = mimeType.toLowerCase().trim();
+            let types = ["image", "text", "audio", "video"];
+            let languages = ["php", "java", "python", "cpp"];
+            let archives = ["zip", "tar", "archive"];
+            let [mainType, subType] = mimeType.split("/");
+            if (mainType === "text" && languages.find(a => subType.includes(a))) {
+                icon = "code";
+            } else if (mainType === "application" && archives.find(a => subType.includes(a))) {
+                icon = "archive";
+            } else if (mainType === "application" && subType === "pdf") {
+                icon = "pdf";
+            } else if (mainType === "application" && (subType.indexOf("powerpoint") > -1 || subType.indexOf("presentation") > -1)) {
+                icon = "powerpoint";
+            } else if (mainType === "application" && (subType.indexOf("word") > -1 || subType.indexOf("opendocument") > -1)) {
+                icon = "word";
+            } else if (mainType === "application" && (subType.indexOf("excel") > -1 || subType.indexOf("sheet") > -1)) {
+                icon = "excel";
+            } else if (mainType === "application" && subType.indexOf("directory") > -1) {
+                icon = "folder";
+            } else if (types.indexOf(mainType) > -1) {
+                if (mainType === "text") {
+                    icon = "alt";
+                } else {
+                    icon = mainType;
+                }
+            }
+        }
+
+        if (icon !== "folder") {
+            icon = "file" + (icon ? ("-" + icon) : icon);
+        }
+
+        return <Icon icon={icon} type={"far"} className={"p-1 align-middle fa-" + size + "x"} />
     }
 
     formatSize(size) {
@@ -134,15 +179,14 @@ export class FileBrowser extends React.Component {
             let uid  = fileElement.uid;
             let type = (fileElement.isDirectory ? "Directory" : fileElement.mimeType);
             let size = (fileElement.isDirectory ? "" : this.formatSize(fileElement.size));
-            // let iconUrl = (fileElement.directory ? "/img/icon/")
-            let iconUrl = "";
-            let token = (this.state.token && this.state.token.valid ? "&token=" + this.token.state.value : "");
+            let mimeType = (fileElement.isDirectory ? "application/x-directory" : fileElement.mimeType);
+            let token = (this.state.token && this.state.token.valid ? "&token=" + this.state.token.value : "");
             let svg = <></>;
             if (indentation > 0) {
                 if (i === values.length - 1) {
-                    svg = this.svgEnd(indentation, 48);
+                    svg = this.svgEnd(indentation, 0.75);
                 } else {
-                    svg = this.svgMiddle(indentation, 48);
+                    svg = this.svgMiddle(indentation, 0.75);
                 }
             }
 
@@ -150,7 +194,7 @@ export class FileBrowser extends React.Component {
                 <tr key={"file-" + uid} data-id={uid} className={"file-row"}>
                     <td>
                         { svg }
-                        <img src={iconUrl} alt={"[Icon]"} />
+                        { this.createFileIcon(mimeType) }
                     </td>
                     <td>
                         {fileElement.isDirectory ? name :
@@ -183,6 +227,16 @@ export class FileBrowser extends React.Component {
         let uploadZone = <></>;
         let writePermissions = this.canUpload();
         let uploadedFiles = [];
+        let alerts = [];
+
+        let i = 0;
+        for (const alert of this.state.alerts) {
+            alerts.push(
+                <div key={"alert-" + i++} className={"alert alert-" + alert.type}>
+                    { alert.text }
+                </div>
+            );
+        }
 
         if (writePermissions) {
 
@@ -190,7 +244,7 @@ export class FileBrowser extends React.Component {
                 const file = this.state.filesToUpload[i];
                 uploadedFiles.push(
                     <span className={"uploaded-file"} key={i}>
-                        <img />
+                        { this.createFileIcon(file.type, 3) }
                         <span>{file.name}</span>
                         <Icon icon={"times"} onClick={(e) => this.onRemoveUploadedFile(e, i)}/>
                     </span>
@@ -203,7 +257,10 @@ export class FileBrowser extends React.Component {
                         <div {...getRootProps()}>
                             <input {...getInputProps()} />
                             <p>Drag 'n' drop some files here, or click to select files</p>
-                            { uploadedFiles.length === 0 ? <Icon className={"mx-auto fa-3x text-black-50"} icon={"upload"}/> : <div>{uploadedFiles}</div> }
+                            { uploadedFiles.length === 0 ?
+                                <Icon className={"mx-auto fa-3x text-black-50"} icon={"upload"}/> :
+                                <div>{uploadedFiles}</div>
+                            }
                         </div>
                     </section>
                  )}
@@ -213,7 +270,7 @@ export class FileBrowser extends React.Component {
 
         return <>
             <h4>File Browser</h4>
-            <table className={"table"}>
+            <table className={"table data-table file-table"}>
                 <thead>
                     <tr>
                         <th/>
@@ -242,11 +299,13 @@ export class FileBrowser extends React.Component {
                 {
                     writePermissions ?
                         <>
-                            <button type={"button"} className={"btn btn-primary"} disabled={uploadedFiles.length === 0}>
+                            <button type={"button"} className={"btn btn-primary"} disabled={uploadedFiles.length === 0}
+                                    onClick={this.onUpload.bind(this)}>
                                 <Icon icon={"upload"} className={"mr-1"}/>
                                 Upload
                             </button>
-                            <button type={"button"} className={"btn btn-danger"} disabled={selectedCount === 0} onClick={(e) => this.deleteFiles(selectedIds)}>
+                            <button type={"button"} className={"btn btn-danger"} disabled={selectedCount === 0}
+                                    onClick={(e) => this.deleteFiles(selectedIds)}>
                                 <Icon icon={"trash"} className={"mr-1"}/>
                                 Delete Selected Files ({selectedCount})
                             </button>
@@ -254,9 +313,31 @@ export class FileBrowser extends React.Component {
                     : <></>
                 }
             </div>
-
             { uploadZone }
+            <div>
+                { alerts }
+            </div>
         </>;
+    }
+
+    fetchFiles() {
+        if (this.state.token.valid) {
+            this.state.api.validateToken(this.state.token.value).then((res) => {
+                if (res) {
+                    this.setState({ ...this.state, files: res.files });
+                } else {
+                    this.pushAlert(res);
+                }
+            });
+        } else if (this.state.api.loggedIn) {
+            this.state.api.listFiles().then((res) => {
+                if (res) {
+                    this.setState({ ...this.state, files: res.files });
+                } else {
+                    this.pushAlert(res);
+                }
+            });
+        }
     }
 
     onRemoveUploadedFile(e, i) {
@@ -266,11 +347,32 @@ export class FileBrowser extends React.Component {
         this.setState({ ...this.state, filesToUpload: files });
     }
 
+    pushAlert(res) {
+        let newAlerts = this.state.alerts.slice();
+        newAlerts.push({ type: "danger", text: res.msg });
+        this.setState({ ...this.state, alerts: newAlerts });
+    }
+
     deleteFiles(selectedIds) {
-        // TODO: delete files
-        this.state.api.delete(selectedIds).then((res) => {
+        let token = (this.state.api.loggedIn ? null : this.state.token.value);
+        this.state.api.delete(selectedIds, token).then((res) => {
            if (res.success) {
+                this.fetchFiles();
+           } else {
+               this.pushAlert(res);
            }
+        });
+    }
+
+    onUpload() {
+        let token = (this.state.api.loggedIn ? null : this.state.token.value);
+        this.state.api.upload(this.state.filesToUpload, token).then((res) => {
+            if (res.success) {
+                this.setState({ ...this.state, filesToUpload: [] })
+                this.fetchFiles();
+            } else {
+                this.pushAlert(res);
+            }
         });
     }
 }

@@ -49,7 +49,32 @@ export default class API {
         return this.apiCall("file/listTokens");
     }
 
-    delete(id) {
-        return this.apiCall("file/delete", { id: id })
+    delete(id, token=null) {
+        return this.apiCall("file/delete", { id: id, token: token });
+    }
+
+    revokeToken(token) {
+        return this.apiCall("file/revokeToken", { token: token });
+    }
+
+    async upload(files, token = null, parentId = null) {
+        const csrf_token = this.csrfToken();
+
+        const fd = new FormData();
+        for (let i = 0; i < files.length; i++) {
+            fd.append('file' + i, files[i]);
+        }
+
+        if (csrf_token) fd.append("csrf_token", csrf_token);
+        if (token) fd.append("token", token);
+        if (parentId) fd.append("parentId", parentId);
+
+        // send `POST` request
+        let response = await fetch('/api/file/upload', {
+            method: 'POST',
+            body: fd
+        });
+
+        return response.json();
     }
 };

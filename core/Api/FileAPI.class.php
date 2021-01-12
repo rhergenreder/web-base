@@ -3,6 +3,9 @@
 namespace Api {
 
   use Driver\SQL\Condition\Compare;
+  use Driver\SQL\Condition\CondIn;
+  use Driver\SQL\Query\Query;
+  use Driver\SQL\SQL;
 
   abstract class FileAPI extends Request {
 
@@ -62,12 +65,66 @@ namespace Api {
       }
     }
 
-    protected function isInDirectory($fileId, $directoryId) {
+    protected function &findDirectory(&$files, $id) {
 
-      $sql = $this->user->getSQL();
+      if ($id !== null) {
+        $id = (string)$id;
+        if (isset($files[$id])) {
+          return $files[$id]["items"];
+        } else {
+          foreach ($files as &$dir) {
+            if ($dir["isDirectory"]) {
+              $target =& $this->findDirectory($dir["items"], $id);
+              if ($target !== $dir["items"]) {
+                return $target;
+              }
+            }
+          }
+          return $files;
+        }
+      } else {
+        return $files;
+      }
+    }
 
+    protected function createFileList($res) {
+      $files = array();
+      foreach ($res as $row) {
+        if ($row["uid"] === null) continue;
+        $fileId = (string)$row["uid"];
+        $parentId = $row["parentId"];
+        $fileName = $row["name"];
+        $isDirectory = $row["directory"];
+        $fileElement = array("uid" => $fileId, "name" => $fileName, "isDirectory" => $isDirectory);
+        if ($isDirectory) {
+          $fileElement["items"] = array();
+        } else {
+          $fileElement["size"] = @filesize($row["path"]);
+          $fileElement["mimeType"] = @mime_content_type($row["path"]);
+        }
 
+        $dir =& $this->findDirectory($files, $parentId);
+        $dir[$fileId] = $fileElement;
+        unset($dir);
+      }
+      return $files;
+    }
 
+    protected function filterFiles(SQL $sql, $query, $id, $token = null) {
+      if (is_array($id)) {
+        $query->where(new CondIn("UserFile.uid", $id));
+      } else {
+        $query->where(new Compare("UserFile.uid", $id));
+      }
+
+      if (is_null($token)) {
+        $query->where(new Compare("user_id", $this->user->getId()));
+      } else {
+        $query->innerJoin("UserFileTokenFile", "UserFile.uid", "file_id")
+          ->innerJoin("UserFileToken", "UserFileToken.uid", "token_id")
+          ->where(new Compare("token", $token))
+          ->where(new Compare("valid_until", $sql->now(), ">="));
+      }
     }
   }
 }
@@ -75,6 +132,7 @@ namespace Api {
 namespace Api\File {
 
   use Api\FileAPI;
+  use Api\Parameter\ArrayType;
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
   use Driver\SQL\Condition\Compare;
@@ -97,7 +155,8 @@ namespace Api\File {
 
       $sql = $this->user->getSQL();
       $token = $this->getParam("token");
-      $res = $sql->select("UserFile.uid", "valid_until", "token_type", "maxFiles", "maxSize", "extensions", "name", "path", "directory")
+      $res = $sql->select("UserFile.uid", "valid_until", "token_type",
+          "maxFiles", "maxSize", "extensions", "name", "path", "directory", "parent_id as parentId")
         ->from("UserFileToken")
         ->leftJoin("UserFileTokenFile", "UserFileToken.uid", "token_id")
         ->leftJoin("UserFile", "UserFile.uid", "file_id")
@@ -118,8 +177,8 @@ namespace Api\File {
             "valid_until" => $row["valid_until"]
           );
 
-          $this->result["files"] = array();
-          foreach ($res as $row) {
+          $this->result["files"] = $this->createFileList($res);
+          /*foreach ($res as $row) {
             if ($row["uid"]) {
               $file = array(
                 "isDirectory" => $row["directory"],
@@ -136,7 +195,7 @@ namespace Api\File {
 
               $this->result["files"][] = $file;
             }
-          }
+          }*/
 
           if ($row["token_type"] === "upload") {
             $this->result["restrictions"] = array(
@@ -169,7 +228,7 @@ namespace Api\File {
       $sql = $this->user->getSQL();
       $token = $this->getParam("token");
       $res = $sql->select($sql->count())
-        ->from("UserToken")
+        ->from("UserFileToken")
         ->where(new Compare("user_id", $this->user->getId()))
         ->where(new Compare("token", $token))
         ->execute();
@@ -179,9 +238,9 @@ namespace Api\File {
 
       if ($this->success) {
         if(empty($res)) {
-          return $this->getParam("Invalid token");
+          return $this->createError("Invalid token");
         } else {
-          $res = $sql->update("UserToken")
+          $res = $sql->update("UserFileToken")
             ->set("valid_until", new \DateTime())
             ->where(new Compare("user_id", $this->user->getId()))
             ->where(new Compare("token", $token))
@@ -205,28 +264,6 @@ namespace Api\File {
       $this->csrfTokenRequired = false;
     }
 
-    private function &findDirectory(&$files, $id) {
-
-      if ($id !== null) {
-        $id = (string)$id;
-        if (isset($files[$id])) {
-          return $files[$id]["items"];
-        } else {
-          foreach ($files as &$dir) {
-            if ($dir["isDirectory"]) {
-              $target =& $this->findDirectory($dir["items"], $id);
-              if ($target !== $dir["items"]) {
-                return $target;
-              }
-            }
-          }
-          return $files;
-        }
-      } else {
-        return $files;
-      }
-    }
-
     public function execute($values = array()) {
       if (!parent::execute($values)) {
         return false;
@@ -247,25 +284,7 @@ namespace Api\File {
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $files = array();
-
-        foreach ($res as $row) {
-          $fileId = (string)$row["uid"];
-          $parentId = $row["parentId"];
-          $fileName = $row["name"];
-          $isDirectory = $row["directory"];
-          $fileElement = array("uid" => $fileId, "name" => $fileName, "isDirectory" => $isDirectory);
-          if ($isDirectory) {
-            $fileElement["items"] = array();
-          } else {
-            $fileElement["size"] = @filesize($row["path"]);
-            $fileElement["mimeType"] = @mime_content_type($row["path"]);
-          }
-
-          $dir =& $this->findDirectory($files, $parentId);
-          $dir[$fileId] = $fileElement;
-          unset($dir);
-        }
+        $files = $this->createFileList($res);
 
         $directoryId = $this->getParam("directory");
         if (!is_null($directoryId)) {
@@ -419,11 +438,12 @@ namespace Api\File {
         $maxFiles = $res[0]["maxFiles"] ?? 0;
         $maxSize = $res[0]["maxSize"] ?? 0;
         $userId = $res[0]["user_id"];
-        $extensions = explode(",", strtolower($res[0]["extensions"] ?? ""));
+        $extensions = explode(",", trim(strtolower($res[0]["extensions"] ?? "")));
+        $extensions = array_filter($extensions);
 
         $res = $sql->select($sql->count())
           ->from("UserFileTokenFile")
-          ->innerJoin("UserFileToken", "token_id", "UserFileToken.uid")
+          ->where(new Compare("token_id", $tokenId))
           ->execute();
 
         $this->success = ($res !== false);
@@ -434,7 +454,7 @@ namespace Api\File {
 
         $count = $res[0]["count"];
         if ($maxFiles > 0 && $numFilesUploaded > 0 && $numFilesUploaded + $count > $maxFiles) {
-          return $this->createError("File limit exceeded. Currently uploaded $count / $maxFiles count");
+          return $this->createError("File limit exceeded. Currently uploaded $count / $maxFiles files");
         }
 
         if ($maxSize > 0 || !empty($extensions)) {
@@ -513,7 +533,7 @@ namespace Api\File {
 
     public function __construct(User $user, bool $externalCall = false) {
       parent::__construct($user, $externalCall, array(
-        "id" => new Parameter("id", Parameter::TYPE_INT),
+        "id" => new ArrayType("id", Parameter::TYPE_INT, true),
         "token" => new StringType("token", 36, true, null)
       ));
       $this->csrfTokenRequired = false;
@@ -530,18 +550,9 @@ namespace Api\File {
       }
 
       $sql = $this->user->getSQL();
-      $fileId = $this->getParam("id");
-      $query =  $sql->select("path", "name")
-        ->from("UserFile")
-        ->where(new Compare("UserFile.uid", $fileId));
-
-      if (is_null($token)) {
-        $query->where(new Compare("user_id", $this->user->getId()));
-      } else {
-        $query->innerJoin("UserFileTokenFile", "UserFile.uid", "file_id")
-          ->innerJoin("UserFileToken", "UserFileToken.uid", "token_id")
-          ->where(new Compare("token", $token));
-      }
+      $fileIds = $this->getParam("id");
+      $query =  $sql->select("uid", "path", "name")->from("UserFile");
+      $this->filterFiles($sql, $query, $fileIds, $token);
 
       $res = $query->execute();
       $this->success = ($res !== false);
@@ -573,9 +584,10 @@ namespace Api\File {
 
     public function __construct(User $user, bool $externalCall = false) {
       parent::__construct($user, $externalCall, array(
-        "id" => new Parameter("id", Parameter::TYPE_INT),
+        "id" => new ArrayType("id", Parameter::TYPE_INT, true),
         "token" => new StringType("token", 36, true, null)
       ));
+      $this->csrfTokenRequired = true;
     }
 
     public function execute($values = array()) {
@@ -583,7 +595,38 @@ namespace Api\File {
         return false;
       }
 
-      // TODO:
+      $token = $this->getParam("token");
+      if (!$this->user->isLoggedIn() && is_null($token)) {
+        return $this->createError("Permission denied (expected token)");
+      }
+
+      $sql = $this->user->getSQL();
+      $fileIds = array_unique($this->getParam("id"));
+
+      $query =  $sql->select("UserFile.uid", "path", "name")->from("UserFile");
+      $this->filterFiles($sql, $query, $fileIds, $token);
+      $res = $query->execute();
+
+      $this->success = ($res !== false);
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success) {
+        if (count($res) !== count($fileIds)) {
+          $foundFiles = array_map(function ($row) { return $row["uid"]; }, $res);
+          foreach($fileIds as $fileId) {
+            if (!in_array($fileId, $foundFiles)) {
+              return $this->createError("File not found: $fileId");
+            }
+          }
+        } else {
+          $res = $sql->delete("UserFile")
+            ->where(new CondIn("uid", $fileIds))
+            ->execute();
+
+          $this->success = ($res !== false);
+          $this->lastError = $sql->getLastError();
+        }
+      }
 
       return $this->success;
     }
@@ -637,7 +680,7 @@ namespace Api\File {
 
       $sql = $this->user->getSQL();
       $token = generateRandomString(36);
-      $validUntil = (new \DateTime())->modify("+$durability HOURS");
+      $validUntil = (new \DateTime())->modify("+$durability MINUTES");
 
       $res = $sql->insert("UserFileToken",
           array("token", "token_type", "maxSize", "maxFiles", "extensions", "valid_until", "user_id"))
@@ -715,7 +758,7 @@ namespace Api\File {
 
       // Insert
       $token = generateRandomString(36);
-      $validUntil = (new \DateTime())->modify("+$durability HOURS");
+      $validUntil = (new \DateTime())->modify("+$durability MINUTES");
       $res = $sql->insert("UserFileToken", array("token_type", "valid_until", "user_id", "token"))
         ->addRow("download", $validUntil, $this->user->getId(), $token)
         ->returning("uid")

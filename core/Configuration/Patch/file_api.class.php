@@ -58,14 +58,14 @@ class file_api extends DatabaseScript {
       ->addInt("maxSize", true)
       ->addString("extensions", 64, true)
       ->primaryKey("uid")
-      ->foreignKey("user_id", "User", "uid");
+      ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
 
     $queries[] = $sql->createTable("UserFileTokenFile")
       ->addInt("file_id")
       ->addInt("token_id")
       ->unique("file_id", "token_id")
-      ->foreignKey("file_id", "UserFile", "uid")
-      ->foreignKey("token_id", "UserFileToken", "uid");
+      ->foreignKey("file_id", "UserFile", "uid", new CascadeStrategy())
+      ->foreignKey("token_id", "UserFileToken", "uid", new CascadeStrategy());
 
     return $queries;
   }

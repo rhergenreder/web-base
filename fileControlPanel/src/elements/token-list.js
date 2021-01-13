@@ -1,6 +1,7 @@
 import * as React from "react";
 import Icon from "./icon";
 import moment from "moment";
+import Popup from "react-popup";
 
 export class TokenList extends React.Component {
 
@@ -23,12 +24,15 @@ export class TokenList extends React.Component {
             });
         } else {
             for (const token of this.state.tokens) {
-                const revoked = moment(token.valid_until).isSameOrBefore(new Date());
+                const validUntil = token.valid_until;
+                const revoked = validUntil !== null && moment(validUntil).isSameOrBefore(new Date());
+                const timeStr = (validUntil === null ? "Forever" : moment(validUntil).format("Do MMM YYYY, HH:mm"));
+
                 rows.push(
                     <tr key={"token-" + token.uid} className={revoked ? "token-revoked" : ""}>
                         <td>{token.token}</td>
                         <td>{token.type}</td>
-                        <td>{moment(token.valid_until).format("Do MMM YYYY, HH:mm")}</td>
+                        <td>{timeStr}</td>
                         <td>
                             <Icon icon={"times"} className={"clickable text-" + (revoked ? "secondary" : "danger")}
                                       onClick={() => (revoked ? null : this.onRevokeToken(token.token) )}
@@ -65,7 +69,7 @@ export class TokenList extends React.Component {
                 </tbody>
             </table>
             <div>
-                <button type={"button"} className={"btn btn-success m-2"}>
+                <button type={"button"} className={"btn btn-success m-2"} onClick={this.onCreateToken.bind(this)}>
                     <Icon icon={"plus"} className={"mr-1"}/>
                     Create Token
                 </button>
@@ -93,5 +97,9 @@ export class TokenList extends React.Component {
                 this.setState({ ...this.state, alerts: newAlerts });
             }
         });
+    }
+
+    onCreateToken() {
+        Popup.alert('I am alert, nice to meet you');
     }
 }

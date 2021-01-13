@@ -9,6 +9,7 @@ use Driver\SQL\Condition\CondIn;
 use Driver\SQL\Condition\Condition;
 use Driver\SQL\Condition\CondKeyword;
 use Driver\SQL\Condition\CondNot;
+use Driver\Sql\Condition\CondNull;
 use Driver\SQL\Condition\CondOr;
 use Driver\SQL\Constraint\Constraint;
 use \Driver\SQL\Constraint\Unique;
@@ -398,6 +399,8 @@ abstract class SQL {
       }
 
       return "NOT $expression";
+    } else if($condition instanceof CondNull) {
+      return $this->columnName($condition->getColumn()) . " IS NULL";
     } else {
       $this->lastError = "Unsupported condition type: " . get_class($condition);
       return false;

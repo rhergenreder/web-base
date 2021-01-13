@@ -4,8 +4,11 @@ namespace Api {
 
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondIn;
-  use Driver\SQL\Query\Query;
+  use Driver\Sql\Condition\CondNull;
   use Driver\SQL\SQL;
+  use External\ZipStream\BufferWriter;
+  use External\ZipStream\File;
+  use External\ZipStream\ZipStream;
 
   abstract class FileAPI extends Request {
 
@@ -63,6 +66,27 @@ namespace Api {
         readfile($path);
         exit;
       }
+    }
+
+    protected function downloadZip($files) {
+      if ($files == null || empty($files) || !is_array($files)) {
+        return $this->createError("No files to download");
+      }
+
+      header('Content-Disposition: attachment; filename="files.zip"');
+      header('Content-Type: application/zip');
+      $writer = new BufferWriter();
+      $writer->registerCallback(function ($w) { echo $w->read(); });
+      $zipStream = new ZipStream($writer);
+
+      foreach ($files as $file) {
+        $f = new File($file["name"]);
+        $f->loadFromFile($file["path"]);
+        $zipStream->saveFile($f);
+      }
+
+      $zipStream->close();
+      exit;
     }
 
     protected function &findDirectory(&$files, $id) {
@@ -123,7 +147,7 @@ namespace Api {
         $query->innerJoin("UserFileTokenFile", "UserFile.uid", "file_id")
           ->innerJoin("UserFileToken", "UserFileToken.uid", "token_id")
           ->where(new Compare("token", $token))
-          ->where(new Compare("valid_until", $sql->now(), ">="));
+          ->where(new CondNull("valid_until"), new Compare("valid_until", $sql->now(), ">="));
       }
     }
   }
@@ -137,6 +161,7 @@ namespace Api\File {
   use Api\Parameter\StringType;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondIn;
+  use Driver\Sql\Condition\CondNull;
   use Objects\User;
 
   class ValidateToken extends FileAPI {
@@ -161,7 +186,7 @@ namespace Api\File {
         ->leftJoin("UserFileTokenFile", "UserFileToken.uid", "token_id")
         ->leftJoin("UserFile", "UserFile.uid", "file_id")
         ->where(new Compare("token", $token))
-        ->where(new Compare("valid_until", $sql->now(), ">"))
+        ->where(new CondNull("valid_until"), new Compare("valid_until", $sql->now(), ">="))
         ->execute();
 
       $this->success = ($res !== false);
@@ -420,7 +445,7 @@ namespace Api\File {
         $res = $sql->select("uid",  "token_type", "maxFiles", "maxSize", "extensions", "user_id")
           ->from("UserFileToken")
           ->where(new Compare("token", $token))
-          ->where(new Compare("valid_until", $sql->now(), ">="))
+          ->where(new CondNull("valid_until"), new Compare("valid_until", $sql->now(), ">="))
           ->limit(1)
           ->execute();
 
@@ -550,8 +575,8 @@ namespace Api\File {
       }
 
       $sql = $this->user->getSQL();
-      $fileIds = $this->getParam("id");
-      $query =  $sql->select("UserFile.uid", "path", "name")->from("UserFile");
+      $fileIds = array_unique($this->getParam("id"));
+      $query =  $sql->select("UserFile.uid", "path", "name", "directory")->from("UserFile");
       $this->filterFiles($sql, $query, $fileIds, $token);
 
       $res = $query->execute();
@@ -559,20 +584,33 @@ namespace Api\File {
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        if (empty($res)) {
-          if (is_null($token)) {
-            return $this->createError("File not found");
-          } else {
-            return $this->createError("Permission denied (token)");
+        $foundFiles = array();
+        foreach ($res as $row) {
+          $foundFiles[$row["uid"]] = $row;
+        }
+
+        $filesToDownload = array();
+        foreach ($fileIds as $fileId) {
+          if (!array_key_exists($fileId, $foundFiles)) {
+            if (is_null($token)) {
+              return $this->createError("File not found: $fileId");
+            } else {
+              return $this->createError("Permission denied (token)");
+            }
+          } else if (!$foundFiles[$fileId]["directory"]) {
+            $filesToDownload[] = $foundFiles[$fileId];
           }
+        }
+
+        if (empty($filesToDownload)) {
+          return $this->createError("No file selected");
+        } else if (count($filesToDownload) === 1) {
+          $file = array_shift($filesToDownload);
+          $path = $file["path"];
+          $name = $file["name"];
+          $this->downloadFile($name, $path);
         } else {
-          if ($res[0]["directory"]) {
-            return $this->createError("Cannot download directory (yet)");
-          } else {
-            $path = $res[0]["path"];
-            $name = $res[0]["name"];
-            $this->downloadFile($name, $path);
-          }
+          $this->downloadZip($filesToDownload);
         }
       }
 
@@ -680,8 +718,7 @@ namespace Api\File {
 
       $sql = $this->user->getSQL();
       $token = generateRandomString(36);
-      $validUntil = (new \DateTime())->modify("+$durability MINUTES");
-
+      $validUntil = $durability == 0 ? null : (new \DateTime())->modify("+$durability MINUTES");
       $res = $sql->insert("UserFileToken",
           array("token", "token_type", "maxSize", "maxFiles", "extensions", "valid_until", "user_id"))
         ->addRow($token, "upload", $maxSize, $maxFiles, $extensions, $validUntil, $this->user->getId())
@@ -758,7 +795,7 @@ namespace Api\File {
 
       // Insert
       $token = generateRandomString(36);
-      $validUntil = (new \DateTime())->modify("+$durability MINUTES");
+      $validUntil = $durability == 0 ? null : (new \DateTime())->modify("+$durability MINUTES");
       $res = $sql->insert("UserFileToken", array("token_type", "valid_until", "user_id", "token"))
         ->addRow("download", $validUntil, $this->user->getId(), $token)
         ->returning("uid")

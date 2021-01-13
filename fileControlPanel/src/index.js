@@ -86,15 +86,17 @@ class FileControlPanel extends React.Component {
                 </div> :
                 <></>;
 
-            return <div className={"container mt-4"}>
-                <div className={"row"}>
-                    <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
-                        <h2>File Control Panel</h2>
-                        <FileBrowser files={this.state.files} token={this.state.token} api={this.api}  />
+            return <>
+                    <div className={"container mt-4"}>
+                    <div className={"row"}>
+                        <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
+                            <h2>File Control Panel</h2>
+                            <FileBrowser files={this.state.files} token={this.state.token} api={this.api}  />
+                        </div>
                     </div>
+                    { tokenList }
                 </div>
-                { tokenList }
-            </div>;
+            </>;
         } else {
             return <div className={"container mt-4"}>
                 <div className={"row"}>

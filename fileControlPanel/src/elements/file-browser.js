@@ -285,7 +285,8 @@ export class FileBrowser extends React.Component {
                 </tbody>
             </table>
             <div className={"file-control-buttons"}>
-                <button type={"button"} className={"btn btn-success"} disabled={selectedCount === 0}>
+                <button type={"button"} className={"btn btn-success"} disabled={selectedCount === 0}
+                        onClick={() => this.onDownload(selectedIds)}>
                     <Icon icon={"download"} className={"mr-1"}/>
                     Download Selected Files ({selectedCount})
                 </button>
@@ -305,7 +306,7 @@ export class FileBrowser extends React.Component {
                                 Upload
                             </button>
                             <button type={"button"} className={"btn btn-danger"} disabled={selectedCount === 0}
-                                    onClick={(e) => this.deleteFiles(selectedIds)}>
+                                    onClick={() => this.deleteFiles(selectedIds)}>
                                 <Icon icon={"trash"} className={"mr-1"}/>
                                 Delete Selected Files ({selectedCount})
                             </button>
@@ -354,14 +355,16 @@ export class FileBrowser extends React.Component {
     }
 
     deleteFiles(selectedIds) {
-        let token = (this.state.api.loggedIn ? null : this.state.token.value);
-        this.state.api.delete(selectedIds, token).then((res) => {
-           if (res.success) {
-                this.fetchFiles();
-           } else {
-               this.pushAlert(res);
-           }
-        });
+        if (selectedIds && selectedIds.length > 0) {
+            let token = (this.state.api.loggedIn ? null : this.state.token.value);
+            this.state.api.delete(selectedIds, token).then((res) => {
+               if (res.success) {
+                    this.fetchFiles();
+               } else {
+                   this.pushAlert(res);
+               }
+            });
+        }
     }
 
     onUpload() {
@@ -374,5 +377,32 @@ export class FileBrowser extends React.Component {
                 this.pushAlert(res);
             }
         });
+    }
+
+    onDownload(selectedIds) {
+        if (selectedIds && selectedIds.length > 0) {
+            let token = (this.state.api.loggedIn ? "" : "&token=" + this.state.token.value);
+            let ids = selectedIds.map(id => "id[]=" + id).join("&");
+            let downloadUrl = "/api/file/download?" + ids + token;
+            fetch(downloadUrl)
+                .then(response => {
+                    let header = response.headers.get("Content-Disposition") || "";
+                    let fileNameFields = header.split(";").filter(c => c.trim().toLowerCase().startsWith("filename="));
+                    let fileName = null;
+                    if (fileNameFields.length > 0) {
+                        fileName = fileNameFields[0].trim().substr("filename=".length);
+                    } else {
+                        fileName = null;
+                    }
+
+                    response.blob().then(blob => {
+                        let url = window.URL.createObjectURL(blob);
+                        let a = document.createElement('a');
+                        a.href = url;
+                        if (fileName !== null) a.download = fileName;
+                        a.click();
+                    });
+                });
+        }
     }
 }

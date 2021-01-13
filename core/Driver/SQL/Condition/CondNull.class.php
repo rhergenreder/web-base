@@ -1,8 +1,6 @@
 <?php
 
-
-namespace Driver\Sql\Condition;
-
+namespace Driver\SQL\Condition;
 
 class CondNull extends Condition {
 

@@ -96,7 +96,11 @@ export class FileBrowser extends React.Component {
             size /= 1024.0;
         }
 
-        return size.toFixed(1) + " " + suffixes[i];
+        if (i === 0 || Math.round(size) === size) {
+            return size + " " + suffixes[i];
+        } else {
+            return size.toFixed(1) + " " + suffixes[i];
+        }
     }
 
     canUpload() {

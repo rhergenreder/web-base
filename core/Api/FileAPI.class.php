@@ -4,7 +4,7 @@ namespace Api {
 
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondIn;
-  use Driver\Sql\Condition\CondNull;
+  use Driver\SQL\Condition\CondNull;
   use Driver\SQL\SQL;
   use External\ZipStream\BufferWriter;
   use External\ZipStream\File;
@@ -161,7 +161,7 @@ namespace Api\File {
   use Api\Parameter\StringType;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondIn;
-  use Driver\Sql\Condition\CondNull;
+  use Driver\SQL\Condition\CondNull;
   use Objects\User;
 
   class ValidateToken extends FileAPI {

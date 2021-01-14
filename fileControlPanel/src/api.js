@@ -57,6 +57,18 @@ export default class API {
         return this.apiCall("file/revokeToken", { token: token });
     }
 
+    createDownloadToken(durability, files) {
+        return this.apiCall("file/createDownloadToken", { files: files, durability: durability });
+    }
+
+    createUploadToken(durability, parentId=null, maxFiles=0, maxSize=0, extensions = "") {
+        return this.apiCall("file/createUploadToken", { parentId: parentId, durability: durability, maxFiles: maxFiles, maxSize: maxSize, extensions: extensions });
+    }
+
+    createDirectory(name, parentId = null) {
+        return this.apiCall("file/createDirectory", { name: name, parentId: parentId });
+    }
+
     async upload(files, token = null, parentId = null) {
         const csrf_token = this.csrfToken();
 

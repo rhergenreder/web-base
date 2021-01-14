@@ -115,7 +115,7 @@ namespace Api {
       $files = array();
       foreach ($res as $row) {
         if ($row["uid"] === null) continue;
-        $fileId = (string)$row["uid"];
+        $fileId = $row["uid"];
         $parentId = $row["parentId"];
         $fileName = $row["name"];
         $isDirectory = $row["directory"];
@@ -377,7 +377,6 @@ namespace Api\File {
         'parentId' => new Parameter('parentId', Parameter::TYPE_INT, true, null)
       ));
       $this->loginRequired = true;
-      $this->csrfTokenRequired = false;
     }
 
     public function execute($values = array()) {

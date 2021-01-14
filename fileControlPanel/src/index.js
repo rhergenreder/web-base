@@ -16,8 +16,73 @@ class FileControlPanel extends React.Component {
             errorMessage: "",
             user: { },
             token: { valid: false, value: "", validUntil: null, type: null },
-            files: [],
+            files: {}
         };
+    }
+
+    onFetchFiles(files) {
+        this.setState({ ...this.state, files: files });
+    }
+
+    getSelectedIds(items = null, recursive = true) {
+        let ids = [];
+        items = items || this.state.files;
+        for (const fileItem of Object.values(items)) {
+            if (fileItem.selected) {
+                ids.push(fileItem.uid);
+            }
+            if (recursive && fileItem.isDirectory) {
+                ids.push(...this.getSelectedIds(fileItem.items));
+            }
+        }
+
+        return ids;
+    }
+
+    onSelectAll(selected, items) {
+        for (const fileElement of Object.values(items)) {
+            fileElement.selected = selected;
+            if (fileElement.isDirectory) {
+                this.onSelectAll(selected, fileElement.items);
+            }
+        }
+    }
+
+    onSelectFile(e, uid, items=null) {
+
+        let found = false;
+        let updatedFiles = (items === null) ? {...this.state.files} : items;
+        if (updatedFiles.hasOwnProperty(uid)) {
+            let fileElement = updatedFiles[uid];
+            found = true;
+            fileElement.selected = e.target.checked;
+            if (fileElement.isDirectory) {
+                this.onSelectAll(fileElement.selected, fileElement.items);
+            }
+        } else {
+            for (const fileElement of Object.values(updatedFiles)) {
+                if (fileElement.isDirectory) {
+                    if (this.onSelectFile(e, uid, fileElement.items)) {
+                        if (!e.target.checked) {
+                            fileElement.selected = false;
+                        } else if (this.getSelectedIds(fileElement.items, false).length === Object.values(fileElement.items).length) {
+                            fileElement.selected = true;
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (items === null) {
+            this.setState({
+                ...this.state,
+                files: updatedFiles
+            });
+        }
+
+        return found;
     }
 
     onValidateToken(token = null) {
@@ -58,7 +123,6 @@ class FileControlPanel extends React.Component {
                 let start = (pathName.startsWith("/files/") ? ("/files/").length : 1);
                 let token = pathName.substr(start, end);
                 if (token) {
-                    // this.setState({ ...this.state, loaded: true, token: { ...this.state.token, value: token } });
                     this.onValidateToken(token);
                     checkUser = false;
                 }
@@ -78,10 +142,11 @@ class FileControlPanel extends React.Component {
 
             return <>Loading… <Icon icon={"spinner"} /></>;
         } else if (this.api.loggedIn || this.state.token.valid) {
+            let selectedIds = this.getSelectedIds();
             let tokenList = (this.api.loggedIn) ?
                 <div className={"row"}>
                     <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
-                        <TokenList api={this.api} />
+                        <TokenList api={this.api} selectedFiles={selectedIds} />
                     </div>
                 </div> :
                 <></>;
@@ -91,7 +156,9 @@ class FileControlPanel extends React.Component {
                     <div className={"row"}>
                         <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
                             <h2>File Control Panel</h2>
-                            <FileBrowser files={this.state.files} token={this.state.token} api={this.api}  />
+                            <FileBrowser files={this.state.files} token={this.state.token} api={this.api}
+                                         onSelectFile={this.onSelectFile.bind(this)}
+                                         onFetchFiles={this.onFetchFiles.bind(this)}/>
                         </div>
                     </div>
                     { tokenList }

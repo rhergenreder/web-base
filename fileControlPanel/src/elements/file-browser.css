@@ -60,6 +60,10 @@
     text-align: center;
 }
 
+.token-table td:nth-child(4) > i {
+    padding-left: 10px;
+}
+
 .file-table td:nth-child(n+3), .file-table th:nth-child(n+3) {
     text-align: center;
 }

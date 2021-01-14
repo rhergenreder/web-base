@@ -2,22 +2,23 @@ import * as React from "react";
 import "./file-browser.css";
 import Dropzone from "react-dropzone";
 import Icon from "./icon";
+import Alert from "./alert";
+import {Popup} from "./popup";
+import {useState} from "react";
 
-export class FileBrowser extends React.Component {
+export function FileBrowser(props) {
 
-    constructor(props) {
-        super(props);
+    let files = props.files || { };
+    let api = props.api;
+    let tokenObj = props.token || { valid: false };
+    let onSelectFile = props.onSelectFile || function() { };
+    let onFetchFiles = props.onFetchFiles || function() { };
 
-        this.state = {
-            api: props.api,
-            files: props.files,
-            token: props.token,
-            filesToUpload: [],
-            alerts: []
-        }
-    }
+    let [popup, setPopup] = useState({ visible: false, directoryName: "" });
+    let [alerts, setAlerts] = useState( []);
+    let [filesToUpload, setFilesToUpload] = useState([]);
 
-    svgMiddle(indentation, scale=1.0) {
+    function svgMiddle(indentation, scale=1.0) {
         let width = 48 * scale;
         let height = 64 * scale;
         let style = (indentation > 1 ? { marginLeft: ((indentation-1)*width) + "px" } : {});
@@ -33,7 +34,7 @@ export class FileBrowser extends React.Component {
         </svg>;
     }
 
-    svgEnd(indentation, scale=1.0) {
+    function svgEnd(indentation, scale=1.0) {
         let width = 48 * scale;
         let height = 64 * scale;
         let style = (indentation > 1 ? { marginLeft: ((indentation-1)*width) + "px" } : {});
@@ -51,7 +52,7 @@ export class FileBrowser extends React.Component {
         </svg>;
     }
 
-    createFileIcon(mimeType, size=2) {
+    function createFileIcon(mimeType, size=2) {
         let icon = "";
         if (mimeType !== null) {
             mimeType = mimeType.toLowerCase().trim();
@@ -89,7 +90,7 @@ export class FileBrowser extends React.Component {
         return <Icon icon={icon} type={"far"} className={"p-1 align-middle fa-" + size + "x"} />
     }
 
-    formatSize(size) {
+    function formatSize(size) {
         const suffixes = ["B","KiB","MiB","GiB","TiB"];
         let i = 0;
         for (; i < suffixes.length && size >= 1024; i++) {
@@ -103,78 +104,32 @@ export class FileBrowser extends React.Component {
         }
     }
 
-    canUpload() {
-        return this.state.api.loggedIn || (this.state.token.valid && this.state.token.type === "upload");
+    function canUpload() {
+        return api.loggedIn || (tokenObj.valid && tokenObj.type === "upload");
     }
 
-    onAddUploadFiles(acceptedFiles) {
-        let files = this.state.filesToUpload.slice();
+    function onAddUploadFiles(acceptedFiles) {
+        let files = filesToUpload.slice();
         files.push(...acceptedFiles);
-        this.setState({ ...this.state, filesToUpload: files });
+        setFilesToUpload(files);
     }
 
-    getSelectedIds(items = null, recursive = true) {
+    function getSelectedIds(items = null, recursive = true) {
         let ids = [];
-        items = items || this.state.files;
+        items = items || files;
         for (const fileItem of Object.values(items)) {
             if (fileItem.selected) {
                 ids.push(fileItem.uid);
             }
             if (recursive && fileItem.isDirectory) {
-                ids.push(...this.getSelectedIds(fileItem.items));
+                ids.push(...getSelectedIds(fileItem.items));
             }
         }
 
         return ids;
     }
 
-    onSelectAll(selected, items) {
-        for (const fileElement of Object.values(items)) {
-            fileElement.selected = selected;
-            if (fileElement.isDirectory) {
-                this.onSelectAll(selected, fileElement.items);
-            }
-        }
-    }
-
-    onSelectFile(e, uid, items=null) {
-
-        let found = false;
-        let updatedFiles = (items === null) ? {...this.state.files} : items;
-        if (updatedFiles.hasOwnProperty(uid)) {
-            let fileElement = updatedFiles[uid];
-            found = true;
-            fileElement.selected = e.target.checked;
-            if (fileElement.isDirectory) {
-                this.onSelectAll(fileElement.selected, fileElement.items);
-            }
-        } else {
-            for (const fileElement of Object.values(updatedFiles)) {
-                if (fileElement.isDirectory) {
-                    if (this.onSelectFile(e, uid, fileElement.items)) {
-                        if (!e.target.checked) {
-                            fileElement.selected = false;
-                        } else if (this.getSelectedIds(fileElement.items, false).length === Object.values(fileElement.items).length) {
-                            fileElement.selected = true;
-                        }
-                        found = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (items === null) {
-            this.setState({
-                ...this.state,
-                files: updatedFiles
-            });
-        }
-
-        return found;
-    }
-
-    createFileList(elements, indentation=0) {
+    function createFileList(elements, indentation=0) {
         let rows = [];
         let i = 0;
         const values = Object.values(elements);
@@ -182,15 +137,15 @@ export class FileBrowser extends React.Component {
             let name = fileElement.name;
             let uid  = fileElement.uid;
             let type = (fileElement.isDirectory ? "Directory" : fileElement.mimeType);
-            let size = (fileElement.isDirectory ? "" : this.formatSize(fileElement.size));
+            let size = (fileElement.isDirectory ? "" : formatSize(fileElement.size));
             let mimeType = (fileElement.isDirectory ? "application/x-directory" : fileElement.mimeType);
-            let token = (this.state.token && this.state.token.valid ? "&token=" + this.state.token.value : "");
+            let token = (tokenObj && tokenObj.valid ? "&token=" + tokenObj.value : "");
             let svg = <></>;
             if (indentation > 0) {
                 if (i === values.length - 1) {
-                    svg = this.svgEnd(indentation, 0.75);
+                    svg = svgEnd(indentation, 0.75);
                 } else {
-                    svg = this.svgMiddle(indentation, 0.75);
+                    svg = svgMiddle(indentation, 0.75);
                 }
             }
 
@@ -198,7 +153,7 @@ export class FileBrowser extends React.Component {
                 <tr key={"file-" + uid} data-id={uid} className={"file-row"}>
                     <td>
                         { svg }
-                        { this.createFileIcon(mimeType) }
+                        { createFileIcon(mimeType) }
                     </td>
                     <td>
                         {fileElement.isDirectory ? name :
@@ -209,53 +164,49 @@ export class FileBrowser extends React.Component {
                     <td>{size}</td>
                     <td>
                         <input type={"checkbox"} checked={!!fileElement.selected}
-                               onChange={(e) => this.onSelectFile(e, uid)}
+                               onChange={(e) => onSelectFile(e, uid)}
                         />
                     </td>
                 </tr>
             );
 
             if (fileElement.isDirectory) {
-                rows.push(...this.createFileList(fileElement.items, indentation + 1));
+                rows.push(...createFileList(fileElement.items, indentation + 1));
             }
             i++;
         }
         return rows;
     }
 
-    render() {
-        
-        let rows = this.createFileList(this.state.files);
-        let selectedIds = this.getSelectedIds();
+        let rows = createFileList(files);
+        let selectedIds = getSelectedIds();
         let selectedCount = selectedIds.length;
         let uploadZone = <></>;
-        let writePermissions = this.canUpload();
+        let writePermissions = canUpload();
         let uploadedFiles = [];
-        let alerts = [];
+        let alertElements = [];
 
-        let i = 0;
-        for (const alert of this.state.alerts) {
-            alerts.push(
-                <div key={"alert-" + i++} className={"alert alert-" + alert.type}>
-                    { alert.text }
-                </div>
+        for (let i = 0; i < alerts.length; i++) {
+            const alert = alerts[i];
+            alertElements.push(
+                <Alert key={"alert-" + i} {...alert} onClose={() => removeAlert(i)} />
             );
         }
 
         if (writePermissions) {
 
-            for(let i = 0; i < this.state.filesToUpload.length; i++) {
-                const file = this.state.filesToUpload[i];
+            for(let i = 0; i < filesToUpload.length; i++) {
+                const file = filesToUpload[i];
                 uploadedFiles.push(
                     <span className={"uploaded-file"} key={i}>
-                        { this.createFileIcon(file.type, 3) }
+                        { createFileIcon(file.type, 3) }
                         <span>{file.name}</span>
-                        <Icon icon={"times"} onClick={(e) => this.onRemoveUploadedFile(e, i)}/>
+                        <Icon icon={"times"} onClick={(e) => onRemoveUploadedFile(e, i)}/>
                     </span>
                 );
             }
 
-            uploadZone = <><Dropzone onDrop={this.onAddUploadFiles.bind(this)}>
+            uploadZone = <><Dropzone onDrop={onAddUploadFiles}>
                 {({getRootProps, getInputProps}) => (
                     <section className={"file-upload-container"}>
                         <div {...getRootProps()}>
@@ -273,7 +224,10 @@ export class FileBrowser extends React.Component {
         }
 
         return <>
-            <h4>File Browser</h4>
+            <h4>
+                <Icon icon={"sync"} className={"mx-3 clickable small"} onClick={fetchFiles}/>
+                File Browser
+            </h4>
             <table className={"table data-table file-table"}>
                 <thead>
                     <tr>
@@ -285,17 +239,23 @@ export class FileBrowser extends React.Component {
                     </tr>
                 </thead>
                 <tbody>
-                    { rows }
+                    { rows.length > 0 ? rows :
+                        <tr>
+                            <td colSpan={4} className={"text-center text-black-50"}>
+                                No files uploaded yet
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
             <div className={"file-control-buttons"}>
                 <button type={"button"} className={"btn btn-success"} disabled={selectedCount === 0}
-                        onClick={() => this.onDownload(selectedIds)}>
+                        onClick={() => onDownload(selectedIds)}>
                     <Icon icon={"download"} className={"mr-1"}/>
                     Download Selected Files ({selectedCount})
                 </button>
-                { this.state.api.loggedIn ?
-                    <button type={"button"} className={"btn btn-info"}>
+                { api.loggedIn ?
+                    <button type={"button"} className={"btn btn-info"} onClick={onPopupOpen}>
                         <Icon icon={"plus"} className={"mr-1"}/>
                         Create Directory
                     </button> :
@@ -305,12 +265,12 @@ export class FileBrowser extends React.Component {
                     writePermissions ?
                         <>
                             <button type={"button"} className={"btn btn-primary"} disabled={uploadedFiles.length === 0}
-                                    onClick={this.onUpload.bind(this)}>
+                                    onClick={onUpload}>
                                 <Icon icon={"upload"} className={"mr-1"}/>
                                 Upload
                             </button>
                             <button type={"button"} className={"btn btn-danger"} disabled={selectedCount === 0}
-                                    onClick={() => this.deleteFiles(selectedIds)}>
+                                    onClick={() => deleteFiles(selectedIds)}>
                                 <Icon icon={"trash"} className={"mr-1"}/>
                                 Delete Selected Files ({selectedCount})
                             </button>
@@ -320,72 +280,113 @@ export class FileBrowser extends React.Component {
             </div>
             { uploadZone }
             <div>
-                { alerts }
+                { alertElements }
             </div>
+            <Popup title={"Create Directory"} visible={popup.visible} buttons={["Ok","Cancel"]} onClose={onPopupClose} onClick={onPopupButton}>
+                <div className={"form-group"}>
+                    <label>Directory Name</label>
+                    <input type={"text"} className={"form-control"} value={popup.directoryName} maxLength={32} placeholder={"Enter name…"}
+                           onChange={(e) => onPopupChange(e, "directoryName")}/>
+                </div>
+            </Popup>
         </>;
+
+    function onPopupOpen() {
+        setPopup({ ...popup, visible: true });
     }
 
-    fetchFiles() {
-        if (this.state.token.valid) {
-            this.state.api.validateToken(this.state.token.value).then((res) => {
-                if (res) {
-                    this.setState({ ...this.state, files: res.files });
+    function onPopupClose() {
+        setPopup({ ...popup, visible: false });
+    }
+
+    function onPopupChange(e, key) {
+        setPopup({ ...popup, [key]: e.target.value });
+    }
+
+    function onPopupButton(btn) {
+
+        if (btn === "Ok") {
+            api.createDirectory(popup.directoryName, null).then((res) => {
+                if (!res.success) {
+                    pushAlert(res, "Error creating directory");
                 } else {
-                    this.pushAlert(res);
+                    fetchFiles();
+                }
+            })
+        }
+
+        onPopupClose();
+    }
+
+    function fetchFiles() {
+        if (tokenObj.valid) {
+            api.validateToken(tokenObj.value).then((res) => {
+                if (res) {
+                    onFetchFiles(res.files);
+                } else {
+                    pushAlert(res);
                 }
             });
-        } else if (this.state.api.loggedIn) {
-            this.state.api.listFiles().then((res) => {
+        } else if (api.loggedIn) {
+            api.listFiles().then((res) => {
                 if (res) {
-                    this.setState({ ...this.state, files: res.files });
+                    onFetchFiles(res.files);
                 } else {
-                    this.pushAlert(res);
+                    pushAlert(res);
                 }
             });
         }
     }
 
-    onRemoveUploadedFile(e, i) {
+    function onRemoveUploadedFile(e, i) {
         e.stopPropagation();
-        let files = this.state.filesToUpload.slice();
+        let files = filesToUpload.slice();
         files.splice(i, 1);
-        this.setState({ ...this.state, filesToUpload: files });
+        setFilesToUpload(files);
     }
 
-    pushAlert(res) {
-        let newAlerts = this.state.alerts.slice();
-        newAlerts.push({ type: "danger", text: res.msg });
-        this.setState({ ...this.state, alerts: newAlerts });
+    function pushAlert(res, title) {
+        let newAlerts = alerts.slice();
+        newAlerts.push({ type: "danger", message: res.msg, title: title });
+        setAlerts(newAlerts);
     }
 
-    deleteFiles(selectedIds) {
+    function removeAlert(i) {
+        if (i >= 0 && i < alerts.length) {
+            let newAlerts = alerts.slice();
+            newAlerts.splice(i, 1);
+            setAlerts(newAlerts);
+        }
+    }
+
+    function deleteFiles(selectedIds) {
         if (selectedIds && selectedIds.length > 0) {
-            let token = (this.state.api.loggedIn ? null : this.state.token.value);
-            this.state.api.delete(selectedIds, token).then((res) => {
+            let token = (api.loggedIn ? null : tokenObj.value);
+            api.delete(selectedIds, token).then((res) => {
                if (res.success) {
-                    this.fetchFiles();
+                   fetchFiles();
                } else {
-                   this.pushAlert(res);
+                   pushAlert(res);
                }
             });
         }
     }
 
-    onUpload() {
-        let token = (this.state.api.loggedIn ? null : this.state.token.value);
-        this.state.api.upload(this.state.filesToUpload, token).then((res) => {
+    function onUpload() {
+        let token = (api.loggedIn ? null : tokenObj.value);
+        api.upload(filesToUpload, token).then((res) => {
             if (res.success) {
-                this.setState({ ...this.state, filesToUpload: [] })
-                this.fetchFiles();
+                setFilesToUpload([]);
+                fetchFiles();
             } else {
-                this.pushAlert(res);
+                pushAlert(res);
             }
         });
     }
 
-    onDownload(selectedIds) {
+    function onDownload(selectedIds) {
         if (selectedIds && selectedIds.length > 0) {
-            let token = (this.state.api.loggedIn ? "" : "&token=" + this.state.token.value);
+            let token = (api.loggedIn ? "" : "&token=" + tokenObj.value);
             let ids = selectedIds.map(id => "id[]=" + id).join("&");
             let downloadUrl = "/api/file/download?" + ids + token;
             fetch(downloadUrl)

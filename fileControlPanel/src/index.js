@@ -118,6 +118,7 @@ class FileControlPanel extends React.Component {
                 }
                 newState.files = res.files;
             } else {
+                newState.token.value = (newState.token.value ? "" : token);
                 newState.errorMessage = res.msg;
             }
 
@@ -137,6 +138,10 @@ class FileControlPanel extends React.Component {
 
             let checkUser = true;
             let pathName = window.location.pathname;
+            if (pathName.startsWith("/files")) {
+                pathName = pathName.substr("/files".length);
+            }
+
             if (pathName.length > 1) {
                 let end = (pathName.endsWith("/") ? pathName.length - 2 : pathName.length - 1);
                 let start = (pathName.startsWith("/files/") ? ("/files/").length : 1);

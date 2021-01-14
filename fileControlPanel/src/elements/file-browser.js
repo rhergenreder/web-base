@@ -13,41 +13,46 @@ export function FileBrowser(props) {
     let tokenObj = props.token || { valid: false };
     let onSelectFile = props.onSelectFile || function() { };
     let onFetchFiles = props.onFetchFiles || function() { };
+    let directories   = props.directories || {};
 
-    let [popup, setPopup] = useState({ visible: false, directoryName: "" });
+    let [popup, setPopup] = useState({ visible: false, directoryName: "", directory: 0, type: "upload" });
     let [alerts, setAlerts] = useState( []);
     let [filesToUpload, setFilesToUpload] = useState([]);
 
-    function svgMiddle(indentation, scale=1.0) {
+
+    function svgMiddle(scale=1.0) {
         let width = 48 * scale;
         let height = 64 * scale;
-        let style = (indentation > 1 ? { marginLeft: ((indentation-1)*width) + "px" } : {});
 
-        return <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg" style={style}>
+        return <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg">
             <g>
-                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2="0" x2={width/2}
-                      y1={height} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
-                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2={height/2} x2={width}
-                      y1={height/2} x1={width/2} fillOpacity="null" strokeOpacity="null" strokeWidth="1.5"
-                      stroke="#000" fill="none"/>
+                <line y2="0" x2={width/2} y1={height} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
+                <line y2={height/2} x2={width} y1={height/2} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
             </g>
         </svg>;
     }
 
-    function svgEnd(indentation, scale=1.0) {
+    function svgEnd(scale=1.0) {
         let width = 48 * scale;
         let height = 64 * scale;
-        let style = (indentation > 1 ? { marginLeft: ((indentation-1)*width) + "px" } : {});
 
-        return <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg" style={style}>
+        return <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg">
             <g>
                 { /* vertical line */}
-                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2="0" x2={width/2}
-                      y1={height/2} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
+                <line y2="0" x2={width/2} y1={height/2} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
                 { /* horizontal line */}
-                <line strokeLinecap="undefined" strokeLinejoin="undefined" y2={height/2} x2={width}
-                      y1={height/2} x1={width/2} fillOpacity="null" strokeOpacity="null" strokeWidth="1.5"
-                      stroke="#000" fill="none"/>
+                <line y2={height/2} x2={width} y1={height/2} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
+            </g>
+        </svg>;
+    }
+
+    function svgLeft(scale=1.0) {
+        let width = 48 * scale;
+        let height = 64 * scale;
+        return <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg" style={{}}>
+            <g>
+                { /* vertical line */}
+                <line y2="0" x2={width/2} y1={height} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
             </g>
         </svg>;
     }
@@ -140,12 +145,16 @@ export function FileBrowser(props) {
             let size = (fileElement.isDirectory ? "" : formatSize(fileElement.size));
             let mimeType = (fileElement.isDirectory ? "application/x-directory" : fileElement.mimeType);
             let token = (tokenObj && tokenObj.valid ? "&token=" + tokenObj.value : "");
-            let svg = <></>;
+            let svg = [];
             if (indentation > 0) {
+                for (let i = 0; i < indentation - 1; i++) {
+                    svg.push(svgLeft(0.75));
+                }
+
                 if (i === values.length - 1) {
-                    svg = svgEnd(indentation, 0.75);
+                    svg.push(svgEnd(0.75));
                 } else {
-                    svg = svgMiddle(indentation, 0.75);
+                    svg.push(svgMiddle(0.75));
                 }
             }
 
@@ -190,6 +199,13 @@ export function FileBrowser(props) {
             const alert = alerts[i];
             alertElements.push(
                 <Alert key={"alert-" + i} {...alert} onClose={() => removeAlert(i)} />
+            );
+        }
+
+        let options = [];
+        for (const [uid, dir] of Object.entries(directories)) {
+            options.push(
+                <option key={"option-" + dir} value={uid}>{dir}</option>
             );
         }
 
@@ -255,7 +271,7 @@ export function FileBrowser(props) {
                     Download Selected Files ({selectedCount})
                 </button>
                 { api.loggedIn ?
-                    <button type={"button"} className={"btn btn-info"} onClick={onPopupOpen}>
+                    <button type={"button"} className={"btn btn-info"} onClick={(e) => onPopupOpen("createDirectory")}>
                         <Icon icon={"plus"} className={"mr-1"}/>
                         Create Directory
                     </button> :
@@ -265,7 +281,7 @@ export function FileBrowser(props) {
                     writePermissions ?
                         <>
                             <button type={"button"} className={"btn btn-primary"} disabled={uploadedFiles.length === 0}
-                                    onClick={onUpload}>
+                                    onClick={(e) => api.loggedIn ? onPopupOpen("upload") : onUpload()}>
                                 <Icon icon={"upload"} className={"mr-1"}/>
                                 Upload
                             </button>
@@ -284,15 +300,24 @@ export function FileBrowser(props) {
             </div>
             <Popup title={"Create Directory"} visible={popup.visible} buttons={["Ok","Cancel"]} onClose={onPopupClose} onClick={onPopupButton}>
                 <div className={"form-group"}>
-                    <label>Directory Name</label>
-                    <input type={"text"} className={"form-control"} value={popup.directoryName} maxLength={32} placeholder={"Enter name…"}
-                           onChange={(e) => onPopupChange(e, "directoryName")}/>
+                    <label>Destination Directory:</label>
+                    <select value={popup.directory} className={"form-control"}
+                            onChange={(e) => onPopupChange(e, "directory")}>
+                        { options }
+                    </select>
                 </div>
+                { popup.type !== "upload" ?
+                    <div className={"form-group"}>
+                        <label>Directory Name</label>
+                        <input type={"text"} className={"form-control"} value={popup.directoryName} maxLength={32} placeholder={"Enter name…"}
+                               onChange={(e) => onPopupChange(e, "directoryName")}/>
+                    </div> : <></>
+                }
             </Popup>
         </>;
 
-    function onPopupOpen() {
-        setPopup({ ...popup, visible: true });
+    function onPopupOpen(type) {
+        setPopup({ ...popup, visible: true, type: type });
     }
 
     function onPopupClose() {
@@ -306,13 +331,18 @@ export function FileBrowser(props) {
     function onPopupButton(btn) {
 
         if (btn === "Ok") {
-            api.createDirectory(popup.directoryName, null).then((res) => {
-                if (!res.success) {
-                    pushAlert(res, "Error creating directory");
-                } else {
-                    fetchFiles();
-                }
-            })
+            let parentId = popup.directory === 0 ? null : popup.directory;
+            if (popup.type === "createDirectory") {
+                api.createDirectory(popup.directoryName, parentId).then((res) => {
+                    if (!res.success) {
+                        pushAlert(res, "Error creating directory");
+                    } else {
+                        fetchFiles();
+                    }
+                });
+            } else if (popup.type === "upload") {
+                onUpload();
+            }
         }
 
         onPopupClose();
@@ -374,7 +404,8 @@ export function FileBrowser(props) {
 
     function onUpload() {
         let token = (api.loggedIn ? null : tokenObj.value);
-        api.upload(filesToUpload, token).then((res) => {
+        let parentId = ((!api.loggedIn || popup.directory === 0) ? null : popup.directory);
+        api.upload(filesToUpload, token, parentId).then((res) => {
             if (res.success) {
                 setFilesToUpload([]);
                 fetchFiles();

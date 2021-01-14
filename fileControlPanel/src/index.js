@@ -24,6 +24,24 @@ class FileControlPanel extends React.Component {
         this.setState({ ...this.state, files: files });
     }
 
+    getDirectories(prefix = "/", items = null) {
+        let directories = { }
+        items = items || this.state.files;
+
+        if (prefix === "/") {
+            directories[0] = "/";
+        }
+
+        for(const fileItem of Object.values(items)) {
+            if (fileItem.isDirectory) {
+                let path = prefix + (prefix.length > 1 ? "/" : "") + fileItem.name;
+                directories[fileItem.uid] = path;
+                directories = Object.assign(directories, {...this.getDirectories(path, fileItem.items)});
+            }
+        }
+        return directories;
+    }
+
     getSelectedIds(items = null, recursive = true) {
         let ids = [];
         items = items || this.state.files;
@@ -90,6 +108,7 @@ class FileControlPanel extends React.Component {
             this.setState({ ...this.state, validatingToken: true, errorMessage: "" });
             token = this.state.token.value;
         }
+
         this.api.validateToken(token).then((res) => {
             let newState = { ...this.state, loaded: true, validatingToken: false };
             if (res.success) {
@@ -143,10 +162,11 @@ class FileControlPanel extends React.Component {
             return <>Loading… <Icon icon={"spinner"} /></>;
         } else if (this.api.loggedIn || this.state.token.valid) {
             let selectedIds = this.getSelectedIds();
+            let directories = this.getDirectories();
             let tokenList = (this.api.loggedIn) ?
                 <div className={"row"}>
                     <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
-                        <TokenList api={this.api} selectedFiles={selectedIds} />
+                        <TokenList api={this.api} selectedFiles={selectedIds} directories={directories} />
                     </div>
                 </div> :
                 <></>;
@@ -156,7 +176,7 @@ class FileControlPanel extends React.Component {
                     <div className={"row"}>
                         <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
                             <h2>File Control Panel</h2>
-                            <FileBrowser files={this.state.files} token={this.state.token} api={this.api}
+                            <FileBrowser files={this.state.files} token={this.state.token} api={this.api} directories={directories}
                                          onSelectFile={this.onSelectFile.bind(this)}
                                          onFetchFiles={this.onFetchFiles.bind(this)}/>
                         </div>

@@ -56,9 +56,11 @@ class file_api extends DatabaseScript {
       # upload only:
       ->addInt("maxFiles", true)
       ->addInt("maxSize", true)
+      ->addInt("parent_id", true)
       ->addString("extensions", 64, true)
       ->primaryKey("uid")
-      ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
+      ->foreignKey("user_id", "User", "uid", new CascadeStrategy())
+      ->foreignKey("parent_id", "UserFile", "uid", new CascadeStrategy());
 
     $queries[] = $sql->createTable("UserFileTokenFile")
       ->addInt("file_id")

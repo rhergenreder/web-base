@@ -9,6 +9,7 @@ export function TokenList(props) {
 
     let api = props.api;
     let selectedFiles = props.selectedFiles || [];
+    let directories   = props.directories || {};
 
     let [tokens, setTokens] = useState(null);
     let [alerts, setAlerts] = useState([]);
@@ -19,7 +20,8 @@ export function TokenList(props) {
         maxSize: 0,
         extensions: "",
         durability: 24 * 60 * 2,
-        visible: false
+        visible: false,
+        directory: 0
     });
 
     function fetchTokens() {
@@ -69,6 +71,13 @@ export function TokenList(props) {
         const alert = alerts[i];
         alertElements.push(
             <Alert key={"alert-" + i} {...alert} onClose={() => removeAlert(i)}/>
+        );
+    }
+
+    let options = [];
+    for (const [uid, dir] of Object.entries(directories)) {
+        options.push(
+            <option key={"option-" + dir} value={uid}>{dir}</option>
         );
     }
 
@@ -128,6 +137,13 @@ export function TokenList(props) {
             </div>
             {popup.tokenType === "upload" ?
                 <>
+                    <div className={"form-group"}>
+                        <label>Destination Directory:</label>
+                        <select value={popup.directory} className={"form-control"}
+                                onChange={(e) => onPopupChange(e, "directory")}>
+                            { options }
+                        </select>
+                    </div>
                     <b>Upload Restrictions:</b>
                     <div className={"form-group"}>
                         <label>Max. Files (0 = unlimited):</label>
@@ -212,7 +228,8 @@ export function TokenList(props) {
                     }
                 });
             } else if (popup.tokenType === "upload") {
-                api.createUploadToken(durability, null, popup.maxFiles, popup.maxSize, popup.extensions).then((res) => {
+                let parentId = popup.directory === 0 ? null : popup.directory;
+                api.createUploadToken(durability, parentId, popup.maxFiles, popup.maxSize, popup.extensions).then((res) => {
                     if (!res.success) {
                         pushAlert(res, "Error creating token");
                     } else {

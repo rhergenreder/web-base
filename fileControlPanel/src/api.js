@@ -8,6 +8,8 @@ export default class API {
     }
 
     csrfToken() {
+        console.log(this.loggedIn);
+        console.log(this.user);
         return this.loggedIn ? this.user.session.csrf_token : null;
     }
 

@@ -181,7 +181,7 @@ namespace Api\File {
       $sql = $this->user->getSQL();
       $token = $this->getParam("token");
       $res = $sql->select("UserFile.uid", "valid_until", "token_type",
-          "maxFiles", "maxSize", "extensions", "name", "path", "directory", "parent_id as parentId")
+          "maxFiles", "maxSize", "extensions", "name", "path", "directory", "UserFile.parent_id as parentId")
         ->from("UserFileToken")
         ->leftJoin("UserFileTokenFile", "UserFileToken.uid", "token_id")
         ->leftJoin("UserFile", "UserFile.uid", "file_id")
@@ -203,30 +203,12 @@ namespace Api\File {
           );
 
           $this->result["files"] = $this->createFileList($res);
-          /*foreach ($res as $row) {
-            if ($row["uid"]) {
-              $file = array(
-                "isDirectory" => $row["directory"],
-                "name" => $row["name"],
-                "uid" => $row["uid"]
-              );
-
-              if ($file["isDirectory"]) {
-                $file["items"] = array();
-              } else {
-                $file["size"] = @filesize($row["path"]);
-                $file["mimeType"] = @mime_content_type($row["path"]);
-              }
-
-              $this->result["files"][] = $file;
-            }
-          }*/
-
           if ($row["token_type"] === "upload") {
             $this->result["restrictions"] = array(
               "maxFiles" => $row["maxFiles"] ?? 0,
               "maxSize"  => $row["maxSize"] ?? 0,
-              "extensions" => $row["extensions"] ?? ""
+              "extensions" => $row["extensions"] ?? "",
+              "parentId" => $row["parentId"] ?? 0
             );
           }
         }
@@ -441,7 +423,7 @@ namespace Api\File {
 
       if (!is_null($token)) {
 
-        $res = $sql->select("uid",  "token_type", "maxFiles", "maxSize", "extensions", "user_id")
+        $res = $sql->select("uid",  "token_type", "maxFiles", "maxSize", "extensions", "user_id", "parent_id")
           ->from("UserFileToken")
           ->where(new Compare("token", $token))
           ->where(new CondNull("valid_until"), new Compare("valid_until", $sql->now(), ">="))
@@ -458,6 +440,7 @@ namespace Api\File {
           return $this->createError("Permission denied (token)");
         }
 
+        $parentId = $res[0]["parent_id"];
         $tokenId = $res[0]["uid"];
         $maxFiles = $res[0]["maxFiles"] ?? 0;
         $maxSize = $res[0]["maxSize"] ?? 0;
@@ -675,7 +658,8 @@ namespace Api\File {
         "maxFiles" => new Parameter("maxFiles", Parameter::TYPE_INT, true, 1),
         "maxSize"  => new Parameter("maxSize", Parameter::TYPE_INT, true, null),
         "extensions" => new StringType("extensions", 64, true, null),
-        "durability" => new Parameter("durability", Parameter::TYPE_INT, true, 60*24*2)
+        "durability" => new Parameter("durability", Parameter::TYPE_INT, true, 60*24*2),
+        "parentId" => new Parameter("parentId", Parameter::TYPE_INT, true, null)
       ));
       $this->loginRequired = true;
       $this->csrfTokenRequired = false;
@@ -690,6 +674,7 @@ namespace Api\File {
       $maxSize  = $this->getParam("maxSize");
       $extensions = $this->getParam("extensions");
       $durability = $this->getParam("durability");
+      $parentId   = $this->getParam("parentId");
 
       if (!is_null($maxFiles) && $maxFiles < 0) {
         return $this->createError("Invalid number of maximum files.");
@@ -715,12 +700,16 @@ namespace Api\File {
         $extensions = implode(",", $extensions);
       }
 
+      if (!$this->checkDirectory($parentId)) {
+        return $this->success;
+      }
+
       $sql = $this->user->getSQL();
       $token = generateRandomString(36);
       $validUntil = $durability == 0 ? null : (new \DateTime())->modify("+$durability MINUTES");
       $res = $sql->insert("UserFileToken",
-          array("token", "token_type", "maxSize", "maxFiles", "extensions", "valid_until", "user_id"))
-        ->addRow($token, "upload", $maxSize, $maxFiles, $extensions, $validUntil, $this->user->getId())
+          array("token", "token_type", "maxSize", "maxFiles", "extensions", "valid_until", "user_id", "parent_id"))
+        ->addRow($token, "upload", $maxSize, $maxFiles, $extensions, $validUntil, $this->user->getId(), $parentId)
         ->returning("uid")
         ->execute();
 

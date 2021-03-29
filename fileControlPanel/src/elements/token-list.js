@@ -3,7 +3,8 @@ import Icon from "./icon";
 import moment from "moment";
 import {Popup} from "./popup";
 import Alert from "./alert";
-import {useState} from "react";
+import {useEffect, useState} from "react";
+import ReactTooltip from 'react-tooltip';
 
 export function TokenList(props) {
 
@@ -24,6 +25,20 @@ export function TokenList(props) {
         directory: 0
     });
 
+    useEffect(() => {
+        setTimeout(() => {
+            if (tokens) {
+                let hasChanged = false;
+                let newTokens = tokens.slice();
+                for (let token of newTokens) {
+                    if (token.tooltip) hasChanged = true;
+                    token.tooltip = false;
+                }
+                if (hasChanged) setTokens(newTokens);
+            }
+        }, 1500);
+    }, [tokens]);
+
     function fetchTokens() {
         api.listTokens().then((res) => {
             if (res) {
@@ -39,7 +54,8 @@ export function TokenList(props) {
     if (tokens === null) {
         fetchTokens();
     } else {
-        for (const token of tokens) {
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
             const validUntil = token.valid_until;
             const revoked = validUntil !== null && moment(validUntil).isSameOrBefore(new Date());
             if (revoked && hideRevoked) {
@@ -47,6 +63,15 @@ export function TokenList(props) {
             }
 
             const timeStr = (validUntil === null ? "Forever" : moment(validUntil).format("Do MMM YYYY, HH:mm"));
+            const tooltipPropsRevoke = (revoked ? {} : {
+                "data-tip": "Revoke", "data-place": "bottom", "data-type": "error",
+                "data-effect": "solid", "data-for": "tooltip-token-" + token.uid,
+            });
+
+            const tooltipPropsCopy = (revoked ? {} : {
+                "data-tip": "", "data-place": "bottom", "data-type": "info",
+                "data-effect": "solid", "data-for": "tooltip-token-" + token.uid,
+            });
 
             rows.push(
                 <tr key={"token-" + token.uid} className={revoked ? "token-revoked" : ""}>
@@ -54,12 +79,14 @@ export function TokenList(props) {
                     <td>{token.type}</td>
                     <td>{timeStr}</td>
                     <td>
+                        { revoked ? <></> : <ReactTooltip id={"tooltip-token-" + token.uid}
+                           getContent={(x) => { if (x === "Revoke") return x; return (!!token.tooltip ? "Coped successfully!" : "Copy to Clipboard"); }} /> }
                         <Icon icon={"times"} className={"clickable text-" + (revoked ? "secondary" : "danger")}
-                              onClick={() => (revoked ? null : onRevokeToken(token.token))}
-                              disabled={revoked}/>
+                              onClick={() => (revoked ? null : onRevokeToken(token.token))} disabled={revoked}
+                              {...tooltipPropsRevoke} />
                         <Icon icon={"save"} className={"clickable text-" + (revoked ? "secondary" : "info")}
-                              onClick={() => (revoked ? null : onCopyToken(token.token))}
-                              disabled={revoked}/>
+                              onClick={() => (revoked ? null : onCopyToken(i))} disabled={revoked}
+                              {...tooltipPropsCopy} />
                     </td>
                 </tr>
             );
@@ -244,10 +271,14 @@ export function TokenList(props) {
         onPopupClose();
     }
 
-    function onCopyToken(token) {
+    function onCopyToken(index) {
+        let newTokens = tokens.slice();
+        let token = newTokens[index].token;
         let url = window.location.href;
         if (!url.endsWith("/")) url += "/";
         url += token;
         navigator.clipboard.writeText(url);
+        newTokens[index].tooltip = true;
+        setTokens(newTokens);
     }
 }

@@ -32,8 +32,9 @@ namespace Documents\Files {
         array('name' => 'viewport', 'content' => 'width=device-width, initial-scale=1.0'),
         array('name' => 'format-detection', 'content' => 'telephone=yes'),
         array('charset' => 'utf-8'),
-        array("http-equiv" => 'expires', 'content' => '0'),
-        array("name" => 'robots', 'content' => 'noarchive')
+        array('http-equiv' => 'expires', 'content' => '0'),
+        array('name' => 'robots', 'content' => 'noarchive'),
+        array('name' => 'referrer', 'content' => 'origin')
       );
     }
 

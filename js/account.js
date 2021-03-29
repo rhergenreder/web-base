@@ -1,5 +1,9 @@
 $(document).ready(function () {
 
+    function isRecaptchaEnabled() {
+        return (typeof grecaptcha !== 'undefined');
+    }
+
     function showAlert(type, msg) {
         let alert = $("#alertMessage");
         alert.text(msg);
@@ -61,7 +65,6 @@ $(document).ready(function () {
         let email = $("#email").val().trim();
         let password = $("#password").val();
         let confirmPassword = $("#confirmPassword").val();
-        let siteKey = $("#siteKey").val().trim();
 
         if (username === '' || email === '' || password === '' || confirmPassword === '') {
             showAlert("danger", "Please fill out every field.");
@@ -69,7 +72,8 @@ $(document).ready(function () {
             showAlert("danger", "Your passwords did not match.");
         } else {
             let params = { username: username, email: email, password: password, confirmPassword: confirmPassword };
-            if (typeof grecaptcha !== 'undefined') {
+            if (isRecaptchaEnabled()) {
+                let siteKey = $("#siteKey").val().trim();
                 grecaptcha.ready(function() {
                     grecaptcha.execute(siteKey, {action: 'register'}).then(function(captcha) {
                         params["captcha"] = captcha;
@@ -124,10 +128,10 @@ $(document).ready(function () {
 
         let btn = $(this);
         let email = $("#email").val();
-        let siteKey = $("#siteKey").val().trim();
 
         let params = { email: email };
-        if (typeof grecaptcha !== 'undefined') {
+        if (isRecaptchaEnabled()) {
+            let siteKey = $("#siteKey").val().trim();
             grecaptcha.ready(function() {
                 grecaptcha.execute(siteKey, {action: 'resetPassword'}).then(function(captcha) {
                     params["captcha"] = captcha;

@@ -4,6 +4,7 @@ import API from "./api";
 import Icon from "./elements/icon";
 import {FileBrowser} from "./elements/file-browser";
 import {TokenList} from "./elements/token-list";
+import {Link} from "react-router-dom";
 
 class FileControlPanel extends React.Component {
 
@@ -134,6 +135,7 @@ class FileControlPanel extends React.Component {
         const self = this;
         const errorMessageShown = !!this.state.errorMessage;
 
+        // still loading
         if (!this.state.loaded) {
 
             let checkUser = true;
@@ -165,7 +167,9 @@ class FileControlPanel extends React.Component {
             }
 
             return <>Loading… <Icon icon={"spinner"} /></>;
-        } else if (this.api.loggedIn || this.state.token.valid) {
+        }
+        // access granted
+        else if (this.api.loggedIn || this.state.token.valid) {
             let selectedIds = this.getSelectedIds();
             let directories = this.getDirectories();
             let tokenList = (this.api.loggedIn) ?
@@ -204,6 +208,9 @@ class FileControlPanel extends React.Component {
                         </form>
                         <div className={"alert alert-danger mt-2"} hidden={!errorMessageShown}>
                             { this.state.errorMessage }
+                        </div>
+                        <div className={"mt-3"}>
+                            Or either <a href={"/admin"}>login</a> to access the file control panel.
                         </div>
                     </div>
                 </div>

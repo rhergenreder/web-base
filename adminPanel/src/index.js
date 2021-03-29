@@ -30,7 +30,8 @@ class AdminDashboard extends React.Component {
     this.state = {
       loaded: false,
       dialog: { onClose: () => this.hideDialog() },
-      notifications: [ ]
+      notifications: [ ],
+      filesPath: null
     };
   }
 
@@ -57,12 +58,35 @@ class AdminDashboard extends React.Component {
     });
   }
 
+  fetchFilesPath() {
+    this.api.getRoutes().then((res) => {
+      if (!res.success) {
+        this.showDialog("Error fetching routes: " + res.msg, "Error fetching routes");
+      } else {
+        for (const route of res.routes) {
+          if (route.target === "\\Documents\\Files") {
+            // prepare the path patterns, e.g. '/files(/.*)?' => '/files'
+            let path = route.request;
+            path = path.replace(/\(.*\)([?*])/g, ''); // remove optional and 0-n groups
+            path = path.replace(/.\*/g, ''); // remove .*
+            path = path.replace(/\[.*]\*/g, ''); // remove []*
+            path = path.replace(/(.*)\+/g, "$1"); // replace 1-n groups with one match
+            // todo: add some more rules, but we should have most of the cases now
+            this.setState({...this.state, filesPath: path });
+            break;
+          }
+        }
+      }
+    });
+  }
+
   componentDidMount() {
     this.api.fetchUser().then(Success => {
       if (!Success) {
         document.location = "/admin";
       } else {
         this.fetchNotifications();
+        this.fetchFilesPath();
         setInterval(this.onUpdate.bind(this), 60*1000);
         this.setState({...this.state, loaded: true});
       }
@@ -83,7 +107,7 @@ class AdminDashboard extends React.Component {
 
     return <Router>
         <Header {...this.controlObj} notifications={this.state.notifications} />
-        <Sidebar {...this.controlObj} notifications={this.state.notifications} />
+        <Sidebar {...this.controlObj} notifications={this.state.notifications} filesPath={this.state.filesPath} />
         <div className={"content-wrapper p-2"}>
           <section className={"content"}>
             <Switch>

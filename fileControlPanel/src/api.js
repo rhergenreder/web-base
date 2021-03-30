@@ -69,6 +69,10 @@ export default class API {
         return this.apiCall("file/createDirectory", { name: name, parentId: parentId });
     }
 
+    getRestrictions() {
+        return this.apiCall("file/getRestrictions");
+    }
+
     async upload(files, token = null, parentId = null) {
         const csrf_token = this.csrfToken();
 

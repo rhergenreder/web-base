@@ -13,12 +13,12 @@ export function FileBrowser(props) {
     let tokenObj = props.token || { valid: false };
     let onSelectFile = props.onSelectFile || function() { };
     let onFetchFiles = props.onFetchFiles || function() { };
-    let directories   = props.directories || {};
+    let directories  = props.directories  || {};
+    let restrictions = props.restrictions || { maxFiles: 0, maxSize: 0, extensions: "" };
 
     let [popup, setPopup] = useState({ visible: false, directoryName: "", directory: 0, type: "upload" });
     let [alerts, setAlerts] = useState( []);
     let [filesToUpload, setFilesToUpload] = useState([]);
-
 
     function svgMiddle(scale=1.0) {
         let width = 48 * scale;
@@ -323,6 +323,12 @@ export function FileBrowser(props) {
                 }
             </div>
             { uploadZone }
+            <div className={"file-browser-restrictions px-4 mb-4"}>
+                <b>Restrictions:</b>
+                <span>Max. Files: { restrictions.maxFiles }</span>
+                <span>Max. Filesize: { formatSize(restrictions.maxSize) }</span>
+                <span>{ restrictions.extensions ? "Allowed extensions: " + restrictions.extensions : "All extensions allowed" }</span>
+            </div>
             <div>
                 { alertElements }
             </div>

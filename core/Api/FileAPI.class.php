@@ -237,7 +237,7 @@ namespace Api\File {
               "maxFiles" => ($maxFiles <= 0 ? $this->getMaxFiles() : min($this->getMaxFiles(), $maxFiles)),
               "maxSize"  => ($maxSize <= 0 ? $this->getMaxFileSizePHP() : min($this->getMaxFileSizePHP(), $maxSize)),
               "extensions" => $row["extensions"] ?? "",
-              "parentId" => $row["parentId"] ?? 0
+          //    "parentId" => $row["parentId"] ?? 0 // not sure, why we need to tell the parentId?
             );
           }
         }
@@ -261,7 +261,8 @@ namespace Api\File {
 
       $this->result["restrictions"] = array(
         "maxFiles" => $this->getMaxFiles(),
-        "maxSize" => $this->getMaxFileSizePHP()
+        "maxSize" => $this->getMaxFileSizePHP(),
+        "extensions" => ""
       );
 
       return true;

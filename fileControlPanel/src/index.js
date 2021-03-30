@@ -4,7 +4,6 @@ import API from "./api";
 import Icon from "./elements/icon";
 import {FileBrowser} from "./elements/file-browser";
 import {TokenList} from "./elements/token-list";
-import {Link} from "react-router-dom";
 
 class FileControlPanel extends React.Component {
 
@@ -17,7 +16,8 @@ class FileControlPanel extends React.Component {
             errorMessage: "",
             user: { },
             token: { valid: false, value: "", validUntil: null, type: null },
-            files: {}
+            files: {},
+            restrictions: { maxFiles: 0, maxSize: 0, extensions: "" }
         };
     }
 
@@ -118,6 +118,7 @@ class FileControlPanel extends React.Component {
                     newState.token.value = token;
                 }
                 newState.files = res.files;
+                newState.restrictions = res.restrictions;
             } else {
                 newState.token.value = (newState.token.value ? "" : token);
                 newState.errorMessage = res.msg;
@@ -159,6 +160,9 @@ class FileControlPanel extends React.Component {
                     if (isLoggedIn) {
                         this.api.listFiles().then((res) => {
                             this.setState({ ...this.state, loaded: true, user: this.api.user, files: res.files });
+                            this.api.getRestrictions().then((res) => {
+                                this.setState({ ...this.state, restrictions: res.restrictions });
+                            })
                         });
                     } else {
                         this.setState({ ...this.state, loaded: true, user: this.api.user });
@@ -172,20 +176,21 @@ class FileControlPanel extends React.Component {
         else if (this.api.loggedIn || this.state.token.valid) {
             let selectedIds = this.getSelectedIds();
             let directories = this.getDirectories();
-            let tokenList = (this.api.loggedIn) ?
+            let tokenList = (this.api.loggedIn ?
                 <div className={"row"}>
                     <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
                         <TokenList api={this.api} selectedFiles={selectedIds} directories={directories} />
                     </div>
-                </div> :
-                <></>;
+                </div> : <></>
+            );
 
             return <>
                     <div className={"container mt-4"}>
                     <div className={"row"}>
                         <div className={"col-lg-8 col-md-10 col-sm-12 mx-auto"}>
                             <h2>File Control Panel</h2>
-                            <FileBrowser files={this.state.files} token={this.state.token} api={this.api} directories={directories}
+                            <FileBrowser files={this.state.files} token={this.state.token} api={this.api}
+                                         restrictions={this.state.restrictions} directories={directories}
                                          onSelectFile={this.onSelectFile.bind(this)}
                                          onFetchFiles={this.onFetchFiles.bind(this)}/>
                         </div>

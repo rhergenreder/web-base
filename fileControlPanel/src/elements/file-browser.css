@@ -62,3 +62,8 @@
 .file-table td:nth-child(n+3), .file-table th:nth-child(n+3) {
     text-align: center;
 }
+
+.file-browser-restrictions {
+    display: grid;
+    grid-template-columns: repeat(4, auto);
+}

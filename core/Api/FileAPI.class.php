@@ -469,8 +469,10 @@ namespace Api\File {
         return $this->success;
       }
 
-      $fileKeys = array_keys($_FILES);
-      $numFilesUploaded = count($fileKeys);
+      $numFilesUploaded = array_sum(array_map(function($fileEntry) {
+          return is_array($fileEntry["name"]) ? count($fileEntry["name"]) : 1;
+        }, $_FILES
+      ));
 
       if (!is_null($token)) {
 
@@ -511,30 +513,43 @@ namespace Api\File {
         }
 
         $count = $res[0]["count"];
-        if ($maxFiles > 0 && $numFilesUploaded > 0 && $numFilesUploaded + $count > $maxFiles) {
-          return $this->createError("File limit exceeded. Currently uploaded $count / $maxFiles files");
-        }
-
-        if ($maxSize > 0 || !empty($extensions)) {
-          foreach ($_FILES as $file) {
-            $name = $file["name"];
-            if ($maxSize > 0 && $file["size"] > $maxSize) {
-              return $this->createError("File Size limit of $maxSize bytes exceeded for file $name");
-            }
-
-            $dotPos = strrpos($name, ".");
-            $ext = ($dotPos !== false ? strtolower(substr($name, $dotPos + 1)) : false);
-            if (!empty($extensions) && $ext !== false && !in_array($ext, $extensions)) {
-              return $this->createError("File '$name' has prohibited extension. Allowed extensions: " . implode(",", $extensions));
-            }
-          }
-        }
       } else {
         $userId = $this->user->getId();
+        $maxSize = 0;
+        $count = 0;
+        $maxFiles = 0;
+        $extensions = array();
       }
+
+      $maxSize = ($maxSize <= 0 ? $this->getMaxFileSizePHP() : min($maxSize, $this->getMaxFileSizePHP()));
+      $maxFiles = ($maxFiles <= 0 ? $this->getMaxFiles() : min($maxFiles, $this->getMaxFiles()));
 
       if ($numFilesUploaded === 0) {
         return $this->createError("No file uploaded");
+      } else if($numFilesUploaded > 1) {
+        return $this->createError("You can only upload one file at once");
+      }
+
+      if ($maxFiles > 0 && $count + 1 > $maxFiles) {
+        return $this->createError("File upload limit exceeded. Currently uploaded $count / $maxFiles files");
+      }
+
+      $fileObject = array_shift($_FILES);
+      $fileName  = (is_array($fileObject["name"]) ? $fileObject["name"][0] : $fileObject["name"]);
+      $fileSize  = (is_array($fileObject["size"]) ? $fileObject["size"][0] : $fileObject["size"]);
+      $tmpPath   = (is_array($fileObject["tmp_name"]) ? $fileObject["tmp_name"][0] : $fileObject["tmp_name"]);
+      $fileError = (is_array($fileObject["error"]) ? $fileObject["error"][0] : $fileObject["error"]);
+
+      if ($maxSize > 0 || !empty($extensions)) {
+        if ($maxSize > 0 && $fileSize > $maxSize) {
+          return $this->createError("File Size limit of $maxSize bytes exceeded for file $fileName");
+        }
+
+        $dotPos = strrpos($fileName, ".");
+        $ext = ($dotPos !== false ? strtolower(substr($fileName, $dotPos + 1)) : false);
+        if (!empty($extensions) && $ext !== false && !in_array($ext, $extensions)) {
+          return $this->createError("File '$fileName' has prohibited extension. Allowed extensions: " . implode(",", $extensions));
+        }
       }
 
       $uploadDir = realpath($_SERVER["DOCUMENT_ROOT"] . "/files/uploaded/");
@@ -542,47 +557,40 @@ namespace Api\File {
         return $this->createError("Upload directory is not writable");
       }
 
-      $fileIds = array();
-      foreach ($_FILES as $key => $file) {
-        $fileName = $file["name"];
-        $tmpPath = $file["tmp_name"];
-        if (!$tmpPath) {
-          return $this->createError("Error uploading file: $fileName");
-        }
+      if (!$tmpPath) {
+        return $this->createError("Error uploading file: $fileError");
+      }
 
-        $md5Hash = @hash_file('md5', $tmpPath);
-        $sha1Hash = @hash_file('sha1', $tmpPath);
-        $filePath =  $uploadDir . "/" . $md5Hash . $sha1Hash;
-        if (move_uploaded_file($tmpPath, $filePath)) {
+      $md5Hash = @hash_file('md5', $tmpPath);
+      $sha1Hash = @hash_file('sha1', $tmpPath);
+      $filePath =  $uploadDir . "/" . $md5Hash . $sha1Hash;
+      if (file_exists($filePath) || move_uploaded_file($tmpPath, $filePath)) {
+        $res = $sql->insert("UserFile", array("name", "directory", "path", "user_id", "parent_id"))
+          ->addRow($fileName, false, $filePath, $userId, $parentId)
+          ->returning("uid")
+          ->execute();
 
-          $res = $sql->insert("UserFile", array("name", "directory", "path", "user_id", "parent_id"))
-            ->addRow($fileName, false, $filePath, $userId, $parentId)
-            ->returning("uid")
-            ->execute();
-
-          if ($res === false) {
-            $this->lastError = $sql->getLastError();
-            $this->success = false;
-            return false;
-          } else {
-            $fileIds[] = $sql->getLastInsertId();
-          }
+        if ($res === false) {
+          $this->lastError = $sql->getLastError();
+          $this->success = false;
+          return false;
         } else {
-          return $this->createError("Could not create file: " . $fileName);
+          $fileId = $sql->getLastInsertId();
         }
+      } else {
+        return $this->createError("Could not create file: $fileName");
       }
 
       if (!is_null($token)) {
-        $query = $sql->insert("UserFileTokenFile", array("file_id", "token_id"));
-        foreach ($fileIds as $fileId) {
-          $query->addRow($fileId, $tokenId);
-        }
+        $res = $sql->insert("UserFileTokenFile", array("file_id", "token_id"))
+          ->addRow($fileId, $tokenId)
+          ->execute();
 
-        $res = $query->execute();
         $this->success = ($res !== false);
         $this->lastError = $sql->getLastError();
       }
 
+      $this->result["fileId"] = $fileId;
       return $this->success;
     }
   }
@@ -651,6 +659,7 @@ namespace Api\File {
     }
   }
 
+  // TODO: delete permanently from filesystem
   class Delete extends FileAPI {
 
     public function __construct(User $user, bool $externalCall = false) {

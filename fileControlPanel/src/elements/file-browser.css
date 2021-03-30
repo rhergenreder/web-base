@@ -40,8 +40,7 @@
     word-wrap: break-word;
 }
 
-.uploaded-file > i:nth-child(3) {
-    color: red;
+.uploaded-file > .status-icon {
     position: absolute;
     top: -9px;
     right: 25px;

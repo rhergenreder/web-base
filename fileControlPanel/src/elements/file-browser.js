@@ -4,62 +4,64 @@ import Dropzone from "react-dropzone";
 import Icon from "./icon";
 import Alert from "./alert";
 import {Popup} from "./popup";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 
 export function FileBrowser(props) {
 
-    let files = props.files || { };
+    let files = props.files || {};
     let api = props.api;
-    let tokenObj = props.token || { valid: false };
-    let onSelectFile = props.onSelectFile || function() { };
-    let onFetchFiles = props.onFetchFiles || function() { };
-    let directories  = props.directories  || {};
-    let restrictions = props.restrictions || { maxFiles: 0, maxSize: 0, extensions: "" };
+    let tokenObj = props.token || {valid: false};
+    let onSelectFile = props.onSelectFile || function () { };
+    let onFetchFiles = props.onFetchFiles || function () { };
+    let directories = props.directories || {};
+    let restrictions = props.restrictions || {maxFiles: 0, maxSize: 0, extensions: ""};
 
-    let [popup, setPopup] = useState({ visible: false, directoryName: "", directory: 0, type: "upload" });
-    let [alerts, setAlerts] = useState( []);
+    let [popup, setPopup] = useState({visible: false, directoryName: "", directory: 0, type: "upload"});
+    let [alerts, setAlerts] = useState([]);
     let [filesToUpload, setFilesToUpload] = useState([]);
 
-    function svgMiddle(scale=1.0) {
+    function svgMiddle(key, scale = 1.0) {
         let width = 48 * scale;
         let height = 64 * scale;
 
-        return <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg">
+        return <svg key={key} width={width} height={height} xmlns="http://www.w3.org/2000/svg">
             <g>
-                <line y2="0" x2={width/2} y1={height} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
-                <line y2={height/2} x2={width} y1={height/2} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
+                <line y2="0" x2={width / 2} y1={height} x1={width / 2} strokeWidth="1.5" stroke="#000" fill="none"/>
+                <line y2={height / 2} x2={width} y1={height / 2} x1={width / 2} strokeWidth="1.5" stroke="#000"
+                      fill="none"/>
             </g>
         </svg>;
     }
 
-    function svgEnd(scale=1.0) {
+    function svgEnd(key, scale = 1.0) {
         let width = 48 * scale;
         let height = 64 * scale;
 
-        return <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg">
+        return <svg key={key} width={width} height={height} xmlns="http://www.w3.org/2000/svg">
             <g>
                 { /* vertical line */}
-                <line y2="0" x2={width/2} y1={height/2} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
+                <line y2="0" x2={width / 2} y1={height / 2} x1={width / 2} strokeWidth="1.5" stroke="#000" fill="none"/>
                 { /* horizontal line */}
-                <line y2={height/2} x2={width} y1={height/2} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
+                <line y2={height / 2} x2={width} y1={height / 2} x1={width / 2} strokeWidth="1.5" stroke="#000"
+                      fill="none"/>
             </g>
         </svg>;
     }
 
-    function svgLeft(scale=1.0) {
+    function svgLeft(key, scale = 1.0) {
         let width = 48 * scale;
         let height = 64 * scale;
-        return <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg" style={{}}>
+        return <svg key={key} width={width} height={height} xmlns="http://www.w3.org/2000/svg">
             <g>
                 { /* vertical line */}
-                <line y2="0" x2={width/2} y1={height} x1={width/2} strokeWidth="1.5" stroke="#000" fill="none"/>
+                <line y2="0" x2={width / 2} y1={height} x1={width / 2} strokeWidth="1.5" stroke="#000" fill="none"/>
             </g>
         </svg>;
     }
 
-    function createFileIcon(mimeType, size="2x") {
+    function createFileIcon(mimeType, size = "2x") {
         let icon = "";
-        if (mimeType !== null) {
+        if (mimeType) {
             mimeType = mimeType.toLowerCase().trim();
             let types = ["image", "text", "audio", "video"];
             let languages = ["php", "java", "python", "cpp"];
@@ -92,11 +94,11 @@ export function FileBrowser(props) {
             icon = "file" + (icon ? ("-" + icon) : icon);
         }
 
-        return <Icon icon={icon} type={"far"} className={"p-1 align-middle fa-" + size} />
+        return <Icon icon={icon} type={"far"} className={"p-1 align-middle fa-" + size}/>
     }
 
     function formatSize(size) {
-        const suffixes = ["B","KiB","MiB","GiB","TiB"];
+        const suffixes = ["B", "KiB", "MiB", "GiB", "TiB"];
         let i = 0;
         for (; i < suffixes.length && size >= 1024; i++) {
             size /= 1024.0;
@@ -109,14 +111,32 @@ export function FileBrowser(props) {
         }
     }
 
+    useEffect(() => {
+        let newFiles = filesToUpload.slice();
+        for (let fileIndex = 0; fileIndex < newFiles.length; fileIndex++) {
+            if (typeof newFiles[fileIndex].progress === 'undefined') {
+                onUpload(fileIndex);
+                break;
+            }
+        }
+    }, [filesToUpload]);
+
     function canUpload() {
         return api.loggedIn || (tokenObj.valid && tokenObj.type === "upload");
     }
 
-    function onAddUploadFiles(acceptedFiles) {
-        let files = filesToUpload.slice();
-        files.push(...acceptedFiles);
-        setFilesToUpload(files);
+    function onAddUploadFiles(acceptedFiles, rejectedFiles) {
+
+        if (rejectedFiles && rejectedFiles.length > 0) {
+            const filenames = rejectedFiles.map(f => f.file.name).join(", ");
+            pushAlert({msg: "The following files could not be uploaded due to given restrictions: " + filenames }, "Cannot upload file");
+        }
+
+        if (acceptedFiles && acceptedFiles.length > 0) {
+            let files = filesToUpload.slice();
+            files.push(...acceptedFiles);
+            setFilesToUpload(files);
+        }
     }
 
     function getSelectedIds(items = null, recursive = true) {
@@ -158,9 +178,9 @@ export function FileBrowser(props) {
         }
     }
 
-    function createFileList(elements, indentation=0) {
+    function createFileList(elements, indentation = 0) {
         let rows = [];
-        let i = 0;
+        let rowIndex = 0;
 
         const scale = 0.45;
         const iconSize = "lg";
@@ -168,7 +188,7 @@ export function FileBrowser(props) {
         const values = Object.values(elements);
         for (const fileElement of values) {
             let name = fileElement.name;
-            let uid  = fileElement.uid;
+            let uid = fileElement.uid;
             let type = (fileElement.isDirectory ? "Directory" : fileElement.mimeType);
             let size = (fileElement.isDirectory ? "" : formatSize(fileElement.size));
             let mimeType = (fileElement.isDirectory ? "application/x-directory" : fileElement.mimeType);
@@ -176,21 +196,21 @@ export function FileBrowser(props) {
             let svg = [];
             if (indentation > 0) {
                 for (let i = 0; i < indentation - 1; i++) {
-                    svg.push(svgLeft(scale));
+                    svg.push(svgLeft(rowIndex + "-" + i, scale));
                 }
 
-                if (i === values.length - 1) {
-                    svg.push(svgEnd(scale));
+                if (rowIndex === values.length - 1) {
+                    svg.push(svgEnd(rowIndex + "-end", scale));
                 } else {
-                    svg.push(svgMiddle(scale));
+                    svg.push(svgMiddle(rowIndex + "-middle", scale));
                 }
             }
 
             rows.push(
                 <tr key={"file-" + uid} data-id={uid} className={"file-row"}>
                     <td>
-                        { svg }
-                        { createFileIcon(mimeType, iconSize) }
+                        {svg}
+                        {createFileIcon(mimeType, iconSize)}
                     </td>
                     <td>
                         {fileElement.isDirectory ? name :
@@ -210,156 +230,190 @@ export function FileBrowser(props) {
             if (fileElement.isDirectory) {
                 rows.push(...createFileList(fileElement.items, indentation + 1));
             }
-            i++;
+            rowIndex++;
         }
         return rows;
     }
 
-        let rows = createFileList(files);
-        let selectedIds = getSelectedIds();
-        let selectedCount = selectedIds.length;
-        let uploadZone = <></>;
-        let writePermissions = canUpload();
-        let uploadedFiles = [];
-        let alertElements = [];
+    let rows = createFileList(files);
+    let selectedIds = getSelectedIds();
+    let selectedCount = selectedIds.length;
+    let uploadZone = <></>;
+    let writePermissions = canUpload();
+    let uploadedFiles = [];
+    let alertElements = [];
 
-        for (let i = 0; i < alerts.length; i++) {
-            const alert = alerts[i];
-            alertElements.push(
-                <Alert key={"alert-" + i} {...alert} onClose={() => removeAlert(i)} />
+    for (let i = 0; i < alerts.length; i++) {
+        const alert = alerts[i];
+        alertElements.push(
+            <Alert key={"alert-" + i} {...alert} onClose={() => removeAlert(i)}/>
+        );
+    }
+
+    let options = [];
+    for (const [uid, dir] of Object.entries(directories)) {
+        options.push(
+            <option key={"option-" + dir} value={uid}>{dir}</option>
+        );
+    }
+
+    function getAllowedExtensions() {
+        let extensions = restrictions.extensions || "";
+        return extensions.split(",")
+            .map(ext => ext.trim())
+            .map(ext => !ext.startsWith(".") && ext.length > 0 ? "." + ext : ext)
+            .join(",");
+    }
+
+    function getRestrictions() {
+        return {
+            accept: getAllowedExtensions(),
+            maxFiles: restrictions.maxFiles,
+            maxSize: restrictions.maxSize
+        };
+    }
+
+    if (writePermissions) {
+
+        for (let i = 0; i < filesToUpload.length; i++) {
+            const file = filesToUpload[i];
+            const progress = Math.round((file.progress ?? 0) * 100);
+            const done = progress >= 100;
+            uploadedFiles.push(
+                <span className={"uploaded-file"} key={i}>
+                        {createFileIcon(file.type, "3x")}
+                    <span>{file.name}</span>
+                    {!done ?
+                        <div className={"progress border border-primary"}>
+                            <div className={"progress-bar progress-bar-striped progress-bar-animated"} role={"progressbar"}
+                                 aria-valuenow={progress} aria-valuemin={"0"} aria-valuemax={"100"}
+                                 style={{width: progress + "%"}}>
+                                { progress + "%" }
+                            </div>
+                        </div> : <></>
+                    }
+                    <Icon icon={done ? "check" : "spinner"} className={"status-icon " + (done ? "text-success" : "text-secondary")} />
+                </span>
             );
         }
 
-        let options = [];
-        for (const [uid, dir] of Object.entries(directories)) {
-            options.push(
-                <option key={"option-" + dir} value={uid}>{dir}</option>
-            );
-        }
-
-        if (writePermissions) {
-
-            for(let i = 0; i < filesToUpload.length; i++) {
-                const file = filesToUpload[i];
-                uploadedFiles.push(
-                    <span className={"uploaded-file"} key={i}>
-                        { createFileIcon(file.type, "3x") }
-                        <span>{file.name}</span>
-                        <Icon icon={"times"} onClick={(e) => onRemoveUploadedFile(e, i)}/>
-                    </span>
-                );
-            }
-
-            uploadZone = <><Dropzone onDrop={onAddUploadFiles}>
+        uploadZone = <>
+            <div className={"p-3"}>
+                <label><b>Destination Directory:</b></label>
+                <select value={popup.directory} className={"form-control"}
+                        onChange={(e) => onPopupChange(e, "directory")}>
+                    {options}
+                </select>
+            </div>
+            <Dropzone onDrop={onAddUploadFiles} {...getRestrictions()} >
                 {({getRootProps, getInputProps}) => (
                     <section className={"file-upload-container"}>
                         <div {...getRootProps()}>
                             <input {...getInputProps()} />
                             <p>Drag 'n' drop some files here, or click to select files</p>
-                            { uploadedFiles.length === 0 ?
+                            {uploadedFiles.length === 0 ?
                                 <Icon className={"mx-auto fa-3x text-black-50"} icon={"upload"}/> :
                                 <div>{uploadedFiles}</div>
                             }
                         </div>
                     </section>
-                 )}
-             </Dropzone>
-           </>;
-        }
-
-        return <>
-            <h4>
-                <Icon icon={"sync"} className={"mx-3 clickable small"} onClick={fetchFiles}/>
-                File Browser
-            </h4>
-            <table className={"table data-table file-table"}>
-                <thead>
-                    <tr>
-                        <th/>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Size</th>
-                        <th/>
-                    </tr>
-                </thead>
-                <tbody>
-                    { rows.length > 0 ? rows :
-                        <tr>
-                            <td colSpan={4} className={"text-center text-black-50"}>
-                                No files uploaded yet
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-            <div className={"file-control-buttons"}>
-                <button type={"button"} className={"btn btn-success"} disabled={selectedCount === 0}
-                        onClick={() => onDownload(selectedIds)}>
-                    <Icon icon={"download"} className={"mr-1"}/>
-                    Download Selected Files ({selectedCount})
-                </button>
-                { api.loggedIn ?
-                    <button type={"button"} className={"btn btn-info"} onClick={(e) => onPopupOpen("createDirectory")}>
-                        <Icon icon={"plus"} className={"mr-1"}/>
-                        Create Directory
-                    </button> :
-                    <></>
-                }
-                {
-                    writePermissions ?
-                        <>
-                            <button type={"button"} className={"btn btn-primary"} disabled={uploadedFiles.length === 0}
-                                    onClick={(e) => api.loggedIn ? onPopupOpen("upload") : onUpload()}>
-                                <Icon icon={"upload"} className={"mr-1"}/>
-                                Upload
-                            </button>
-                            <button type={"button"} className={"btn btn-danger"} disabled={selectedCount === 0}
-                                    onClick={() => deleteFiles(selectedIds)}>
-                                <Icon icon={"trash"} className={"mr-1"}/>
-                                Delete Selected Files ({selectedCount})
-                            </button>
-                        </>
-                    : <></>
-                }
-            </div>
-            { uploadZone }
-            <div className={"file-browser-restrictions px-4 mb-4"}>
-                <b>Restrictions:</b>
-                <span>Max. Files: { restrictions.maxFiles }</span>
-                <span>Max. Filesize: { formatSize(restrictions.maxSize) }</span>
-                <span>{ restrictions.extensions ? "Allowed extensions: " + restrictions.extensions : "All extensions allowed" }</span>
-            </div>
-            <div>
-                { alertElements }
-            </div>
-            <Popup title={"Create Directory"} visible={popup.visible} buttons={["Ok","Cancel"]} onClose={onPopupClose} onClick={onPopupButton}>
-                <div className={"form-group"}>
-                    <label>Destination Directory:</label>
-                    <select value={popup.directory} className={"form-control"}
-                            onChange={(e) => onPopupChange(e, "directory")}>
-                        { options }
-                    </select>
-                </div>
-                { popup.type !== "upload" ?
-                    <div className={"form-group"}>
-                        <label>Directory Name</label>
-                        <input type={"text"} className={"form-control"} value={popup.directoryName} maxLength={32} placeholder={"Enter name…"}
-                               onChange={(e) => onPopupChange(e, "directoryName")}/>
-                    </div> : <></>
-                }
-            </Popup>
+                )}
+            </Dropzone>
         </>;
+    }
+
+    return <>
+        <h4>
+            <Icon icon={"sync"} className={"mx-3 clickable small"} onClick={fetchFiles}/>
+            File Browser
+        </h4>
+        <table className={"table data-table file-table"}>
+            <thead>
+            <tr>
+                <th/>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th/>
+            </tr>
+            </thead>
+            <tbody>
+            {rows.length > 0 ? rows :
+                <tr>
+                    <td colSpan={4} className={"text-center text-black-50"}>
+                        No files uploaded yet
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        <div className={"file-control-buttons"}>
+            <button type={"button"} className={"btn btn-success"} disabled={selectedCount === 0}
+                    onClick={() => onDownload(selectedIds)}>
+                <Icon icon={"download"} className={"mr-1"}/>
+                Download Selected Files ({selectedCount})
+            </button>
+            <span/>
+            {
+                writePermissions ?
+                    <>
+                        <button type={"button"} className={"btn btn-danger"} disabled={selectedCount === 0}
+                                onClick={() => deleteFiles(selectedIds)}>
+                            <Icon icon={"trash"} className={"mr-1"}/>
+                            Delete Selected Files ({selectedCount})
+                        </button>
+                        {api.loggedIn ?
+                            <button type={"button"} className={"btn btn-info"}
+                                    onClick={(e) => onPopupOpen("createDirectory")}>
+                                <Icon icon={"plus"} className={"mr-1"}/>
+                                Create Directory
+                            </button> :
+                            <></>
+                        }
+                    </>
+                    : <></>
+            }
+        </div>
+        {uploadZone}
+        <div className={"file-browser-restrictions px-4 mb-4"}>
+            <b>Restrictions:</b>
+            <span>Max. Files: {restrictions.maxFiles}</span>
+            <span>Max. Filesize: {formatSize(restrictions.maxSize)}</span>
+            <span>{restrictions.extensions ? "Allowed extensions: " + restrictions.extensions : "All extensions allowed"}</span>
+        </div>
+        <div>
+            {alertElements}
+        </div>
+        <Popup title={"Create Directory"} visible={popup.visible} buttons={["Ok", "Cancel"]} onClose={onPopupClose}
+               onClick={onPopupButton}>
+            <div className={"form-group"}>
+                <label>Destination Directory:</label>
+                <select value={popup.directory} className={"form-control"}
+                        onChange={(e) => onPopupChange(e, "directory")}>
+                    {options}
+                </select>
+            </div>
+            {popup.type !== "upload" ?
+                <div className={"form-group"}>
+                    <label>Directory Name</label>
+                    <input type={"text"} className={"form-control"} value={popup.directoryName} maxLength={32}
+                           placeholder={"Enter name…"}
+                           onChange={(e) => onPopupChange(e, "directoryName")}/>
+                </div> : <></>
+            }
+        </Popup>
+    </>;
 
     function onPopupOpen(type) {
-        setPopup({ ...popup, visible: true, type: type });
+        setPopup({...popup, visible: true, type: type});
     }
 
     function onPopupClose() {
-        setPopup({ ...popup, visible: false });
+        setPopup({...popup, visible: false});
     }
 
     function onPopupChange(e, key) {
-        setPopup({ ...popup, [key]: e.target.value });
+        setPopup({...popup, [key]: e.target.value});
     }
 
     function onPopupButton(btn) {
@@ -374,32 +428,38 @@ export function FileBrowser(props) {
                         fetchFiles();
                     }
                 });
-            } else if (popup.type === "upload") {
-                onUpload();
             }
         }
 
         onPopupClose();
     }
 
-    function fetchFiles() {
-        if (tokenObj.valid) {
-            api.validateToken(tokenObj.value).then((res) => {
-                if (res) {
-                    onFetchFiles(res.files);
-                } else {
-                    pushAlert(res);
-                }
-            });
-        } else if (api.loggedIn) {
-            api.listFiles().then((res) => {
-                if (res) {
-                    onFetchFiles(res.files);
-                } else {
-                    pushAlert(res);
-                }
-            });
+    function removeUploadedFiles() {
+        let newFiles = filesToUpload.filter(file => !file.progress || file.progress < 1.0);
+        if (newFiles.length !== filesToUpload.length) {
+            setFilesToUpload(newFiles);
         }
+    }
+
+    function fetchFiles() {
+        let promise;
+
+        if (tokenObj.valid) {
+            promise = api.validateToken(tokenObj.value);
+        } else if (api.loggedIn) {
+            promise = api.listFiles()
+        } else {
+            return; // should never happen
+        }
+
+        promise.then((res) => {
+            if (res) {
+                onFetchFiles(res.files);
+                removeUploadedFiles();
+            } else {
+                pushAlert(res);
+            }
+        });
     }
 
     function onRemoveUploadedFile(e, i) {
@@ -411,7 +471,7 @@ export function FileBrowser(props) {
 
     function pushAlert(res, title) {
         let newAlerts = alerts.slice();
-        newAlerts.push({ type: "danger", message: res.msg, title: title });
+        newAlerts.push({type: "danger", message: res.msg, title: title});
         setAlerts(newAlerts);
     }
 
@@ -427,21 +487,30 @@ export function FileBrowser(props) {
         if (selectedIds && selectedIds.length > 0) {
             let token = (api.loggedIn ? null : tokenObj.value);
             api.delete(selectedIds, token).then((res) => {
-               if (res.success) {
-                   fetchFiles();
-               } else {
-                   pushAlert(res);
-               }
+                if (res.success) {
+                    fetchFiles();
+                } else {
+                    pushAlert(res);
+                }
             });
         }
     }
 
-    function onUpload() {
+    function onUploadProgress(event, fileIndex) {
+        if (fileIndex < filesToUpload.length) {
+            let files = filesToUpload.slice();
+            files[fileIndex].progress = event.loaded >= event.total ? 1 : event.loaded / event.total;
+            setFilesToUpload(files);
+        }
+    }
+
+    function onUpload(fileIndex) {
         let token = (api.loggedIn ? null : tokenObj.value);
         let parentId = ((!api.loggedIn || popup.directory === 0) ? null : popup.directory);
-        api.upload(filesToUpload, token, parentId).then((res) => {
+        const file = filesToUpload[fileIndex];
+        api.upload(file, token, parentId, (e) => onUploadProgress(e, fileIndex)).then((res) => {
             if (res.success) {
-                setFilesToUpload([]);
+                // setFilesToUpload([]);
                 fetchFiles();
             } else {
                 pushAlert(res);

@@ -1,4 +1,5 @@
 import 'babel-polyfill';
+import axios from "axios";
 
 export default class API {
 
@@ -13,24 +14,18 @@ export default class API {
 
     async apiCall(method, params) {
         params = params || { };
-
         const csrf_token = this.csrfToken();
         if (csrf_token) params.csrf_token = csrf_token;
-        let response = await fetch("/api/" + method, {
-            method: 'post',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(params)
-        });
-
-        return await response.json();
+        let response = await axios.post("/api/" + method, params);
+        return response.data;
     }
 
     async fetchUser() {
-        let response = await fetch("/api/user/info");
-        let data = await response.json();
+        let response = await axios.get("/api/user/info");
+        let data = response.data;
         this.user = data["user"];
         this.loggedIn = data["loggedIn"];
-        return data && data.success && data.loggedIn;
+        return data && data["success"] && data["loggedIn"];
     }
 
     async logout() {
@@ -73,24 +68,20 @@ export default class API {
         return this.apiCall("file/getRestrictions");
     }
 
-    async upload(files, token = null, parentId = null) {
+    async upload(file, token = null, parentId = null, onUploadProgress = null) {
         const csrf_token = this.csrfToken();
 
         const fd = new FormData();
-        for (let i = 0; i < files.length; i++) {
-            fd.append('file' + i, files[i]);
-        }
-
+        fd.append("file", file);
         if (csrf_token) fd.append("csrf_token", csrf_token);
         if (token) fd.append("token", token);
         if (parentId) fd.append("parentId", parentId);
 
-        // send `POST` request
-        let response = await fetch('/api/file/upload', {
-            method: 'POST',
-            body: fd
+        let response = await axios.post('/api/file/upload', fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: onUploadProgress || function () { }
         });
 
-        return response.json();
+        return response.data;
     }
 };

@@ -57,7 +57,7 @@ export function FileBrowser(props) {
         </svg>;
     }
 
-    function createFileIcon(mimeType, size=2) {
+    function createFileIcon(mimeType, size="2x") {
         let icon = "";
         if (mimeType !== null) {
             mimeType = mimeType.toLowerCase().trim();
@@ -92,7 +92,7 @@ export function FileBrowser(props) {
             icon = "file" + (icon ? ("-" + icon) : icon);
         }
 
-        return <Icon icon={icon} type={"far"} className={"p-1 align-middle fa-" + size + "x"} />
+        return <Icon icon={icon} type={"far"} className={"p-1 align-middle fa-" + size} />
     }
 
     function formatSize(size) {
@@ -134,9 +134,37 @@ export function FileBrowser(props) {
         return ids;
     }
 
+    // TODO: add more mime type names or use an directory here?
+    function getTypeName(type) {
+        if (type.toLowerCase() === "directory") {
+            return "Directory";
+        }
+
+        switch (type.toLowerCase()) {
+            case "image/jpeg":
+                return "JPEG-Image";
+            case "image/png":
+                return "PNG-Image";
+            case "application/pdf":
+                return "PDF-Document";
+            case "text/plain":
+                return "Text-Document"
+            case "application/x-dosexec":
+                return "Windows Executable";
+            case "application/vnd.oasis.opendocument.text":
+                return "OpenOffice-Document";
+            default:
+                return type;
+        }
+    }
+
     function createFileList(elements, indentation=0) {
         let rows = [];
         let i = 0;
+
+        const scale = 0.45;
+        const iconSize = "lg";
+
         const values = Object.values(elements);
         for (const fileElement of values) {
             let name = fileElement.name;
@@ -148,13 +176,13 @@ export function FileBrowser(props) {
             let svg = [];
             if (indentation > 0) {
                 for (let i = 0; i < indentation - 1; i++) {
-                    svg.push(svgLeft(0.75));
+                    svg.push(svgLeft(scale));
                 }
 
                 if (i === values.length - 1) {
-                    svg.push(svgEnd(0.75));
+                    svg.push(svgEnd(scale));
                 } else {
-                    svg.push(svgMiddle(0.75));
+                    svg.push(svgMiddle(scale));
                 }
             }
 
@@ -162,14 +190,14 @@ export function FileBrowser(props) {
                 <tr key={"file-" + uid} data-id={uid} className={"file-row"}>
                     <td>
                         { svg }
-                        { createFileIcon(mimeType) }
+                        { createFileIcon(mimeType, iconSize) }
                     </td>
                     <td>
                         {fileElement.isDirectory ? name :
                             <a href={"/api/file/download?id=" + uid + token} download={true}>{name}</a>
                         }
                     </td>
-                    <td>{type}</td>
+                    <td>{getTypeName(type)}</td>
                     <td>{size}</td>
                     <td>
                         <input type={"checkbox"} checked={!!fileElement.selected}
@@ -215,7 +243,7 @@ export function FileBrowser(props) {
                 const file = filesToUpload[i];
                 uploadedFiles.push(
                     <span className={"uploaded-file"} key={i}>
-                        { createFileIcon(file.type, 3) }
+                        { createFileIcon(file.type, "3x") }
                         <span>{file.name}</span>
                         <Icon icon={"times"} onClick={(e) => onRemoveUploadedFile(e, i)}/>
                     </span>

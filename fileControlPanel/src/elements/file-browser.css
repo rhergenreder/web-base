@@ -2,6 +2,7 @@
     padding: 0;
     border: none;
     vertical-align: middle;
+    font-size: 0.9em;
 }
 
 .file-control-buttons {
@@ -60,8 +61,4 @@
 
 .file-table td:nth-child(n+3), .file-table th:nth-child(n+3) {
     text-align: center;
-}
-
-.file-table tr, .file-table td {
-    height: 40px;
 }

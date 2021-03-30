@@ -150,6 +150,32 @@ namespace Api {
           ->where(new CondNull("valid_until"), new Compare("valid_until", $sql->now(), ">="));
       }
     }
+
+    private static function unitToBytes($var) : int {
+      if (is_int($var) || is_numeric($var)) {
+        return intval($var);
+      } else {
+        preg_match("/(\\d+)([KMG])/", $var, $re);
+        if ($re) {
+          $units = ["K","M","G"];
+          $value = intval($re[1]);
+          $unitIndex = array_search($re[2], $units);
+          return $value * pow(1024, $unitIndex + 1);
+        } else {
+          return -1; // some weird error here
+        }
+      }
+    }
+
+    protected function getMaxFileSizePHP() : int {
+      $uploadMaxFilesize = $this->unitToBytes(ini_get("upload_max_filesize"));
+      $postMaxSize = $this->unitToBytes(ini_get("post_max_size"));
+      return min($uploadMaxFilesize, $postMaxSize);
+    }
+
+    protected function getMaxFiles() : int {
+      return intval(ini_get("max_file_uploads"));
+    }
   }
 }
 
@@ -204,9 +230,12 @@ namespace Api\File {
 
           $this->result["files"] = $this->createFileList($res);
           if ($row["token_type"] === "upload") {
+            $maxFiles = ($row["maxFiles"] ?? 0);
+            $maxSize  = ($row["maxSize"] ?? 0);
+
             $this->result["restrictions"] = array(
-              "maxFiles" => $row["maxFiles"] ?? 0,
-              "maxSize"  => $row["maxSize"] ?? 0,
+              "maxFiles" => ($maxFiles <= 0 ? $this->getMaxFiles() : min($this->getMaxFiles(), $maxFiles)),
+              "maxSize"  => ($maxSize <= 0 ? $this->getMaxFileSizePHP() : min($this->getMaxFileSizePHP(), $maxSize)),
               "extensions" => $row["extensions"] ?? "",
               "parentId" => $row["parentId"] ?? 0
             );
@@ -215,6 +244,27 @@ namespace Api\File {
       }
 
       return $this->success;
+    }
+  }
+
+  class GetRestrictions extends FileAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array());
+      $this->csrfTokenRequired = false;
+      $this->loginRequired = true;
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $this->result["restrictions"] = array(
+        "maxFiles" => $this->getMaxFiles(),
+        "maxSize" => $this->getMaxFileSizePHP()
+      );
+
+      return true;
     }
   }
 

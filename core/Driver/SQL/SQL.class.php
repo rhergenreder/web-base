@@ -435,9 +435,6 @@ abstract class SQL {
       $sql = new MySQL($connectionData);
     } else if ($type === "postgres") {
       $sql = new PostgreSQL($connectionData);
-    /*} else if ($type === "oracle") {
-      // $sql = new OracleSQL($connectionData);
-    */
     } else {
       return "Unknown database type";
     }

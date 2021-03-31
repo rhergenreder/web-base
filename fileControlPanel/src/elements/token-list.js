@@ -41,7 +41,7 @@ export function TokenList(props) {
 
     function fetchTokens() {
         api.listTokens().then((res) => {
-            if (res) {
+            if (res.success) {
                 setTokens(res.tokens);
             } else {
                 pushAlert(res, "Error fetching tokens");

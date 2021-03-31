@@ -17,13 +17,14 @@ namespace Documents {
 namespace Documents\Files {
 
   use Elements\Head;
+  use Elements\Link;
   use Elements\Script;
   use Elements\SimpleBody;
 
   class FilesHead extends Head {
 
     protected function initSources() {
-      $this->loadBootstrap();
+      $this->addCSS(Link::BOOTSTRAP);
       $this->loadFontawesome();
     }
 

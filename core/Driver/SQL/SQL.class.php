@@ -9,6 +9,7 @@ use Driver\SQL\Condition\CondIn;
 use Driver\SQL\Condition\Condition;
 use Driver\SQL\Condition\CondKeyword;
 use Driver\SQL\Condition\CondNot;
+use Driver\Sql\Condition\CondNull;
 use Driver\SQL\Condition\CondOr;
 use Driver\SQL\Constraint\Constraint;
 use \Driver\SQL\Constraint\Unique;
@@ -16,6 +17,7 @@ use \Driver\SQL\Constraint\PrimaryKey;
 use \Driver\SQL\Constraint\ForeignKey;
 use Driver\SQL\Query\CreateTable;
 use Driver\SQL\Query\Delete;
+use Driver\SQL\Query\Drop;
 use Driver\SQL\Query\Insert;
 use Driver\SQL\Query\Query;
 use Driver\SQL\Query\Select;
@@ -73,6 +75,10 @@ abstract class SQL {
     return new Update($this, $table);
   }
 
+  public function drop(string $table) {
+    return new Drop($this, $table);
+  }
+
   // ####################
   // ### ABSTRACT METHODS
   // ####################
@@ -107,7 +113,9 @@ abstract class SQL {
           $joinTable = $this->tableName($join->getTable());
           $columnA = $this->columnName($join->getColumnA());
           $columnB = $this->columnName($join->getColumnB());
-          $joinStr .= " $type JOIN $joinTable ON $columnA=$columnB";
+          $tableAlias = ($join->getTableAlias() ? " " . $join->getTableAlias() : "");
+
+          $joinStr .= " $type JOIN $joinTable$tableAlias ON $columnA=$columnB";
         }
       }
 
@@ -248,6 +256,12 @@ abstract class SQL {
     return $this->execute($query, $params);
   }
 
+  public function executeDrop(Drop $drop) {
+    $query = "DROP TABLE " . $this->tableName($drop->getTable());
+    if ($drop->dump) { var_dump($query); }
+    return $this->execute($query);
+  }
+
   protected function getWhereClause($conditions, &$params) {
     if (!$conditions) {
       return "";
@@ -338,6 +352,15 @@ abstract class SQL {
       $column = $this->columnName($condition->getColumn());
       $value = $condition->getValue();
       $operator = $condition->getOperator();
+
+      if ($value === null) {
+        if ($operator === "=") {
+          return "$column IS NULL";
+        } else if ($operator === "!=") {
+          return "$column IS NOT NULL";
+        }
+      }
+
       return $column . $operator . $this->addValue($value, $params);
     } else if ($condition instanceof CondBool) {
       return $this->columnName($condition->getValue());
@@ -385,6 +408,8 @@ abstract class SQL {
       }
 
       return "NOT $expression";
+    } else if($condition instanceof CondNull) {
+      return $this->columnName($condition->getColumn()) . " IS NULL";
     } else {
       $this->lastError = "Unsupported condition type: " . get_class($condition);
       return false;
@@ -410,9 +435,6 @@ abstract class SQL {
       $sql = new MySQL($connectionData);
     } else if ($type === "postgres") {
       $sql = new PostgreSQL($connectionData);
-    /*} else if ($type === "oracle") {
-      // $sql = new OracleSQL($connectionData);
-    */
     } else {
       return "Unknown database type";
     }

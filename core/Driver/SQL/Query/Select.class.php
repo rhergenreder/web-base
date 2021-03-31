@@ -40,13 +40,13 @@ class Select extends Query {
     return $this;
   }
 
-  public function innerJoin($table, $columnA, $columnB) {
-    $this->joins[] = new Join("INNER", $table, $columnA, $columnB);
+  public function innerJoin($table, $columnA, $columnB, $tableAlias=null) {
+    $this->joins[] = new Join("INNER", $table, $columnA, $columnB, $tableAlias);
     return $this;
   }
 
-  public function leftJoin($table, $columnA, $columnB) {
-    $this->joins[] = new Join("LEFT", $table, $columnA, $columnB);
+  public function leftJoin($table, $columnA, $columnB, $tableAlias=null) {
+    $this->joins[] = new Join("LEFT", $table, $columnA, $columnB, $tableAlias);
     return $this;
   }
 

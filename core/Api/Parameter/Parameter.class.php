@@ -18,9 +18,11 @@ class Parameter {
   const TYPE_RAW       = 8;
 
   // only json will work here i guess
+  // nope. also name[]=value
   const TYPE_ARRAY     = 9;
+  const TYPE_MIXED     = 10;
 
-  const names = array('Integer', 'Float', 'Boolean', 'String', 'Date', 'Time', 'DateTime', 'E-Mail', 'Raw', 'Array');
+  const names = array('Integer', 'Float', 'Boolean', 'String', 'Date', 'Time', 'DateTime', 'E-Mail', 'Raw', 'Array', 'Mixed');
 
   public string $name;
   public $value;

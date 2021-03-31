@@ -1,0 +1,85 @@
+.file-row td {
+    padding: 0;
+    border: none;
+    vertical-align: middle;
+    font-size: 0.9em;
+}
+
+.file-control-buttons {
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-template-columns: auto auto;
+}
+
+.file-control-buttons > button {
+    margin: 15px;
+}
+
+.file-upload-container {
+    border: dotted;
+    margin: 18px;
+    padding: 15px;
+    min-height: 150px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.file-upload-container > div > div {
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+}
+
+.uploaded-file {
+    max-width: 120px;
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.uploaded-file > span {
+    display: block;
+    word-wrap: break-word;
+}
+
+.uploaded-file > .status-icon {
+    position: absolute;
+    top: -9px;
+    right: 25px;
+    cursor: pointer;
+}
+
+.uploaded-file > .cancel-button {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 15px;
+    bottom: 0;
+    opacity: 0;
+}
+
+.uploaded-file:hover > .file-icon {
+    opacity: 0.5;
+}
+
+.uploaded-file:hover > .cancel-button {
+    opacity: 1.0;
+}
+
+.clickable { cursor: pointer; }
+.token-revoked td { text-decoration: line-through; }
+
+.token-table td:not(:first-child), .token-table th:not(:first-child) {
+    text-align: center;
+}
+
+.token-table td:nth-child(4) > i {
+    padding-left: 10px;
+}
+
+.file-table td:nth-child(n+3), .file-table th:nth-child(n+3) {
+    text-align: center;
+}
+
+.file-browser-restrictions {
+    display: grid;
+    grid-template-columns: repeat(4, auto);
+}

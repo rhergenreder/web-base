@@ -7,7 +7,8 @@ export default function Sidebar(props) {
     let parent = {
         showDialog: props.showDialog || function() {},
         api: props.api,
-        notifications: props.notifications || [ ]
+        notifications: props.notifications || [ ],
+        filesPath: props.filesPath || null
     };
 
     function onLogout() {
@@ -69,6 +70,16 @@ export default function Sidebar(props) {
                 </NavLink>
             </li>
         );
+    }
+
+    let filePath = parent.filesPath;
+    if (filePath) {
+        li.push(<li className={"nav-item"} key={"files"}>
+            <a href={filePath} className={"nav-link"} target={"_blank"} rel={"noopener noreferrer"}>
+                <Icon icon={"folder"} className={"nav-icon"} />
+                <p>Files</p>
+            </a>
+        </li>);
     }
 
     li.push(<li className={"nav-item"} key={"logout"}>

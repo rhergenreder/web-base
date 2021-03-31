@@ -234,7 +234,7 @@ namespace Documents\Install {
         $missingInputs[] = "Type";
       }
 
-      $supportedTypes = array("mysql", "postgres"); # , "oracle", "postgres");
+      $supportedTypes = array("mysql", "postgres");
       if(!$success) {
         $msg = "Please fill out the following inputs:<br>" .
           $this->createUnorderedList($missingInputs);
@@ -590,7 +590,7 @@ namespace Documents\Install {
           "title" => "Database configuration",
           "form" => array(
             array("title" => "Database Type", "name" => "type", "type" => "select", "required" => true, "items" => array(
-              "mysql" => "MySQL", "oracle" => "Oracle", "postgres" => "PostgreSQL"
+              "mysql" => "MySQL", "postgres" => "PostgreSQL"
             )),
             array("title" => "Username", "name"  => "username", "type"  => "text", "required" => true),
             array("title" => "Password", "name"  => "password", "type"  => "password"),

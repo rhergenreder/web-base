@@ -50,7 +50,7 @@ class Request {
     foreach($this->params as $name => $param) {
       $value = $values[$name] ?? NULL;
 
-      $isEmpty = (is_string($value) || is_array($value)) && empty($value);
+      $isEmpty = (is_string($value) && strlen($value) === 0) || (is_array($value) && empty($value));
       if(!$param->optional && (is_null($value) || $isEmpty)) {
         return $this->createError("Missing parameter: $name");
       }
@@ -187,6 +187,7 @@ class Request {
   public function success() { return $this->success; }
   public function loginRequired() { return $this->loginRequired; }
   public function isExternalCall() { return $this->externalCall; }
+  public function clearError() { $this->success = true; $this->lastError = ""; }
 
   private function getMethod() {
     $class = str_replace("\\", "/", get_class($this));

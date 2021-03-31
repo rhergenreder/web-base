@@ -254,20 +254,13 @@ class User extends ApiObject {
 
   public function processVisit() {
     if ($this->sql && $this->sql->isConnected() && isset($_COOKIE["PHPSESSID"]) && !empty($_COOKIE["PHPSESSID"])) {
-
       if ($this->isBot()) {
         return;
       }
 
       $cookie = $_COOKIE["PHPSESSID"];
-      $day = (new DateTime())->format("Ymd");
-
-      $this->sql->insert("Visitor", array("cookie", "day"))
-        ->addRow($cookie, $day)
-        ->onDuplicateKeyStrategy(new UpdateStrategy(
-          array("month", "cookie"),
-          array("count" => new Add("Visitor.count", 1))))
-        ->execute();
+      $req = new \Api\Visitors\ProcessVisit($this);
+      $req->execute(array("cookie" => $cookie));
     }
   }
 

@@ -1,6 +1,6 @@
 <?php
 
-define("WEBBASE_VERSION", "1.0.4");
+define("WEBBASE_VERSION", "1.2.0");
 
 function getProtocol() {
   return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
@@ -75,6 +75,10 @@ function replaceCssSelector($sel) {
   return preg_replace("~[.#<>]~", "_", preg_replace("~[:\-]~", "", $sel));
 }
 
+function urlId($str) {
+  return urlencode(htmlspecialchars(preg_replace("[: ]","-", $str)));
+}
+
 function getClassPath($class, $suffix = true) {
   $path = str_replace('\\', '/', $class);
   $path = array_values(array_filter(explode("/", $path)));
@@ -134,7 +138,6 @@ function serveStatic(string $webRoot, string $file) {
     $length = $size;
 
     if (isset($_SERVER['HTTP_RANGE'])) {
-      $partialContent = true;
       preg_match('/bytes=(\d+)-(\d+)?/', $_SERVER['HTTP_RANGE'], $matches);
       $offset = intval($matches[1]);
       $length = intval($matches[2]) - $offset;

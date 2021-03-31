@@ -4,8 +4,8 @@ const SUCCESFULL = 2;
 const ERROR = 3;
 
 function setState(state) {
-  var li = $("#currentStep");
-  var icon, color, text;
+  let li = $("#currentStep");
+  let icon, color, text;
 
   switch (state) {
     case PENDING:
@@ -44,23 +44,25 @@ function getCurrentStep() {
 
 function sendRequest(params, done) {
   setState(PENDING);
-  var success = false;
-  $("#status").hide();
+  let success = false;
+  let statusBox = $("#status");
+
+  statusBox.hide();
   $.post("/index.php", params, function(data) {
-    if(data.success || data.step != getCurrentStep()) {
+    if(data.success || data.step !== getCurrentStep()) {
       success = true;
       window.location.reload();
     } else {
       setState(ERROR);
-      $("#status").addClass("alert-danger");
-      $("#status").html("An error occurred during intallation: " + data.msg);
-      $("#status").show();
+      statusBox.addClass("alert-danger");
+      statusBox.html("An error occurred during intallation: " + data.msg);
+      statusBox.show();
     }
   }, "json").fail(function() {
     setState(ERROR);
-    $("#status").addClass("alert-danger");
-    $("#status").html("An error occurred during intallation. Try <a href=\"/index.php\">restarting the process</a>.");
-    $("#status").show();
+    statusBox.addClass("alert-danger");
+    statusBox.html("An error occurred during intallation. Try <a href=\"/index.php\">restarting the process</a>.");
+    statusBox.show();
   }).always(function() {
     if(done) done(success);
   });
@@ -79,12 +81,13 @@ $(document).ready(function() {
 
   $("#btnSubmit").click(function() {
     params = { };
-    var textBefore = $("#btnSubmit").text();
-    $("#btnSubmit").prop("disabled", true);
-    $("#btnSubmit").html("Submitting… <i class=\"fas fa-spinner fa-spin\">");
+    let submitButton = $("#btnSubmit");
+    let textBefore = submitButton.text();
+    submitButton.prop("disabled", true);
+    submitButton.html("Submitting… <i class=\"fas fa-spinner fa-spin\">");
     $("#installForm .form-control").each(function() {
-      var type = $(this).attr("type") ?? $(this).prop("tagName").toLowerCase();
-      var name = $(this).attr("name");
+      let type = $(this).attr("type") ?? $(this).prop("tagName").toLowerCase();
+      let name = $(this).attr("name");
       if(type === "text") {
         params[name] = $(this).val().trim();
       } else if(type === "password" || type === "number") {
@@ -95,8 +98,8 @@ $(document).ready(function() {
     }).promise().done(function() {
       sendRequest(params, function(success) {
         if(!success) {
-          $("#btnSubmit").prop("disabled",false);
-          $("#btnSubmit").text(textBefore);
+          submitButton.prop("disabled",false);
+          submitButton.text(textBefore);
         } else {
           setState(SUCCESFULL);
         }
@@ -135,17 +138,16 @@ $(document).ready(function() {
   });
 
   // DATABASE PORT
-  var prevPort = $("#port").val();
-  var prevDbms = $("#type option:selected").val();
+  let prevPort = $("#port").val();
+  let prevDbms = $("#type option:selected").val();
   function updateDefaultPort() {
-    var defaultPorts = {
+    let defaultPorts = {
       "mysql": 3306,
-      "postgres": 5432,
-      "oracle": 1521
+      "postgres": 5432
     };
 
-    var curDbms = $("#type option:selected").val();
-    if(defaultPorts[prevDbms] == prevPort) {
+    let curDbms = $("#type option:selected").val();
+    if(defaultPorts[prevDbms] === prevPort) {
       $("#port").val(defaultPorts[curDbms]);
     }
   }

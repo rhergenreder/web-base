@@ -45,6 +45,7 @@ export function TokenList(props) {
                 setTokens(res.tokens);
             } else {
                 pushAlert(res, "Error fetching tokens");
+                setTokens([]);
             }
         });
     }

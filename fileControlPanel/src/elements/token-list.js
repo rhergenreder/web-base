@@ -180,7 +180,7 @@ export function TokenList(props) {
                                onChange={(e) => onPopupChange(e, "maxFiles")}/>
                     </div>
                     <div className={"form-group"}>
-                        <label>Max. Size per file in MB (0 = unlimited):</label>
+                        <label>Max. Size per file in MiB (0 = unlimited):</label>
                         <input type={"number"} min={0} max={10} className={"form-control"}
                                value={popup.maxSize} onChange={(e) => onPopupChange(e, "maxSize")}/>
                     </div>
@@ -257,7 +257,8 @@ export function TokenList(props) {
                 });
             } else if (popup.tokenType === "upload") {
                 let parentId = popup.directory === 0 ? null : popup.directory;
-                api.createUploadToken(durability, parentId, popup.maxFiles, popup.maxSize, popup.extensions).then((res) => {
+                let maxSize = Math.round(popup.maxSize * 1024 * 1024);
+                api.createUploadToken(durability, parentId, popup.maxFiles, maxSize, popup.extensions).then((res) => {
                     if (!res.success) {
                         pushAlert(res, "Error creating token");
                     } else {

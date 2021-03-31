@@ -111,26 +111,65 @@ namespace Api {
       }
     }
 
+    private function insert(&$files, $row) {
+      $entry = array("uid" => $row["uid"], "name" => $row["name"], "isDirectory" => $row["directory"]);
+      if ($row["directory"]) {
+        $entry["items"] = array();
+      } else {
+        $entry["size"] = @filesize($row["path"]);
+        $entry["mimeType"] = @mime_content_type($row["path"]);
+      }
+
+      $dir =& $this->findDirectory($files, $row["parentId"]);
+      if ($dir !== $files || $row["parentId"] === null) {
+        $dir[$row["uid"]] = $entry;
+        return true;
+      }
+
+      return false;
+    }
+
     protected function createFileList($res) {
+
       $files = array();
+
+      // Create temporary files
+      $tempFiles = [];
       foreach ($res as $row) {
-        if ($row["uid"] === null) continue;
         $fileId = $row["uid"];
         $parentId = $row["parentId"];
-        $fileName = $row["name"];
-        $isDirectory = $row["directory"];
-        $fileElement = array("uid" => $fileId, "name" => $fileName, "isDirectory" => $isDirectory);
-        if ($isDirectory) {
-          $fileElement["items"] = array();
-        } else {
-          $fileElement["size"] = @filesize($row["path"]);
-          $fileElement["mimeType"] = @mime_content_type($row["path"]);
+        if ($fileId === null) {
+          continue;
         }
 
-        $dir =& $this->findDirectory($files, $parentId);
-        $dir[$fileId] = $fileElement;
-        unset($dir);
+        // insert all files/dirs in the root directory
+        if ($parentId === null) {
+          $this->insert($files, $row);
+        } else {
+          // save other files temporary
+          $tempFiles[$fileId] = $row;
+        }
       }
+
+      // repeatedly try to find the directory
+      // a bit ugly code over here..
+      $filesToProcess = count($tempFiles);
+      while (count($tempFiles) > 0) {
+
+        foreacH($tempFiles as $fileId => $row) {
+          if ($this->insert($files, $row)) {
+            unset($tempFiles[$fileId]);
+          }
+        }
+
+        // some files could not be inserted for some reason
+        if (count($tempFiles) === $filesToProcess) {
+          break;
+        } else {
+          $filesToProcess = count($tempFiles);
+        }
+      }
+
       return $files;
     }
 
@@ -434,9 +473,175 @@ namespace Api\File {
     }
   }
 
-  class Rename extends FileAPI { }
+  class Rename extends FileAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "id" => new Parameter("id", Parameter::TYPE_INT),
+        "name" => new StringType("name", 64, false),
+        "token" => new StringType("token", 36, true, null)
+      ));
+    }
 
-  class Move extends FileAPI { }
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $fileId = $this->getParam("id");
+      $newName = $this->getParam("name");
+      $token = $this->getParam("token");
+
+      if (!$this->user->isLoggedIn() && is_null($token)) {
+        return $this->createError("Permission denied (expected token)");
+      }
+
+      $sql = $this->user->getSQL();
+
+      $selectColumns = ($token !== null ? array("parent_id", "user_id") : array("parent_id"));
+      $query =  $sql->select(...$selectColumns)->from("UserFile");
+      $this->filterFiles($sql, $query, $fileId, $token);
+      $res = $query->execute();
+
+      $this->success = $res !== false;
+      $this->lastError = $sql->getLastError();
+      if (!$this->success) {
+        return false;
+      } else if (empty($res)) {
+        return $this->createError("File not found");
+      }
+
+      // check if file already exists
+      $parentId = $res[0]["parent_id"];
+      $userId = ($token === null) ? $this->user->getId() : $res[0]["user_id"];
+      $res = $sql->select($sql->count())
+        ->from("UserFile")
+        ->where(new Compare("name", $newName))
+        ->where(new Compare("parent_id", $parentId))
+        ->where(new Compare("user_id", $userId))
+        ->execute();
+
+      $this->success = $res !== false;
+      $this->lastError = $sql->getLastError();
+      if (!$this->success) {
+        return false;
+      } else if ($res[0]["count"] > 0) {
+        return $this->createError("A file or directory with this name does already exist");
+      }
+
+      $res = $sql->update("UserFile")
+        ->set("name", $newName)
+        ->where(new Compare("parent_id", $parentId))
+        ->where(new Compare("user_id", $userId))
+        ->where(new Compare("uid", $fileId))
+        ->execute();
+
+      $this->success = $res !== false;
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
+  }
+
+  class Move extends FileAPI {
+
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        'parentId' => new Parameter('parentId', Parameter::TYPE_INT, true, null),
+        "id" => new ArrayType("id", Parameter::TYPE_INT, true),
+      ));
+      $this->loginRequired = true;
+    }
+
+    public function execute($values = array()) {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $sql = $this->user->getSQL();
+      $fileIds = array_unique($this->getParam("id"));
+      $destinationId = $this->getParam("parentId");
+      $userId = $this->user->getId();
+
+      // check, if we are trying to do some illegal move
+      if ($destinationId !== null && in_array($destinationId,  $fileIds)) {
+        return $this->createError("Cannot move a file to the given directory");
+      }
+
+      $query = $sql->select("UserFile.uid", "directory", "name", "parent_id")->from("UserFile");
+      $this->filterFiles($sql, $query, array_merge($fileIds, [$destinationId]));
+      $query->orderBy("parent_id")->ascending();
+
+      $res = $query->execute();
+      $this->success = ($res !== false);
+      $this->lastError = $sql->getLastError();
+      if (!$this->success) {
+        return false;
+      }
+
+      $foundFiles = array();
+      $moveFiles = array();
+      $skipDirectories = array();
+
+      foreach($res as $row) {
+        $fileId = $row["uid"];
+        $isDirectory = $row["directory"];
+        $fileName = $row["name"];
+        $filesDirectory = $row["parent_id"];
+        if ($fileId === $destinationId) {
+          if (!$isDirectory) {
+            return $this->createError("Cannot move file: Destination is not a directory");
+          }
+        } else {
+          $foundFiles[] = $fileId;
+
+          if ($filesDirectory === null || !in_array($filesDirectory, $skipDirectories)) {
+            $moveFiles[$fileId] = $fileName;
+          }
+
+          if ($isDirectory) {
+            $skipDirectories[] = $fileId;
+          }
+        }
+      }
+
+      if (count($foundFiles) !== count($fileIds)) {
+        foreach ($fileIds as $fileId) {
+          if (!array_key_exists($fileId, $foundFiles)) {
+            return $this->createError("File not found: $fileId");
+          }
+        }
+      }
+
+      // check for duplicates
+      $res = $sql->select($sql->count())
+        ->from("UserFile")
+        ->where(new Compare("user_id", $userId))
+        ->where(new Compare("parent_id", $destinationId))
+        ->where(new CondIn("name", array_values($moveFiles)))
+        ->execute();
+
+      $this->success = $res !== false;
+      $this->lastError = $sql->getLastError();
+      if (!$this->success) {
+        return false;
+      } else if($res[0]["count"] > 0) {
+        return $this->createError("Cannot move files: the destination directory already contains one or " .
+          "more files or directories with the same name");
+      }
+
+      // update parent ids
+      $res = $sql->update("UserFile")
+        ->set("parent_id", $destinationId)
+        ->where(new Compare("user_id", $userId))
+        ->where(new CondIn("uid", array_keys($moveFiles)))
+        ->execute();
+
+      $this->success = $res !== false;
+      $this->lastError = $sql->getLastError();
+
+      return $this->success;
+    }
+
+  }
 
   class Upload extends FileAPI {
 

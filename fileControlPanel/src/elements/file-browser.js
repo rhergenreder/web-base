@@ -17,9 +17,13 @@ export function FileBrowser(props) {
     let directories = props.directories || {};
     let restrictions = props.restrictions || {maxFiles: 0, maxSize: 0, extensions: ""};
 
-    let [popup, setPopup] = useState({visible: false, directoryName: "", directory: 0, type: "upload"});
+    let [popup, setPopup] = useState({ visible: false, name: "", directory: 0, target: null, type: "createDirectory" });
     let [alerts, setAlerts] = useState([]);
     let [filesToUpload, setFilesToUpload] = useState([]);
+
+    function canUpload() {
+        return api.loggedIn || (tokenObj.valid && tokenObj.type === "upload");
+    }
 
     function svgMiddle(key, scale = 1.0) {
         let width = 48 * scale;
@@ -122,10 +126,6 @@ export function FileBrowser(props) {
         }
     }, [filesToUpload]);
 
-    function canUpload() {
-        return api.loggedIn || (tokenObj.valid && tokenObj.type === "upload");
-    }
-
     function onAddUploadFiles(acceptedFiles, rejectedFiles) {
 
         if (rejectedFiles && rejectedFiles.length > 0) {
@@ -179,6 +179,13 @@ export function FileBrowser(props) {
         }
     }
 
+    let selectedIds = getSelectedIds();
+    let selectedCount = selectedIds.length;
+    let uploadZone = <></>;
+    let writePermissions = canUpload();
+    let uploadedFiles = [];
+    let alertElements = [];
+
     function createFileList(elements, indentation = 0) {
         let rows = [];
         let rowIndex = 0;
@@ -224,6 +231,10 @@ export function FileBrowser(props) {
                         <input type={"checkbox"} checked={!!fileElement.selected}
                                onChange={(e) => onSelectFile(e, uid)}
                         />
+                        { writePermissions ?
+                            <Icon icon={"pencil-alt"} title={"Rename"} className={"ml-2 clickable text-secondary"}
+                                style={{marginTop: "-17px"}} onClick={() => onPopupOpen("rename", uid)} /> :
+                            <></> }
                     </td>
                 </tr>
             );
@@ -235,14 +246,6 @@ export function FileBrowser(props) {
         }
         return rows;
     }
-
-    let rows = createFileList(files);
-    let selectedIds = getSelectedIds();
-    let selectedCount = selectedIds.length;
-    let uploadZone = <></>;
-    let writePermissions = canUpload();
-    let uploadedFiles = [];
-    let alertElements = [];
 
     for (let i = 0; i < alerts.length; i++) {
         const alert = alerts[i];
@@ -287,6 +290,7 @@ export function FileBrowser(props) {
         setFilesToUpload(files);
     }
 
+    let rows = createFileList(files);
     if (writePermissions) {
 
         for (let i = 0; i < filesToUpload.length; i++) {
@@ -340,6 +344,54 @@ export function FileBrowser(props) {
         </>;
     }
 
+    let singleButton = {
+        gridColumnStart: 1,
+        gridColumnEnd: 3,
+        width: "40%",
+        margin: "0 auto"
+    };
+
+    function createPopup() {
+        let title = "";
+        let inputs = [];
+
+        if (popup.type === "createDirectory" || popup.type === "moveFiles") {
+            inputs.push(
+                <div className={"form-group"} key={"select-directory"}>
+                    <label>Destination Directory:</label>
+                    <select value={popup.directory} className={"form-control"}
+                            onChange={(e) => onPopupChange(e, "directory")}>
+                        {options}
+                    </select>
+                </div>
+            );
+        }
+
+        if (popup.type === "createDirectory" || popup.type === "rename") {
+            inputs.push(
+                <div className={"form-group"} key={"input-name"}>
+                    <label>{ popup.type === "createDirectory" ? "Create Directory" : "New Name" }</label>
+                    <input type={"text"} className={"form-control"} value={popup.name} maxLength={32}
+                           placeholder={"Enter name…"}
+                           onChange={(e) => onPopupChange(e, "name")}/>
+                </div>
+            );
+        }
+
+        if (popup.type === "createDirectory") {
+            title = "Create Directory";
+        } else if (popup.type === "moveFiles") {
+            title = "Move Files";
+        } else if (popup.type === "rename") {
+            title = "Rename File or Directory";
+        }
+
+        return <Popup title={title} visible={popup.visible} buttons={["Ok", "Cancel"]} onClose={onPopupClose}
+                      onClick={onPopupButton}>
+            { inputs }
+        </Popup>
+    }
+
     return <>
         <h4>
             <Icon icon={"sync"} className={"mx-3 clickable small"} onClick={fetchFiles}/>
@@ -366,12 +418,11 @@ export function FileBrowser(props) {
             </tbody>
         </table>
         <div className={"file-control-buttons"}>
-            <button type={"button"} className={"btn btn-success"} disabled={selectedCount === 0}
+            <button type={"button"} className={"btn btn-success"} disabled={selectedCount === 0} style={!writePermissions ? singleButton : {}}
                     onClick={() => onDownload(selectedIds)}>
                 <Icon icon={"download"} className={"mr-1"}/>
                 Download Selected Files ({selectedCount})
             </button>
-            <span/>
             {
                 writePermissions ?
                     <>
@@ -381,11 +432,18 @@ export function FileBrowser(props) {
                             Delete Selected Files ({selectedCount})
                         </button>
                         {api.loggedIn ?
-                            <button type={"button"} className={"btn btn-info"}
+                            <>
+                                <button type={"button"} className={"btn btn-info"}
                                     onClick={(e) => onPopupOpen("createDirectory")}>
                                 <Icon icon={"plus"} className={"mr-1"}/>
                                 Create Directory
-                            </button> :
+                                </button>
+                                <button type={"button"} className={"btn btn-primary"} disabled={selectedCount === 0}
+                                        onClick={(e) => onPopupOpen("moveFiles")}>
+                                    <Icon icon={"plus"} className={"mr-1"}/>
+                                    Move Selected Files ({selectedCount})
+                                </button>
+                            </>:
                             <></>
                         }
                     </>
@@ -402,28 +460,11 @@ export function FileBrowser(props) {
         <div>
             {alertElements}
         </div>
-        <Popup title={"Create Directory"} visible={popup.visible} buttons={["Ok", "Cancel"]} onClose={onPopupClose}
-               onClick={onPopupButton}>
-            <div className={"form-group"}>
-                <label>Destination Directory:</label>
-                <select value={popup.directory} className={"form-control"}
-                        onChange={(e) => onPopupChange(e, "directory")}>
-                    {options}
-                </select>
-            </div>
-            {popup.type !== "upload" ?
-                <div className={"form-group"}>
-                    <label>Directory Name</label>
-                    <input type={"text"} className={"form-control"} value={popup.directoryName} maxLength={32}
-                           placeholder={"Enter name…"}
-                           onChange={(e) => onPopupChange(e, "directoryName")}/>
-                </div> : <></>
-            }
-        </Popup>
+        { createPopup() }
     </>;
 
-    function onPopupOpen(type) {
-        setPopup({...popup, visible: true, type: type});
+    function onPopupOpen(type, target = null) {
+        setPopup({...popup, visible: true, type: type, target: target});
     }
 
     function onPopupClose() {
@@ -439,9 +480,25 @@ export function FileBrowser(props) {
         if (btn === "Ok") {
             let parentId = popup.directory === 0 ? null : popup.directory;
             if (popup.type === "createDirectory") {
-                api.createDirectory(popup.directoryName, parentId).then((res) => {
+                api.createDirectory(popup.name, parentId).then((res) => {
                     if (!res.success) {
                         pushAlert(res, "Error creating directory");
+                    } else {
+                        fetchFiles();
+                    }
+                });
+            } else if (popup.type === "moveFiles") {
+                api.moveFiles(selectedIds, parentId).then((res) => {
+                    if (!res.success) {
+                        pushAlert(res, "Error moving files");
+                    } else {
+                        fetchFiles();
+                    }
+                });
+            } else if (popup.type === "rename") {
+                api.rename(popup.target, popup.name, tokenObj.valid ? tokenObj.value : null).then((res) => {
+                    if (!res.success) {
+                        pushAlert(res, "Error renaming file or directory");
                     } else {
                         fetchFiles();
                     }

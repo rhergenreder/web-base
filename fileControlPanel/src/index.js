@@ -84,9 +84,9 @@ class FileControlPanel extends React.Component {
                     if (this.onSelectFile(e, uid, fileElement.items)) {
                         if (!e.target.checked) {
                             fileElement.selected = false;
-                        } else if (this.getSelectedIds(fileElement.items, false).length === Object.values(fileElement.items).length) {
+                        }/* else if (this.getSelectedIds(fileElement.items, false).length === Object.values(fileElement.items).length) {
                             fileElement.selected = true;
-                        }
+                        }*/
                         found = true;
                         break;
                     }

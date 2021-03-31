@@ -64,6 +64,14 @@ export default class API {
         return this.apiCall("file/createDirectory", { name: name, parentId: parentId });
     }
 
+    moveFiles(files, parentId = null) {
+        return this.apiCall("file/move", { id: files, parentId: parentId });
+    }
+
+    rename(id, name, token = null) {
+        return this.apiCall("file/rename", { id: id, name: name, token: token });
+    }
+
     getRestrictions() {
         return this.apiCall("file/getRestrictions");
     }

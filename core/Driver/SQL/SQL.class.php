@@ -352,6 +352,15 @@ abstract class SQL {
       $column = $this->columnName($condition->getColumn());
       $value = $condition->getValue();
       $operator = $condition->getOperator();
+
+      if ($value === null) {
+        if ($operator === "=") {
+          return "$column IS NULL";
+        } else if ($operator === "!=") {
+          return "$column IS NOT NULL";
+        }
+      }
+
       return $column . $operator . $this->addValue($value, $params);
     } else if ($condition instanceof CondBool) {
       return $this->columnName($condition->getValue());

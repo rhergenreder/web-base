@@ -278,12 +278,13 @@ export function FileBrowser(props) {
         e.stopPropagation();
         e.preventDefault();
         const cancelToken = filesToUpload[i].cancelToken;
-        if (cancelToken) {
+        if (cancelToken && filesToUpload[i].progress < 1) {
             cancelToken.cancel("Upload cancelled");
-            let files = filesToUpload.slice();
-            files.splice(i, 1);
-            setFilesToUpload(files);
         }
+
+        let files = filesToUpload.slice();
+        files.splice(i, 1);
+        setFilesToUpload(files);
     }
 
     if (writePermissions) {
@@ -306,15 +307,17 @@ export function FileBrowser(props) {
                            </span>
                         </div> : <></>
                     }
-                    <Icon icon={done ? "check" : "spinner"} className={"status-icon " + (done ? "text-success" : "text-secondary")} />
-                    <Icon icon={"times"} className={"text-danger cancel-button fa-2x"} title={"Cancel Upload"} onClick={(e) => onCancelUpload(e, i)}/>
+                    <Icon icon={done ? (file.success ? "check" : "times") : "spinner"}
+                          className={"status-icon " + (done ? (file.success ? "text-success" : "text-danger") : "text-secondary")} />
+                    <Icon icon={"times"} className={"text-danger cancel-button fa-2x"}
+                          title={"Cancel Upload"} onClick={(e) => onCancelUpload(e, i)}/>
                 </span>
             );
         }
 
         uploadZone = <>
             <div className={"p-3"}>
-                <label><b>Destination Directory:</b></label>
+                <label><b>Upload Directory:</b></label>
                 <select value={popup.directory} className={"form-control"}
                         onChange={(e) => onPopupChange(e, "directory")}>
                     {options}
@@ -524,15 +527,19 @@ export function FileBrowser(props) {
         setFilesToUpload(newFiles);
 
         api.upload(file, token, parentId, cancelToken, (e) => onUploadProgress(e, fileIndex)).then((res) => {
+
+            let newFiles = filesToUpload.slice();
+            newFiles[fileIndex].success = res.success;
+            setFilesToUpload(newFiles);
+
             if (res.success) {
-                // setFilesToUpload([]);
                 fetchFiles();
             } else {
                 pushAlert(res);
             }
         }).catch((reason) => {
             if (reason && reason.message !== "Upload cancelled") {
-                pushAlert({ msg: reason}, "Error uploading files");
+                pushAlert({ msg: reason }, "Error uploading files");
             }
         });
     }

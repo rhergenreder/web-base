@@ -250,7 +250,6 @@ namespace Api\File {
   class GetRestrictions extends FileAPI {
     public function __construct(User $user, bool $externalCall = false) {
       parent::__construct($user, $externalCall, array());
-      $this->csrfTokenRequired = false;
       $this->loginRequired = true;
     }
 
@@ -564,6 +563,24 @@ namespace Api\File {
       $md5Hash = @hash_file('md5', $tmpPath);
       $sha1Hash = @hash_file('sha1', $tmpPath);
       $filePath =  $uploadDir . "/" . $md5Hash . $sha1Hash;
+
+      // check if a file with this name already exists
+      $res = $sql->select($sql->count())
+        ->from("UserFile")
+        ->where(new Compare("name", $fileName))
+        ->where(new Compare("user_id", $userId))
+        ->where(new Compare("parent_id", $parentId))
+        ->execute();
+      if ($res === false) {
+        return $this->createError($sql->getLastError());
+      } else {
+        if ($res[0]["count"] > 0) {
+          return $this->createError("Error uploading file: a file or directory with this name already exists " .
+            "in the given upload directory");
+        }
+      }
+
+      // save file to disk and database
       if (file_exists($filePath) || move_uploaded_file($tmpPath, $filePath)) {
         $res = $sql->insert("UserFile", array("name", "directory", "path", "user_id", "parent_id"))
           ->addRow($fileName, false, $filePath, $userId, $parentId)
@@ -571,9 +588,7 @@ namespace Api\File {
           ->execute();
 
         if ($res === false) {
-          $this->lastError = $sql->getLastError();
-          $this->success = false;
-          return false;
+          return $this->createError($sql->getLastError());
         } else {
           $fileId = $sql->getLastInsertId();
         }
@@ -581,6 +596,7 @@ namespace Api\File {
         return $this->createError("Could not create file: $fileName");
       }
 
+      // connect to the token, if present
       if (!is_null($token)) {
         $res = $sql->insert("UserFileTokenFile", array("file_id", "token_id"))
           ->addRow($fileId, $tokenId)

@@ -16,6 +16,7 @@ class file_api extends DatabaseScript {
 
     $queries[] = $sql->insert("ApiPermission", array("method", "groups", "description"))
       ->onDuplicateKeyStrategy(new UpdateStrategy(array("method"), array("method" => new Column("method"))))
+      ->addRow("File/GetRestrictions", array(), "Allows users to view global upload restrictions")
       ->addRow("File/Download", array(), "Allows users to download files when logged in, or using a given token")
       ->addRow("File/Upload", array(), "Allows users to upload files when logged in, or using a given token")
       ->addRow("File/ValidateToken", array(), "Allows users to validate a given token")
@@ -40,9 +41,9 @@ class file_api extends DatabaseScript {
       ->addString("name", 64, false)
       ->addString("path", 512, true)
       ->addInt("parent_id", true)
-      ->addInt("user_id", true)
+      ->addInt("user_id")
       ->primaryKey("uid")
-      ->unique("parent_id", "name")
+      ->unique("user_id", "parent_id", "name")
       ->foreignKey("parent_id", "UserFile", "uid", new CascadeStrategy())
       ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
 

@@ -68,7 +68,7 @@ export default class API {
         return this.apiCall("file/getRestrictions");
     }
 
-    async upload(file, token = null, parentId = null, onUploadProgress = null) {
+    async upload(file, token = null, parentId = null, cancelToken = null, onUploadProgress = null) {
         const csrf_token = this.csrfToken();
 
         const fd = new FormData();
@@ -79,7 +79,8 @@ export default class API {
 
         let response = await axios.post('/api/file/upload', fd, {
             headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: onUploadProgress || function () { }
+            onUploadProgress: onUploadProgress || function () { },
+            cancelToken : cancelToken.token
         });
 
         return response.data;

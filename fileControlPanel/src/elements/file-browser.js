@@ -5,6 +5,7 @@ import Icon from "./icon";
 import Alert from "./alert";
 import {Popup} from "./popup";
 import {useEffect, useState} from "react";
+import axios from "axios";
 
 export function FileBrowser(props) {
 
@@ -94,7 +95,7 @@ export function FileBrowser(props) {
             icon = "file" + (icon ? ("-" + icon) : icon);
         }
 
-        return <Icon icon={icon} type={"far"} className={"p-1 align-middle fa-" + size}/>
+        return <Icon icon={icon} type={"far"} className={"p-1 align-middle file-icon fa-" + size}/>
     }
 
     function formatSize(size) {
@@ -273,6 +274,18 @@ export function FileBrowser(props) {
         };
     }
 
+    function onCancelUpload(e, i) {
+        e.stopPropagation();
+        e.preventDefault();
+        const cancelToken = filesToUpload[i].cancelToken;
+        if (cancelToken) {
+            cancelToken.cancel("Upload cancelled");
+            let files = filesToUpload.slice();
+            files.splice(i, 1);
+            setFilesToUpload(files);
+        }
+    }
+
     if (writePermissions) {
 
         for (let i = 0; i < filesToUpload.length; i++) {
@@ -284,15 +297,17 @@ export function FileBrowser(props) {
                         {createFileIcon(file.type, "3x")}
                     <span>{file.name}</span>
                     {!done ?
-                        <div className={"progress border border-primary"}>
+                        <div className={"progress border border-primary position-relative"}>
                             <div className={"progress-bar progress-bar-striped progress-bar-animated"} role={"progressbar"}
                                  aria-valuenow={progress} aria-valuemin={"0"} aria-valuemax={"100"}
-                                 style={{width: progress + "%"}}>
-                                { progress + "%" }
-                            </div>
+                                 style={{width: progress + "%"}} />
+                           <span className="justify-content-center d-flex position-absolute w-100" style={{top: "7px"}}>
+                               { progress + "%" }
+                           </span>
                         </div> : <></>
                     }
                     <Icon icon={done ? "check" : "spinner"} className={"status-icon " + (done ? "text-success" : "text-secondary")} />
+                    <Icon icon={"times"} className={"text-danger cancel-button fa-2x"} title={"Cancel Upload"} onClick={(e) => onCancelUpload(e, i)}/>
                 </span>
             );
         }
@@ -462,13 +477,6 @@ export function FileBrowser(props) {
         });
     }
 
-    function onRemoveUploadedFile(e, i) {
-        e.stopPropagation();
-        let files = filesToUpload.slice();
-        files.splice(i, 1);
-        setFilesToUpload(files);
-    }
-
     function pushAlert(res, title) {
         let newAlerts = alerts.slice();
         newAlerts.push({type: "danger", message: res.msg, title: title});
@@ -508,12 +516,23 @@ export function FileBrowser(props) {
         let token = (api.loggedIn ? null : tokenObj.value);
         let parentId = ((!api.loggedIn || popup.directory === 0) ? null : popup.directory);
         const file = filesToUpload[fileIndex];
-        api.upload(file, token, parentId, (e) => onUploadProgress(e, fileIndex)).then((res) => {
+        const cancelToken = axios.CancelToken.source();
+
+        let newFiles = filesToUpload.slice();
+        newFiles[fileIndex].cancelToken = cancelToken;
+        newFiles[fileIndex].progress = 0;
+        setFilesToUpload(newFiles);
+
+        api.upload(file, token, parentId, cancelToken, (e) => onUploadProgress(e, fileIndex)).then((res) => {
             if (res.success) {
                 // setFilesToUpload([]);
                 fetchFiles();
             } else {
                 pushAlert(res);
+            }
+        }).catch((reason) => {
+            if (reason && reason.message !== "Upload cancelled") {
+                pushAlert({ msg: reason}, "Error uploading files");
             }
         });
     }

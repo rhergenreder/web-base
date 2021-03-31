@@ -47,6 +47,23 @@
     cursor: pointer;
 }
 
+.uploaded-file > .cancel-button {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 15px;
+    bottom: 0;
+    opacity: 0;
+}
+
+.uploaded-file:hover > .file-icon {
+    opacity: 0.5;
+}
+
+.uploaded-file:hover > .cancel-button {
+    opacity: 1.0;
+}
+
 .clickable { cursor: pointer; }
 .token-revoked td { text-decoration: line-through; }
 

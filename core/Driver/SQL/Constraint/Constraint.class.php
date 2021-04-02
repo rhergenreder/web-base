@@ -10,5 +10,5 @@ abstract class Constraint {
     $this->columnNames = (!is_array($columnNames) ? array($columnNames) : $columnNames);
   }
 
-  public function getColumnNames() { return $this->columnNames; }
+  public function getColumnNames(): array { return $this->columnNames; }
 }

@@ -24,7 +24,7 @@ namespace Api\Mail {
       ));
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -77,7 +77,7 @@ namespace Api\Mail {
       return null;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }

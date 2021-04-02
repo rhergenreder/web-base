@@ -56,7 +56,7 @@ class LanguageFlags extends View {
     }
   }
 
-  public function getCode() {
+  public function getCode(): string {
     return implode('', $this->languageFlags);
   }
 }

@@ -24,7 +24,7 @@ class LoginBody extends Body {
     $head->addCSS(Link::ACCOUNT);
   }
 
-  public function getCode() {
+  public function getCode(): string {
     $html = parent::getCode();
 
     $username = L("Username");

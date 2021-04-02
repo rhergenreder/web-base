@@ -10,7 +10,7 @@ use Driver\SQL\Strategy\UpdateStrategy;
 
 class file_api extends DatabaseScript {
 
-  public static function createQueries(SQL $sql) {
+  public static function createQueries(SQL $sql): array {
 
     $queries = array();
 

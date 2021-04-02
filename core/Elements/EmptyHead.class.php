@@ -11,16 +11,16 @@ class EmptyHead extends Head {
   protected function initSources() {
   }
 
-  protected function initMetas() {
+  protected function initMetas(): array {
     return array(
     );
   }
 
-  protected function initRawFields() {
+  protected function initRawFields(): array {
     return array();
   }
 
-  protected function initTitle() {
+  protected function initTitle(): string {
     return "";
   }
 }

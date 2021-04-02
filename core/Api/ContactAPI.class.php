@@ -34,7 +34,7 @@ namespace Api\Contact {
       parent::__construct($user, $externalCall, $parameters);
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }

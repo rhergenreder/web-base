@@ -11,7 +11,7 @@ class CreateDatabase extends DatabaseScript {
   // NOTE:
   // explicit serial ids removed due to postgres' serial implementation
 
-  public static function createQueries(SQL $sql) {
+  public static function createQueries(SQL $sql): array {
     $queries = array();
 
     // Language
@@ -24,8 +24,8 @@ class CreateDatabase extends DatabaseScript {
       ->unique("name");
 
     $queries[] = $sql->insert("Language", array("code", "name"))
-      ->addRow( "en_US", 'American English')
-      ->addRow( "de_DE", 'Deutsch Standard');
+      ->addRow("en_US", 'American English')
+      ->addRow("de_DE", 'Deutsch Standard');
 
     $queries[] = $sql->createTable("User")
       ->addSerial("uid")
@@ -50,7 +50,7 @@ class CreateDatabase extends DatabaseScript {
       ->addString("browser", 64)
       ->addJson("data", false, '{}')
       ->addBool("stay_logged_in", true)
-      ->addString("csrf_token", 16 )
+      ->addString("csrf_token", 16)
       ->primaryKey("uid", "user_id")
       ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
 
@@ -82,7 +82,7 @@ class CreateDatabase extends DatabaseScript {
 
     $queries[] = $sql->createTable("Notification")
       ->addSerial("uid")
-      ->addEnum("type", array("default","message","warning"), false, "default")
+      ->addEnum("type", array("default", "message", "warning"), false, "default")
       ->addDateTime("created_at", false, $sql->currentTimestamp())
       ->addString("title", 32)
       ->addString("message", 256)
@@ -200,7 +200,7 @@ class CreateDatabase extends DatabaseScript {
     return $queries;
   }
 
-  private static function MessageConfirmEmail() : string {
+  private static function MessageConfirmEmail(): string {
     return "Hello {{username}},<br>" .
       "You recently created an account on {{site_name}}. Please click on the following link to " .
       "confirm your email address and complete your registration. If you haven't registered an " .
@@ -210,7 +210,7 @@ class CreateDatabase extends DatabaseScript {
       "{{site_name}} Administration";
   }
 
-  private static function MessageAcceptInvite() : string {
+  private static function MessageAcceptInvite(): string {
     return "Hello {{username}},<br>" .
       "You were invited to create an account on {{site_name}}. Please click on the following link to " .
       "confirm your email address and complete your registration by choosing a new password. " .
@@ -220,7 +220,7 @@ class CreateDatabase extends DatabaseScript {
       "{{site_name}} Administration";
   }
 
-  private static function MessageResetPassword() : string {
+  private static function MessageResetPassword(): string {
     return "Hello {{username}},<br>" .
       "you requested a password reset on {{site_name}}. Please click on the following link to " .
       "choose a new password. If this request was not intended, you can simply ignore the email. The Link is valid for one hour:<br><br>" .
@@ -233,7 +233,7 @@ class CreateDatabase extends DatabaseScript {
     $patchDirectory = './core/Configuration/Patch/';
     if (file_exists($patchDirectory) && is_dir($patchDirectory)) {
       $scan_arr = scandir($patchDirectory);
-      $files_arr = array_diff($scan_arr, array('.','..'));
+      $files_arr = array_diff($scan_arr, array('.', '..'));
       foreach ($files_arr as $file) {
         $suffix = ".class.php";
         if (endsWith($file, $suffix)) {
@@ -241,7 +241,7 @@ class CreateDatabase extends DatabaseScript {
           $className = "\\Configuration\\Patch\\$className";
           $method = "$className::createQueries";
           $patchQueries = call_user_func($method, $sql);
-          foreach($patchQueries as $query) $queries[] = $query;
+          foreach ($patchQueries as $query) $queries[] = $query;
         }
       }
     }

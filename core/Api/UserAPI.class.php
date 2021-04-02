@@ -9,11 +9,11 @@ namespace Api {
     protected function userExists(?string $username, ?string $email) {
 
       $conditions = array();
-      if (!is_null($username) && !empty($username)) {
+      if ($username) {
         $conditions[] = new Compare("User.name", $username);
       }
 
-      if (!is_null($email) && !empty($email)) {
+      if ($email) {
         $conditions[] = new Compare("User.email", $email);
       }
 
@@ -152,7 +152,7 @@ namespace Api\User {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -229,7 +229,7 @@ namespace Api\User {
       return false;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -306,7 +306,7 @@ namespace Api\User {
       ));
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -350,7 +350,7 @@ namespace Api\User {
       $this->csrfTokenRequired = false;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -377,7 +377,7 @@ namespace Api\User {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -469,7 +469,7 @@ namespace Api\User {
       return $this->success;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -533,7 +533,7 @@ namespace Api\User {
       return $this->success;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -586,7 +586,7 @@ namespace Api\User {
       return $this->createError(L('Wrong username or password'));
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -648,7 +648,7 @@ namespace Api\User {
       $this->apiKeyAllowed = false;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -693,7 +693,7 @@ namespace Api\User {
       return $this->success;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -804,7 +804,7 @@ namespace Api\User {
       return array();
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -847,7 +847,7 @@ namespace Api\User {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -945,7 +945,7 @@ namespace Api\User {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -986,7 +986,7 @@ namespace Api\User {
       $this->csrfTokenRequired = false;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -1105,7 +1105,7 @@ namespace Api\User {
       return $this->success;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }

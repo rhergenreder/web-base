@@ -11,7 +11,7 @@ class AdminDashboardBody extends Body {
     parent::__construct($document);
   }
 
-  public function getCode() {
+  public function getCode(): string {
     $html = parent::getCode();
     $script = new Script(Script::MIME_TEXT_JAVASCRIPT, "/js/admin.min.js");
     $html .= "<body><div class=\"wrapper\" id=\"root\">$script</div></body>";

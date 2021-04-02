@@ -23,7 +23,7 @@ namespace Api\Language {
       parent::__construct($user, $externalCall, array());
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }
@@ -108,7 +108,7 @@ namespace Api\Language {
       return $this->success;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }

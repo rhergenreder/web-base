@@ -2,18 +2,20 @@
 
 namespace Driver\SQL\Query;
 
+use Driver\SQL\SQL;
+
 class Truncate extends Query {
 
   private string $tableName;
 
-  public function __construct($sql, $name) {
+  public function __construct(SQL $sql, string $name) {
     parent::__construct($sql);
     $this->tableName = $name;
   }
 
-  public function execute() {
+  public function execute(): bool {
     return $this->sql->executeTruncate($this);
   }
 
-  public function getTable() { return $this->tableName; }
+  public function getTable(): string { return $this->tableName; }
 }

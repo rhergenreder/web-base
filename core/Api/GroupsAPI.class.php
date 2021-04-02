@@ -54,7 +54,7 @@ namespace Api\Groups {
       return $this->success;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }
@@ -116,7 +116,7 @@ namespace Api\Groups {
       ));
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -162,7 +162,7 @@ namespace Api\Groups {
       ));
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }

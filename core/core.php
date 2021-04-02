@@ -1,6 +1,6 @@
 <?php
 
-define("WEBBASE_VERSION", "1.2.1");
+define("WEBBASE_VERSION", "1.2.2");
 
 function getProtocol() {
   return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";

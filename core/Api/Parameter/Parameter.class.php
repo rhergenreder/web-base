@@ -26,11 +26,11 @@ class Parameter {
 
   public string $name;
   public $value;
-  public $optional;
+  public bool $optional;
   public int $type;
   public string $typeName;
 
-  public function __construct($name, $type, $optional = FALSE, $defaultValue = NULL) {
+  public function __construct(string $name, int $type, bool $optional = FALSE, $defaultValue = NULL) {
     $this->name = $name;
     $this->optional = $optional;
     $this->value = $defaultValue;
@@ -38,11 +38,11 @@ class Parameter {
     $this->typeName = $this->getTypeName();
   }
 
-  public function getTypeName() {
+  public function getTypeName(): string {
     return ($this->type >= 0 && $this->type < count(Parameter::names)) ? Parameter::names[$this->type] : "INVALID";
   }
 
-  public function toString() {
+  public function toString(): string {
     $typeName = Parameter::names[$this->type];
 
     $str = "$typeName $this->name";
@@ -54,7 +54,7 @@ class Parameter {
     return $str;
   }
 
-  public static function parseType($value) {
+  public static function parseType($value): int {
     if(is_array($value))
       return Parameter::TYPE_ARRAY;
     else if(is_numeric($value) && intval($value) == $value)
@@ -77,7 +77,7 @@ class Parameter {
       return Parameter::TYPE_STRING;
   }
 
-  public function parseParam($value) {
+  public function parseParam($value): bool {
     switch($this->type) {
       case Parameter::TYPE_INT:
         if(is_numeric($value) && intval($value) == $value) {

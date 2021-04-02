@@ -6,10 +6,10 @@ class Keyword {
 
   private string $value;
 
-  public function __construct($value) {
+  public function __construct(string $value) {
     $this->value = $value;
   }
 
-  public function getValue() { return $this->value; }
+  public function getValue(): string { return $this->value; }
 
 }

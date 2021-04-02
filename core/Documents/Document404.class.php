@@ -15,7 +15,6 @@ namespace Documents {
 
 namespace Documents\Document404 {
 
-  use Elements\Body;
   use Elements\Head;
   use Elements\SimpleBody;
   use Views\View404;
@@ -29,7 +28,7 @@ namespace Documents\Document404 {
     protected function initSources() {
     }
 
-    protected function initMetas() {
+    protected function initMetas(): array {
       return array(
         array('name' => 'viewport', 'content' => 'width=device-width, initial-scale=1.0'),
         array('name' => 'format-detection', 'content' => 'telephone=yes'),
@@ -39,11 +38,11 @@ namespace Documents\Document404 {
       );
     }
 
-    protected function initRawFields() {
+    protected function initRawFields(): array {
       return array();
     }
 
-    protected function initTitle() {
+    protected function initTitle(): string {
       return "WebBase - Not Found";
     }
   }
@@ -58,7 +57,7 @@ namespace Documents\Document404 {
       http_response_code(404);
     }
 
-    protected function getContent() {
+    protected function getContent(): string {
       return $this->load(View404::class);
     }
   }

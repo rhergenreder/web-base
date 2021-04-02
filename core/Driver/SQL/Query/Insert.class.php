@@ -2,6 +2,7 @@
 
 namespace Driver\SQL\Query;
 
+use Driver\SQL\SQL;
 use Driver\SQL\Strategy\Strategy;
 
 class Insert extends Query {
@@ -12,7 +13,7 @@ class Insert extends Query {
   private ?Strategy $onDuplicateKey;
   private ?string $returning;
 
-  public function __construct($sql, $name, $columns=array()) {
+  public function __construct(SQL $sql, string $name, array $columns = array()) {
     parent::__construct($sql);
     $this->tableName = $name;
     $this->columns = $columns;
@@ -21,28 +22,28 @@ class Insert extends Query {
     $this->returning = NULL;
   }
 
-  public function addRow(...$values) {
+  public function addRow(...$values): Insert {
     $this->rows[] = $values;
     return $this;
   }
 
-  public function onDuplicateKeyStrategy($strategy) {
+  public function onDuplicateKeyStrategy(Strategy $strategy): Insert {
     $this->onDuplicateKey = $strategy;
     return $this;
   }
 
-  public function returning($column) {
+  public function returning(string $column): Insert {
     $this->returning = $column;
     return $this;
   }
 
-  public function execute() {
+  public function execute(): bool {
     return $this->sql->executeInsert($this);
   }
 
-  public function getTableName() { return $this->tableName; }
-  public function getColumns() { return $this->columns; }
-  public function getRows() { return $this->rows; }
-  public function onDuplicateKey() { return $this->onDuplicateKey; }
-  public function getReturning() { return $this->returning; }
+  public function getTableName(): string { return $this->tableName; }
+  public function getColumns(): array { return $this->columns; }
+  public function getRows(): array { return $this->rows; }
+  public function onDuplicateKey(): ?Strategy { return $this->onDuplicateKey; }
+  public function getReturning(): ?string { return $this->returning; }
 }

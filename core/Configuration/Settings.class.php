@@ -11,12 +11,16 @@ use Objects\User;
 
 class Settings {
 
+  //
+  private bool $installationComplete;
+
+  // settings
   private string $siteName;
   private string $baseUrl;
   private string $jwtSecret;
-  private bool $installationComplete;
   private bool $registrationAllowed;
   private bool $recaptchaEnabled;
+  private bool $mailEnabled;
   private string $recaptchaPublicKey;
   private string $recaptchaPrivateKey;
 
@@ -24,11 +28,11 @@ class Settings {
     return $this->jwtSecret;
   }
 
-  public function isInstalled() {
+  public function isInstalled(): bool {
     return $this->installationComplete;
   }
 
-  public static function loadDefaults() : Settings {
+  public static function loadDefaults(): Settings {
     $hostname = $_SERVER["SERVER_NAME"];
     $protocol = getProtocol();
     $jwt = generateRandomString(32);
@@ -42,10 +46,11 @@ class Settings {
     $settings->recaptchaPublicKey = "";
     $settings->recaptchaPrivateKey = "";
     $settings->recaptchaEnabled = false;
+    $settings->mailEnabled = false;
     return $settings;
   }
 
-  public function loadFromDatabase(User $user) {
+  public function loadFromDatabase(User $user): bool {
     $req = new \Api\Settings\Get($user);
     $success = $req->execute();
 
@@ -58,6 +63,7 @@ class Settings {
       $this->recaptchaEnabled = $result["recaptcha_enabled"] ?? $this->recaptchaEnabled;
       $this->recaptchaPublicKey = $result["recaptcha_public_key"] ?? $this->recaptchaPublicKey;
       $this->recaptchaPrivateKey = $result["recaptcha_private_key"] ?? $this->recaptchaPrivateKey;
+      $this->mailEnabled = $result["mail_enabled"] ?? $this->mailEnabled;
 
       if (!isset($result["jwt_secret"])) {
         $req = new \Api\Settings\Set($user);
@@ -81,27 +87,27 @@ class Settings {
       ->addRow("recaptcha_private_key", $this->recaptchaPrivateKey, true, false);
   }
 
-  public function getSiteName() : string {
+  public function getSiteName(): string {
     return $this->siteName;
   }
 
-  public function getBaseUrl() : string {
+  public function getBaseUrl(): string {
     return $this->baseUrl;
   }
 
-  public function isRecaptchaEnabled() : bool {
+  public function isRecaptchaEnabled(): bool {
     return $this->recaptchaEnabled;
   }
 
-  public function getRecaptchaSiteKey() : string {
+  public function getRecaptchaSiteKey(): string {
     return $this->recaptchaPublicKey;
   }
 
-  public function getRecaptchaSecretKey() : string {
+  public function getRecaptchaSecretKey(): string {
     return $this->recaptchaPrivateKey;
   }
 
-  public function isRegistrationAllowed() : bool {
+  public function isRegistrationAllowed(): bool {
     return $this->registrationAllowed;
   }
 }

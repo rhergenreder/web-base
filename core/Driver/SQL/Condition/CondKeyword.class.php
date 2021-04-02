@@ -8,7 +8,7 @@ abstract class CondKeyword extends Condition {
   private $rightExpression;
   private string $keyword;
 
-  public function __construct($keyword, $leftExpression, $rightExpression) {
+  public function __construct(string $keyword, $leftExpression, $rightExpression) {
     $this->leftExpression = $leftExpression;
     $this->rightExpression = $rightExpression;
     $this->keyword = $keyword;
@@ -16,5 +16,5 @@ abstract class CondKeyword extends Condition {
 
   public function getLeftExp() { return $this->leftExpression; }
   public function getRightExp() { return $this->rightExpression; }
-  public function getKeyword() { return $this->keyword; }
+  public function getKeyword(): string { return $this->keyword; }
 }

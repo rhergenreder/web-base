@@ -26,7 +26,7 @@ abstract class AccountView extends View {
     }
   }
 
-  public function getCode() {
+  public function getCode(): string {
     $html = parent::getCode();
 
     $content = $this->getAccountContent();

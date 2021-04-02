@@ -44,7 +44,7 @@ namespace Api\ApiKey {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
 
       if(!parent::execute($values)) {
         return false;
@@ -81,7 +81,7 @@ namespace Api\ApiKey {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }
@@ -127,7 +127,7 @@ namespace Api\ApiKey {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }
@@ -162,7 +162,7 @@ namespace Api\ApiKey {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }

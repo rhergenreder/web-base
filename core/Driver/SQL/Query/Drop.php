@@ -14,16 +14,16 @@ class Drop extends Query {
    * @param SQL $sql
    * @param string $table
    */
-  public function __construct(\Driver\SQL\SQL $sql, string $table) {
+  public function __construct(SQL $sql, string $table) {
     parent::__construct($sql);
     $this->table = $table;
   }
 
-  public function execute() {
-    $this->sql->executeDrop($this);
+  public function execute(): bool {
+    return $this->sql->executeDrop($this);
   }
 
-  public function getTable() {
+  public function getTable(): string {
     return $this->table;
   }
 }

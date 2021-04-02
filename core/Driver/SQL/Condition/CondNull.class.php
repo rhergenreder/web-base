@@ -10,5 +10,5 @@ class CondNull extends Condition {
     $this->column = $col;
   }
 
-  public function getColumn() { return $this->column; }
+  public function getColumn(): string { return $this->column; }
 }

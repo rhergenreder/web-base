@@ -16,7 +16,7 @@ class VerifyCaptcha extends Request {
     $this->isPublic = false;
   }
 
-  public function execute($values = array()) {
+  public function execute($values = array()): bool {
      if(!parent::execute($values)) {
        return false;
      }

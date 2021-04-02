@@ -35,7 +35,7 @@ namespace Api\Permission {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -102,7 +102,7 @@ namespace Api\Permission {
       return $this->success;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -147,7 +147,7 @@ namespace Api\Permission {
       ));
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }

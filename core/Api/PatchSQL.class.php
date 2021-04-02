@@ -16,7 +16,7 @@ class PatchSQL extends Request {
     $this->csrfTokenRequired = false;
   }
 
-  public function execute($values = array()) {
+  public function execute($values = array()): bool {
     if (!parent::execute($values)) {
       return false;
     }

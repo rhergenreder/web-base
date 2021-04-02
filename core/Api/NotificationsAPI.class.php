@@ -107,7 +107,7 @@ namespace Api\Notifications {
       return $this->success;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }
@@ -213,7 +213,7 @@ namespace Api\Notifications {
       return $this->success;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }
@@ -235,7 +235,7 @@ namespace Api\Notifications {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }

@@ -19,8 +19,6 @@ namespace Documents {
 namespace Documents\Admin {
 
   use Elements\Head;
-  use Elements\Link;
-  use Elements\Script;
 
   class AdminHead extends Head {
 
@@ -32,7 +30,7 @@ namespace Documents\Admin {
       $this->loadFontawesome();
     }
 
-    protected function initMetas() {
+    protected function initMetas(): array {
       return array(
         array('name' => 'viewport', 'content' => 'width=device-width, initial-scale=1.0'),
         array('name' => 'format-detection', 'content' => 'telephone=yes'),
@@ -42,12 +40,12 @@ namespace Documents\Admin {
       );
     }
 
-    protected function initRawFields() {
+    protected function initRawFields(): array {
       return array();
     }
 
-    protected function initTitle() {
-      return "WebBase - Administration";
+    protected function initTitle(): string {
+      return $this->getSiteName() . " - Administration";
     }
   }
 }

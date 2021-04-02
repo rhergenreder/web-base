@@ -24,9 +24,9 @@ abstract class Head extends View {
   }
 
   protected abstract function initSources();
-  protected abstract function initMetas();
-  protected abstract function initRawFields();
-  protected abstract function initTitle();
+  protected abstract function initMetas(): array;
+  protected abstract function initRawFields(): array;
+  protected abstract function initTitle(): string;
 
   protected function init() {
     $this->keywords = array();

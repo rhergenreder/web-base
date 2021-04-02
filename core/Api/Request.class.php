@@ -77,6 +77,7 @@ class Request {
   }
 
   public function execute($values = array()): bool {
+    $this->params = array_merge([], $this->defaultParams);
     $this->success = false;
     $this->result = array();
     $this->lastError = '';

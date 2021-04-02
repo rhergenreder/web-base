@@ -68,7 +68,7 @@ abstract class Head extends View {
     $this->addJS(Script::BOOTSTRAP);
   }
 
-  public function getCode() {
+  public function getCode(): string {
     $header = "<head>";
 
     foreach($this->metas as $aMeta) {

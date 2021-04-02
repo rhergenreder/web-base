@@ -24,7 +24,7 @@ namespace Objects {
     }
 
     public function getId() { return $this->languageId; }
-    public function getCode() { return $this->langCode; }
+    public function getCode(): string { return $this->langCode; }
     public function getShortCode() { return substr($this->langCode, 0, 2); }
     public function getName() { return $this->langName; }
     public function getIconPath() { return "/img/icons/lang/$this->langCode.gif"; }

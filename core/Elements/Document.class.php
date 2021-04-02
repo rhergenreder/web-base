@@ -35,7 +35,7 @@ abstract class Document {
     return new $this->activeView($this);
   }
 
-  function getCode() {
+  function getCode(): string {
 
     if ($this->databaseRequired) {
       $sql = $this->user->getSQL();

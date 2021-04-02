@@ -80,7 +80,7 @@ class Select extends Query {
     return $this;
   }
 
-  public function execute(): bool {
+  public function execute() {
     return $this->sql->executeSelect($this);
   }
 

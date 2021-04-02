@@ -18,13 +18,13 @@ class Request {
   protected bool $apiKeyAllowed;
   protected bool $csrfTokenRequired;
 
-  private array $aDefaultParams;
+  private array $defaultParams;
   private array $allowedMethods;
   private bool $externalCall;
 
   public function __construct(User $user, bool $externalCall = false, array $params = array()) {
     $this->user = $user;
-    $this->aDefaultParams = $params;
+    $this->defaultParams = $params;
 
     $this->success = false;
     $this->result = array();
@@ -77,7 +77,6 @@ class Request {
   }
 
   public function execute($values = array()): bool {
-    $this->params = $this->aDefaultParams;
     $this->success = false;
     $this->result = array();
     $this->lastError = '';
@@ -181,7 +180,8 @@ class Request {
   }
 
   protected function getParam($name) {
-    return $this->params[$name] ?? NULL;
+    // i don't know why phpstorm
+    return (isset($this->params[$name]) ? $this->params[$name]->value : NULL);
   }
 
   public function isPublic(): bool {

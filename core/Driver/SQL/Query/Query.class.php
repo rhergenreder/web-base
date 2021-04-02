@@ -19,6 +19,7 @@ abstract class Query {
     return $this;
   }
 
-  public abstract function execute(): bool;
+  // can actually return bool|array (depending on success and query type)
+  public abstract function execute();
 
 }

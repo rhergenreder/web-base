@@ -28,7 +28,7 @@ class Update extends Query {
     return $this;
   }
 
-  public function execute(): bool {
+  public function execute() {
     return $this->sql->executeUpdate($this);
   }
 

@@ -21,7 +21,7 @@ class Delete extends Query {
     return $this;
   }
 
-  public function execute() {
+  public function execute(): bool {
     return $this->sql->executeDelete($this);
   }
 

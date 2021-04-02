@@ -22,10 +22,9 @@ I actually don't know what i want to implement here. There are quite to many CMS
 ## Installation
 
 1. `git clone https://git.romanh.de/Projekte/web-base` (or `https://github.com/rhergenreder/web-base`)
-2. `chmod 777 ./files/uploaded ./core/Configuration`
-3. Create a [mysql](https://dev.mysql.com/doc/refman/5.7/en/creating-database.html) or [postgresql](https://www.postgresql.org/docs/9.0/sql-createdatabase.html) database
+2. Create a [mysql](https://dev.mysql.com/doc/refman/5.7/en/creating-database.html) or [postgresql](https://www.postgresql.org/docs/9.0/sql-createdatabase.html) database
     or use an existing empty database (e.g. test or public)
-4. Open the webapp in your browser and follow the installation guide
+3. Open the webapp in your browser and follow the installation guide
 
 For any changes made in [/adminPanel](/adminPanel) or [/fileControlPanel](/fileControlPanel), run:
 1. once: `npm i`

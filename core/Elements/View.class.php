@@ -66,19 +66,23 @@ abstract class View extends StaticView {
   }
 
   // UI Functions
-  private function createList($items, $tag): string {
-    if(count($items) === 0)
-      return "<$tag></$tag>";
-    else
-      return "<$tag><li>" . implode("</li><li>", $items) . "</li></$tag>";
+  private function createList($items, $tag, $classes = ""): string {
+
+    $class = ($classes ? " class=\"$classes\"" : "");
+
+    if(count($items) === 0) {
+      return "<$tag$class></$tag>";
+    } else {
+      return "<$tag$class><li>" . implode("</li><li>", $items) . "</li></$tag>";
+    }
   }
 
-  public function createOrderedList($items=array()): string {
-    return $this->createList($items, "ol");
+  public function createOrderedList($items=array(), $classes = ""): string {
+    return $this->createList($items, "ol", $classes);
   }
 
-  public function createUnorderedList($items=array()): string {
-    return $this->createList($items, "ul");
+  public function createUnorderedList($items=array(), $classes = ""): string {
+    return $this->createList($items, "ul", $classes);
   }
 
   protected function createLink($link, $title=null, $classes=""): string {

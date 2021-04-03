@@ -17,6 +17,8 @@ class AlterTable extends Query {
   public function __construct(SQL $sql, string $table) {
     parent::__construct($sql);
     $this->table = $table;
+    $this->column = null;
+    $this->constraint = null;
   }
 
   public function add($what): AlterTable {

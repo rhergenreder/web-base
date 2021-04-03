@@ -26,17 +26,44 @@ function generateRandomString($length): string {
   return $randomString;
 }
 
-function startsWith($haystack, $needle): bool {
+function startsWith($haystack, $needle, bool $ignoreCase = false): bool {
+
   $length = strlen($needle);
-  return (substr($haystack, 0, $length) === $needle);
+  if ($length === 0) {
+    return true;
+  }
+
+  if ($ignoreCase) {
+    $haystack = strtolower($haystack);
+    $needle = strtolower($haystack);
+  }
+
+  // PHP 8.0 support
+  if (function_exists("str_starts_with")) {
+    return str_starts_with($haystack, $needle);
+  } else {
+    return (substr($haystack, 0, $length) === $needle);
+  }
 }
 
-function endsWith($haystack, $needle): bool {
-  $length = strlen($needle);
-  if ($length == 0)
-    return true;
+function endsWith($haystack, $needle, bool $ignoreCase = false): bool {
 
-  return (substr($haystack, -$length) === $needle);
+  $length = strlen($needle);
+  if ($length === 0) {
+    return true;
+  }
+
+  if ($ignoreCase) {
+    $haystack = strtolower($haystack);
+    $needle = strtolower($haystack);
+  }
+
+  // PHP 8.0 support
+  if (function_exists("str_ends_with")) {
+    return str_ends_with($haystack, $needle);
+  } else {
+    return (substr($haystack, -$length) === $needle);
+  }
 }
 
 function intendCode($code, $escape = true) {

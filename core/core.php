@@ -35,7 +35,7 @@ function startsWith($haystack, $needle, bool $ignoreCase = false): bool {
 
   if ($ignoreCase) {
     $haystack = strtolower($haystack);
-    $needle = strtolower($haystack);
+    $needle = strtolower($needle);
   }
 
   // PHP 8.0 support
@@ -55,7 +55,7 @@ function endsWith($haystack, $needle, bool $ignoreCase = false): bool {
 
   if ($ignoreCase) {
     $haystack = strtolower($haystack);
-    $needle = strtolower($haystack);
+    $needle = strtolower($needle);
   }
 
   // PHP 8.0 support

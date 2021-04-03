@@ -1,8 +1,8 @@
 <?php
 
-define("WEBBASE_VERSION", "1.2.2");
+define("WEBBASE_VERSION", "1.2.3");
 
-function getProtocol() {
+function getProtocol(): string {
   return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
 }
 
@@ -26,12 +26,12 @@ function generateRandomString($length): string {
   return $randomString;
 }
 
-function startsWith($haystack, $needle) {
+function startsWith($haystack, $needle): bool {
   $length = strlen($needle);
   return (substr($haystack, 0, $length) === $needle);
 }
 
-function endsWith($haystack, $needle) {
+function endsWith($haystack, $needle): bool {
   $length = strlen($needle);
   if ($length == 0)
     return true;
@@ -97,7 +97,7 @@ function createError($msg) {
   return json_encode(array("success" => false, "msg" => $msg));
 }
 
-function serveStatic(string $webRoot, string $file) {
+function serveStatic(string $webRoot, string $file): string {
 
   $path = realpath($webRoot . "/" . $file);
   if (!startsWith($path, $webRoot . "/")) {

@@ -27,12 +27,17 @@ abstract class Document {
 
   public function getView() : ?View {
 
-    $file = getClassPath($this->activeView);
-    if(!file_exists($file) || !is_subclass_of($this->activeView, View::class)) {
+    $view = parseClass($this->activeView);
+    $file = getClassPath($view);
+    if(!file_exists($file) || !is_subclass_of($view, View::class)) {
       return null;
     }
 
-    return new $this->activeView($this);
+    return new $view($this);
+  }
+
+  public function getRequestedView(): string {
+    return $this->activeView;
   }
 
   function getCode(): string {

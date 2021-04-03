@@ -89,7 +89,7 @@ abstract class View extends StaticView {
 
   protected function createExternalLink($link, $title=null): string {
     if(is_null($title)) $title=$link;
-    return "<a href=\"$link\" target=\"_blank\" class=\"external\">$title</a>";
+    return "<a href=\"$link\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"external\">$title</a>";
   }
 
   protected function createIcon($icon, $type = "fas", $classes = ""): string {

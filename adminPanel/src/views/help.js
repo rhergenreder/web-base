@@ -121,7 +121,13 @@ export default function HelpPage() {
                                         <b>Project Lead & Main Developer</b>
                                         <ul className={"list-unstyled"}>
                                             <li><small><Icon icon={"address-card"} className={"mr-1"}/>Roman Hergenreder</small></li>
-                                            <li><small><Icon icon={"globe"} className={"mr-1"}/><a href={"https://romanh.de/"} target={"_blank"}>https://romanh.de/</a></small></li>
+                                            <li>
+                                                <small><Icon icon={"globe"} className={"mr-1"}/>
+                                                    <a href={"https://romanh.de/"} target={"_blank"} rel={"noopener"}>
+                                                    https://romanh.de/
+                                                    </a>
+                                                </small>
+                                            </li>
                                             <li><small><Icon icon={"envelope"} className={"mr-1"}/><a href={"mailto:webmaster@romanh.de"}>webmaster@romanh.de</a></small></li>
                                         </ul>
 

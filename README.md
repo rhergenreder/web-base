@@ -214,7 +214,7 @@ namespace Documents\Example {
     }
     
     public function getCode(): string {
-       $view = $this->getDocument()->getView() ?? "<Empty>";
+       $view = $this->getDocument()->getRequestedView() ?? "<Empty>";
        return "<b>Requested View:</b> " . htmlspecialchars($view);
     }
   }
@@ -223,6 +223,48 @@ namespace Documents\Example {
 
 Of course, the head and body classes can be placed in any file, as the code might get big and complex.
 
+### Localization
+
+Currently, there are two languages specified, which are stored in the database: `en_US` and `de_DE`.
+A language is dynamically loaded according to the sent `Accept-Language`-Header, but can also be set using the `lang` parameter
+or [/api/language/set](/core/Api/LanguageAPI.class.php) endpoint. Localization of strings can be achieved using the [LanguageModule](/core/Objects/lang/LanguageModule.php)-Class.
+Let's look at this example:
+
+```php
+class ExampleLangModule extends \Objects\lang\LanguageModule {
+    public function getEntries(string $langCode) {
+      $entries = array();
+      switch ($langCode) {
+        case 'de_DE': 
+          $entries["EXAMPLE_KEY"] = "Das ist eine Beispielübersetzung";
+          $entries["Welcome"] = "Willkommen";
+          break;
+        default:
+          $entries["EXAMPLE_KEY"] = "This is an example translation";
+          break;
+      }
+      return $entries;     
+    }
+}
+```
+
+If any translation key is not defined, the key is returned, which means, we don't need to specify the string `Welcome` again. To access the translations,
+we firstly have to load the module. This is done by adding the class, or the object inside the constructor.
+To translate the defined strings, we can use the global `L()` function. The following code snipped shows the use of 
+our sample language module:
+
+```php
+class SomeView extends \Elements\View {
+  public function __construct(\Elements\Document $document) {
+    parent::__construct($document);
+    $this->langModules[] = ExampleModule::class;
+  }
+  
+  public function getCode() : string{
+    return L("Welcome") . "! " . L("EXAMPLE_KEY");
+  }
+}
+```
 
 ## Anything more?
 

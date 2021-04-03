@@ -27,6 +27,10 @@ abstract class Document {
 
   public function getView() : ?View {
 
+    if ($this->activeView === null) {
+      return null;
+    }
+
     $view = parseClass($this->activeView);
     $file = getClassPath($view);
     if(!file_exists($file) || !is_subclass_of($view, View::class)) {

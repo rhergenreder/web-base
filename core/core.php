@@ -139,8 +139,8 @@ function serveStatic(string $webRoot, string $file): string {
 
   $pathInfo = pathinfo($path);
 
-  // TODO: add more file extensions here
-  $allowedExtension = array("html", "htm");
+  // TODO: add more file extensions here, probably add them to settings?
+  $allowedExtension = array("html", "htm", "pdf");
   $ext = $pathInfo["extension"] ?? "";
   if (!in_array($ext, $allowedExtension)) {
     http_response_code(406);

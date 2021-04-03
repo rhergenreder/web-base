@@ -141,16 +141,12 @@ abstract class View extends StaticView {
   }
 
   protected function createJumbotron(string $content, bool $fluid=false, $class=""): string {
-    $jumbotronClass = "jumbotron" . ($fluid ? "-fluid" : "");
+    $jumbotronClass = "jumbotron" . ($fluid ? " jumbotron-fluid" : "");
     if (!empty($class)) $jumbotronClass .= " $class";
 
-    return "
-      <div class=\"row\">
-        <div class=\"col-12\">
-          <div class=\"$jumbotronClass\">
-            $content
-          </div>
-        </div>
+    return
+      "<div class=\"$jumbotronClass\">
+         $content
       </div>";
   }
 

@@ -15,6 +15,7 @@ use Driver\SQL\Constraint\Constraint;
 use \Driver\SQL\Constraint\Unique;
 use \Driver\SQL\Constraint\PrimaryKey;
 use \Driver\SQL\Constraint\ForeignKey;
+use Driver\SQL\Query\AlterTable;
 use Driver\SQL\Query\CreateTable;
 use Driver\SQL\Query\Delete;
 use Driver\SQL\Query\Drop;
@@ -77,6 +78,10 @@ abstract class SQL {
 
   public function drop(string $table) {
     return new Drop($this, $table);
+  }
+
+  public function alterTable($tableName) {
+    return new AlterTable($this, $tableName);
   }
 
   // ####################
@@ -246,7 +251,7 @@ abstract class SQL {
 
     $valueStr = array();
     foreach($update->getValues() as $key => $val) {
-      $valueStr[] =  $this->columnName($key) . "=" . $this->addValue($val, $params);
+      $valueStr[] = $this->columnName($key) . "=" . $this->addValue($val, $params);
     }
     $valueStr = implode(",", $valueStr);
 
@@ -259,6 +264,47 @@ abstract class SQL {
   public function executeDrop(Drop $drop) {
     $query = "DROP TABLE " . $this->tableName($drop->getTable());
     if ($drop->dump) { var_dump($query); }
+    return $this->execute($query);
+  }
+
+  public function executeAlter(AlterTable $alter): bool {
+    $tableName = $this->tableName($alter->getTable());
+    $action = $alter->getAction();
+    $column = $alter->getColumn();
+    $constraint = $alter->getConstraint();
+
+    $query = "ALTER TABLE $tableName $action ";
+
+    if ($column) {
+      $query .= "COLUMN ";
+      if ($action === "DROP") {
+        $query .= $this->columnName($column->getName());
+      } else {
+        // ADD or modify
+        $query .= $this->getColumnDefinition($column);
+      }
+    } else if ($constraint) {
+      if ($action === "DROP") {
+        if ($constraint instanceof PrimaryKey) {
+          $query .= "PRIMARY KEY";
+        } else if ($constraint instanceof ForeignKey) {
+          // TODO: how can we pass the constraint name here?
+          $this->lastError = "DROP CONSTRAINT foreign key is not supported yet.";
+          return false;
+        }
+      } else if ($action === "ADD") {
+        $query .= "CONSTRAINT ";
+        $query .= $this->getConstraintDefinition($constraint);
+      } else if ($action === "MODIFY") {
+        $this->lastError = "MODIFY CONSTRAINT foreign key is not supported.";
+        return false;
+      }
+    } else {
+      $this->lastError = "ALTER TABLE requires at least a column or a constraint.";
+      return false;
+    }
+
+    if ($alter->dump) { var_dump($query); }
     return $this->execute($query);
   }
 

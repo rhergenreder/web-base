@@ -138,22 +138,26 @@ $(document).ready(function() {
   });
 
   // DATABASE PORT
-  let prevPort = $("#port").val();
-  let prevDbms = $("#type option:selected").val();
+  let portField = $("#port");
+  let typeField = $("#type");
+
+  let prevPort = parseInt(portField.val());
+  let prevDbms = typeField.find("option:selected").val();
   function updateDefaultPort() {
     let defaultPorts = {
       "mysql": 3306,
       "postgres": 5432
     };
 
-    let curDbms = $("#type option:selected").val();
+    let curDbms = typeField.find("option:selected").val();
     if(defaultPorts[prevDbms] === prevPort) {
-      $("#port").val(defaultPorts[curDbms]);
+      prevDbms = curDbms;
+      portField.val(prevPort = defaultPorts[curDbms]);
     }
   }
 
   updateDefaultPort();
-  $("#type").change(function() {
+  typeField.change(function() {
     updateDefaultPort();
   });
 });

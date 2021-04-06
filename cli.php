@@ -187,13 +187,13 @@ function onMaintenance(array $argv) {
     printLine("$ git fetch " . str_replace("/", " ", $pullBranch));
     exec("git fetch " . str_replace("/", " ", $pullBranch), $gitFetch, $ret);
     if ($ret !== 0) {
-      _exit(implode(PHP_EOL, $gitFetch));
+      die();
     }
 
     printLine("$ git log HEAD..$pullBranch --oneline");
     exec("git log HEAD..$pullBranch --oneline", $gitLog, $ret);
     if ($ret !== 0) {
-      _exit(implode(PHP_EOL, $gitLog));
+      die();
     } else if (count($gitLog) === 0) {
       _exit("Already up to date.");
     }
@@ -214,24 +214,29 @@ function onMaintenance(array $argv) {
     // enable maintenance mode if it wasn't turned on before
     if (!$isMaintenanceEnabled) {
       printLine("Turning on maintenance mode");
-      onMaintenance(["cli.php", "maintenance", "on"]);
+      $file = fopen($maintenanceFile, 'w') or _exit("Unable to create maintenance file");
+      fclose($file);
     }
 
     printLine("Ready to update, pulling and merging");
-    printLine("$ git pull $pullBranch");
-    exec("git pull $pullBranch", $gitPull, $ret);
+    printLine("$ git pull " . str_replace("/", " ", $pullBranch) . " --no-ff");
+    exec("git pull " . str_replace("/", " ", $pullBranch) . " --no-ff", $gitPull, $ret);
     if ($ret !== 0) {
+      printLine();
       printLine("Update could not be applied, check the following git message.");
       printLine("Follow the instructions and afterwards turn off the maintenance mode again using:");
       printLine("cli.php maintenance off");
-      printLine();
-      _exit(implode(PHP_EOL, $gitLog));
+      die();
     }
 
     // disable maintenance mode again
     if (!$isMaintenanceEnabled) {
       printLine("Turning off maintenance mode");
-      onMaintenance(["cli.php", "maintenance", "off"]);
+      if (file_exists($maintenanceFile)) {
+        if (!unlink($maintenanceFile)) {
+          _exit("Unable to delete maintenance file");
+        }
+      }
     }
   } else {
     _exit("Usage: cli.php maintenance <status|on|off|update>");

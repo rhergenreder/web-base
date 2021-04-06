@@ -178,8 +178,63 @@ function onMaintenance(array $argv) {
       }
     }
     _exit("Maintenance disabled");
+  } else if ($action === "update") {
+
+    // TODO: find that dynamically
+    $pullBranch = "root/master";
+    $pushBranch = "origin/master";
+
+    printLine("$ git fetch " . str_replace("/", " ", $pullBranch));
+    exec("git fetch " . str_replace("/", " ", $pullBranch), $gitFetch, $ret);
+    if ($ret !== 0) {
+      _exit(implode(PHP_EOL, $gitFetch));
+    }
+
+    printLine("$ git log HEAD..$pullBranch --oneline");
+    exec("git log HEAD..$pullBranch --oneline", $gitLog, $ret);
+    if ($ret !== 0) {
+      _exit(implode(PHP_EOL, $gitLog));
+    } else if (count($gitLog) === 0) {
+      _exit("Already up to date.");
+    }
+
+    printLine("Found updates, checking repository state");
+    printLine("$ git diff-index --quiet HEAD --"); // check for any uncommitted changes
+    exec("git diff-index --quiet HEAD --", $gitDiff, $ret);
+    if ($ret !== 0) {
+      _exit("You have uncommitted changes. Please commit them before updating.");
+    }
+
+    printLine("$ git rev-list HEAD...$pushBranch --ignore-submodules --count");
+    exec("git rev-list HEAD...$pushBranch --ignore-submodules --count", $gitRevList, $ret);
+    if ($ret !== 0) {
+      _exit("HEAD is behind your local branch. Please push your commits before updating.");
+    }
+
+    // enable maintenance mode if it wasn't turned on before
+    if (!$isMaintenanceEnabled) {
+      printLine("Turning on maintenance mode");
+      onMaintenance(["cli.php", "maintenance", "on"]);
+    }
+
+    printLine("Ready to update, pulling and merging");
+    printLine("$ git pull $pullBranch");
+    exec("git pull $pullBranch", $gitPull, $ret);
+    if ($ret !== 0) {
+      printLine("Update could not be applied, check the following git message.");
+      printLine("Follow the instructions and afterwards turn off the maintenance mode again using:");
+      printLine("cli.php maintenance off");
+      printLine();
+      _exit(implode(PHP_EOL, $gitLog));
+    }
+
+    // disable maintenance mode again
+    if (!$isMaintenanceEnabled) {
+      printLine("Turning off maintenance mode");
+      onMaintenance(["cli.php", "maintenance", "off"]);
+    }
   } else {
-    _exit("Usage: cli.php maintenance <status|on|off>");
+    _exit("Usage: cli.php maintenance <status|on|off|update>");
   }
 }
 

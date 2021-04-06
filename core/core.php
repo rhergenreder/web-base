@@ -110,7 +110,7 @@ function getClassPath($class, $suffix = true) {
   $path = str_replace('\\', '/', $class);
   $path = array_values(array_filter(explode("/", $path)));
 
-  if (strcasecmp($path[0], "api") === 0 && count($path) > 2 && strcasecmp($path[1], "Parameter") !== 0) {
+  if (count($path) > 2 && strcasecmp($path[0], "api") === 0 && strcasecmp($path[1], "Parameter") !== 0) {
     $path = "Api/" . $path[1] . "API";
   } else {
     $path = implode("/", $path);

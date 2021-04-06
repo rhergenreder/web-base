@@ -14,16 +14,6 @@ if (!is_readable(getClassPath(Configuration::class))) {
   die(json_encode(array( "success" => false, "msg" => "Configuration directory is not readable, check permissions before proceeding." )));
 }
 
-spl_autoload_extensions(".php");
-spl_autoload_register(function($class) {
-  $full_path = getClassPath($class, true);
-  if(file_exists($full_path)) {
-    include_once $full_path;
-  } else {
-    include_once getClassPath($class, false);
-  }
-});
-
 $config = new Configuration();
 $user   = new Objects\User($config);
 $sql    = $user->getSQL();

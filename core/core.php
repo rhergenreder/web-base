@@ -2,6 +2,17 @@
 
 define("WEBBASE_VERSION", "1.2.3");
 
+spl_autoload_extensions(".php");
+spl_autoload_register(function($class) {
+  $full_path = getClassPath($class);
+  if(file_exists($full_path)) {
+    include_once $full_path;
+  } else {
+    include_once getClassPath($class, false);
+  }
+});
+
+
 function getProtocol(): string {
   return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
 }

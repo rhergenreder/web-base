@@ -1,13 +1,20 @@
 <?php
 
+include_once 'core/core.php';
+include_once 'core/datetime.php';
+include_once 'core/constants.php';
+
+if (is_file("MAINTENANCE")) {
+  http_response_code(503);
+  $currentDir = dirname(__FILE__);
+  serveStatic($currentDir, "/static/maintenance.html");
+  die();
+}
+
 use Api\Request;
 use Configuration\Configuration;
 use Documents\Document404;
 use Elements\Document;
-
-include_once 'core/core.php';
-include_once 'core/datetime.php';
-include_once 'core/constants.php';
 
 if (!is_readable(getClassPath(Configuration::class))) {
   header("Content-Type: application/json");

@@ -38,7 +38,7 @@ function connectDatabase() {
 }
 
 function printHelp() {
-
+  // TODO: help
 }
 
 function handleDatabase($argv) {
@@ -155,6 +155,31 @@ function handleDatabase($argv) {
 
       proc_close($process);
     }
+  } else {
+    die("Usage: cli.php db <migrate|import|export> [options...]");
+  }
+}
+
+function onMaintenance($argv) {
+  $action = $argv[2] ?? "status";
+  $maintenanceFile = "MAINTENANCE";
+  $isMaintenanceEnabled = file_exists($maintenanceFile);
+
+  if ($action === "status") {
+    die("Maintenance: " . ($isMaintenanceEnabled ? "on" : "off") . "\n");
+  } else if ($action === "on") {
+    $file = fopen($maintenanceFile, 'w') or die("Unable to create maintenance file\n");
+    fclose($file);
+    die("Maintenance enabled\n");
+  } else if ($action === "off") {
+    if (file_exists($maintenanceFile)) {
+      if (!unlink($maintenanceFile)) {
+        die("Unable to delete maintenance file\n");
+      }
+    }
+    die("Maintenance disabled\n");
+  } else {
+    die("Usage: cli.php maintenance <status|on|off>\n");
   }
 }
 
@@ -172,6 +197,10 @@ switch ($command) {
     handleDatabase($argv);
     break;
   case 'routes':
+    // TODO: routes
+    break;
+  case 'maintenance':
+    onMaintenance($argv);
     break;
   default:
     echo "Unknown command '$command'\n\n";

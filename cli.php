@@ -3,75 +3,79 @@
 include_once 'core/core.php';
 include_once 'core/constants.php';
 
+use Configuration\Configuration;
 use Configuration\DatabaseScript;
-use Driver\SQL\SQL;
 use Objects\ConnectionData;
+use Objects\User;
+
+function printLine(string $line = "") {
+  echo $line . PHP_EOL;
+}
+
+function _exit(string $line = "") {
+  printLine($line);
+  die();
+}
 
 if (php_sapi_name() !== "cli") {
-  die();
+  _exit("Can only be executed via CLI");
 }
 
 function getDatabaseConfig(): ConnectionData {
   $configClass = "\\Configuration\\Database";
   $file = getClassPath($configClass);
   if (!file_exists($file) || !is_readable($file)) {
-    die("Database configuration does not exist or is not readable\n");
+    _exit("Database configuration does not exist or is not readable");
   }
 
   include_once $file;
   return new $configClass();
 }
 
-function connectDatabase() {
-  $config = getDatabaseConfig();
-  $db = SQL::createConnection($config);
-  if (!($db instanceof SQL) || !$db->isConnected()) {
-    if ($db instanceof SQL) {
-      die($db->getLastError() . "\n");
-    } else {
-      $msg = (is_string($db) ? $db : "Unknown Error");
-      die("Database error: $msg\n");
-    }
+function getUser(): User {
+  $config = new Configuration();
+  $user = new User($config);
+  if (!$user->getSQL() || !$user->getSQL()->isConnected()) {
+    _exit("Could not establish database connection");
   }
 
-  return $db;
+  return $user;
 }
 
 function printHelp() {
   // TODO: help
 }
 
-function handleDatabase($argv) {
+function handleDatabase(array $argv) {
   $action = $argv[2] ?? "";
 
   if ($action === "migrate") {
     $class = $argv[3] ?? null;
     if (!$class) {
-      die("Usage: cli.php db migrate <class name>\n");
+      _exit("Usage: cli.php db migrate <class name>");
     }
 
     $class = str_replace('/', '\\', $class);
     $className = "\\Configuration\\$class";
     $classPath = getClassPath($className);
     if (!file_exists($classPath) || !is_readable($classPath)) {
-      die("Database script file does not exist or is not readable\n");
+      _exit("Database script file does not exist or is not readable");
     }
 
     include_once $classPath;
     $obj = new $className();
     if (!($obj instanceof DatabaseScript)) {
-      die("Not a database script\n");
+      _exit("Not a database script");
     }
 
-    $db = connectDatabase();
-    $queries = $obj->createQueries($db);
+    $user = getUser();
+    $sql = $user->getSQL();
+    $queries = $obj->createQueries($sql);
     foreach ($queries as $query) {
-      if (!$query->execute($db)) {
-        die($db->getLastError());
+      if (!$query->execute($sql)) {
+        _exit($sql->getLastError());
       }
     }
-
-    $db->close();
   } else if ($action === "export" || $action === "import") {
 
     // database config
@@ -94,11 +98,11 @@ function handleDatabase($argv) {
     if ($action === "import") {
       $file = $argv[3] ?? null;
       if (!$file) {
-        die("Usage: cli.php db import <path>\n");
+        _exit("Usage: cli.php db import <path>");
       }
 
       if (!file_exists($file) || !is_readable($file)) {
-        die("File not found or not readable\n");
+        _exit("File not found or not readable");
       }
 
       $inputData = file_get_contents($file);
@@ -116,8 +120,6 @@ function handleDatabase($argv) {
       } else if ($action === "import") {
         $command_bin = "mysql";
         $descriptorSpec[0] = ["pipe", "r"];
-      } else {
-        die("Unsupported action\n");
       }
     } else if ($dbType === "postgres") {
 
@@ -132,12 +134,10 @@ function handleDatabase($argv) {
       } else if ($action === "import") {
         $command_bin = "/usr/bin/psql";
         $descriptorSpec[0] = ["pipe", "r"];
-      } else {
-        die("Unsupported action\n");
       }
 
     } else {
-      die("Unsupported database type\n");
+      _exit("Unsupported database type");
     }
 
     if ($database) {
@@ -156,36 +156,155 @@ function handleDatabase($argv) {
       proc_close($process);
     }
   } else {
-    die("Usage: cli.php db <migrate|import|export> [options...]");
+    _exit("Usage: cli.php db <migrate|import|export> [options...]");
   }
 }
 
-function onMaintenance($argv) {
+function onMaintenance(array $argv) {
   $action = $argv[2] ?? "status";
   $maintenanceFile = "MAINTENANCE";
   $isMaintenanceEnabled = file_exists($maintenanceFile);
 
   if ($action === "status") {
-    die("Maintenance: " . ($isMaintenanceEnabled ? "on" : "off") . "\n");
+    _exit("Maintenance: " . ($isMaintenanceEnabled ? "on" : "off"));
   } else if ($action === "on") {
-    $file = fopen($maintenanceFile, 'w') or die("Unable to create maintenance file\n");
+    $file = fopen($maintenanceFile, 'w') or _exit("Unable to create maintenance file");
     fclose($file);
-    die("Maintenance enabled\n");
+    _exit("Maintenance enabled");
   } else if ($action === "off") {
     if (file_exists($maintenanceFile)) {
       if (!unlink($maintenanceFile)) {
-        die("Unable to delete maintenance file\n");
+        _exit("Unable to delete maintenance file");
       }
     }
-    die("Maintenance disabled\n");
+    _exit("Maintenance disabled");
   } else {
-    die("Usage: cli.php maintenance <status|on|off>\n");
+    _exit("Usage: cli.php maintenance <status|on|off>");
+  }
+}
+
+function printTable(array $head, array $body) {
+
+  $columns = [];
+  foreach ($head as $key) {
+    $columns[$key] = strlen($key);
+  }
+
+  foreach ($body as $row) {
+    foreach ($head as $key) {
+      $value = $row[$key] ?? "";
+      $length = strlen($value);
+      $columns[$key] = max($columns[$key], $length);
+    }
+  }
+
+  // print table
+  foreach ($head as $key) {
+    echo str_pad($key, $columns[$key]) . '   ';
+  }
+  printLine();
+
+  foreach ($body as $row) {
+    foreach ($head as $key) {
+      echo str_pad($row[$key] ?? "", $columns[$key]) . '   ';
+    }
+    printLine();
+  }
+}
+
+// TODO: add missing api functions (should be all internal only i guess)
+function onRoutes(array $argv) {
+
+  $user = getUser();
+  $action = $argv[2] ?? "list";
+
+  if ($action === "list") {
+    $req = new Api\Routes\Fetch($user);
+    $success = $req->execute();
+    if (!$success) {
+      _exit("Error fetching routes: " . $req->getLastError());
+    } else {
+      $routes = $req->getResult()["routes"];
+      $head = ["uid", "request", "action", "target", "extra", "active"];
+
+      // strict boolean
+      foreach ($routes as &$route) {
+        $route["active"] = $route["active"] ? "true" : "false";
+      }
+
+      printTable($head, $routes);
+    }
+  } else if ($action === "add") {
+    if (count($argv) < 6) {
+      _exit("Usage: cli.php routes add <request> <action> <target> [extra]");
+    }
+
+    $params = array(
+      "request" => $argv[3],
+      "action" => $argv[4],
+      "target" => $argv[5],
+      "extra" => $argv[6] ?? ""
+    );
+
+    /*
+    $req  = new Api\Routes\Add($user);
+    $success = $req->execute($params);
+    if (!$success) {
+      _exit($req->getLastError());
+    } else {
+      _exit("Route added successfully");
+    }*/
+  } else if (in_array($action, ["remove","modify","enable","disable"])) {
+    $uid = $argv[3] ?? null;
+    if ($uid === null || ($action === "modify" && count($argv) < 7)) {
+      if ($action === "modify") {
+        _exit("Usage: cli.php routes $action <uid> <request> <action> <target> [extra]");
+      } else {
+        _exit("Usage: cli.php routes $action <uid>");
+      }
+    }
+
+    $params = ["uid" => $uid];
+    if ($action === "remove") {
+      $input = null;
+      do {
+        if ($input === "n") {
+          die();
+        }
+        echo "Remove route #$uid? (y|n): ";
+      } while(($input = trim(fgets(STDIN))) !== "y");
+
+      // $req = new Api\Routes\Remove($user);
+    } else if ($action === "enable") {
+      // $req = new Api\Routes\Enable($user);
+    } else if ($action === "disable") {
+      // $req = new Api\Routes\Disable($user);
+    } else if ($action === "modify") {
+      // $req = new Api\Routes\Update($user);
+      $params["request"] = $argv[4];
+      $params["action"] = $argv[5];
+      $params["target"] = $argv[6];
+      $params["extra"] = $argv[7] ?? "";
+    } else {
+      _exit("Unsupported action");
+    }
+
+    /*
+    $success = $req->execute($params);
+    if (!$success) {
+      _exit($req->getLastError());
+    } else {
+      _exit("Route updated successfully");
+    }
+    */
+  } else {
+    _exit("Usage: cli.php routes <list|enable|disable|add|remove|modify> [options...]");
   }
 }
 
 $argv = $_SERVER['argv'];
 if (count($argv) < 2) {
-  die("Usage: cli.php <db|routes|settings|maintenance> [options...]\n");
+  _exit("Usage: cli.php <db|routes|settings|maintenance> [options...]");
 }
 
 $command = $argv[1];
@@ -197,13 +316,14 @@ switch ($command) {
     handleDatabase($argv);
     break;
   case 'routes':
-    // TODO: routes
+    onRoutes($argv);
     break;
   case 'maintenance':
     onMaintenance($argv);
     break;
   default:
-    echo "Unknown command '$command'\n\n";
+    printLine("Unknown command '$command'");
+    printLine();
     printHelp();
     exit;
 }

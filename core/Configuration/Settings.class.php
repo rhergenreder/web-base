@@ -33,7 +33,7 @@ class Settings {
   }
 
   public static function loadDefaults(): Settings {
-    $hostname = $_SERVER["SERVER_NAME"];
+    $hostname = $_SERVER["SERVER_NAME"] ?? "localhost";
     $protocol = getProtocol();
     $jwt = generateRandomString(32);
 

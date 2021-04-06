@@ -126,7 +126,8 @@ class CreateDatabase extends DatabaseScript {
       ->addString("target", 128)
       ->addString("extra", 64, true)
       ->addBool("active", true)
-      ->primaryKey("uid");
+      ->primaryKey("uid")
+      ->unique("request");
 
     $queries[] = $sql->insert("Route", array("request", "action", "target", "extra"))
       ->addRow("^/admin(/.*)?$", "dynamic", "\\Documents\\Admin", NULL)

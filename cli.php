@@ -1,7 +1,9 @@
 <?php
 
 include_once 'core/core.php';
+include_once 'core/constants.php';
 
+use Configuration\DatabaseScript;
 use Driver\SQL\SQL;
 use Objects\ConnectionData;
 
@@ -44,7 +46,33 @@ function handleDatabase($argv) {
 
   switch ($action) {
     case 'migrate':
+      $class = $argv[3] ?? null;
+      if (!$class) {
+        die("Usage: cli.php db migrate <class name>\n");
+      }
+
+      $class = str_replace('/', '\\', $class);
+      $className = "\\Configuration\\$class";
+      $classPath = getClassPath($className);
+      if (!file_exists($classPath) || !is_readable($classPath)) {
+        die("Database script file does not exist or is not readable\n");
+      }
+
+      include_once $classPath;
+      $obj = new $className();
+      if (!($obj instanceof DatabaseScript)) {
+        die("Not a database script\n");
+      }
+
       $db = connectDatabase();
+      $queries = $obj->createQueries($db);
+      foreach ($queries as $query) {
+        if (!$query->execute($db)) {
+          die($db->getLastError());
+        }
+      }
+
+      $db->close();
       break;
     case 'export':
       $config = getDatabaseConfig();

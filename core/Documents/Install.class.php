@@ -280,9 +280,7 @@ namespace Documents\Install {
             $success = false;
             $msg = "Unable to write file";
           }
-        }
 
-        if ($sql) {
           $sql->close();
         }
       }

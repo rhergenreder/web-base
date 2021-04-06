@@ -193,8 +193,7 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("User/edit", array(USER_GROUP_ADMIN), "Allows users to edit details and group memberships of any user")
       ->addRow("User/delete", array(USER_GROUP_ADMIN), "Allows users to delete any other user")
       ->addRow("Permission/fetch", array(USER_GROUP_ADMIN), "Allows users to list all API permissions")
-      ->addRow("Visitors/stats", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to see visitor statistics")
-      ->addRow("PatchSQL", array(USER_GROUP_ADMIN), "Allows users to import database patches");
+      ->addRow("Visitors/stats", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to see visitor statistics");
 
     self::loadPatches($queries, $sql);
 

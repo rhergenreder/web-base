@@ -37,7 +37,7 @@ The compiled dist files will be automatically moved to `/js`.
 
 Each API endpoint has usually one overlying category, for example all user and authorization endpoints belong to the [UserAPI](/core/Api/UserAPI.class.php).
 These endpoints can be accessed by requesting URLs starting with `/api/user`, for example: `/api/user/login`. There are also endpoints, which don't have
-a category, e.g. [PatchSQL](/core/Api/PatchSQL.class.php). These functions can be called directly, for example with `/api/patchSQL`. Both methods have one thing in common:
+a category, e.g. [VerifyCaptcha](/core/Api/VerifyCaptcha.class.php). These functions can be called directly, for example with `/api/verifyCaptcha`. Both methods have one thing in common:
 Each endpoint is represented by a class inheriting the [Request Class](/core/Api/Request.class.php). An example endpoint looks like this:
 
 ```php
@@ -112,7 +112,7 @@ If any result is expected from the api call, the `$req->getResult()` method can 
 This step is not really required, as and changes made to the database must not be presented inside the code.
 On the other hand, it is recommended to keep track of any modifications for later use or to deploy the application
 to other systems. Therefore, either the [default installation script](/core/Configuration/CreateDatabase.class.php) or
-an additional patch file, which can be executed using the API (`/api/PatchSQL`), can be created. The patch files are usually
+an additional patch file, which can be executed using the [CLI](/cli.php), can be created. The patch files are usually
 located in [/core/Configuration/Patch](/core/Configuration/Patch) and have the following structure:
 
 ```php

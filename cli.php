@@ -46,28 +46,46 @@ function handleDatabase($argv) {
     case 'migrate':
       $db = connectDatabase();
       break;
-    case 'dump':
+    case 'export':
       $config = getDatabaseConfig();
-      $output = $argv[3] ?? null;
+      $dbType = $config->getProperty("type") ?? null;
       $user = $config->getLogin();
       $password = $config->getPassword();
       $database = $config->getProperty("database");
-      $command = ["mysqldump", "-u", $user, "--password=$password"];
+      $host = $config->getHost();
+      $port = $config->getPort();
+
+      $env = [];
+      $output = $argv[3] ?? null;
       $descriptorSpec = [STDIN, STDOUT, STDOUT];
 
-      if ($database) {
-        $command[] = $database;
+      if ($dbType === "mysql") {
+
+        $command = ["mysqldump", "-u", $user, '-h', $host, '-P', $port, "--password=$password"];
+        if ($database) {
+          $command[] = $database;
+        }
+
+      } else if ($dbType === "postgres") {
+        $command = ["pg_dump", "-U", $user, '-h', $host, '-p', $port];
+        if ($database) {
+          $command[] = $database;
+        }
+
+        $env["PGPASSWORD"] = $password;
+      } else {
+        die("Unsupported database type\n");
       }
 
       if ($output) {
         $descriptorSpec[1] = ["file", $output, "w"];
       }
 
-      $process = proc_open($command, $descriptorSpec, $pipes);
+      $process = proc_open($command, $descriptorSpec, $pipes, null, $env);
       proc_close($process);
       break;
     default:
-      die("Usage: cli.php db <dump|migrate>\n");
+      die("Usage: cli.php db <import|export|migrate>\n");
   }
 }
 

@@ -17,17 +17,18 @@ namespace Documents {
 namespace Documents\Files {
 
   use Elements\Head;
+  use Elements\Link;
   use Elements\Script;
   use Elements\SimpleBody;
 
   class FilesHead extends Head {
 
     protected function initSources() {
-      $this->loadBootstrap();
+      $this->addCSS(Link::BOOTSTRAP);
       $this->loadFontawesome();
     }
 
-    protected function initMetas() {
+    protected function initMetas(): array {
       return array(
         array('name' => 'viewport', 'content' => 'width=device-width, initial-scale=1.0'),
         array('name' => 'format-detection', 'content' => 'telephone=yes'),
@@ -38,11 +39,11 @@ namespace Documents\Files {
       );
     }
 
-    protected function initRawFields() {
+    protected function initRawFields(): array {
       return array();
     }
 
-    protected function initTitle() {
+    protected function initTitle(): string {
       return "File Control Panel";
     }
   }
@@ -53,7 +54,7 @@ namespace Documents\Files {
       parent::__construct($document);
     }
 
-    protected function getContent() {
+    protected function getContent(): string {
       $html = "<noscript>" . $this->createErrorText("Javascript is required for this site to render.") . "</noscript>";
       $html .= "<div id=\"root\"></div>";
       $html .= new Script(Script::MIME_TEXT_JAVASCRIPT, Script::FILES);

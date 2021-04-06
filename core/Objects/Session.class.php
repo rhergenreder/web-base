@@ -28,7 +28,7 @@ class Session extends ApiObject {
     $this->csrfToken = $csrfToken ?? generateRandomString(16);
   }
 
-  public static function create($user, $stayLoggedIn) {
+  public static function create($user, $stayLoggedIn): ?Session {
     $session = new Session($user, null, null);
     if($session->insert($stayLoggedIn)) {
       return $session;
@@ -69,15 +69,15 @@ class Session extends ApiObject {
     setcookie('session', $sessionCookie, $this->getExpiresTime(), "/", "", $secure);
   }
 
-  public function getExpiresTime() {
+  public function getExpiresTime(): int {
     return ($this->stayLoggedIn == 0 ? 0 : $this->expires);
   }
 
-  public function getExpiresSeconds() {
+  public function getExpiresSeconds(): int {
     return ($this->stayLoggedIn == 0 ? -1 : $this->expires - time());
   }
 
-  public function jsonSerialize() {
+  public function jsonSerialize(): array {
     return array(
       'uid' => $this->sessionId,
       'user_id' => $this->user->getId(),
@@ -89,7 +89,7 @@ class Session extends ApiObject {
     );
   }
 
-  public function insert($stayLoggedIn) {
+  public function insert($stayLoggedIn): bool {
     $this->updateMetaData();
     $sql = $this->user->getSQL();
 

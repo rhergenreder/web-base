@@ -10,5 +10,5 @@ class CondAnd extends Condition {
     $this->conditions = $conditions;
   }
 
-  public function getConditions() { return $this->conditions; }
+  public function getConditions(): array { return $this->conditions; }
 }

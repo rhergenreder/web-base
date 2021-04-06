@@ -41,7 +41,7 @@ namespace Documents\Install {
       $this->addJS(Script::INSTALL);
     }
 
-    protected function initMetas() {
+    protected function initMetas(): array {
       return array(
         array('name' => 'viewport', 'content' => 'width=device-width, initial-scale=1.0'),
         array('name' => 'format-detection', 'content' => 'telephone=yes'),
@@ -51,11 +51,11 @@ namespace Documents\Install {
       );
     }
 
-    protected function initRawFields() {
+    protected function initRawFields(): array {
       return array();
     }
 
-    protected function initTitle() {
+    protected function initTitle(): string {
       return "WebBase - Installation";
     }
 
@@ -88,17 +88,17 @@ namespace Documents\Install {
       $this->steps = array();
     }
 
-    private function getParameter($name) {
-      if(isset($_REQUEST[$name]) && is_string($_REQUEST[$name])) {
+    private function getParameter($name): ?string {
+      if (isset($_REQUEST[$name]) && is_string($_REQUEST[$name])) {
         return trim($_REQUEST[$name]);
       }
 
       return NULL;
     }
 
-    private function getCurrentStep() {
+    private function getCurrentStep(): int {
 
-      if(!$this->checkRequirements()["success"]) {
+      if (!$this->checkRequirements()["success"]) {
         return self::CHECKING_REQUIREMENTS;
       }
 
@@ -106,12 +106,12 @@ namespace Documents\Install {
       $config = $user->getConfiguration();
 
       // Check if database configuration exists
-      if(!$config->getDatabase()) {
+      if (!$config->getDatabase()) {
         return self::DATABASE_CONFIGURATION;
       }
 
       $sql = $user->getSQL();
-      if(!$sql || !$sql->isConnected()) {
+      if (!$sql || !$sql->isConnected()) {
         return self::DATABASE_CONFIGURATION;
       }
 
@@ -156,33 +156,33 @@ namespace Documents\Install {
       return $step;
     }
 
-    private function checkRequirements() {
+    private function checkRequirements(): array {
 
       $msg = $this->errorString;
       $success = true;
       $failedRequirements = array();
 
       $configDir = "core/Configuration/";
-      if(!is_writeable($configDir)) {
+      if (!is_writeable($configDir)) {
         $failedRequirements[] = "<b>$configDir</b> is not writeable. Try running <b>chmod 700 $configDir</b>";
         $success = false;
       }
 
       if (function_exists("posix_getuid")) {
         $userId = posix_getuid();
-        if(fileowner($configDir) !== $userId) {
+        if (fileowner($configDir) !== $userId) {
           $username = posix_getpwuid($userId)['name'];
           $failedRequirements[] = "<b>$configDir</b> is not owned by current user: $username ($userId). Try running <b>chown -R $username $configDir</b>";
           $success = false;
         }
       }
 
-      if(version_compare(PHP_VERSION, '7.4', '<')) {
-          $failedRequirements[] = "PHP Version <b>>= 7.4</b> is required. Got: <b>" . PHP_VERSION . "</b>";
-          $success = false;
+      if (version_compare(PHP_VERSION, '7.4', '<')) {
+        $failedRequirements[] = "PHP Version <b>>= 7.4</b> is required. Got: <b>" . PHP_VERSION . "</b>";
+        $success = false;
       }
 
-      if(!$success) {
+      if (!$success) {
         $msg = "The following requirements failed the check:<br>" .
           $this->createUnorderedList($failedRequirements);
         $this->errorString = $msg;
@@ -191,7 +191,7 @@ namespace Documents\Install {
       return array("success" => $success, "msg" => $msg);
     }
 
-    private function databaseConfiguration() {
+    private function databaseConfiguration(): array {
 
       $host = $this->getParameter("host");
       $port = $this->getParameter("port");
@@ -204,44 +204,44 @@ namespace Documents\Install {
       $success = true;
 
       $missingInputs = array();
-      if(is_null($host) || empty($host)) {
+      if (is_null($host) || empty($host)) {
         $success = false;
         $missingInputs[] = "Host";
       }
 
-      if(is_null($port) || empty($port)) {
+      if (is_null($port) || empty($port)) {
         $success = false;
         $missingInputs[] = "Port";
       }
 
-      if(is_null($username) || empty($username)) {
+      if (is_null($username) || empty($username)) {
         $success = false;
         $missingInputs[] = "Username";
       }
 
-      if(is_null($password)) {
+      if (is_null($password)) {
         $success = false;
         $missingInputs[] = "Password";
       }
 
-      if(is_null($database) || empty($database)) {
+      if (is_null($database) || empty($database)) {
         $success = false;
         $missingInputs[] = "Database";
       }
 
-      if(is_null($type) || empty($type)) {
+      if (is_null($type) || empty($type)) {
         $success = false;
         $missingInputs[] = "Type";
       }
 
       $supportedTypes = array("mysql", "postgres");
-      if(!$success) {
+      if (!$success) {
         $msg = "Please fill out the following inputs:<br>" .
           $this->createUnorderedList($missingInputs);
-      } else if(!is_numeric($port) || ($port = intval($port)) < 1 || $port > 65535) {
+      } else if (!is_numeric($port) || ($port = intval($port)) < 1 || $port > 65535) {
         $msg = "Port must be in range of 1-65535.";
         $success = false;
-      } else if(!in_array($type, $supportedTypes)) {
+      } else if (!in_array($type, $supportedTypes)) {
         $msg = "Unsupported database type. Must be one of: " . implode(", ", $supportedTypes);
         $success = false;
       } else {
@@ -251,9 +251,9 @@ namespace Documents\Install {
         $connectionData->setProperty('type', $type);
         $sql = SQL::createConnection($connectionData);
         $success = false;
-        if(is_string($sql)) {
+        if (is_string($sql)) {
           $msg = "Error connecting to database: $sql";
-        } else if(!$sql->isConnected()) {
+        } else if (!$sql->isConnected()) {
           if (!$sql->checkRequirements()) {
             $driverName = $sql->getDriverName();
             $installLink = "https://www.php.net/manual/en/$driverName.setup.php";
@@ -267,7 +267,7 @@ namespace Documents\Install {
           $msg = "";
           $success = true;
           $queries = CreateDatabase::createQueries($sql);
-          foreach($queries as $query) {
+          foreach ($queries as $query) {
             if (!($res = $query->execute())) {
               $msg = "Error creating tables: " . $sql->getLastError();
               $success = false;
@@ -276,13 +276,13 @@ namespace Documents\Install {
           }
 
           $config = $this->getDocument()->getUser()->getConfiguration();
-          if(!$config->create("Database", $connectionData)) {
+          if (!$config->create("Database", $connectionData)) {
             $success = false;
             $msg = "Unable to write file";
           }
         }
 
-        if($sql) {
+        if ($sql) {
           $sql->close();
         }
       }
@@ -290,10 +290,10 @@ namespace Documents\Install {
       return array("success" => $success, "msg" => $msg);
     }
 
-    private function createUser() {
+    private function createUser(): array {
 
       $user = $this->getDocument()->getUser();
-      if($this->getParameter("prev") === "true") {
+      if ($this->getParameter("prev") === "true") {
         $success = $user->getConfiguration()->delete("Database");
         $msg = $success ? "" : error_get_last();
         return array("success" => $success, "msg" => $msg);
@@ -307,22 +307,22 @@ namespace Documents\Install {
       $success = true;
       $missingInputs = array();
 
-      if(is_null($username) || empty($username)) {
+      if (is_null($username) || empty($username)) {
         $success = false;
         $missingInputs[] = "Username";
       }
 
-      if(is_null($password) || empty($password)) {
+      if (is_null($password) || empty($password)) {
         $success = false;
         $missingInputs[] = "Password";
       }
 
-      if(is_null($confirmPassword) || empty($confirmPassword)) {
+      if (is_null($confirmPassword) || empty($confirmPassword)) {
         $success = false;
         $missingInputs[] = "Confirm Password";
       }
 
-      if(!$success) {
+      if (!$success) {
         $msg = "Please fill out the following inputs:<br>" .
           $this->createUnorderedList($missingInputs);
       } else {
@@ -347,10 +347,10 @@ namespace Documents\Install {
       return array("msg" => $msg, "success" => $success);
     }
 
-    private function addMailService() {
+    private function addMailService(): array {
 
       $user = $this->getDocument()->getUser();
-      if($this->getParameter("prev") === "true") {
+      if ($this->getParameter("prev") === "true") {
         $sql = $user->getSQL();
         $success = $sql->delete("User")->execute();
         $msg = $sql->getLastError();
@@ -359,9 +359,9 @@ namespace Documents\Install {
 
       $success = true;
       $msg = $this->errorString;
-      if($this->getParameter("skip") === "true") {
+      if ($this->getParameter("skip") === "true") {
         $req = new \Api\Settings\Set($user);
-        $success = $req->execute(array("settings" => array( "mail_enabled" => "0" )));
+        $success = $req->execute(array("settings" => array("mail_enabled" => "0")));
         $msg = $req->getLastError();
       } else {
 
@@ -372,30 +372,30 @@ namespace Documents\Install {
         $success = true;
 
         $missingInputs = array();
-        if(is_null($address) || empty($address)) {
+        if (is_null($address) || empty($address)) {
           $success = false;
           $missingInputs[] = "SMTP Address";
         }
 
-        if(is_null($port) || empty($port)) {
+        if (is_null($port) || empty($port)) {
           $success = false;
           $missingInputs[] = "Port";
         }
 
-        if(is_null($username) || empty($username)) {
+        if (is_null($username) || empty($username)) {
           $success = false;
           $missingInputs[] = "Username";
         }
 
-        if(is_null($password)) {
+        if (is_null($password)) {
           $success = false;
           $missingInputs[] = "Password";
         }
 
-        if(!$success) {
+        if (!$success) {
           $msg = "Please fill out the following inputs:<br>" .
             $this->createUnorderedList($missingInputs);
-        } else if(!is_numeric($port) || ($port = intval($port)) < 1 || $port > 65535) {
+        } else if (!is_numeric($port) || ($port = intval($port)) < 1 || $port > 65535) {
           $msg = "Port must be in range of 1-65535.";
           $success = false;
         } else {
@@ -413,7 +413,7 @@ namespace Documents\Install {
 
           try {
             $success = $mail->SmtpConnect();
-            if(!$success) {
+            if (!$success) {
               $error = empty($mail->ErrorInfo) ? "Unknown Error" : $mail->ErrorInfo;
               $msg = "Could not connect to SMTP Server: $error";
             } else {
@@ -421,11 +421,11 @@ namespace Documents\Install {
               $msg = "";
               $mail->smtpClose();
             }
-          } catch(Exception $error) {
+          } catch (Exception $error) {
             $msg = "Could not connect to SMTP Server: " . $error->errorMessage();
           }
 
-          if($success) {
+          if ($success) {
             $req = new \Api\Settings\Set($user);
             $success = $req->execute(array("settings" => array(
               "mail_enabled" => "1",
@@ -442,9 +442,9 @@ namespace Documents\Install {
       return array("success" => $success, "msg" => $msg);
     }
 
-    private function performStep() {
+    private function performStep(): array {
 
-      switch($this->currentStep) {
+      switch ($this->currentStep) {
 
         case self::CHECKING_REQUIREMENTS:
           return $this->checkRequirements();
@@ -466,30 +466,30 @@ namespace Documents\Install {
       }
     }
 
-    private function createProgressSidebar() {
+    private function createProgressSidebar(): string {
       $items = array();
-      foreach($this->steps as $num => $step) {
+      foreach ($this->steps as $num => $step) {
 
         $title = $step["title"];
         $status = $step["status"];
         $currentStep = ($num == $this->currentStep) ? " id=\"currentStep\"" : "";
 
-        switch($status) {
+        switch ($status) {
           case self::PENDING:
-            $statusIcon  = $this->createIcon("spinner");
-            $statusText  = "Loading…";
+            $statusIcon = $this->createIcon("spinner");
+            $statusText = "Loading…";
             $statusColor = "muted";
             break;
 
           case self::SUCCESSFUL:
-            $statusIcon  = $this->createIcon("check-circle");
-            $statusText  = "Successful";
+            $statusIcon = $this->createIcon("check-circle");
+            $statusText = "Successful";
             $statusColor = "success";
             break;
 
           case self::ERROR:
-            $statusIcon  = $this->createIcon("times-circle");
-            $statusText  = "Failed";
+            $statusIcon = $this->createIcon("times-circle");
+            $statusText = "Failed";
             $statusColor = "danger";
             break;
 
@@ -514,11 +514,11 @@ namespace Documents\Install {
       return implode("", $items);
     }
 
-    private function createFormItem($formItem, $inline=false) {
+    private function createFormItem($formItem, $inline = false): string {
 
       $title = $formItem["title"];
-      $name  = $formItem["name"];
-      $type  = $formItem["type"];
+      $name = $formItem["name"];
+      $type = $formItem["type"];
 
       $attributes = array(
         "name" => $name,
@@ -526,37 +526,37 @@ namespace Documents\Install {
         "class" => "form-control"
       );
 
-      if(isset($formItem["required"]) && $formItem["required"]) {
+      if (isset($formItem["required"]) && $formItem["required"]) {
         $attributes["required"] = "";
       }
 
       if ($type !== "select") {
         $attributes["type"] = $type;
 
-        if(isset($formItem["value"]) && $formItem["value"]) {
+        if (isset($formItem["value"]) && $formItem["value"]) {
           $attributes["value"] = $formItem["value"];
         }
 
-        if($type === "number") {
-          if(isset($formItem["min"]) && is_numeric($formItem["min"]))
+        if ($type === "number") {
+          if (isset($formItem["min"]) && is_numeric($formItem["min"]))
             $attributes["min"] = $formItem["min"];
-          if(isset($formItem["max"]) && is_numeric($formItem["max"]))
+          if (isset($formItem["max"]) && is_numeric($formItem["max"]))
             $attributes["max"] = $formItem["max"];
-          if(isset($formItem["step"]) && is_numeric($formItem["step"]))
+          if (isset($formItem["step"]) && is_numeric($formItem["step"]))
             $attributes["step"] = $formItem["step"];
         }
       }
 
       $replacements = array("+" => " ", "&" => "\" ", "=" => "=\"");
       $attributes = http_build_query($attributes) . "\"";
-      foreach($replacements as $key => $val) {
+      foreach ($replacements as $key => $val) {
         $attributes = str_replace($key, $val, $attributes);
       }
 
       if ($type === "select") {
         $items = $formItem["items"] ?? array();
         $element = "<select $attributes>";
-        foreach($items as $key => $val) {
+        foreach ($items as $key => $val) {
           $element .= "<option value=\"$key\">$val</option>";
         }
         $element .= "</select>";
@@ -564,7 +564,7 @@ namespace Documents\Install {
         $element = "<input $attributes>";
       }
 
-      if(!$inline) {
+      if (!$inline) {
         return
           "<div class=\"d-block my-3\">
             <label for=\"$name\">$title</label>
@@ -579,7 +579,7 @@ namespace Documents\Install {
       }
     }
 
-    private function createProgessMainview() {
+    private function createProgessMainview(): string {
 
       $views = array(
         self::CHECKING_REQUIREMENTS => array(
@@ -592,21 +592,21 @@ namespace Documents\Install {
             array("title" => "Database Type", "name" => "type", "type" => "select", "required" => true, "items" => array(
               "mysql" => "MySQL", "postgres" => "PostgreSQL"
             )),
-            array("title" => "Username", "name"  => "username", "type"  => "text", "required" => true),
-            array("title" => "Password", "name"  => "password", "type"  => "password"),
-            array("title" => "Database", "name"  => "database", "type"  => "text", "required" => true),
+            array("title" => "Username", "name" => "username", "type" => "text", "required" => true),
+            array("title" => "Password", "name" => "password", "type" => "password"),
+            array("title" => "Database", "name" => "database", "type" => "text", "required" => true),
             array("type" => "row", "items" => array(
               array(
-                "title" => "Address", "name"  => "host", "type"  => "text", "required" => true,
+                "title" => "Address", "name" => "host", "type" => "text", "required" => true,
                 "value" => "localhost", "row" => true
               ),
               array(
-                "title" => "Port", "name"  => "port", "type"  => "number", "required" => true,
+                "title" => "Port", "name" => "port", "type" => "number", "required" => true,
                 "value" => "3306", "min" => "1", "max" => "65535", "row" => true
               )
             )),
             array(
-              "title" => "Encoding", "name"  => "encoding", "type"  => "text", "required" => false,
+              "title" => "Encoding", "name" => "encoding", "type" => "text", "required" => false,
               "value" => "UTF-8"
             ),
           )
@@ -614,25 +614,25 @@ namespace Documents\Install {
         self::CREATE_USER => array(
           "title" => "Create a User",
           "form" => array(
-            array("title" => "Username", "name"  => "username", "type"  => "text", "required" => true),
-            array("title" => "Email", "name"  => "email", "type"  => "text"),
-            array("title" => "Password", "name"  => "password", "type"  => "password", "required" => true),
-            array("title" => "Confirm Password", "name"  => "confirmPassword", "type"  => "password", "required" => true),
+            array("title" => "Username", "name" => "username", "type" => "text", "required" => true),
+            array("title" => "Email", "name" => "email", "type" => "text"),
+            array("title" => "Password", "name" => "password", "type" => "password", "required" => true),
+            array("title" => "Confirm Password", "name" => "confirmPassword", "type" => "password", "required" => true),
           ),
           "previousButton" => true
         ),
         self::ADD_MAIL_SERVICE => array(
           "title" => "Optional: Add Mail Service",
           "form" => array(
-            array("title" => "Username", "name"  => "username", "type"  => "text", "required" => true),
-            array("title" => "Password", "name"  => "password", "type"  => "password"),
+            array("title" => "Username", "name" => "username", "type" => "text", "required" => true),
+            array("title" => "Password", "name" => "password", "type" => "password"),
             array("type" => "row", "items" => array(
               array(
-                "title" => "SMTP Address", "name"  => "address", "type"  => "text", "required" => true,
+                "title" => "SMTP Address", "name" => "address", "type" => "text", "required" => true,
                 "value" => "localhost", "row" => true
               ),
               array(
-                "title" => "Port", "name"  => "port", "type"  => "number", "required" => true,
+                "title" => "Port", "name" => "port", "type" => "number", "required" => true,
                 "value" => "587", "min" => "1", "max" => "65535", "row" => true
               )
             )),
@@ -646,7 +646,7 @@ namespace Documents\Install {
         )
       );
 
-      if(!isset($views[$this->currentStep])) {
+      if (!isset($views[$this->currentStep])) {
         return "";
       }
 
@@ -657,24 +657,24 @@ namespace Documents\Install {
 
       $html = "<h4 class=\"mb-3\">$title</h4><hr class=\"mb-4\">";
 
-      if(isset($currentView["text"])) {
+      if (isset($currentView["text"])) {
         $text = $currentView["text"];
         $html .= "<div class=\"my-3\">$text</i></div>";
       }
 
-      if(isset($currentView["progressText"])) {
+      if (isset($currentView["progressText"])) {
         $progressText = $currentView["progressText"];
         $html .= "<div id=\"progressText\" style=\"display:none\" class=\"my-3\">$progressText$spinnerIcon</i></div>";
       }
 
-      if(isset($currentView["form"])) {
+      if (isset($currentView["form"])) {
         $html .= "<form id=\"installForm\">";
 
-        foreach($currentView["form"] as $formItem) {
+        foreach ($currentView["form"] as $formItem) {
 
-          if($formItem["type"] === "row") {
+          if ($formItem["type"] === "row") {
             $html .= "<div class=\"row\">";
-            foreach($formItem["items"] as $item) {
+            foreach ($formItem["items"] as $item) {
               $html .= $this->createFormItem($item, true);
             }
             $html .= "</div>";
@@ -691,7 +691,7 @@ namespace Documents\Install {
         array("title" => "Go Back", "type" => "info", "id" => "btnPrev", "float" => "left", "disabled" => $prevDisabled)
       );
 
-      if($this->currentStep != self::FINISH_INSTALLATION) {
+      if ($this->currentStep != self::FINISH_INSTALLATION) {
         if ($this->currentStep == self::CHECKING_REQUIREMENTS) {
           $buttons[] = array("title" => "Retry", "type" => "success", "id" => "btnRetry", "float" => "right");
         } else {
@@ -701,14 +701,14 @@ namespace Documents\Install {
         $buttons[] = array("title" => "Finish", "type" => "success", "id" => "btnFinish", "float" => "right");
       }
 
-      if(isset($currentView["skip"])) {
+      if (isset($currentView["skip"])) {
         $buttons[] = array("title" => "Skip", "type" => "secondary", "id" => "btnSkip", "float" => "right");
       }
 
       $buttonsLeft = "";
       $buttonsRight = "";
 
-      foreach($buttons as $button) {
+      foreach ($buttons as $button) {
         $title = $button["title"];
         $type = $button["type"];
         $id = $button["id"];
@@ -716,7 +716,7 @@ namespace Documents\Install {
         $disabled = (isset($button["disabled"]) && $button["disabled"]) ? " disabled" : "";
         $button = "<button type=\"button\" id=\"$id\" class=\"btn btn-$type m-1\"$disabled>$title</button>";
 
-        if($float === "left") {
+        if ($float === "left") {
           $buttonsLeft .= $button;
         } else {
           $buttonsRight .= $button;
@@ -732,7 +732,7 @@ namespace Documents\Install {
       return $html;
     }
 
-    function getCode() {
+    function getCode(): string {
       $html = parent::getCode();
 
       $this->steps = array(
@@ -761,16 +761,16 @@ namespace Documents\Install {
       $this->currentStep = $this->getCurrentStep();
 
       // set status
-      for($step = self::CHECKING_REQUIREMENTS; $step < $this->currentStep; $step++) {
+      for ($step = self::CHECKING_REQUIREMENTS; $step < $this->currentStep; $step++) {
         $this->steps[$step]["status"] = self::SUCCESSFUL;
       }
 
-      if($this->currentStep == self::FINISH_INSTALLATION) {
+      if ($this->currentStep == self::FINISH_INSTALLATION) {
         $this->steps[$this->currentStep]["status"] = self::SUCCESSFUL;
       }
 
       // POST
-      if($_SERVER['REQUEST_METHOD'] == 'POST') {
+      if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $response = $this->performStep();
         $response["step"] = $this->currentStep;
         die(json_encode($response));

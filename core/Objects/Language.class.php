@@ -24,14 +24,17 @@ namespace Objects {
     }
 
     public function getId() { return $this->languageId; }
-    public function getCode() { return $this->langCode; }
+    public function getCode(): string { return $this->langCode; }
     public function getShortCode() { return substr($this->langCode, 0, 2); }
     public function getName() { return $this->langName; }
     public function getIconPath() { return "/img/icons/lang/$this->langCode.gif"; }
     public function getEntries() { return $this->entries; }
     public function getModules() { return $this->modules; }
 
-    public function loadModule(LanguageModule $module) {
+      /**
+       * @param $module LanguageModule class or object
+       */
+    public function loadModule($module) {
       if(!is_object($module))
         $module = new $module;
 
@@ -40,7 +43,7 @@ namespace Objects {
       $this->modules[] = $module;
     }
 
-    public function translate($key) {
+    public function translate(string $key): string {
       if(isset($this->entries[$key]))
         return $this->entries[$key];
 
@@ -51,7 +54,7 @@ namespace Objects {
       setcookie('lang', $this->langCode, 0, "/", "");
     }
 
-    public function jsonSerialize() {
+    public function jsonSerialize(): array {
       return array(
         'uid' => $this->languageId,
         'code' => $this->langCode,

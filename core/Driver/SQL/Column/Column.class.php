@@ -8,14 +8,14 @@ class Column {
   private bool $nullable;
   private $defaultValue;
 
-  public function __construct($name, $nullable = false, $defaultValue = NULL) {
+  public function __construct(string $name, bool $nullable = false, $defaultValue = NULL) {
     $this->name = $name;
     $this->nullable = $nullable;
     $this->defaultValue = $defaultValue;
   }
 
-  public function getName() { return $this->name; }
-  public function notNull() { return !$this->nullable; }
+  public function getName(): string { return $this->name; }
+  public function notNull(): bool { return !$this->nullable; }
   public function getDefaultValue() { return $this->defaultValue; }
 
 }

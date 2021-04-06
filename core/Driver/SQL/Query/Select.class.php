@@ -30,52 +30,52 @@ class Select extends Query {
     $this->sortAscending = true;
   }
 
-  public function from(...$tables) {
+  public function from(...$tables): Select {
     $this->tables = array_merge($this->tables, $tables);
     return $this;
   }
 
-  public function where(...$conditions) {
+  public function where(...$conditions): Select {
     $this->conditions[] = (count($conditions) === 1 ? $conditions : new CondOr($conditions));
     return $this;
   }
 
-  public function innerJoin($table, $columnA, $columnB, $tableAlias=null) {
+  public function innerJoin(string $table, string $columnA, string $columnB, ?string $tableAlias = null): Select {
     $this->joins[] = new Join("INNER", $table, $columnA, $columnB, $tableAlias);
     return $this;
   }
 
-  public function leftJoin($table, $columnA, $columnB, $tableAlias=null) {
+  public function leftJoin(string $table, string $columnA, string $columnB, ?string $tableAlias = null): Select {
     $this->joins[] = new Join("LEFT", $table, $columnA, $columnB, $tableAlias);
     return $this;
   }
 
-  public function groupBy(...$columns) {
+  public function groupBy(...$columns): Select {
     $this->groupColumns = $columns;
     return $this;
   }
 
-  public function orderBy(...$columns) {
+  public function orderBy(...$columns): Select {
     $this->orderColumns = $columns;
     return $this;
   }
 
-  public function ascending() {
+  public function ascending(): Select {
     $this->sortAscending = true;
     return $this;
   }
 
-  public function descending() {
+  public function descending(): Select {
     $this->sortAscending = false;
     return $this;
   }
 
-  public function limit($limit) {
+  public function limit(int $limit): Select {
     $this->limit = $limit;
     return $this;
   }
 
-  public function offset($offset) {
+  public function offset(int $offset): Select {
     $this->offset = $offset;
     return $this;
   }
@@ -84,14 +84,14 @@ class Select extends Query {
     return $this->sql->executeSelect($this);
   }
 
-  public function getColumns() { return $this->columns; }
-  public function getTables() { return $this->tables; }
-  public function getConditions() { return $this->conditions; }
-  public function getJoins() { return $this->joins; }
-  public function isOrderedAscending() { return $this->sortAscending; }
-  public function getOrderBy() { return $this->orderColumns; }
-  public function getLimit() { return $this->limit; }
-  public function getOffset() { return $this->offset; }
-  public function getGroupBy() { return $this->groupColumns; }
+  public function getColumns(): array { return $this->columns; }
+  public function getTables(): array { return $this->tables; }
+  public function getConditions(): array { return $this->conditions; }
+  public function getJoins(): array { return $this->joins; }
+  public function isOrderedAscending(): bool { return $this->sortAscending; }
+  public function getOrderBy(): array { return $this->orderColumns; }
+  public function getLimit(): int { return $this->limit; }
+  public function getOffset(): int { return $this->offset; }
+  public function getGroupBy(): array { return $this->groupColumns; }
 
 }

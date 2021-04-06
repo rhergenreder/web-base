@@ -141,12 +141,11 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
             $response = serveStatic($currentDir, $target);
             break;
           case "dynamic":
-            $view = parseClass($extra);
             $file = getClassPath($target);
-            if(!file_exists($file) || !is_subclass_of($target, Document::class)) {
-              $document = new Document404($user, $view);
+            if (!file_exists($file) || !is_subclass_of($target, Document::class)) {
+              $document = new Document404($user, $extra);
             } else {
-              $document = new $target($user, $view);
+              $document = new $target($user, $extra);
             }
 
             $response = $document->getCode();

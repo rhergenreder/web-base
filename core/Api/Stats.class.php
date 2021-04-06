@@ -66,7 +66,7 @@ class Stats extends Request {
     return ($this->success ? $res[0]["count"] : $this->success);
   }
 
-  public function execute($values = array()) {
+  public function execute($values = array()): bool {
     if(!parent::execute($values)) {
       return false;
     }

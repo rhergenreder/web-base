@@ -3,9 +3,6 @@
 namespace Objects;
 
 use Configuration\Configuration;
-use DateTime;
-use Driver\SQL\Expression\Add;
-use Driver\SQL\Strategy\UpdateStrategy;
 use Exception;
 use External\JWT;
 use Driver\SQL\SQL;
@@ -52,19 +49,19 @@ class User extends ApiObject {
     }
   }
 
-  public function getId() { return $this->uid; }
-  public function isLoggedIn() { return $this->loggedIn; }
-  public function getUsername() { return $this->username; }
-  public function getEmail() { return $this->email; }
-  public function getSQL() { return $this->sql; }
-  public function getLanguage() { return $this->language; }
+  public function getId(): int { return $this->uid; }
+  public function isLoggedIn(): bool { return $this->loggedIn; }
+  public function getUsername(): string { return $this->username; }
+  public function getEmail(): ?string { return $this->email; }
+  public function getSQL(): ?SQL { return $this->sql; }
+  public function getLanguage(): Language { return $this->language; }
   public function setLanguage(Language $language) { $this->language = $language; $language->load(); }
-  public function getSession() { return $this->session; }
-  public function getConfiguration() { return $this->configuration; }
-  public function getGroups() { return $this->groups; }
-  public function hasGroup(int $group) { return isset($this->groups[$group]); }
+  public function getSession(): ?Session { return $this->session; }
+  public function getConfiguration(): Configuration { return $this->configuration; }
+  public function getGroups(): array { return $this->groups; }
+  public function hasGroup(int $group): bool { return isset($this->groups[$group]); }
 
-  public function __debugInfo() {
+  public function __debugInfo(): array {
     $debugInfo = array(
       'loggedIn' => $this->loggedIn,
       'language' => $this->language->getName(),
@@ -78,7 +75,7 @@ class User extends ApiObject {
     return $debugInfo;
   }
 
-  public function jsonSerialize() {
+  public function jsonSerialize(): array {
     if ($this->isLoggedIn()) {
       return array(
         'uid' => $this->uid,
@@ -103,7 +100,7 @@ class User extends ApiObject {
     $this->session = null;
   }
 
-  public function logout() {
+  public function logout(): bool {
     $success = true;
     if($this->loggedIn) {
       $success = $this->session->destroy();
@@ -113,7 +110,7 @@ class User extends ApiObject {
     return $success;
   }
 
-  public function updateLanguage($lang) {
+  public function updateLanguage($lang): bool {
     if($this->sql) {
       $request = new \Api\Language\Set($this);
       return $request->execute(array("langCode" => $lang));
@@ -131,7 +128,13 @@ class User extends ApiObject {
     session_write_close();
   }
 
-  public function readData($userId, $sessionId, $sessionUpdate = true) {
+  /**
+   * @param $userId user's id
+   * @param $sessionId session's id
+   * @param bool $sessionUpdate update session information, including session's lifetime and browser information
+   * @return bool true, if the data could be loaded
+   */
+  public function readData($userId, $sessionId, $sessionUpdate = true): bool {
 
     $res = $this->sql->select("User.name", "User.email",
         "Language.uid as langId", "Language.code as langCode", "Language.name as langName",
@@ -203,10 +206,10 @@ class User extends ApiObject {
     }
   }
 
-  public function createSession($userId, $stayLoggedIn) {
+  public function createSession($userId, $stayLoggedIn): bool {
     $this->uid = $userId;
     $this->session = Session::create($this, $stayLoggedIn);
-    if($this->session) {
+    if ($this->session) {
       $this->loggedIn = true;
       return true;
     }
@@ -214,10 +217,11 @@ class User extends ApiObject {
     return false;
   }
 
-  public function authorize($apiKey) {
+  public function authorize($apiKey): bool {
 
-    if($this->loggedIn)
+    if ($this->loggedIn) {
       return true;
+    }
 
     $res = $this->sql->select("ApiKey.user_id as uid", "User.name", "User.email", "User.confirmed",
       "Language.uid as langId", "Language.code as langCode", "Language.name as langName")
@@ -264,7 +268,7 @@ class User extends ApiObject {
     }
   }
 
-  private function isBot() {
+  private function isBot(): bool {
     if (!isset($_SERVER["HTTP_USER_AGENT"]) || empty($_SERVER["HTTP_USER_AGENT"])) {
       return false;
     }

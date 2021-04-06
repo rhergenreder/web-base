@@ -34,7 +34,7 @@ namespace Api\Routes {
     parent::__construct($user, $externalCall, array());
   }
 
-  public function execute($values = array()) {
+  public function execute($values = array()): bool {
     if(!parent::execute($values)) {
       return false;
     }
@@ -81,7 +81,7 @@ namespace Api\Routes {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }
@@ -133,7 +133,7 @@ namespace Api\Routes {
       ));
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if(!parent::execute($values)) {
         return false;
       }

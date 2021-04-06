@@ -13,29 +13,38 @@ abstract class Document {
   private ?string $activeView;
 
   public function __construct(User $user, $headClass, $bodyClass, ?string $view = NULL) {
+    $this->user = $user;
     $this->head = new $headClass($this);
     $this->body = new $bodyClass($this);
-    $this->user = $user;
     $this->databaseRequired = true;
     $this->activeView = $view;
   }
 
-  public function getHead() { return $this->head; }
-  public function getBody() { return $this->body; }
-  public function getSQL()  { return $this->user->getSQL(); }
-  public function getUser() { return $this->user; }
+  public function getHead(): Head { return $this->head; }
+  public function getBody(): Body { return $this->body; }
+  public function getSQL(): ?\Driver\SQL\SQL { return $this->user->getSQL(); }
+  public function getUser(): User { return $this->user; }
 
   public function getView() : ?View {
 
-    $file = getClassPath($this->activeView);
-    if(!file_exists($file) || !is_subclass_of($this->activeView, View::class)) {
+    if ($this->activeView === null) {
       return null;
     }
 
-    return new $this->activeView($this);
+    $view = parseClass($this->activeView);
+    $file = getClassPath($view);
+    if(!file_exists($file) || !is_subclass_of($view, View::class)) {
+      return null;
+    }
+
+    return new $view($this);
   }
 
-  function getCode() {
+  public function getRequestedView(): string {
+    return $this->activeView;
+  }
+
+  function getCode(): string {
 
     if ($this->databaseRequired) {
       $sql = $this->user->getSQL();

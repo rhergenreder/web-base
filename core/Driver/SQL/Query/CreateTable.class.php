@@ -13,6 +13,8 @@ use Driver\SQL\Column\JsonColumn;
 use Driver\SQL\Constraint\PrimaryKey;
 use Driver\SQL\Constraint\Unique;
 use Driver\SQL\Constraint\ForeignKey;
+use Driver\SQL\SQL;
+use Driver\SQL\Strategy\Strategy;
 
 class CreateTable extends Query {
 
@@ -21,7 +23,7 @@ class CreateTable extends Query {
   private array $constraints;
   private bool $ifNotExists;
 
-  public function __construct($sql, $name) {
+  public function __construct(SQL $sql, string $name) {
     parent::__construct($sql);
     $this->tableName = $name;
     $this->columns = array();
@@ -29,67 +31,67 @@ class CreateTable extends Query {
     $this->ifNotExists = false;
   }
 
-  public function addSerial($name) {
+  public function addSerial(string $name): CreateTable {
     $this->columns[$name] = new SerialColumn($name);
     return $this;
   }
 
-  public function addString($name, $maxSize=NULL, $nullable=false, $defaultValue=NULL) {
+  public function addString(string $name, ?int $maxSize = NULL, bool $nullable = false, $defaultValue = NULL): CreateTable {
     $this->columns[$name] = new StringColumn($name, $maxSize, $nullable, $defaultValue);
     return $this;
   }
 
-  public function addDateTime($name, $nullable=false, $defaultValue=NULL) {
+  public function addDateTime(string $name, bool $nullable = false, $defaultValue = NULL): CreateTable {
     $this->columns[$name] = new DateTimeColumn($name, $nullable, $defaultValue);
     return $this;
   }
 
-  public function addInt($name, $nullable=false, $defaultValue=NULL) {
+  public function addInt(string $name, bool $nullable = false, $defaultValue = NULL): CreateTable {
     $this->columns[$name] = new IntColumn($name, $nullable, $defaultValue);
     return $this;
   }
 
-  public function addBool($name, $defaultValue=false) {
+  public function addBool(string $name, $defaultValue = false): CreateTable {
     $this->columns[$name] = new BoolColumn($name, $defaultValue);
     return $this;
   }
 
-  public function addJson($name, $nullable=false, $defaultValue=NULL) {
+  public function addJson(string $name, bool $nullable = false, $defaultValue = NULL): CreateTable {
     $this->columns[$name] = new JsonColumn($name, $nullable, $defaultValue);
     return $this;
   }
 
-  public function addEnum($name, $values, $nullable=false, $defaultValue=NULL) {
+  public function addEnum(string $name, array $values, bool $nullable = false, $defaultValue = NULL): CreateTable {
     $this->columns[$name] = new EnumColumn($name, $values, $nullable, $defaultValue);
     return $this;
   }
 
-  public function primaryKey(...$names) {
+  public function primaryKey(...$names): CreateTable {
     $this->constraints[] = new PrimaryKey($names);
     return $this;
   }
 
-  public function unique(...$names) {
+  public function unique(...$names): CreateTable {
     $this->constraints[] = new Unique($names);
     return $this;
   }
 
-  public function foreignKey($name, $refTable, $refColumn, $strategy = NULL) {
+  public function foreignKey(string $name, string $refTable, string $refColumn, ?Strategy $strategy = NULL): CreateTable {
     $this->constraints[] = new ForeignKey($name, $refTable, $refColumn, $strategy);
     return $this;
   }
 
-  public function onlyIfNotExists() {
+  public function onlyIfNotExists(): CreateTable {
     $this->ifNotExists = true;
     return $this;
   }
 
-  public function execute() {
+  public function execute(): bool {
     return $this->sql->executeCreateTable($this);
   }
 
-  public function ifNotExists() { return $this->ifNotExists; }
-  public function getTableName() { return $this->tableName; }
-  public function getColumns() { return $this->columns; }
-  public function getConstraints() { return $this->constraints; }
+  public function ifNotExists(): bool { return $this->ifNotExists; }
+  public function getTableName(): string { return $this->tableName; }
+  public function getColumns(): array { return $this->columns; }
+  public function getConstraints(): array { return $this->constraints; }
 }

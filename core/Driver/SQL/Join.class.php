@@ -8,9 +8,9 @@ class Join {
   private string $table;
   private string $columnA;
   private string $columnB;
-  private $tableAlias;
+  private ?string $tableAlias;
 
-  public function __construct($type, $table, $columnA, $columnB, $tableAlias=null) {
+  public function __construct(string $type, string $table, string $columnA, string $columnB, ?string $tableAlias = null) {
     $this->type = $type;
     $this->table = $table;
     $this->columnA = $columnA;
@@ -18,10 +18,10 @@ class Join {
     $this->tableAlias = $tableAlias;
   }
 
-  public function getType() { return $this->type; }
-  public function getTable() { return $this->table; }
-  public function getColumnA() { return $this->columnA; }
-  public function getColumnB() { return $this->columnB; }
-  public function getTableAlias() { return $this->tableAlias; }
+  public function getType(): string { return $this->type; }
+  public function getTable(): string { return $this->table; }
+  public function getColumnA(): string { return $this->columnA; }
+  public function getColumnB(): string { return $this->columnB; }
+  public function getTableAlias(): ?string { return $this->tableAlias; }
 
 }

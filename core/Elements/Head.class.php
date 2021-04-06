@@ -24,9 +24,9 @@ abstract class Head extends View {
   }
 
   protected abstract function initSources();
-  protected abstract function initMetas();
-  protected abstract function initRawFields();
-  protected abstract function initTitle();
+  protected abstract function initMetas(): array;
+  protected abstract function initRawFields(): array;
+  protected abstract function initTitle(): string;
 
   protected function init() {
     $this->keywords = array();
@@ -38,13 +38,13 @@ abstract class Head extends View {
   public function setDescription($description) { $this->description = $description; }
   public function setKeywords($keywords) { $this->keywords = $keywords; }
   public function setTitle($title) { $this->title = $title; }
-  public function getSources() { return $this->sources; }
+  public function getSources(): array { return $this->sources; }
   public function addScript($type, $url, $js = '') { $this->sources[] = new Script($type, $url, $js); }
   public function addRawField($rawField) { $this->rawFields[] = $rawField; }
   public function addMeta($aMeta) { $this->metas[] = $aMeta; }
   public function addLink($rel, $href, $type = "") { $this->sources[] = new Link($rel, $href, $type); }
-  public function addKeywords($keywords) { array_merge($this->keywords, $keywords); }
-  public function getTitle() { return $this->title; }
+  public function addKeywords($keywords) { $this->keywords = array_merge($this->keywords, $keywords); }
+  public function getTitle(): string { return $this->title; }
 
   public function addCSS($href, $type = Link::MIME_TEXT_CSS)  { $this->sources[] = new Link(Link::STYLESHEET, $href, $type); }
   public function addStyle($style) { $this->sources[] = new Style($style); }
@@ -68,7 +68,7 @@ abstract class Head extends View {
     $this->addJS(Script::BOOTSTRAP);
   }
 
-  public function getCode() {
+  public function getCode(): string {
     $header = "<head>";
 
     foreach($this->metas as $aMeta) {

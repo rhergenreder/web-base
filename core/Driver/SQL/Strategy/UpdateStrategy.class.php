@@ -12,9 +12,11 @@ class UpdateStrategy extends Strategy {
     $this->values = $values;
   }
 
-  public function getConflictingColumns() {
+  public function getConflictingColumns(): array {
     return $this->conflictingColumns;
   }
 
-  public function getValues() { return $this->values; }
+  public function getValues(): array {
+    return $this->values;
+  }
 }

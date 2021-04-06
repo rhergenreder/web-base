@@ -10,5 +10,5 @@ class CondOr extends Condition {
     $this->conditions = (!empty($conditions) && is_array($conditions[0])) ? $conditions[0] : $conditions;
   }
 
-  public function getConditions() { return $this->conditions; }
+  public function getConditions(): array { return $this->conditions; }
 }

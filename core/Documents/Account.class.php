@@ -34,7 +34,7 @@ namespace Documents\Account {
       $this->loadFontawesome();
     }
 
-    protected function initMetas() {
+    protected function initMetas(): array {
       return array(
         array('name' => 'viewport', 'content' => 'width=device-width, initial-scale=1.0'),
         array('name' => 'format-detection', 'content' => 'telephone=yes'),
@@ -44,11 +44,11 @@ namespace Documents\Account {
       );
     }
 
-    protected function initRawFields() {
+    protected function initRawFields(): array {
       return array();
     }
 
-    protected function initTitle() {
+    protected function initTitle(): string {
       return "Account";
     }
   }
@@ -59,7 +59,7 @@ namespace Documents\Account {
       parent::__construct($document);
     }
 
-    protected function getContent() {
+    protected function getContent(): string {
 
       $view = $this->getDocument()->getView();
       if ($view === null) {

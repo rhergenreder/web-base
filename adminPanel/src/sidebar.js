@@ -75,7 +75,7 @@ export default function Sidebar(props) {
     let filePath = parent.filesPath;
     if (filePath) {
         li.push(<li className={"nav-item"} key={"files"}>
-            <a href={filePath} className={"nav-link"} target={"_blank"} rel={"noopener noreferrer"}>
+            <a href={filePath} className={"nav-link"} target={"_blank"} rel={"noopener"}>
                 <Icon icon={"folder"} className={"nav-icon"} />
                 <p>Files</p>
             </a>

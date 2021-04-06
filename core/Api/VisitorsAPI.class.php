@@ -27,7 +27,7 @@ namespace Api\Visitors {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }
@@ -75,7 +75,7 @@ namespace Api\Visitors {
       }
     }
 
-    public function execute($values = array()) {
+    public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
       }

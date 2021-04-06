@@ -23,7 +23,7 @@ class Script extends StaticView {
     $this->content = $content;
   }
 
-  function getCode() {
+  function getCode(): string {
     $src = (empty($this->src) ? "" : " src=\"$this->src\"");
       return "<script type=\"$this->type\"$src>$this->content</script>";
   }

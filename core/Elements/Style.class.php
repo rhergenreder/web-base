@@ -10,7 +10,7 @@ class Style extends StaticView {
     $this->style = $style;
   }
 
-  function getCode() {
+  function getCode(): string {
     return "<style>$this->style</style>";
   }
 }

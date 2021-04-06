@@ -1,8 +1,8 @@
 <?php
 
-define("WEBBASE_VERSION", "1.1.0");
+define("WEBBASE_VERSION", "1.2.3");
 
-function getProtocol() {
+function getProtocol(): string {
   return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
 }
 
@@ -26,17 +26,44 @@ function generateRandomString($length): string {
   return $randomString;
 }
 
-function startsWith($haystack, $needle) {
+function startsWith($haystack, $needle, bool $ignoreCase = false): bool {
+
   $length = strlen($needle);
-  return (substr($haystack, 0, $length) === $needle);
+  if ($length === 0) {
+    return true;
+  }
+
+  if ($ignoreCase) {
+    $haystack = strtolower($haystack);
+    $needle = strtolower($needle);
+  }
+
+  // PHP 8.0 support
+  if (function_exists("str_starts_with")) {
+    return str_starts_with($haystack, $needle);
+  } else {
+    return (substr($haystack, 0, $length) === $needle);
+  }
 }
 
-function endsWith($haystack, $needle) {
-  $length = strlen($needle);
-  if ($length == 0)
-    return true;
+function endsWith($haystack, $needle, bool $ignoreCase = false): bool {
 
-  return (substr($haystack, -$length) === $needle);
+  $length = strlen($needle);
+  if ($length === 0) {
+    return true;
+  }
+
+  if ($ignoreCase) {
+    $haystack = strtolower($haystack);
+    $needle = strtolower($needle);
+  }
+
+  // PHP 8.0 support
+  if (function_exists("str_ends_with")) {
+    return str_ends_with($haystack, $needle);
+  } else {
+    return (substr($haystack, -$length) === $needle);
+  }
 }
 
 function intendCode($code, $escape = true) {
@@ -83,7 +110,7 @@ function getClassPath($class, $suffix = true) {
   $path = str_replace('\\', '/', $class);
   $path = array_values(array_filter(explode("/", $path)));
 
-  if (strcasecmp($path[0], "api") === 0 && count($path) > 2 && strcasecmp($path[1], "Parameter") !== 0) {
+  if (count($path) > 2 && strcasecmp($path[0], "api") === 0 && strcasecmp($path[1], "Parameter") !== 0) {
     $path = "Api/" . $path[1] . "API";
   } else {
     $path = implode("/", $path);
@@ -97,7 +124,7 @@ function createError($msg) {
   return json_encode(array("success" => false, "msg" => $msg));
 }
 
-function serveStatic(string $webRoot, string $file) {
+function serveStatic(string $webRoot, string $file): string {
 
   $path = realpath($webRoot . "/" . $file);
   if (!startsWith($path, $webRoot . "/")) {
@@ -112,8 +139,8 @@ function serveStatic(string $webRoot, string $file) {
 
   $pathInfo = pathinfo($path);
 
-  // TODO: add more file extensions here
-  $allowedExtension = array("html", "htm");
+  // TODO: add more file extensions here, probably add them to settings?
+  $allowedExtension = array("html", "htm", "pdf");
   $ext = $pathInfo["extension"] ?? "";
   if (!in_array($ext, $allowedExtension)) {
     http_response_code(406);

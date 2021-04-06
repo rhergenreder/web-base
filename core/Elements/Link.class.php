@@ -22,7 +22,7 @@ class Link extends StaticView {
     $this->rel = $rel;
   }
 
-  function getCode() {
+  function getCode(): string {
     $type = (empty($this->type) ? "" : " type=\"$this->type\"");
     return "<link rel=\"$this->rel\" href=\"$this->href\"$type/>";
   }

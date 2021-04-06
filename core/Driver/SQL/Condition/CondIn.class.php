@@ -12,6 +12,6 @@ class CondIn extends Condition {
     $this->expression = $expression;
   }
 
-  public function getColumn() { return $this->column; }
+  public function getColumn(): string { return $this->column; }
   public function getExpression() { return $this->expression; }
 }

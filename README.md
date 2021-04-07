@@ -7,13 +7,14 @@ Web-Base is a php framework which provides basic web functionalities and a moder
 - One of these php extensions: mysqli, postgres
 
 ### Current Functionalities:
-- Installation Guide with automatic database setup
-- REST API
-- Account management
-- Supporting MySQL + PostgreSQL
-- Dynamic Page Routing
+- [Installation Guide with automatic database setup](#installation)
+- [REST API](#adding-api-endpoints)
+- [Supporting MySQL + PostgreSQL](#modifying-the-database)
+- [Dynamic Page Routing](#routing)
+- [Localization](#localization)
+- [Command Line Interface (CLI)](#cli)
+- [Account & User functions](#access-control)
 - Admin Dashboard
-- Account & User functions
 - File Sharing Dashboard
 
 ### Upcoming:
@@ -112,7 +113,7 @@ If any result is expected from the api call, the `$req->getResult()` method can 
 This step is not really required, as and changes made to the database must not be presented inside the code.
 On the other hand, it is recommended to keep track of any modifications for later use or to deploy the application
 to other systems. Therefore, either the [default installation script](/core/Configuration/CreateDatabase.class.php) or
-an additional patch file, which can be executed using the [CLI](/cli.php), can be created. The patch files are usually
+an additional patch file, which can be executed using the [CLI](#CLI), can be created. The patch files are usually
 located in [/core/Configuration/Patch](/core/Configuration/Patch) and have the following structure:
 
 ```php
@@ -264,6 +265,37 @@ class SomeView extends \Elements\View {
     return L("Welcome") . "! " . L("EXAMPLE_KEY");
   }
 }
+```
+
+## CLI
+
+Using the CLI, you can toggle the maintenance mode, perform database updates, managing routes and updating the whole project. Some example usages:
+
+### Maintenance commands
+```bash
+php cli.php maintenance status
+php cli.php maintenance off
+php cli.php maintenance on
+php cli.php maintenance update
+```
+
+### Database commands
+```bash
+php cli.php db export > dump.sql
+php cli.php db export --data-only > data.sql
+php cli.php db import dump.sql
+php cli.php db migrate Patch/SomePatch
+```
+
+### Route commands
+```bash
+# Route commands
+php cli.php routes list
+php cli.php routes remove 1
+php cli.php routes enable 1
+php cli.php routes disable 1
+php cli.php routes add /some/path static /static/test.html
+php.cli.php routes modify 1 '/regex(/.*)?' dynamic '\\Documents\\Test'
 ```
 
 ## Anything more?

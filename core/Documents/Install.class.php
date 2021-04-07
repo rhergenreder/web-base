@@ -88,6 +88,10 @@ namespace Documents\Install {
       $this->steps = array();
     }
 
+    function isDocker(): bool {
+      return file_exists("/.dockerenv");
+    }
+
     private function getParameter($name): ?string {
       if (isset($_REQUEST[$name]) && is_string($_REQUEST[$name])) {
         return trim($_REQUEST[$name]);
@@ -542,6 +546,10 @@ namespace Documents\Install {
             $attributes["max"] = $formItem["max"];
           if (isset($formItem["step"]) && is_numeric($formItem["step"]))
             $attributes["step"] = $formItem["step"];
+        } else {
+          if (isset($formItem["default"])) {
+            $attributes["value"] = $formItem["default"];
+          }
         }
       }
 
@@ -579,6 +587,12 @@ namespace Documents\Install {
 
     private function createProgessMainview(): string {
 
+      $isDocker = $this->isDocker();
+      $defaultHost = ($isDocker ? "db" : "");
+      $defaultUsername = ($isDocker ? "root" : "");
+      $defaultPassword = ($isDocker ? "webbasedb" : "");
+      $defaultDatabase = ($isDocker ? "webbase" : "");
+
       $views = array(
         self::CHECKING_REQUIREMENTS => array(
           "title" => "Application Requirements",
@@ -590,13 +604,13 @@ namespace Documents\Install {
             array("title" => "Database Type", "name" => "type", "type" => "select", "required" => true, "items" => array(
               "mysql" => "MySQL", "postgres" => "PostgreSQL"
             )),
-            array("title" => "Username", "name" => "username", "type" => "text", "required" => true),
-            array("title" => "Password", "name" => "password", "type" => "password"),
-            array("title" => "Database", "name" => "database", "type" => "text", "required" => true),
+            array("title" => "Username", "name" => "username", "type" => "text", "required" => true, "default" => $defaultUsername),
+            array("title" => "Password", "name" => "password", "type" => "password", "default" => $defaultPassword),
+            array("title" => "Database", "name" => "database", "type" => "text", "required" => true, "default" => $defaultDatabase),
             array("type" => "row", "items" => array(
               array(
                 "title" => "Address", "name" => "host", "type" => "text", "required" => true,
-                "value" => "localhost", "row" => true
+                "value" => "localhost", "row" => true, "default" => $defaultHost
               ),
               array(
                 "title" => "Port", "name" => "port", "type" => "number", "required" => true,

@@ -18,7 +18,7 @@ use Elements\Document;
 
 if (!is_readable(getClassPath(Configuration::class))) {
   header("Content-Type: application/json");
-  die(json_encode(array( "success" => false, "msg" => "Configuration directory is not readable, check permissions before proceeding." )));
+  die(json_encode(array( "success" => false, "msg" => "Configuration class is not readable, check permissions before proceeding." )));
 }
 
 $config = new Configuration();

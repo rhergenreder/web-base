@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+    - .:/application:rw
+    - ./docker/nginx/site.conf:/etc/nginx/conf.d/default.conf:ro
+    links:
+      - db
+      - php
+  db:
+    image: mariadb:latest
+    ports:
+      -  '3306:3306'
+    environment:
+      - "MYSQL_ROOT_PASSWORD=webbasedb"
+      - "MYSQL_DATABASE=webbase"
+  php:
+    volumes:
+      - .:/application:rw
+      - ./docker/php/php.ini:/usr/local/etc/php/php.ini:ro
+    build:
+      context: './docker/php/'
+    links:
+      - db
+

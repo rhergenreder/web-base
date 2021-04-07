@@ -5,6 +5,7 @@ Web-Base is a php framework which provides basic web functionalities and a moder
 ### Requirements
 - PHP >= 7.4
 - One of these php extensions: mysqli, postgres
+- Apache/nginx or docker
 
 ### Current Functionalities:
 - [Installation Guide with automatic database setup](#installation)
@@ -16,16 +17,22 @@ Web-Base is a php framework which provides basic web functionalities and a moder
 - [Account & User functions](#access-control)
 - Admin Dashboard
 - File Sharing Dashboard
+- Docker Support
 
 ### Upcoming:
 I actually don't know what i want to implement here. There are quite to many CMS out there with alot of vulnerabilities. There also exist some frameworks already. This project is meant to provide a stable project base to implement what ever a developer wants to: Dynamic Homepages, Webshops, ..
 
 ## Installation
 
+### Default Installation
 1. `git clone https://git.romanh.de/Projekte/web-base` (or `https://github.com/rhergenreder/web-base`)
 2. Create a [mysql](https://dev.mysql.com/doc/refman/5.7/en/creating-database.html) or [postgresql](https://www.postgresql.org/docs/9.0/sql-createdatabase.html) database
     or use an existing empty database (e.g. test or public)
 3. Open the webapp in your browser and follow the installation guide
+
+### Docker Installation
+1. `docker-compose up`
+2. Open the webapp in your browser and follow the installation guide
 
 For any changes made in [/adminPanel](/adminPanel) or [/fileControlPanel](/fileControlPanel), run:
 1. once: `npm i`

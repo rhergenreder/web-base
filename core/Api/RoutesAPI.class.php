@@ -1,7 +1,12 @@
 <?php
 
 namespace Api {
+
+  use Driver\SQL\Condition\Compare;
+
   abstract class RoutesAPI extends Request {
+
+    const ACTIONS = array("redirect_temporary", "redirect_permanently", "static", "dynamic");
 
     protected function formatRegex(string $input, bool $append) : string {
       $start = startsWith($input, "^");
@@ -16,6 +21,39 @@ namespace Api {
 
       return $input;
     }
+
+    protected function routeExists($uid): bool {
+      $sql = $this->user->getSQL();
+      $res = $sql->select($sql->count())
+        ->from("Route")
+        ->where(new Compare("uid", $uid))
+        ->execute();
+
+      $this->success = ($res !== false);
+      $this->lastError = $sql->getLastError();
+      if ($this->success) {
+        if ($res[0]["count"] === 0) {
+          return $this->createError("Route not found");
+        }
+      }
+
+      return $this->success;
+    }
+
+    protected function toggleRoute($uid, $active): bool {
+      if (!$this->routeExists($uid)) {
+        return false;
+      }
+
+      $sql = $this->user->getSQL();
+      $this->success = $sql->update("Route")
+        ->set("active", $active)
+        ->where(new Compare("uid", $uid))
+        ->execute();
+
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
   }
 }
 
@@ -25,8 +63,10 @@ namespace Api\Routes {
   use Api\Parameter\StringType;
   use Api\RoutesAPI;
   use Driver\SQL\Column\Column;
+  use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondBool;
   use Driver\SQL\Condition\CondRegex;
+  use Objects\User;
 
   class Fetch extends RoutesAPI {
 
@@ -162,7 +202,7 @@ namespace Api\Routes {
       return $this->success;
     }
 
-    private function validateRoutes() {
+    private function validateRoutes(): bool {
 
       $this->routes = array();
       $keys = array(
@@ -171,10 +211,6 @@ namespace Api\Routes {
         "target" => Parameter::TYPE_STRING,
         "extra"  => Parameter::TYPE_STRING,
         "active" => Parameter::TYPE_BOOLEAN
-      );
-
-      $actions = array(
-        "redirect_temporary", "redirect_permanently", "static", "dynamic"
       );
 
       foreach($this->getParam("routes") as $index => $route) {
@@ -193,7 +229,7 @@ namespace Api\Routes {
         }
 
         $action = $route["action"];
-        if (!in_array($action, $actions)) {
+        if (!in_array($action, self::ACTIONS)) {
           return $this->createError("Invalid action: $action");
         }
 
@@ -211,6 +247,150 @@ namespace Api\Routes {
       }
 
       return true;
+    }
+  }
+
+  class Add extends RoutesAPI {
+
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "request" => new StringType("request", 128),
+        "action" => new StringType("action"),
+        "target" => new StringType("target", 128),
+        "extra"  => new StringType("extra", 64, true, ""),
+      ));
+      $this->isPublic = false;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $request = $this->formatRegex($this->getParam("request"), true);
+      $action = $this->getParam("action");
+      $target = $this->getParam("target");
+      $extra = $this->getParam("extra");
+
+      if (!in_array($action, self::ACTIONS)) {
+        return $this->createError("Invalid action: $action");
+      }
+
+      $sql = $this->user->getSQL();
+      $this->success = $sql->insert("Route", ["request", "action", "target", "extra"])
+        ->addRow($request, $action, $target, $extra)
+        ->execute();
+
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
+  }
+
+  class Update extends RoutesAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "uid" => new Parameter("uid", Parameter::TYPE_INT),
+        "request" => new StringType("request", 128),
+        "action" => new StringType("action"),
+        "target" => new StringType("target", 128),
+        "extra"  => new StringType("extra", 64, true, ""),
+      ));
+      $this->isPublic = false;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $uid = $this->getParam("uid");
+      if (!$this->routeExists($uid)) {
+        return false;
+      }
+
+      $request = $this->formatRegex($this->getParam("request"), true);
+      $action = $this->getParam("action");
+      $target = $this->getParam("target");
+      $extra = $this->getParam("extra");
+      if (!in_array($action, self::ACTIONS)) {
+        return $this->createError("Invalid action: $action");
+      }
+
+      $sql = $this->user->getSQL();
+      $this->success = $sql->update("Route")
+        ->set("request", $request)
+        ->set("action", $action)
+        ->set("target", $target)
+        ->set("extra", $extra)
+        ->where(new Compare("uid", $uid))
+        ->execute();
+
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
+  }
+
+  class Remove extends RoutesAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "uid" => new Parameter("uid", Parameter::TYPE_INT)
+      ));
+      $this->isPublic = false;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $uid = $this->getParam("uid");
+      if (!$this->routeExists($uid)) {
+        return false;
+      }
+
+      $sql = $this->user->getSQL();
+      $this->success = $sql->delete("Route")
+        ->where(new Compare("uid", $uid))
+        ->execute();
+
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
+  }
+
+  class Enable extends RoutesAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "uid" => new Parameter("uid", Parameter::TYPE_INT)
+      ));
+      $this->isPublic = false;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $uid = $this->getParam("uid");
+      return $this->toggleRoute($uid, true);
+    }
+  }
+
+  class Disable extends RoutesAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "uid" => new Parameter("uid", Parameter::TYPE_INT)
+      ));
+      $this->isPublic = false;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $uid = $this->getParam("uid");
+      return $this->toggleRoute($uid, false);
     }
   }
 }

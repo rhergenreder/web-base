@@ -223,7 +223,7 @@ function onMaintenance(array $argv) {
     exec("git pull " . str_replace("/", " ", $pullBranch) . " --no-ff", $gitPull, $ret);
     if ($ret !== 0) {
       printLine();
-      printLine("Update could not be applied, check the following git message.");
+      printLine("Update could not be applied, check the git output.");
       printLine("Follow the instructions and afterwards turn off the maintenance mode again using:");
       printLine("cli.php maintenance off");
       die();
@@ -306,14 +306,13 @@ function onRoutes(array $argv) {
       "extra" => $argv[6] ?? ""
     );
 
-    /*
     $req  = new Api\Routes\Add($user);
     $success = $req->execute($params);
     if (!$success) {
       _exit($req->getLastError());
     } else {
       _exit("Route added successfully");
-    }*/
+    }
   } else if (in_array($action, ["remove","modify","enable","disable"])) {
     $uid = $argv[3] ?? null;
     if ($uid === null || ($action === "modify" && count($argv) < 7)) {
@@ -334,13 +333,13 @@ function onRoutes(array $argv) {
         echo "Remove route #$uid? (y|n): ";
       } while(($input = trim(fgets(STDIN))) !== "y");
 
-      // $req = new Api\Routes\Remove($user);
+      $req = new Api\Routes\Remove($user);
     } else if ($action === "enable") {
-      // $req = new Api\Routes\Enable($user);
+      $req = new Api\Routes\Enable($user);
     } else if ($action === "disable") {
-      // $req = new Api\Routes\Disable($user);
+      $req = new Api\Routes\Disable($user);
     } else if ($action === "modify") {
-      // $req = new Api\Routes\Update($user);
+      $req = new Api\Routes\Update($user);
       $params["request"] = $argv[4];
       $params["action"] = $argv[5];
       $params["target"] = $argv[6];
@@ -349,14 +348,12 @@ function onRoutes(array $argv) {
       _exit("Unsupported action");
     }
 
-    /*
     $success = $req->execute($params);
     if (!$success) {
       _exit($req->getLastError());
     } else {
       _exit("Route updated successfully");
     }
-    */
   } else {
     _exit("Usage: cli.php routes <list|enable|disable|add|remove|modify> [options...]");
   }

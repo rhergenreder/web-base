@@ -1,28 +1,25 @@
 <?php
 
+include_once 'core/core.php';
+include_once 'core/datetime.php';
+include_once 'core/constants.php';
+
+if (is_file("MAINTENANCE")) {
+  http_response_code(503);
+  $currentDir = dirname(__FILE__);
+  serveStatic($currentDir, "/static/maintenance.html");
+  die();
+}
+
 use Api\Request;
 use Configuration\Configuration;
 use Documents\Document404;
 use Elements\Document;
 
-include_once 'core/core.php';
-include_once 'core/datetime.php';
-include_once 'core/constants.php';
-
 if (!is_readable(getClassPath(Configuration::class))) {
   header("Content-Type: application/json");
   die(json_encode(array( "success" => false, "msg" => "Configuration directory is not readable, check permissions before proceeding." )));
 }
-
-spl_autoload_extensions(".php");
-spl_autoload_register(function($class) {
-  $full_path = getClassPath($class, true);
-  if(file_exists($full_path)) {
-    include_once $full_path;
-  } else {
-    include_once getClassPath($class, false);
-  }
-});
 
 $config = new Configuration();
 $user   = new Objects\User($config);

@@ -111,13 +111,15 @@ class Request {
       return false;
     }
 
-    if (!in_array($_SERVER['REQUEST_METHOD'], $this->allowedMethods)) {
-      $this->lastError = 'This method is not allowed';
-      header('HTTP 1.1 405 Method Not Allowed');
-      return false;
-    }
-
     if ($this->externalCall) {
+
+      // check the request method
+      if (!in_array($_SERVER['REQUEST_METHOD'], $this->allowedMethods)) {
+        $this->lastError = 'This method is not allowed';
+        header('HTTP 1.1 405 Method Not Allowed');
+        return false;
+      }
+
       $apiKeyAuthorized = false;
 
       // Logged in or api key authorized?

@@ -53,7 +53,7 @@ class PostgreSQL extends SQL {
       }
     }
 
-    $this->connection = @pg_connect(implode(" ", $connectionString));
+    $this->connection = @pg_connect(implode(" ", $connectionString), PGSQL_CONNECT_FORCE_NEW);
     if (!$this->connection) {
       $this->lastError = "Failed to connect to Database";
       $this->connection = NULL;

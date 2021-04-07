@@ -1,9 +1,24 @@
 <?php
 
-define("WEBBASE_VERSION", "1.2.3");
+define("WEBBASE_VERSION", "1.2.4");
+
+spl_autoload_extensions(".php");
+spl_autoload_register(function($class) {
+  $full_path = getClassPath($class);
+  if(file_exists($full_path)) {
+    include_once $full_path;
+  } else {
+    include_once getClassPath($class, false);
+  }
+});
+
 
 function getProtocol(): string {
-  return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
+  $isSecure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') ||
+              (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') ||
+              (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] == 'on');
+
+  return $isSecure ? 'https' : 'http';
 }
 
 function generateRandomString($length): string {

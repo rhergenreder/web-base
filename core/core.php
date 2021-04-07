@@ -1,6 +1,6 @@
 <?php
 
-define("WEBBASE_VERSION", "1.2.3");
+define("WEBBASE_VERSION", "1.2.4");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {

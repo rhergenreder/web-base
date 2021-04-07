@@ -160,6 +160,24 @@ function handleDatabase(array $argv) {
   }
 }
 
+function findPullBranch(array $output): ?string {
+  foreach ($output as $line) {
+    $parts = preg_split('/\s+/', $line);
+    if (count($parts) >= 3 && $parts[2] === '(fetch)') {
+      $remoteName = $parts[0];
+      $url = $parts[1];
+      if (endsWith($url, "@github.com:rhergenreder/web-base.git") ||
+          endsWith($url, "@romanh.de:Projekte/web-base.git") ||
+          $url === 'https://github.com/rhergenreder/web-base.git' ||
+          $url === 'https://git.romanh.de/Projekte/web-base.git') {
+        return "$remoteName/master";
+      }
+    }
+  }
+
+  return null;
+}
+
 function onMaintenance(array $argv) {
   $action = $argv[2] ?? "status";
   $maintenanceFile = "MAINTENANCE";
@@ -180,9 +198,21 @@ function onMaintenance(array $argv) {
     _exit("Maintenance disabled");
   } else if ($action === "update") {
 
-    // TODO: find that dynamically
-    $pullBranch = "root/master";
-    $pushBranch = "origin/master";
+    printLine("$ git remote -v");
+    exec("git remote -v", $gitRemote, $ret);
+    if ($ret !== 0) {
+      die();
+    }
+
+    $pullBranch = findPullBranch($gitRemote);
+    if ($pullBranch === null) {
+      $pullBranch = 'origin/master';
+      printLine("Unable to find remote update branch. Make sure, you are still in a git repository, and one of the remote branches " .
+                      "have the original fetch url");
+      printLine("Trying to continue with '$pullBranch'");
+    } else {
+      printLine("Using remote update branch: $pullBranch");
+    }
 
     printLine("$ git fetch " . str_replace("/", " ", $pullBranch));
     exec("git fetch " . str_replace("/", " ", $pullBranch), $gitFetch, $ret);
@@ -203,12 +233,6 @@ function onMaintenance(array $argv) {
     exec("git diff-index --quiet HEAD --", $gitDiff, $ret);
     if ($ret !== 0) {
       _exit("You have uncommitted changes. Please commit them before updating.");
-    }
-
-    printLine("$ git rev-list HEAD...$pushBranch --ignore-submodules --count");
-    exec("git rev-list HEAD...$pushBranch --ignore-submodules --count", $gitRevList, $ret);
-    if ($ret !== 0) {
-      _exit("HEAD is behind your local branch. Please push your commits before updating.");
     }
 
     // enable maintenance mode if it wasn't turned on before

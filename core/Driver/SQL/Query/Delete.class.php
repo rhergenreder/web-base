@@ -21,10 +21,12 @@ class Delete extends Query {
     return $this;
   }
 
-  public function execute(): bool {
-    return $this->sql->executeDelete($this);
-  }
-
   public function getTable(): string { return $this->table; }
   public function getConditions(): array { return $this->conditions; }
+
+  public function build(array &$params, Query $context = NULL): ?string {
+    $table = $this->sql->tableName($this->getTable());
+    $where = $this->sql->getWhereClause($this->getConditions(), $params);
+    return "DELETE FROM $table$where";
+  }
 }

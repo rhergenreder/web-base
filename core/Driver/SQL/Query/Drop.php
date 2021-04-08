@@ -19,11 +19,11 @@ class Drop extends Query {
     $this->table = $table;
   }
 
-  public function execute(): bool {
-    return $this->sql->executeDrop($this);
-  }
-
   public function getTable(): string {
     return $this->table;
+  }
+
+  public function build(array &$params, Query $context = NULL): ?string {
+    return "DROP TABLE " . $this->sql->tableName($this->getTable());
   }
 }

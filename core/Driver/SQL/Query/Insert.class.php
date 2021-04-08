@@ -37,8 +37,9 @@ class Insert extends Query {
     return $this;
   }
 
-  public function execute(): bool {
-    return $this->sql->executeInsert($this);
+  public function execute() {
+    $fetchResult = !empty($this->sql->getReturning($this->returning));
+    return $this->sql->executeQuery($this, $fetchResult);
   }
 
   public function getTableName(): string { return $this->tableName; }
@@ -46,4 +47,42 @@ class Insert extends Query {
   public function getRows(): array { return $this->rows; }
   public function onDuplicateKey(): ?Strategy { return $this->onDuplicateKey; }
   public function getReturning(): ?string { return $this->returning; }
+
+  public function build(array &$params, Query $context = NULL): ?string {
+    $tableName = $this->sql->tableName($this->getTableName());
+    $columns = $this->getColumns();
+    $rows = $this->getRows();
+
+    if (empty($rows)) {
+      $this->sql->setLastError("No rows to insert given.");
+      return null;
+    }
+
+    if (is_null($columns) || empty($columns)) {
+      $columnStr = "";
+    } else {
+      $columnStr = " (" . $this->sql->columnName($columns) . ")";
+    }
+
+    $values = array();
+    foreach ($rows as $row) {
+      $rowPlaceHolder = array();
+      foreach ($row as $val) {
+        $rowPlaceHolder[] = $this->sql->addValue($val, $params);
+      }
+
+      $values[] = "(" . implode(",", $rowPlaceHolder) . ")";
+    }
+
+    $values = implode(",", $values);
+
+    $onDuplicateKey = $this->sql->getOnDuplicateStrategy($this->onDuplicateKey(), $params);
+    if ($onDuplicateKey === FALSE) {
+      return null;
+    }
+
+    $returningCol = $this->getReturning();
+    $returning = $this->sql->getReturning($returningCol);
+    return "INSERT INTO $tableName$columnStr VALUES $values$onDuplicateKey$returning";
+  }
 }

@@ -16,7 +16,9 @@ use \Driver\SQL\Constraint\Unique;
 use \Driver\SQL\Constraint\PrimaryKey;
 use \Driver\SQL\Constraint\ForeignKey;
 use Driver\SQL\Query\AlterTable;
+use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\Query\CreateTable;
+use Driver\SQL\Query\CreateTrigger;
 use Driver\SQL\Query\Delete;
 use Driver\SQL\Query\Drop;
 use Driver\SQL\Query\Insert;
@@ -44,45 +46,54 @@ abstract class SQL {
     $this->lastInsertId = 0;
   }
 
-  public function isConnected() {
+  public function isConnected(): bool {
     return !is_null($this->connection);
   }
 
-  public function getLastError() {
+  public function getLastError(): string {
     return trim($this->lastError);
   }
 
-  public function createTable($tableName) {
+  public function createTable($tableName): CreateTable {
     return new CreateTable($this, $tableName);
   }
 
-  public function insert($tableName, $columns=array()) {
+  public function insert($tableName, $columns=array()): Insert {
     return new Insert($this, $tableName, $columns);
   }
 
-  public function select(...$columNames) {
+  public function select(...$columNames): Select {
     return new Select($this, $columNames);
   }
 
-  public function truncate($table) {
+  public function truncate($table): Truncate {
     return new Truncate($this, $table);
   }
 
-  public function delete($table) {
+  public function delete($table): Delete {
     return new Delete($this, $table);
   }
 
-  public function update($table) {
+  public function update($table): Update {
     return new Update($this, $table);
   }
 
-  public function drop(string $table) {
+  public function drop(string $table): Drop {
     return new Drop($this, $table);
   }
 
-  public function alterTable($tableName) {
+  public function alterTable($tableName): AlterTable {
     return new AlterTable($this, $tableName);
   }
+
+  public function createTrigger($triggerName): CreateTrigger {
+    return new CreateTrigger($this, $triggerName);
+  }
+
+  public function createProcedure(string $procName): CreateProcedure {
+    return new CreateProcedure($this, $procName);
+  }
+
 
   // ####################
   // ### ABSTRACT METHODS
@@ -92,223 +103,37 @@ abstract class SQL {
   public abstract function checkRequirements();
   public abstract function getDriverName();
 
-  // Connection Managment
+  // Connection Management
   public abstract function connect();
   public abstract function disconnect();
 
-  // Querybuilder
-  protected function buildQuery(Query $query, array &$params) {
-    if ($query instanceof Select) {
-      $select = $query;
-      $columns = $this->columnName($select->getColumns());
-      $tables = $select->getTables();
+  public function executeQuery(Query $query, bool $fetchResult = false) {
 
-      if (!$tables) {
-        return $this->execute("SELECT $columns", $params, true);
-      }
+    $parameters = [];
+    $queryStr = $query->build($parameters);
 
-      $tables = $this->tableName($tables);
-      $where = $this->getWhereClause($select->getConditions(), $params);
-
-      $joinStr = "";
-      $joins = $select->getJoins();
-      if (!empty($joins)) {
-        foreach($joins as $join) {
-          $type = $join->getType();
-          $joinTable = $this->tableName($join->getTable());
-          $columnA = $this->columnName($join->getColumnA());
-          $columnB = $this->columnName($join->getColumnB());
-          $tableAlias = ($join->getTableAlias() ? " " . $join->getTableAlias() : "");
-
-          $joinStr .= " $type JOIN $joinTable$tableAlias ON $columnA=$columnB";
-        }
-      }
-
-      $groupBy = "";
-      $groupColumns = $select->getGroupBy();
-      if (!empty($groupColumns)) {
-        $groupBy = " GROUP BY " . $this->columnName($groupColumns);
-      }
-
-      $orderBy = "";
-      $orderColumns = $select->getOrderBy();
-      if (!empty($orderColumns)) {
-        $orderBy = " ORDER BY " . $this->columnName($orderColumns);
-        $orderBy .= ($select->isOrderedAscending() ? " ASC" : " DESC");
-      }
-
-      $limit = ($select->getLimit() > 0 ? (" LIMIT " . $select->getLimit()) : "");
-      $offset = ($select->getOffset() > 0 ? (" OFFSET " . $select->getOffset()) : "");
-      return "SELECT $columns FROM $tables$joinStr$where$groupBy$orderBy$limit$offset";
-    } else {
-      $this->lastError = "buildQuery() not implemented for type: " . get_class($query);
-      return FALSE;
-    }
-  }
-
-  public function executeCreateTable(CreateTable $createTable) {
-    $tableName = $this->tableName($createTable->getTableName());
-    $ifNotExists = $createTable->ifNotExists() ? " IF NOT EXISTS": "";
-
-    $entries = array();
-    foreach($createTable->getColumns() as $column) {
-      $entries[] = ($tmp = $this->getColumnDefinition($column));
-      if (is_null($tmp)) {
-        return false;
-      }
+    if($query->dump) {
+      var_dump($queryStr);
+      var_dump($parameters);
     }
 
-    foreach($createTable->getConstraints() as $constraint) {
-      $entries[] = ($tmp = $this->getConstraintDefinition($constraint));
-      if (is_null($tmp)) {
-        return false;
-      }
-    }
-
-    $entries = implode(",", $entries);
-    $query = "CREATE TABLE$ifNotExists $tableName ($entries)";
-    return $this->execute($query);
-  }
-
-  public function executeInsert(Insert $insert) {
-
-    $tableName = $this->tableName($insert->getTableName());
-    $columns = $insert->getColumns();
-    $rows = $insert->getRows();
-
-    if (empty($rows)) {
-      $this->lastError = "No rows to insert given.";
+    if ($queryStr === null) {
       return false;
     }
 
-    if (is_null($columns) || empty($columns)) {
-      $columnStr = "";
-    } else {
-      $columnStr = " (" . $this->columnName($columns) . ")";
-    }
-
-    $parameters = array();
-    $values = array();
-    foreach($rows as $row) {
-      $rowPlaceHolder = array();
-      foreach($row as $val) {
-        $rowPlaceHolder[] = $this->addValue($val, $parameters);
-      }
-
-      $values[] = "(" . implode(",", $rowPlaceHolder) . ")";
-    }
-
-    $values = implode(",", $values);
-
-    $onDuplicateKey = $this->getOnDuplicateStrategy($insert->onDuplicateKey(), $parameters);
-    if ($onDuplicateKey === FALSE) {
-      return false;
-    }
-
-    $returningCol = $insert->getReturning();
-    $returning = $this->getReturning($returningCol);
-
-    $query = "INSERT INTO $tableName$columnStr VALUES $values$onDuplicateKey$returning";
-    if($insert->dump) { var_dump($query); var_dump($parameters); }
-    $res = $this->execute($query, $parameters, !empty($returning));
+    $res = $this->execute($queryStr, $parameters, $fetchResult);
     $success = ($res !== FALSE);
 
-    if($success && $returningCol) {
-      $this->fetchReturning($res, $returningCol);
+    // fetch generated serial ids for Insert statements
+    $generatedColumn = ($query instanceof Insert ? $query->getReturning() : null);
+    if($success && $fetchResult && $generatedColumn) {
+      $this->fetchReturning($res, $generatedColumn);
     }
 
-    return $success;
+    return $fetchResult ? $res : $success;
   }
 
-  public function executeSelect(Select $select) {
-    $params = array();
-    $query = $this->buildQuery($select, $params);
-    if($select->dump) { var_dump($query); var_dump($params); }
-    return $this->execute($query, $params, true);
-  }
-
-  public function executeDelete(Delete $delete) {
-
-    $params = array();
-    $table = $this->tableName($delete->getTable());
-    $where = $this->getWhereClause($delete->getConditions(), $params);
-
-    $query = "DELETE FROM $table$where";
-    if($delete->dump) { var_dump($query); }
-    return $this->execute($query, $params);
-  }
-
-  public function executeTruncate(Truncate $truncate) {
-    $query = "TRUNCATE " . $this->tableName($truncate->getTable());
-    if ($truncate->dump) { var_dump($query); }
-    return $this->execute($query);
-  }
-
-  public function executeUpdate(Update $update) {
-
-    $params = array();
-    $table = $this->tableName($update->getTable());
-
-    $valueStr = array();
-    foreach($update->getValues() as $key => $val) {
-      $valueStr[] = $this->columnName($key) . "=" . $this->addValue($val, $params);
-    }
-    $valueStr = implode(",", $valueStr);
-
-    $where = $this->getWhereClause($update->getConditions(), $params);
-    $query = "UPDATE $table SET $valueStr$where";
-    if($update->dump) { var_dump($query); var_dump($params); }
-    return $this->execute($query, $params);
-  }
-
-  public function executeDrop(Drop $drop) {
-    $query = "DROP TABLE " . $this->tableName($drop->getTable());
-    if ($drop->dump) { var_dump($query); }
-    return $this->execute($query);
-  }
-
-  public function executeAlter(AlterTable $alter): bool {
-    $tableName = $this->tableName($alter->getTable());
-    $action = $alter->getAction();
-    $column = $alter->getColumn();
-    $constraint = $alter->getConstraint();
-
-    $query = "ALTER TABLE $tableName $action ";
-
-    if ($column) {
-      $query .= "COLUMN ";
-      if ($action === "DROP") {
-        $query .= $this->columnName($column->getName());
-      } else {
-        // ADD or modify
-        $query .= $this->getColumnDefinition($column);
-      }
-    } else if ($constraint) {
-      if ($action === "DROP") {
-        if ($constraint instanceof PrimaryKey) {
-          $query .= "PRIMARY KEY";
-        } else if ($constraint instanceof ForeignKey) {
-          // TODO: how can we pass the constraint name here?
-          $this->lastError = "DROP CONSTRAINT foreign key is not supported yet.";
-          return false;
-        }
-      } else if ($action === "ADD") {
-        $query .= "CONSTRAINT ";
-        $query .= $this->getConstraintDefinition($constraint);
-      } else if ($action === "MODIFY") {
-        $this->lastError = "MODIFY CONSTRAINT foreign key is not supported.";
-        return false;
-      }
-    } else {
-      $this->lastError = "ALTER TABLE requires at least a column or a constraint.";
-      return false;
-    }
-
-    if ($alter->dump) { var_dump($query); }
-    return $this->execute($query);
-  }
-
-  protected function getWhereClause($conditions, &$params) {
+  public function getWhereClause($conditions, &$params): string {
     if (!$conditions) {
       return "";
     } else {
@@ -316,7 +141,7 @@ abstract class SQL {
     }
   }
 
-  public function getConstraintDefinition(Constraint $constraint) {
+  public function getConstraintDefinition(Constraint $constraint): ?string {
     $columnName = $this->columnName($constraint->getColumnNames());
     if ($constraint instanceof PrimaryKey) {
       return "PRIMARY KEY ($columnName)";
@@ -338,29 +163,52 @@ abstract class SQL {
       return $code;
     } else {
       $this->lastError = "Unsupported constraint type: " . get_class($constraint);
-      return false;
+      return null;
     }
   }
 
-  protected function getReturning(?string $columns) {
-    return "";
+  protected abstract function fetchReturning($res, string $returningCol);
+  public abstract function getColumnDefinition(Column $column): ?string;
+  public abstract function getOnDuplicateStrategy(?Strategy $strategy, &$params): ?string;
+  public abstract function createTriggerBody(CreateTrigger $trigger): ?string;
+  public abstract function getProcedureHead(CreateProcedure $procedure): ?string;
+  public abstract function getColumnType(Column $column): ?string;
+  public function getProcedureTail(): string { return ""; }
+  public function getReturning(?string $columns): string { return ""; }
+
+  public function getProcedureBody(CreateProcedure $procedure): string {
+    $statements = "";
+    foreach ($procedure->getStatements() as $statement) {
+      $statements .= $this->buildUnsafe($statement) . ";";
+    }
+    return $statements;
   }
 
-  protected abstract function getColumnDefinition(Column $column);
-  protected abstract function fetchReturning($res, string $returningCol);
-  protected abstract function getOnDuplicateStrategy(?Strategy $strategy, &$params);
+  protected function getUnsafeValue($value): ?string {
+    if (is_string($value) || is_numeric($value) || is_bool($value)) {
+      return "'" . addslashes("$value") . "'"; // unsafe operation here...
+    } else if ($value instanceof Column) {
+      return $this->columnName($value);
+    } else if ($value === null) {
+      return "NULL";
+    } else {
+      $this->lastError = "Cannot create unsafe value of type: " . gettype($value);
+      return null;
+    }
+  }
 
   protected abstract function getValueDefinition($val);
-  protected abstract function addValue($val, &$params);
+  public abstract function addValue($val, &$params = NULL);
+  protected abstract function buildUnsafe(Query $statement): string;
 
-  protected abstract function tableName($table);
-  protected abstract function columnName($col);
+  public abstract function tableName($table): string;
+  public abstract function columnName($col): string;
 
   // Special Keywords and functions
-  public function now() { return $this->currentTimestamp(); }
-  public abstract function currentTimestamp();
+  public function now(): Keyword { return $this->currentTimestamp(); }
+  public abstract function currentTimestamp(): Keyword;
 
-  public function count($col = NULL) {
+  public function count($col = NULL): Keyword {
     if (is_null($col)) {
       return new Keyword("COUNT(*) AS count");
     } else if($col instanceof Keyword) {
@@ -372,13 +220,13 @@ abstract class SQL {
     }
   }
 
-  public function sum($col) {
+  public function sum($col): Keyword {
     $sumCol = strtolower(str_replace(".","_", $col)) .  "_sum";
     $col = $this->columnName($col);
     return new Keyword("SUM($col) AS $sumCol");
   }
 
-  public function distinct($col) {
+  public function distinct($col): Keyword {
     $col = $this->columnName($col);
     return new Keyword("DISTINCT($col)");
   }
@@ -431,7 +279,7 @@ abstract class SQL {
 
         $values = implode(",", $values);
       } else if($expression instanceof Select) {
-        $values = $this->buildQuery($expression, $params);
+        $values = $expression->build($params);
       } else {
         $this->lastError = "Unsupported in-expression value: " . get_class($condition);
         return false;
@@ -466,7 +314,7 @@ abstract class SQL {
     $this->lastError = $str;
   }
 
-  public function getLastInsertId() {
+  public function getLastInsertId(): int {
     return $this->lastInsertId;
   }
 

@@ -16,8 +16,14 @@ use Driver\SQL\Column\JsonColumn;
 
 use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Expression\Add;
+use Driver\SQL\Query\CreateProcedure;
+use Driver\SQL\Query\CreateTrigger;
+use Driver\SQL\Query\Query;
 use Driver\SQL\Strategy\Strategy;
 use \Driver\SQL\Strategy\UpdateStrategy;
+use Driver\SQL\Type\CurrentColumn;
+use Driver\SQL\Type\CurrentTable;
+use Driver\SQL\Type\Trigger;
 
 class MySQL extends SQL {
 
@@ -67,7 +73,7 @@ class MySQL extends SQL {
     return true;
   }
 
-  public function getLastError() {
+  public function getLastError(): string {
     $lastError = parent::getLastError();
     if (empty($lastError)) {
       $lastError = mysqli_error($this->connection);
@@ -175,7 +181,7 @@ class MySQL extends SQL {
     return ($success && $returnValues) ? $resultRows : $success;
   }
 
-  protected function getOnDuplicateStrategy(?Strategy $strategy, &$params) {
+  public function getOnDuplicateStrategy(?Strategy $strategy, &$params): ?string {
     if (is_null($strategy)) {
       return "";
     } else if ($strategy instanceof UpdateStrategy) {
@@ -199,7 +205,7 @@ class MySQL extends SQL {
     } else {
       $strategyClass = get_class($strategy);
       $this->lastError = "ON DUPLICATE Strategy $strategyClass is not supported yet.";
-      return false;
+      return null;
     }
   }
 
@@ -207,39 +213,50 @@ class MySQL extends SQL {
     $this->lastInsertId = mysqli_insert_id($this->connection);
   }
 
-  public function getColumnDefinition(Column $column) {
-    $columnName = $this->columnName($column->getName());
-    $defaultValue = $column->getDefaultValue();
-
+  public function getColumnType(Column $column): ?string {
     if ($column instanceof StringColumn) {
       $maxSize = $column->getMaxSize();
       if ($maxSize) {
-        $type = "VARCHAR($maxSize)";
+        return "VARCHAR($maxSize)";
       } else {
-        $type = "TEXT";
+        return "TEXT";
       }
     } else if($column instanceof SerialColumn) {
-      $type = "INTEGER AUTO_INCREMENT";
+      return "INTEGER AUTO_INCREMENT";
     } else if($column instanceof IntColumn) {
-      $type = "INTEGER";
+      return "INTEGER";
     } else if($column instanceof DateTimeColumn) {
-      $type = "DATETIME";
-    } else if($column instanceof EnumColumn) {
-      $values = array();
-      foreach($column->getValues() as $value) {
-        $values[] = $this->getValueDefinition($value);
-      }
-
-      $values = implode(",", $values);
-      $type = "ENUM($values)";
+      return "DATETIME";
     } else if($column instanceof BoolColumn) {
-      $type = "BOOLEAN";
+      return "BOOLEAN";
     } else if($column instanceof JsonColumn) {
-      $type = "LONGTEXT"; # some maria db setups don't allow JSON here…
-      $defaultValue = NULL; # must be null :(
+      return "LONGTEXT"; # some maria db setups don't allow JSON here…
     } else {
       $this->lastError = "Unsupported Column Type: " . get_class($column);
       return NULL;
+    }
+  }
+
+  public function getColumnDefinition(Column $column): ?string {
+    $columnName = $this->columnName($column->getName());
+    $defaultValue = $column->getDefaultValue();
+    $type = $this->getColumnType($column);
+    if (!$type) {
+      if ($column instanceof EnumColumn) {
+        $values = array();
+        foreach($column->getValues() as $value) {
+          $values[] = $this->getValueDefinition($value);
+        }
+
+        $values = implode(",", $values);
+        $type = "ENUM($values)";
+      } else {
+        return null;
+      }
+    }
+
+    if ($type === "LONGTEXT") {
+      $defaultValue = NULL; # must be null :(
     }
 
     $notNull = $column->notNull() ? " NOT NULL" : "";
@@ -267,16 +284,20 @@ class MySQL extends SQL {
     }
   }
 
-  protected function addValue($val, &$params) {
+  public function addValue($val, &$params = NULL) {
     if ($val instanceof Keyword) {
       return $val->getValue();
+    } else if ($val instanceof CurrentColumn) {
+      return $val->getName();
+    } else if ($val instanceof Column) {
+      return $this->columnName($val->getName());
     } else {
       $params[] = $val;
       return "?";
     }
   }
 
-  protected function tableName($table) {
+  public function tableName($table): string {
     if (is_array($table)) {
       $tables = array();
       foreach($table as $t) $tables[] = $this->tableName($t);
@@ -286,7 +307,7 @@ class MySQL extends SQL {
     }
   }
 
-  protected function columnName($col) {
+  public function columnName($col): string {
     if ($col instanceof Keyword) {
       return $col->getValue();
     } elseif(is_array($col)) {
@@ -308,11 +329,72 @@ class MySQL extends SQL {
     }
   }
 
-  public function currentTimestamp() {
+  public function currentTimestamp(): Keyword {
     return new Keyword("NOW()");
   }
 
   public function getStatus() {
     return mysqli_stat($this->connection);
+  }
+
+  public function createTriggerBody(CreateTrigger $trigger): ?string {
+    $values = array();
+
+    foreach ($trigger->getProcedure()->getParameters() as $param) {
+      if ($param instanceof CurrentTable) {
+        $values[] = $this->getUnsafeValue($trigger->getTable());
+      } else {
+        $values[] = $this->columnName("NEW." . $param->getName());
+      }
+    }
+
+    $procName = $trigger->getProcedure()->getName();
+    $procParameters = implode(",", $values);
+    return "CALL $procName($procParameters)";
+  }
+
+  private function getParameterDefinition(Column $parameter, bool $out = false): string {
+    $out = ($out ? "OUT" : "IN");
+    $name = $parameter->getName();
+    $type = $this->getColumnType($parameter);
+    return "$out $name $type";
+  }
+
+  public function getProcedureHead(CreateProcedure $procedure): ?string {
+    $name = $procedure->getName();
+    $returns = $procedure->getReturns();
+    $paramDefs = [];
+
+    foreach ($procedure->getParameters() as $param) {
+      if ($param instanceof Column) {
+        $paramDefs[] = $this->getParameterDefinition($param);
+      } else {
+        $this->setLastError("PROCEDURE parameter type " . gettype($returns) . "  is not implemented yet");
+        return null;
+      }
+    }
+
+    if ($returns) {
+      if ($returns instanceof Column) {
+        $paramDefs[] = $this->getParameterDefinition($returns, true);
+      } else if (!($returns instanceof Trigger)) { // mysql does not need to return triggers here
+        $this->setLastError("PROCEDURE RETURN type " . gettype($returns) . "  is not implemented yet");
+        return null;
+      }
+    }
+
+    $paramDefs = implode(",", $paramDefs);
+    return "CREATE PROCEDURE $name($paramDefs)";
+  }
+
+  protected function buildUnsafe(Query $statement): string {
+    $params = [];
+    $query = $statement->build($params);
+
+    foreach ($params as $value) {
+      $query = preg_replace("?", $this->getUnsafeValue($value), $query, 1);
+    }
+
+    return $query;
   }
 }

@@ -588,7 +588,7 @@ namespace Documents\Install {
     private function createProgessMainview(): string {
 
       $isDocker = $this->isDocker();
-      $defaultHost = ($isDocker ? "db" : "");
+      $defaultHost = ($isDocker ? "db" : "localhost");
       $defaultUsername = ($isDocker ? "root" : "");
       $defaultPassword = ($isDocker ? "webbasedb" : "");
       $defaultDatabase = ($isDocker ? "webbase" : "");

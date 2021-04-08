@@ -28,11 +28,20 @@ class Update extends Query {
     return $this;
   }
 
-  public function execute() {
-    return $this->sql->executeUpdate($this);
-  }
-
   public function getTable(): string { return $this->table; }
   public function getConditions(): array { return $this->conditions; }
   public function getValues(): array { return $this->values; }
+
+  public function build(array &$params, Query $context = NULL): ?string {
+    $table = $this->sql->tableName($this->getTable());
+
+    $valueStr = array();
+    foreach($this->getValues() as $key => $val) {
+      $valueStr[] = $this->sql->columnName($key) . "=" . $this->sql->addValue($val, $params);
+    }
+    $valueStr = implode(",", $valueStr);
+
+    $where = $this->sql->getWhereClause($this->getConditions(), $params);
+    return "UPDATE $table SET $valueStr$where";
+  }
 }

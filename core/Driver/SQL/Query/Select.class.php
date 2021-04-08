@@ -4,6 +4,7 @@ namespace Driver\SQL\Query;
 
 use Driver\SQL\Condition\CondOr;
 use Driver\SQL\Join;
+use Driver\SQL\SQL;
 
 class Select extends Query {
 
@@ -81,7 +82,7 @@ class Select extends Query {
   }
 
   public function execute() {
-    return $this->sql->executeSelect($this);
+    return $this->sql->executeQuery($this, true);
   }
 
   public function getColumns(): array { return $this->columns; }
@@ -94,4 +95,46 @@ class Select extends Query {
   public function getOffset(): int { return $this->offset; }
   public function getGroupBy(): array { return $this->groupColumns; }
 
+  public function build(array &$params, Query $context = NULL): ?string {
+    $columns = $this->sql->columnName($this->getColumns());
+    $tables = $this->getTables();
+
+    if (!$tables) {
+      return "SELECT $columns";
+    }
+
+    $tables = $this->sql->tableName($tables);
+    $where = $this->sql->getWhereClause($this->getConditions(), $params);
+
+    $joinStr = "";
+    $joins = $this->getJoins();
+    if (!empty($joins)) {
+      foreach ($joins as $join) {
+        $type = $join->getType();
+        $joinTable = $this->sql->tableName($join->getTable());
+        $columnA = $this->sql->columnName($join->getColumnA());
+        $columnB = $this->sql->columnName($join->getColumnB());
+        $tableAlias = ($join->getTableAlias() ? " " . $join->getTableAlias() : "");
+
+        $joinStr .= " $type JOIN $joinTable$tableAlias ON $columnA=$columnB";
+      }
+    }
+
+    $groupBy = "";
+    $groupColumns = $this->getGroupBy();
+    if (!empty($groupColumns)) {
+      $groupBy = " GROUP BY " . $this->sql->columnName($groupColumns);
+    }
+
+    $orderBy = "";
+    $orderColumns = $this->getOrderBy();
+    if (!empty($orderColumns)) {
+      $orderBy = " ORDER BY " . $this->sql->columnName($orderColumns);
+      $orderBy .= ($this->isOrderedAscending() ? " ASC" : " DESC");
+    }
+
+    $limit = ($this->getLimit() > 0 ? (" LIMIT " . $this->getLimit()) : "");
+    $offset = ($this->getOffset() > 0 ? (" OFFSET " . $this->getOffset()) : "");
+    return "SELECT $columns FROM $tables$joinStr$where$groupBy$orderBy$limit$offset";
+  }
 }

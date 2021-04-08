@@ -4,6 +4,7 @@ namespace Driver\SQL;
 
 use \Api\Parameter\Parameter;
 
+use Api\User\Create;
 use Driver\SQL\Column\Column;
 use \Driver\SQL\Column\IntColumn;
 use \Driver\SQL\Column\SerialColumn;
@@ -15,8 +16,14 @@ use Driver\SQL\Column\JsonColumn;
 
 use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Expression\Add;
+use Driver\SQL\Query\CreateProcedure;
+use Driver\SQL\Query\CreateTrigger;
+use Driver\SQL\Query\Query;
 use Driver\SQL\Strategy\Strategy;
 use Driver\SQL\Strategy\UpdateStrategy;
+use Driver\SQL\Type\CurrentColumn;
+use Driver\SQL\Type\CurrentTable;
+use Driver\SQL\Type\Trigger;
 
 class PostgreSQL extends SQL {
 
@@ -71,7 +78,7 @@ class PostgreSQL extends SQL {
     @pg_close($this->connection);
   }
 
-  public function getLastError() {
+  public function getLastError(): string {
     $lastError = parent::getLastError();
     if (empty($lastError)) {
       $lastError = trim(pg_last_error($this->connection) . " " . pg_last_error($this->connection));
@@ -134,39 +141,39 @@ class PostgreSQL extends SQL {
     }
   }
 
-  protected function getOnDuplicateStrategy(?Strategy $strategy, &$params) {
+  public function getOnDuplicateStrategy(?Strategy $strategy, &$params): ?string {
       if (!is_null($strategy)) {
         if ($strategy instanceof UpdateStrategy) {
-              $updateValues = array();
-              foreach($strategy->getValues() as $key => $value) {
-                $leftColumn = $this->columnName($key);
-                if ($value instanceof Column) {
-                  $columnName = $this->columnName($value->getName());
-                  $updateValues[] = "$leftColumn=EXCLUDED.$columnName";
-                } else if ($value instanceof Add) {
-                  $columnName = $this->columnName($value->getColumn());
-                  $operator = $value->getOperator();
-                  $value = $value->getValue();
-                  $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
-                } else {
-                  $updateValues[] = "$leftColumn=" . $this->addValue($value, $parameters);
-                }
-              }
-
-              $conflictingColumns = $this->columnName($strategy->getConflictingColumns());
-              $updateValues = implode(",", $updateValues);
-              return " ON CONFLICT ($conflictingColumns) DO UPDATE SET $updateValues";
-          } else {
-            $strategyClass = get_class($strategy);
-            $this->lastError = "ON DUPLICATE Strategy $strategyClass is not supported yet.";
-           return false;
+          $updateValues = array();
+          foreach($strategy->getValues() as $key => $value) {
+            $leftColumn = $this->columnName($key);
+            if ($value instanceof Column) {
+              $columnName = $this->columnName($value->getName());
+              $updateValues[] = "$leftColumn=EXCLUDED.$columnName";
+            } else if ($value instanceof Add) {
+              $columnName = $this->columnName($value->getColumn());
+              $operator = $value->getOperator();
+              $value = $value->getValue();
+              $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
+            } else {
+              $updateValues[] = "$leftColumn=" . $this->addValue($value, $parameters);
+            }
           }
+
+          $conflictingColumns = $this->columnName($strategy->getConflictingColumns());
+          $updateValues = implode(",", $updateValues);
+          return " ON CONFLICT ($conflictingColumns) DO UPDATE SET $updateValues";
+        } else {
+          $strategyClass = get_class($strategy);
+          $this->lastError = "ON DUPLICATE Strategy $strategyClass is not supported yet.";
+          return null;
+        }
       } else {
         return "";
       }
   }
 
-  protected function getReturning(?string $columns) {
+  public function getReturning(?string $columns): string {
     return $columns ? (" RETURNING " . $this->columnName($columns)) : "";
   }
 
@@ -175,12 +182,7 @@ class PostgreSQL extends SQL {
   }
 
   // UGLY but.. what should i do?
-  private function createEnum(EnumColumn $enumColumn) {
-    $typeName = $enumColumn->getName();
-    if(!endsWith($typeName, "_type")) {
-      $typeName = "${typeName}_type";
-    }
-
+  private function createEnum(EnumColumn $enumColumn, string $typeName): string {
     $values = array();
     foreach($enumColumn->getValues() as $value) {
       $values[] = $this->getValueDefinition($value);
@@ -194,35 +196,49 @@ class PostgreSQL extends SQL {
         WHEN duplicate_object THEN null;
       END $$;";
 
-    $this->execute($query);
-    return $typeName;
+    return $this->execute($query);
   }
 
-  protected function getColumnDefinition($column) {
-    $columnName = $this->columnName($column->getName());
-
+  public function getColumnType(Column $column): ?string {
     if ($column instanceof StringColumn) {
       $maxSize = $column->getMaxSize();
       if ($maxSize) {
-        $type = "VARCHAR($maxSize)";
+        return "VARCHAR($maxSize)";
       } else {
-        $type = "TEXT";
+        return "TEXT";
       }
     } else if($column instanceof SerialColumn) {
-      $type = "SERIAL";
+      return "SERIAL";
     } else if($column instanceof IntColumn) {
-      $type = "INTEGER";
+      return "INTEGER";
     } else if($column instanceof DateTimeColumn) {
-      $type = "TIMESTAMP";
+      return "TIMESTAMP";
     } else if($column instanceof EnumColumn) {
-      $type = $this->createEnum($column);
+      $typeName = $column->getName();
+      if(!endsWith($typeName, "_type")) {
+        $typeName = "${typeName}_type";
+      }
+      return $typeName;
     } else if($column instanceof BoolColumn) {
-      $type = "BOOLEAN";
+      return "BOOLEAN";
     } else if($column instanceof JsonColumn) {
-      $type = "JSON";
+      return "JSON";
     } else {
       $this->lastError = "Unsupported Column Type: " . get_class($column);
       return NULL;
+    }
+  }
+
+  public function getColumnDefinition($column): ?string {
+    $columnName = $this->columnName($column->getName());
+
+    $type = $this->getColumnType($column);
+    if (!$type) {
+      return null;
+    } else if ($column instanceof EnumColumn) {
+      if (!$this->createEnum($column, $type)) {
+        return null;
+      }
     }
 
     $notNull = $column->notNull() ? " NOT NULL" : "";
@@ -249,16 +265,22 @@ class PostgreSQL extends SQL {
     }
   }
 
-  protected function addValue($val, &$params) {
+  public function addValue($val, &$params = NULL) {
     if ($val instanceof Keyword) {
       return $val->getValue();
+    } else if ($val instanceof CurrentTable) {
+      return "TG_TABLE_NAME";
+    } else if ($val instanceof CurrentColumn) {
+      return "NEW." . $this->columnName($val->getName());
+    } else if ($val instanceof Column) {
+      return $this->columnName($val->getName());
     } else {
       $params[] = is_bool($val) ? ($val ? "TRUE" : "FALSE") : $val;
       return '$' . count($params);
     }
   }
 
-  protected function tableName($table) {
+  public function tableName($table): string {
     if (is_array($table)) {
       $tables = array();
       foreach($table as $t) $tables[] = $this->tableName($t);
@@ -268,7 +290,7 @@ class PostgreSQL extends SQL {
     }
   }
 
-  protected function columnName($col) {
+  public function columnName($col): string {
     if ($col instanceof KeyWord) {
       return $col->getValue();
     } elseif(is_array($col)) {
@@ -291,7 +313,7 @@ class PostgreSQL extends SQL {
   }
 
   // Special Keywords and functions
-  public function currentTimestamp() {
+  public function currentTimestamp(): Keyword {
     return new Keyword("CURRENT_TIMESTAMP");
   }
 
@@ -316,5 +338,76 @@ class PostgreSQL extends SQL {
     } else {
       return parent::buildCondition($condition, $params);
     }
+  }
+
+  private function createTriggerProcedure(string $name, array $statements) {
+    $params = [];
+    $query = "CREATE OR REPLACE FUNCTION $name() RETURNS TRIGGER AS \$table\$ BEGIN ";
+    foreach($statements as $stmt) {
+      if ($stmt instanceof Keyword) {
+        $query .= $stmt->getValue() . ";";
+      } else {
+        $query .= $stmt->build($this, $params) . ";";
+      }
+    }
+    $query .= "END;";
+    $query .= "\$table\$ LANGUAGE plpgsql;";
+
+    var_dump($query);
+    var_dump($params);
+
+    return $this->execute($query, $params);
+  }
+
+  public function createTriggerBody(CreateTrigger $trigger): ?string {
+    $procName = $this->tableName($trigger->getProcedure()->getName());
+    return "EXECUTE PROCEDURE $procName()";
+  }
+
+  public function getProcedureHead(CreateProcedure $procedure): ?string {
+    $name = $this->tableName($procedure->getName());
+    $returns = $procedure->getReturns() ?? "";
+    $paramDefs = [];
+
+    if (!($procedure->getReturns() instanceof Trigger)) {
+      foreach ($procedure->getParameters() as $parameter) {
+        $paramDefs[] = $parameter->getName() . " " . $this->getColumnType($parameter);
+      }
+    }
+
+    $paramDefs = implode(",", $paramDefs);
+    if ($returns) {
+      if ($returns instanceof Column) {
+        $returns = " RETURNS " . $this->getColumnType($returns);
+      } else if ($returns instanceof Keyword) {
+        $returns = " RETURNS " . $returns->getValue();
+      }
+    }
+
+    return "CREATE OR REPLACE FUNCTION $name($paramDefs)$returns AS $$";
+  }
+
+  public function getProcedureTail(): string {
+    return "$$ LANGUAGE plpgsql;";
+  }
+
+  public function getProcedureBody(CreateProcedure $procedure): string {
+    $statements = parent::getProcedureBody($procedure);
+    if ($procedure->getReturns() instanceof Trigger) {
+      $statements .= "RETURN NEW;";
+    }
+    return $statements;
+  }
+
+  protected function buildUnsafe(Query $statement): string {
+    $params = [];
+    $query = $statement->build($params);
+
+    foreach ($params as $index => $value) {
+      $value = $this->getUnsafeValue($value);
+      $query = preg_replace("\$$index", $value, $query, 1);
+    }
+
+    return $query;
   }
 }

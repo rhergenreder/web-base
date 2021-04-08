@@ -20,6 +20,9 @@ abstract class Query {
   }
 
   // can actually return bool|array (depending on success and query type)
-  public abstract function execute();
+  public function execute() {
+    return $this->sql->executeQuery($this);
+  }
 
+  public abstract function build(array &$params): ?string;
 }

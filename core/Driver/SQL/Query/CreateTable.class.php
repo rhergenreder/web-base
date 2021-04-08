@@ -86,12 +86,31 @@ class CreateTable extends Query {
     return $this;
   }
 
-  public function execute(): bool {
-    return $this->sql->executeCreateTable($this);
-  }
-
   public function ifNotExists(): bool { return $this->ifNotExists; }
   public function getTableName(): string { return $this->tableName; }
   public function getColumns(): array { return $this->columns; }
   public function getConstraints(): array { return $this->constraints; }
+
+  public function build(array &$params): ?string {
+    $tableName = $this->sql->tableName($this->getTableName());
+    $ifNotExists = $this->ifNotExists() ? " IF NOT EXISTS" : "";
+
+    $entries = array();
+    foreach ($this->getColumns() as $column) {
+      $entries[] = ($tmp = $this->sql->getColumnDefinition($column));
+      if (is_null($tmp)) {
+        return false;
+      }
+    }
+
+    foreach ($this->getConstraints() as $constraint) {
+      $entries[] = ($tmp = $this->sql->getConstraintDefinition($constraint));
+      if (is_null($tmp)) {
+        return false;
+      }
+    }
+
+    $entries = implode(",", $entries);
+    return "CREATE TABLE$ifNotExists $tableName ($entries)";
+  }
 }

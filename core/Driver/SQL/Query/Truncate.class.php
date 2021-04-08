@@ -13,9 +13,9 @@ class Truncate extends Query {
     $this->tableName = $name;
   }
 
-  public function execute(): bool {
-    return $this->sql->executeTruncate($this);
-  }
-
   public function getTable(): string { return $this->tableName; }
+
+  public function build(array &$params, Query $context = NULL): ?string {
+    return "TRUNCATE " . $this->sql->tableName($this->getTable());
+  }
 }

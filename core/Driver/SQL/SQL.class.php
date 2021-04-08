@@ -16,7 +16,6 @@ use \Driver\SQL\Constraint\Unique;
 use \Driver\SQL\Constraint\PrimaryKey;
 use \Driver\SQL\Constraint\ForeignKey;
 use Driver\SQL\Expression\CurrentTimeStamp;
-use Driver\SQL\Expression\DateAdd;
 use Driver\SQL\Expression\Expression;
 use Driver\SQL\Query\AlterTable;
 use Driver\SQL\Query\CreateProcedure;
@@ -246,23 +245,19 @@ abstract class SQL {
       }
       return "(" . implode(" OR ", $conditions) . ")";
     } else if ($condition instanceof Compare) {
-      $lhs = $condition->getLHS();
-      $lhs = ($lhs instanceof Expression ?
-        $this->createExpression($lhs, $params) :
-        $this->columnName($lhs));
-
+      $column = $this->columnName($condition->getColumn());
       $value = $condition->getValue();
       $operator = $condition->getOperator();
 
       if ($value === null) {
         if ($operator === "=") {
-          return "$lhs IS NULL";
+          return "$column IS NULL";
         } else if ($operator === "!=") {
-          return "$lhs IS NOT NULL";
+          return "$column IS NOT NULL";
         }
       }
 
-      return $lhs . $operator . $this->addValue($value, $params);
+      return $column . $operator . $this->addValue($value, $params);
     } else if ($condition instanceof CondBool) {
       return $this->columnName($condition->getValue());
     } else if (is_array($condition)) {

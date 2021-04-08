@@ -18,6 +18,7 @@ use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Expression\Add;
 use Driver\SQL\Expression\CurrentTimeStamp;
 use Driver\SQL\Expression\DateAdd;
+use Driver\SQL\Expression\DateSub;
 use Driver\SQL\Expression\Expression;
 use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\Query\CreateTrigger;
@@ -195,7 +196,7 @@ class MySQL extends SQL {
           $columnName = $this->columnName($value->getName());
           $updateValues[] = "$leftColumn=VALUES($columnName)";
         } else if($value instanceof Add) {
-          $columnName = $this->columnName($value->getLHS());
+          $columnName = $this->columnName($value->getColumn());
           $operator = $value->getOperator();
           $value = $value->getValue();
           $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
@@ -403,11 +404,12 @@ class MySQL extends SQL {
   }
 
   protected function createExpression(Expression $exp, array &$params) {
-    if ($exp instanceof DateAdd) {
+    if ($exp instanceof DateAdd || $exp instanceof DateSub) {
       $lhs = $this->addValue($exp->getLHS(), $params);
       $rhs = $this->addValue($exp->getRHS(), $params);
       $unit = $exp->getUnit();
-      return "DATE_ADD($lhs, INTERVAL $rhs $unit)";
+      $dateFunction = ($exp instanceof DateAdd ? "DATE_ADD" : "DATE_SUB");
+      return "$dateFunction($lhs, INTERVAL $rhs $unit)";
     } else if ($exp instanceof CurrentTimeStamp) {
       return "NOW()";
     } else {

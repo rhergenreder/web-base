@@ -8,7 +8,7 @@ use Configuration\DatabaseScript;
 use Driver\SQL\Column\Column;
 use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondIn;
-use Driver\SQL\Expression\DateAdd;
+use Driver\SQL\Expression\DateSub;
 use Objects\ConnectionData;
 use Objects\User;
 
@@ -169,7 +169,8 @@ function handleDatabase(array $argv) {
     $tables = [];
     $res = $sql->select("entityId", "tableName")
       ->from("EntityLog")
-      ->where(new Compare($sql->now(), new DateAdd(new Column("modified"), new Column("lifetime"), "DAY"), ">="))
+      ->where(new Compare("modified", new DateSub($sql->now(), new Column("lifetime"), "DAY"), "<="))
+      ->dump()
       ->execute();
 
     $success = ($res !== false);

@@ -18,6 +18,7 @@ use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Expression\Add;
 use Driver\SQL\Expression\CurrentTimeStamp;
 use Driver\SQL\Expression\DateAdd;
+use Driver\SQL\Expression\DateSub;
 use Driver\SQL\Expression\Expression;
 use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\Query\CreateTrigger;
@@ -155,7 +156,7 @@ class PostgreSQL extends SQL {
               $columnName = $this->columnName($value->getName());
               $updateValues[] = "$leftColumn=EXCLUDED.$columnName";
             } else if ($value instanceof Add) {
-              $columnName = $this->columnName($value->getLHS());
+              $columnName = $this->columnName($value->getColumn());
               $operator = $value->getOperator();
               $value = $value->getValue();
               $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
@@ -419,7 +420,7 @@ class PostgreSQL extends SQL {
   }
 
   protected function createExpression(Expression $exp, array &$params) {
-    if ($exp instanceof DateAdd) {
+    if ($exp instanceof DateAdd || $exp instanceof DateSub) {
       $lhs = $this->addValue($exp->getLHS(), $params);
       $rhs = $this->addValue($exp->getRHS(), $params);
       $unit = $exp->getUnit();
@@ -430,7 +431,8 @@ class PostgreSQL extends SQL {
         $rhs = "$rhs $unit";
       }
 
-      return "$lhs + $rhs";
+      $operator = ($exp instanceof DateAdd ? "+" : "-");
+      return "$lhs $operator $rhs";
     } else if ($exp instanceof CurrentTimeStamp) {
       return "CURRENT_TIMESTAMP";
     } else {

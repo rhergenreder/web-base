@@ -21,6 +21,7 @@ use Driver\SQL\Expression\DateAdd;
 use Driver\SQL\Expression\Expression;
 use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\Query\CreateTrigger;
+use Driver\SQL\Query\Insert;
 use Driver\SQL\Query\Query;
 use Driver\SQL\Strategy\Strategy;
 use Driver\SQL\Strategy\UpdateStrategy;
@@ -178,6 +179,10 @@ class PostgreSQL extends SQL {
 
   public function getReturning(?string $columns): string {
     return $columns ? (" RETURNING " . $this->columnName($columns)) : "";
+  }
+
+  public function executeQuery(Query $query, bool $fetchResult = false) {
+    return parent::executeQuery($query, $fetchResult || ($query instanceof Insert && !empty($query->getReturning())));
   }
 
   protected function fetchReturning($res, string $returningCol) {

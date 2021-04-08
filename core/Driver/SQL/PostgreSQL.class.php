@@ -16,6 +16,9 @@ use Driver\SQL\Column\JsonColumn;
 
 use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Expression\Add;
+use Driver\SQL\Expression\CurrentTimeStamp;
+use Driver\SQL\Expression\DateAdd;
+use Driver\SQL\Expression\Expression;
 use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\Query\CreateTrigger;
 use Driver\SQL\Query\Query;
@@ -151,7 +154,7 @@ class PostgreSQL extends SQL {
               $columnName = $this->columnName($value->getName());
               $updateValues[] = "$leftColumn=EXCLUDED.$columnName";
             } else if ($value instanceof Add) {
-              $columnName = $this->columnName($value->getColumn());
+              $columnName = $this->columnName($value->getLHS());
               $operator = $value->getOperator();
               $value = $value->getValue();
               $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
@@ -257,8 +260,10 @@ class PostgreSQL extends SQL {
       return $value ? "TRUE" : "FALSE";
     } else if(is_null($value)) {
       return "NULL";
-    } else if($value instanceof Keyword) {
+    } else if ($value instanceof Keyword) {
       return $value->getValue();
+    } else if ($value instanceof CurrentTimeStamp) {
+      return "CURRENT_TIMESTAMP";
     } else {
       $str = str_replace("'", "''", $value);
       return "'$str'";
@@ -274,6 +279,8 @@ class PostgreSQL extends SQL {
       return "NEW." . $this->columnName($val->getName());
     } else if ($val instanceof Column) {
       return $this->columnName($val->getName());
+    } else if ($val instanceof Expression) {
+      return $this->createExpression($val, $params);
     } else {
       $params[] = is_bool($val) ? ($val ? "TRUE" : "FALSE") : $val;
       return '$' . count($params);
@@ -310,11 +317,6 @@ class PostgreSQL extends SQL {
         return "\"$col\"";
       }
     }
-  }
-
-  // Special Keywords and functions
-  public function currentTimestamp(): Keyword {
-    return new Keyword("CURRENT_TIMESTAMP");
   }
 
   public function getStatus() {
@@ -409,5 +411,25 @@ class PostgreSQL extends SQL {
     }
 
     return $query;
+  }
+
+  protected function createExpression(Expression $exp, array &$params) {
+    if ($exp instanceof DateAdd) {
+      $lhs = $this->addValue($exp->getLHS(), $params);
+      $rhs = $this->addValue($exp->getRHS(), $params);
+      $unit = $exp->getUnit();
+
+      if ($exp->getRHS() instanceof Column) {
+        $rhs = "$rhs * INTERVAL '1 $unit'";
+      } else {
+        $rhs = "$rhs $unit";
+      }
+
+      return "$lhs + $rhs";
+    } else if ($exp instanceof CurrentTimeStamp) {
+      return "CURRENT_TIMESTAMP";
+    } else {
+      return parent::createExpression($exp, $params);
+    }
   }
 }

@@ -38,12 +38,23 @@ class log extends DatabaseScript {
       ->exec(array(
         $sql->update("EntityLog")
           ->set("modified", $sql->now())
-          ->where(new Compare("entityId",new CurrentColumn("uid")))
-          ->where(new Compare("tableName",new CurrentTable()))
+          ->where(new Compare("entityId", new CurrentColumn("uid")))
+          ->where(new Compare("tableName", new CurrentTable()))
+      ));
+
+    $deleteProcedure = $sql->createProcedure("DeleteEntityLog")
+      ->param(new CurrentTable())
+      ->param(new IntColumn("uid"))
+      ->returns(new Trigger())
+      ->exec(array(
+        $sql->delete("EntityLog")
+          ->where(new Compare("entityId", new CurrentColumn("uid")))
+          ->where(new Compare("tableName", new CurrentTable()))
       ));
 
     $queries[] = $insertProcedure;
     $queries[] = $updateProcedure;
+    $queries[] = $deleteProcedure;
 
     $tables = ["ContactRequest"];
     foreach ($tables as $table) {
@@ -55,6 +66,10 @@ class log extends DatabaseScript {
       $queries[] = $sql->createTrigger("${table}_trg_update")
         ->after()->update($table)
         ->exec($updateProcedure);
+
+      $queries[] = $sql->createTrigger("${table}_trg_delete")
+        ->after()->delete($table)
+        ->exec($deleteProcedure);
     }
 
     return $queries;

@@ -2,7 +2,9 @@
 
 namespace Driver\SQL;
 
-class Keyword {
+use Driver\SQL\Expression\Expression;
+
+class Keyword extends Expression {
 
   private string $value;
 

@@ -2,9 +2,10 @@
 
 namespace Driver\SQL\Query;
 
+use Driver\SQL\Expression\Expression;
 use Driver\SQL\SQL;
 
-abstract class Query {
+abstract class Query extends Expression {
 
   protected SQL $sql;
   public bool $dump;
@@ -23,6 +24,4 @@ abstract class Query {
   public function execute() {
     return $this->sql->executeQuery($this);
   }
-
-  public abstract function build(array &$params): ?string;
 }

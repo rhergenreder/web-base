@@ -2,7 +2,9 @@
 
 namespace Driver\SQL\Column;
 
-class Column {
+use Driver\SQL\Expression\Expression;
+
+class Column extends Expression {
 
   private string $name;
   private bool $nullable;

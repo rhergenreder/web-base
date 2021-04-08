@@ -16,6 +16,9 @@ use Driver\SQL\Column\JsonColumn;
 
 use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Expression\Add;
+use Driver\SQL\Expression\CurrentTimeStamp;
+use Driver\SQL\Expression\DateAdd;
+use Driver\SQL\Expression\Expression;
 use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\Query\CreateTrigger;
 use Driver\SQL\Query\Query;
@@ -192,7 +195,7 @@ class MySQL extends SQL {
           $columnName = $this->columnName($value->getName());
           $updateValues[] = "$leftColumn=VALUES($columnName)";
         } else if($value instanceof Add) {
-          $columnName = $this->columnName($value->getColumn());
+          $columnName = $this->columnName($value->getLHS());
           $operator = $value->getOperator();
           $value = $value->getValue();
           $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
@@ -278,6 +281,8 @@ class MySQL extends SQL {
       return "NULL";
     } else if($value instanceof Keyword) {
       return $value->getValue();
+    } else if ($value instanceof CurrentTimeStamp) {
+      return "CURRENT_TIMESTAMP";
     } else {
       $str = addslashes($value);
       return "'$str'";
@@ -291,6 +296,8 @@ class MySQL extends SQL {
       return $val->getName();
     } else if ($val instanceof Column) {
       return $this->columnName($val->getName());
+    } else if ($val instanceof Expression) {
+      return $this->createExpression($val, $params);
     } else {
       $params[] = $val;
       return "?";
@@ -327,10 +334,6 @@ class MySQL extends SQL {
         return "`$col`";
       }
     }
-  }
-
-  public function currentTimestamp(): Keyword {
-    return new Keyword("NOW()");
   }
 
   public function getStatus() {
@@ -396,5 +399,18 @@ class MySQL extends SQL {
     }
 
     return $query;
+  }
+
+  protected function createExpression(Expression $exp, array &$params) {
+    if ($exp instanceof DateAdd) {
+      $lhs = $this->addValue($exp->getLHS(), $params);
+      $rhs = $this->addValue($exp->getRHS(), $params);
+      $unit = $exp->getUnit();
+      return "DATE_ADD($lhs, INTERVAL $rhs $unit)";
+    } else if ($exp instanceof CurrentTimeStamp) {
+      return "NOW()";
+    } else {
+      return parent::createExpression($exp, $params);
+    }
   }
 }

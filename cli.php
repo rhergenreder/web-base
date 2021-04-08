@@ -5,6 +5,10 @@ include_once 'core/constants.php';
 
 use Configuration\Configuration;
 use Configuration\DatabaseScript;
+use Driver\SQL\Column\Column;
+use Driver\SQL\Condition\Compare;
+use Driver\SQL\Condition\CondIn;
+use Driver\SQL\Expression\DateAdd;
 use Objects\ConnectionData;
 use Objects\User;
 
@@ -155,6 +159,45 @@ function handleDatabase(array $argv) {
 
       proc_close($process);
     }
+  } else if ($action === "clean") {
+    $user = getUser();
+    $sql = $user->getSQL();
+
+    printLine("Deleting user related data older than 90 days...");
+
+    // 1st: Select all related tables and entities
+    $tables = [];
+    $res = $sql->select("entityId", "tableName")
+      ->from("EntityLog")
+      ->where(new Compare($sql->now(), new DateAdd(new Column("modified"), new Column("lifetime"), "DAY"), ">="))
+      ->execute();
+
+    $success = ($res !== false);
+    if (!$success) {
+      _exit("Error querying data: " .  $sql->getLastError());
+    }
+
+    foreach ($res as $row) {
+      $tableName = $row["tableName"];
+      $uid = $row["entityId"];
+      if (!isset($tables[$tableName])) {
+        $tables[$tableName] = [];
+      }
+      $tables[$tableName][] = $uid;
+    }
+
+    // 2nd: delete!
+    foreach ($tables as $table => $uids) {
+      $success = $sql->delete($table)
+        ->where(new CondIn("uid", $uids))
+        ->execute();
+
+      if (!$success) {
+        printLine("Error deleting data: " .  $sql->getLastError());
+      }
+    }
+
+    printLine("Done!");
   } else {
     _exit("Usage: cli.php db <migrate|import|export> [options...]");
   }

@@ -5,16 +5,16 @@ namespace Driver\SQL\Condition;
 class Compare extends Condition {
 
   private string $operator;
-  private string $column;
+  private $lhs;
   private $value;
 
-  public function __construct(string $col, $val, string $operator = '=') {
+  public function __construct($col, $val, string $operator = '=') {
     $this->operator = $operator;
-    $this->column = $col;
+    $this->lhs = $col;
     $this->value = $val;
   }
 
-  public function getColumn(): string { return $this->column; }
+  public function getLHS() { return $this->lhs; }
   public function getValue() { return $this->value; }
   public function getOperator(): string { return $this->operator; }
 

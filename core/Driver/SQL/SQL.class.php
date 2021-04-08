@@ -15,6 +15,9 @@ use Driver\SQL\Constraint\Constraint;
 use \Driver\SQL\Constraint\Unique;
 use \Driver\SQL\Constraint\PrimaryKey;
 use \Driver\SQL\Constraint\ForeignKey;
+use Driver\SQL\Expression\CurrentTimeStamp;
+use Driver\SQL\Expression\DateAdd;
+use Driver\SQL\Expression\Expression;
 use Driver\SQL\Query\AlterTable;
 use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\Query\CreateTable;
@@ -205,8 +208,8 @@ abstract class SQL {
   public abstract function columnName($col): string;
 
   // Special Keywords and functions
-  public function now(): Keyword { return $this->currentTimestamp(); }
-  public abstract function currentTimestamp(): Keyword;
+  public function now(): CurrentTimeStamp { return new CurrentTimeStamp(); }
+  public function currentTimestamp(): CurrentTimeStamp { return new CurrentTimeStamp(); }
 
   public function count($col = NULL): Keyword {
     if (is_null($col)) {
@@ -243,19 +246,23 @@ abstract class SQL {
       }
       return "(" . implode(" OR ", $conditions) . ")";
     } else if ($condition instanceof Compare) {
-      $column = $this->columnName($condition->getColumn());
+      $lhs = $condition->getLHS();
+      $lhs = ($lhs instanceof Expression ?
+        $this->createExpression($lhs, $params) :
+        $this->columnName($lhs));
+
       $value = $condition->getValue();
       $operator = $condition->getOperator();
 
       if ($value === null) {
         if ($operator === "=") {
-          return "$column IS NULL";
+          return "$lhs IS NULL";
         } else if ($operator === "!=") {
-          return "$column IS NOT NULL";
+          return "$lhs IS NOT NULL";
         }
       }
 
-      return $column . $operator . $this->addValue($value, $params);
+      return $lhs . $operator . $this->addValue($value, $params);
     } else if ($condition instanceof CondBool) {
       return $this->columnName($condition->getValue());
     } else if (is_array($condition)) {
@@ -306,7 +313,16 @@ abstract class SQL {
       return $this->columnName($condition->getColumn()) . " IS NULL";
     } else {
       $this->lastError = "Unsupported condition type: " . get_class($condition);
-      return false;
+      return null;
+    }
+  }
+
+  protected function createExpression(Expression $exp, array &$params) {
+    if ($exp instanceof Column) {
+      return $this->columnName($exp);
+    } else {
+      $this->lastError = "Unsupported expression type: " . get_class($exp);
+      return null;
     }
   }
 

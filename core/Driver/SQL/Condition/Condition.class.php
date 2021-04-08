@@ -2,6 +2,8 @@
 
 namespace Driver\SQL\Condition;
 
-abstract class Condition {
+use Driver\SQL\Expression\Expression;
+
+abstract class Condition extends Expression {
   
 }

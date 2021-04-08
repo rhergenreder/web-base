@@ -37,11 +37,6 @@ class Insert extends Query {
     return $this;
   }
 
-  public function execute() {
-    $fetchResult = !empty($this->sql->getReturning($this->returning));
-    return $this->sql->executeQuery($this, $fetchResult);
-  }
-
   public function getTableName(): string { return $this->tableName; }
   public function getColumns(): array { return $this->columns; }
   public function getRows(): array { return $this->rows; }

@@ -129,7 +129,7 @@ abstract class SQL {
 
     // fetch generated serial ids for Insert statements
     $generatedColumn = ($query instanceof Insert ? $query->getReturning() : null);
-    if($success && $fetchResult && $generatedColumn) {
+    if($success && $generatedColumn) {
       $this->fetchReturning($res, $generatedColumn);
     }
 

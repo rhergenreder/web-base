@@ -347,7 +347,8 @@ class MySQL extends SQL {
       if ($param instanceof CurrentTable) {
         $values[] = $this->getUnsafeValue($trigger->getTable());
       } else {
-        $values[] = $this->columnName("NEW." . $param->getName());
+        $prefix = ($trigger->getEvent() !== "DELETE" ? "NEW." : "OLD.");
+        $values[] = $this->columnName($prefix . $param->getName());
       }
     }
 

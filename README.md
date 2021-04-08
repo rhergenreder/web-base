@@ -39,6 +39,12 @@ For any changes made in [/adminPanel](/adminPanel) or [/fileControlPanel](/fileC
 2. build: `npm run build`
 The compiled dist files will be automatically moved to `/js`.
 
+To fulfill the requirements of data deletion for GDPR, add the following line to your `/etc/crontab`
+or any other cron file:
+```
+@daily www-data /usr/bin/sh -c 'cd /var/www/html && /usr/bin/php cli.php db clean'
+```
+
 ## Extending the Base
 
 ### Adding API-Endpoints

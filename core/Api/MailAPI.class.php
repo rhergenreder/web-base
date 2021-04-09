@@ -199,6 +199,18 @@ namespace Api\Mail {
       return $this->success;
     }
 
+    private function parseDate($date) {
+      $formats = [null, "D M d Y H:i:s e+"];
+      foreach ($formats as $format) {
+        try {
+          return ($format === null ? new \DateTime($date) : \DateTime::createFromFormat($format, $date));
+        } catch (\Exception $exception) {
+        }
+      }
+
+      return $this->createError("Could not parse date: $date");
+    }
+
     public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
@@ -254,7 +266,11 @@ namespace Api\Mail {
       $messages = [];
       foreach ($result as $msgNo) {
         $header = imap_headerinfo($mbox, $msgNo);
-        $date   = new \DateTime($header->date);
+        $date   = $this->parseDate($header->date);
+        if ($date === false) {
+          return false;
+        }
+
         if ($lastSync === 0 || \datetimeDiff($lastSyncDateTime, $date) > 0) {
 
           $references = property_exists($header, "references") ?
@@ -300,7 +316,7 @@ namespace Api\Mail {
       }
 
       @imap_close($mbox);
-      if (!$this->insertMessages($messages)) {
+      if (!empty($messages) && !$this->insertMessages($messages)) {
         return false;
       }
 

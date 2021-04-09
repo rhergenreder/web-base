@@ -246,10 +246,11 @@ namespace Api\Mail {
       return $boxes;
     }
 
-    private function runSearch($mbox, string $searchCriteria, ?\DateTime $lastSyncDateTime, &$messages) {
+    private function runSearch($mbox, string $searchCriteria, ?\DateTime $lastSyncDateTime, array $messageIds, array &$messages) {
       $result = @imap_search($mbox, $searchCriteria);
       if ($result === false) {
-        return $this->createError("Could not run search: " . imap_last_error());
+        $err = imap_last_error(); // might return false, if not messages were found, so we can just abort without throwing an error
+        return empty($err) ? true : $this->createError("Could not run search: $err");
       }
 
       foreach ($result as $msgNo) {
@@ -348,7 +349,7 @@ namespace Api\Mail {
       $messages = [];
       foreach ($boxes as $box) {
         imap_reopen($mbox, $box);
-        if (!$this->runSearch($mbox, $searchCriteria, $lastSyncDateTime, $messages)) {
+        if (!$this->runSearch($mbox, $searchCriteria, $lastSyncDateTime, $messageIds,$messages)) {
           return false;
         }
       }

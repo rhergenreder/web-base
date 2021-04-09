@@ -12,6 +12,9 @@ spl_autoload_register(function($class) {
   }
 });
 
+function is_cli(): bool {
+  return php_sapi_name() === "cli";
+}
 
 function getProtocol(): string {
   $isSecure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') ||

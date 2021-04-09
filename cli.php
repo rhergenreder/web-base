@@ -21,7 +21,7 @@ function _exit(string $line = "") {
   die();
 }
 
-if (php_sapi_name() !== "cli") {
+if (!is_cli()) {
   _exit("Can only be executed via CLI");
 }
 
@@ -36,11 +36,12 @@ function getDatabaseConfig(): ConnectionData {
   return new $configClass();
 }
 
-function getUser(): User {
+function getUser(): ?User {
   $config = new Configuration();
   $user = new User($config);
   if (!$user->getSQL() || !$user->getSQL()->isConnected()) {
-    _exit("Could not establish database connection");
+    printLine("Could not establish database connection");
+    return null;
   }
 
   return $user;
@@ -48,6 +49,33 @@ function getUser(): User {
 
 function printHelp() {
   // TODO: help
+}
+
+function applyPatch(\Driver\SQL\SQL $sql, string $patchName): bool {
+  $class = str_replace('/', '\\', $patchName);
+  $className = "\\Configuration\\$class";
+  $classPath = getClassPath($className);
+  if (!file_exists($classPath) || !is_readable($classPath)) {
+    printLine("Database script file does not exist or is not readable");
+    return false;
+  }
+
+  include_once $classPath;
+  $obj = new $className();
+  if (!($obj instanceof DatabaseScript)) {
+    printLine("Not a database script");
+    return false;
+  }
+
+  $queries = $obj->createQueries($sql);
+  foreach ($queries as $query) {
+    if (!$query->execute($sql)) {
+      printLine($sql->getLastError());
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function handleDatabase(array $argv) {
@@ -59,27 +87,9 @@ function handleDatabase(array $argv) {
       _exit("Usage: cli.php db migrate <class name>");
     }
 
-    $class = str_replace('/', '\\', $class);
-    $className = "\\Configuration\\$class";
-    $classPath = getClassPath($className);
-    if (!file_exists($classPath) || !is_readable($classPath)) {
-      _exit("Database script file does not exist or is not readable");
-    }
-
-    include_once $classPath;
-    $obj = new $className();
-    if (!($obj instanceof DatabaseScript)) {
-      _exit("Not a database script");
-    }
-
-    $user = getUser();
+    $user = getUser() or die();
     $sql = $user->getSQL();
-    $queries = $obj->createQueries($sql);
-    foreach ($queries as $query) {
-      if (!$query->execute($sql)) {
-        _exit($sql->getLastError());
-      }
-    }
+    applyPatch($sql, $class);
   } else if ($action === "export" || $action === "import") {
 
     // database config
@@ -160,7 +170,7 @@ function handleDatabase(array $argv) {
       proc_close($process);
     }
   } else if ($action === "clean") {
-    $user = getUser();
+    $user = getUser() or die();
     $sql = $user->getSQL();
 
     printLine("Deleting user related data older than 90 days...");
@@ -242,6 +252,7 @@ function onMaintenance(array $argv) {
     _exit("Maintenance disabled");
   } else if ($action === "update") {
 
+    $oldPatchFiles = glob('core/Configuration/Patch/*.php');
     printLine("$ git remote -v");
     exec("git remote -v", $gitRemote, $ret);
     if ($ret !== 0) {
@@ -294,7 +305,24 @@ function onMaintenance(array $argv) {
       printLine("Update could not be applied, check the git output.");
       printLine("Follow the instructions and afterwards turn off the maintenance mode again using:");
       printLine("cli.php maintenance off");
+      printLine("Also don't forget to apply new database patches using: cli.php db migrate");
       die();
+    }
+
+    $newPatchFiles = glob('core/Configuration/Patch/*.php');
+    $newPatchFiles = array_diff($newPatchFiles, $oldPatchFiles);
+    if (count($newPatchFiles) > 0) {
+      printLine("Applying new database patches");
+      $user = getUser();
+      if ($user) {
+        $sql = $user->getSQL();
+        foreach ($newPatchFiles as $patchFile) {
+          if (preg_match("/core\/Configuration\/(Patch\/.*)\.class\.php/", $patchFile, $match)) {
+            $patchName = $match[1];
+            applyPatch($sql, $patchName);
+          }
+        }
+      }
     }
 
     // disable maintenance mode again
@@ -343,7 +371,7 @@ function printTable(array $head, array $body) {
 // TODO: add missing api functions (should be all internal only i guess)
 function onRoutes(array $argv) {
 
-  $user = getUser();
+  $user = getUser() or die();
   $action = $argv[2] ?? "list";
 
   if ($action === "list") {
@@ -427,6 +455,10 @@ function onRoutes(array $argv) {
   }
 }
 
+function onTest($argv) {
+
+}
+
 $argv = $_SERVER['argv'];
 if (count($argv) < 2) {
   _exit("Usage: cli.php <db|routes|settings|maintenance> [options...]");
@@ -445,6 +477,9 @@ switch ($command) {
     break;
   case 'maintenance':
     onMaintenance($argv);
+    break;
+  case 'test':
+    onTest($argv);
     break;
   default:
     printLine("Unknown command '$command'");

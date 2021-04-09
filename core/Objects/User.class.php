@@ -22,12 +22,15 @@ class User extends ApiObject {
   private array $groups;
 
   public function __construct($configuration) {
-    session_start();
     $this->configuration = $configuration;
-    $this->setLanguage(Language::DEFAULT_LANGUAGE());
     $this->reset();
     $this->connectDb();
-    $this->parseCookies();
+
+    if (!is_cli()) {
+      session_start();
+      $this->setLanguage(Language::DEFAULT_LANGUAGE());
+      $this->parseCookies();
+    }
   }
 
   public function __destruct() {

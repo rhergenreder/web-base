@@ -34,12 +34,14 @@ I actually don't know what i want to implement here. There are quite to many CMS
 1. `docker-compose up`
 2. Open the webapp in your browser and follow the installation guide
 
+### Afterwards
+
 For any changes made in [/adminPanel](/adminPanel) or [/fileControlPanel](/fileControlPanel), run:
 1. once: `npm i`
 2. build: `npm run build`
 The compiled dist files will be automatically moved to `/js`.
 
-To fulfill the requirements of data deletion for GDPR, add the following line to your `/etc/crontab`
+To fulfill the requirements of data deletion for **GDPR**, add the following line to your `/etc/crontab`
 or any other cron file:
 ```
 @daily www-data /usr/bin/sh -c 'cd /var/www/html && /usr/bin/php cli.php db clean'

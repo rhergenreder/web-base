@@ -40,6 +40,7 @@ namespace Api\Mail {
   use Api\Parameter\StringType;
   use Driver\SQL\Column\Column;
   use Driver\SQL\Condition\Compare;
+  use Driver\SQL\Condition\CondIn;
   use Driver\SQL\Strategy\UpdateStrategy;
   use External\PHPMailer\Exception;
   use External\PHPMailer\PHPMailer;
@@ -139,11 +140,12 @@ namespace Api\Mail {
   }
 
   // TODO: IMAP mail settings :(
+  // TODO: attachments
   class Sync extends MailAPI {
 
     public function __construct(User $user, bool $externalCall = false) {
       parent::__construct($user, $externalCall, array());
-      $this->csrfTokenRequired = true;
+      $this->loginRequired = true;
     }
 
     private function fetchMessageIds() {
@@ -184,20 +186,36 @@ namespace Api\Mail {
     private function insertMessages($messages): bool {
       $sql = $this->user->getSQL();
 
-      $query = $sql->insert("ContactMessage", ["request_id", "user_id", "message", "messageId"])
+      $query = $sql->insert("ContactMessage", ["request_id", "user_id", "message", "messageId", "created_at"])
         ->onDuplicateKeyStrategy(new UpdateStrategy(["message_id"], ["message" => new Column("message")]));
 
+      $entityIds = [];
       foreach ($messages as $message) {
+        $requestId = $message["requestId"];
         $query->addRow(
-          $message["requestId"],
+          $requestId,
           $sql->select("uid")->from("User")->where(new Compare("email", $message["from"]))->limit(1),
           $message["body"],
-          $message["messageId"]
+          $message["messageId"],
+          (new \DateTime())->setTimeStamp($message["timestamp"]),
         );
+
+        if (!in_array($requestId, $entityIds)) {
+          $entityIds[] = $requestId;
+        }
       }
 
       $this->success = $query->execute();
       $this->lastError = $sql->getLastError();
+
+      // Update entity log
+      if ($this->success && count($entityIds) > 0) {
+        $sql->update("EntityLog")
+          ->set("modified", $sql->now())
+          ->where(new CondIn("entityId", $entityIds))
+          ->execute();
+      }
+
       return $this->success;
     }
 
@@ -246,6 +264,20 @@ namespace Api\Mail {
       return $boxes;
     }
 
+    private function getSenderAddress($header): string {
+      if (property_exists($header, "reply_to") && count($header->reply_to) > 0) {
+        $mailBox = $header->reply_to[0]->mailbox;
+        $host = $header->reply_to[0]->host;
+      } else if (property_exists($header, "from") && count($header->from) > 0) {
+        $mailBox = $header->from[0]->mailbox;
+        $host = $header->from[0]->host;
+      } else {
+        return "unknown_addr";
+      }
+
+      return "$mailBox@$host";
+    }
+
     private function runSearch($mbox, string $searchCriteria, ?\DateTime $lastSyncDateTime, array $messageIds, array &$messages) {
       $result = @imap_search($mbox, $searchCriteria);
       if ($result === false) {
@@ -268,7 +300,7 @@ namespace Api\Mail {
           $requestId = $this->findContactRequest($messageIds, $references);
           if ($requestId) {
             $messageId = $header->message_id;
-            $senderAddress = $header->senderaddress;
+            $senderAddress = $this->getSenderAddress($header);
 
             $structure = imap_fetchstructure($mbox, $msgNo);
             $attachments = [];

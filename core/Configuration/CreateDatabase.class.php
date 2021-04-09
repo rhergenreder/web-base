@@ -176,9 +176,12 @@ class CreateDatabase extends DatabaseScript {
       ->addString("message", 512)
       ->addString("messageId", 78)
       ->addDateTime("created_at", false, $sql->currentTimestamp())
+      ->addBool("read", false)
       ->unique("messageId")
       ->primaryKey("uid")
-      ->foreignKey("request_id", "ContactRequest", "uid", new CascadeStrategy());
+      ->foreignKey("request_id", "ContactRequest", "uid", new CascadeStrategy())
+      ->foreignKey("user_id", "User", "uid", new SetNullStrategy());
+
 
     $queries[] = $sql->createTable("ApiPermission")
       ->addString("method", 32)
@@ -208,7 +211,10 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("User/edit", array(USER_GROUP_ADMIN), "Allows users to edit details and group memberships of any user")
       ->addRow("User/delete", array(USER_GROUP_ADMIN), "Allows users to delete any other user")
       ->addRow("Permission/fetch", array(USER_GROUP_ADMIN), "Allows users to list all API permissions")
-      ->addRow("Visitors/stats", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to see visitor statistics");
+      ->addRow("Visitors/stats", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to see visitor statistics")
+      ->addRow("Contact/respond", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to respond to contact requests")
+      ->addRow("Contact/fetch", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to fetch all contact requests")
+      ->addRow("Contact/get", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to see messages within a contact request");
 
     self::loadPatches($queries, $sql);
 

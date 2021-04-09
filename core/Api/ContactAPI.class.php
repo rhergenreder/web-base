@@ -1,8 +1,34 @@
 <?php
 
 namespace Api {
+
+  use Objects\User;
+
   abstract class ContactAPI extends Request {
 
+    protected ?string $messageId;
+
+    public function __construct(User $user, bool $externalCall, array $params) {
+      parent::__construct($user, $externalCall, $params);
+      $this->messageId = null;
+    }
+
+    protected function sendMail(string $name, ?string $fromEmail, string $subject, string $message, ?string $to = null): bool {
+      $request = new \Api\Mail\Send($this->user);
+      $this->success = $request->execute(array(
+        "subject" => $subject,
+        "body" => $message,
+        "replyTo" => $fromEmail,
+        "replyName" => $name,
+        "to" => $to
+      ));
+
+      if ($this->success) {
+        $this->messageId = $request->getResult()["messageId"];
+      }
+
+      return $this->success;
+    }
   }
 }
 
@@ -12,13 +38,10 @@ namespace Api\Contact {
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
   use Api\VerifyCaptcha;
+  use Driver\SQL\Condition\Compare;
   use Objects\User;
 
   class Request extends ContactAPI {
-
-    private int $notificationId;
-    private int $contactRequestId;
-    private ?string $messageId;
 
     public function __construct(User $user, bool $externalCall = false) {
       $parameters = array(
@@ -32,7 +55,6 @@ namespace Api\Contact {
         $parameters["captcha"] = new StringType("captcha");
       }
 
-      $this->messageId = null;
       parent::__construct($user, $externalCall, $parameters);
     }
 
@@ -50,11 +72,16 @@ namespace Api\Contact {
         }
       }
 
-      $sendMail = $this->sendMail();
+      // parameter
+      $message = $this->getParam("message");
+      $name = $this->getParam("fromName");
+      $email = $this->getParam("fromEmail");
+
+      $sendMail = $this->sendMail($name, $email, "Contact Request", $message);
       $mailError = $this->getLastError();
 
       $insertDB = $this->insertContactRequest();
-      $dbError  = $this->getLastError();
+      $dbError = $this->getLastError();
 
       // Create a log entry
       if (!$sendMail || $mailError) {
@@ -77,7 +104,7 @@ namespace Api\Contact {
       return $this->success;
     }
 
-    private function insertContactRequest() {
+    private function insertContactRequest(): bool {
       $sql = $this->user->getSQL();
       $name = $this->getParam("fromName");
       $email = $this->getParam("fromEmail");
@@ -91,62 +118,194 @@ namespace Api\Contact {
 
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
-
-      if ($this->success) {
-        $this->contactRequestId = $sql->getLastInsertId();
-      }
-
       return $this->success;
     }
+  }
 
-    private function createNotification() {
+  class Respond extends ContactAPI {
+
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "requestId" => new Parameter("requestId", Parameter::TYPE_INT),
+        'message' => new StringType('message', 512),
+      ));
+      $this->loginRequired = true;
+      $this->csrfTokenRequired = false;
+    }
+
+    private function getSenderMail(): ?string {
+      $requestId = $this->getParam("requestId");
       $sql = $this->user->getSQL();
-      $name = $this->getParam("fromName");
-      $email = $this->getParam("fromEmail");
-      $message = $this->getParam("message");
-
-      $res = $sql->insert("Notification", array("title", "message", "type"))
-        ->addRow("New Contact Request from: $name", "$name ($email) wrote:\n$message", "message")
-        ->returning("uid")
+      $res = $sql->select("from_email")
+        ->from("ContactRequest")
+        ->where(new Compare("uid", $requestId))
         ->execute();
 
-      $this->success = ($res !== FALSE);
+      $this->success = ($res !== false);
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $this->notificationId = $sql->getLastInsertId();
-
-        $res = $sql->insert("GroupNotification", array("group_id", "notification_id"))
-          ->addRow(USER_GROUP_ADMIN, $this->notificationId)
-          ->addRow(USER_GROUP_SUPPORT, $this->notificationId)
-          ->execute();
-
-        $this->success = ($res !== FALSE);
-        $this->lastError = $sql->getLastError();
+        if (empty($res)) {
+          return $this->createError("Request does not exist");
+        } else {
+          return $res[0]["from_email"];
+        }
       }
 
+      return null;
+    }
+
+    private function insertResponseMessage(): bool {
+      $sql = $this->user->getSQL();
+      $message = $this->getParam("message");
+      $requestId = $this->getParam("requestId");
+
+      $this->success = $sql->insert("ContactMessage", ["request_id", "user_id", "message", "messageId", "read"])
+        ->addRow($requestId, $this->user->getId(), $message, $this->messageId, true)
+        ->execute();
+
+      $this->lastError = $sql->getLastError();
       return $this->success;
     }
 
-    private function sendMail(): bool {
-      $name = $this->getParam("fromName");
-      $email = $this->getParam("fromEmail");
-      $message = $this->getParam("message");
+    private function updateEntity() {
+      $sql = $this->user->getSQL();
+      $requestId = $this->getParam("requestId");
 
-      $request = new \Api\Mail\Send($this->user);
-      $this->success = $request->execute(array(
-        "subject" => "Contact Request",
-        "body" => $message,
-        "replyTo" => $email,
-        "replyName" => $name
-      ));
+      $sql->update("EntityLog")
+        ->set("modified", $sql->now())
+        ->where(new Compare("entityId", $requestId))
+        ->execute();
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $message = $this->getParam("message");
+      $senderMail = $this->getSenderMail();
+      if (!$this->success) {
+        return false;
+      }
+
+      $fromName = $this->user->getUsername();
+      $fromEmail = $this->user->getEmail();
+
+      if (!$this->sendMail($fromName, $fromEmail, "Re: Contact Request", $message, $senderMail)) {
+        return false;
+      }
+
+      if (!$this->insertResponseMessage()) {
+        return false;
+      }
+
+      $this->updateEntity();
+      return $this->success;
+    }
+  }
+
+  class Fetch extends ContactAPI {
+
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array());
+      $this->loginRequired = true;
+      $this->csrfTokenRequired = false;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $sql = $this->user->getSQL();
+      $res = $sql->select("ContactRequest.uid", "from_name", "from_email", "from_name", $sql->sum("read"))
+        ->from("ContactRequest")
+        ->groupBy("uid")
+        ->leftJoin("ContactMessage", "ContactRequest.uid", "ContactMessage.request_id")
+        ->execute();
+
+      $this->success = ($res !== false);
+      $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $this->messageId = $request->getResult()["messageId"];
+        $this->result["contactRequests"] = $res;
       }
 
       return $this->success;
     }
   }
 
+  class Get extends ContactAPI {
+
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "requestId" => new Parameter("requestId", Parameter::TYPE_INT),
+      ));
+      $this->loginRequired = true;
+      $this->csrfTokenRequired = false;
+    }
+
+    private function updateRead() {
+      $requestId = $this->getParam("requestId");
+      $sql = $this->user->getSQL();
+      $sql->update("ContactMessage")
+        ->set("read", 1)
+        ->where(new Compare("request_id", $requestId))
+        ->execute();
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $requestId = $this->getParam("requestId");
+      $sql = $this->user->getSQL();
+
+      $res = $sql->select("from_name", "from_email", "message", "created_at")
+        ->from("ContactRequest")
+        ->where(new Compare("uid", $requestId))
+        ->execute();
+
+      $this->success = ($res !== false);
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success) {
+        if (empty($res)) {
+          return $this->createError("Request does not exist");
+        } else {
+          $row = $res[0];
+          $this->result["request"] = array(
+            "from_name" => $row["from_name"],
+            "from_email" => $row["from_email"],
+            "messages" => array(
+              ["sender_id" => null, "message" => $row["message"], "timestamp" => $row["created_at"]]
+            )
+          );
+
+          $res = $sql->select("user_id", "message", "created_at")
+            ->from("ContactMessage")
+            ->where(new Compare("request_id", $requestId))
+            ->orderBy("created_at")
+            ->execute();
+
+          $this->success = ($res !== false);
+          $this->lastError = $sql->getLastError();
+
+          if ($this->success) {
+            foreach ($res as $row) {
+              $this->result["request"]["messages"][] = array(
+                "sender_id" => $row["user_id"], "message" => $row["message"], "timestamp" => $row["created_at"]
+              );
+            }
+
+            $this->updateRead();
+          }
+        }
+      }
+
+      return $this->success;
+    }
+  }
 }

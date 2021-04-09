@@ -18,6 +18,7 @@ namespace Api\Contact {
 
     private int $notificationId;
     private int $contactRequestId;
+    private ?string $messageId;
 
     public function __construct(User $user, bool $externalCall = false) {
       $parameters = array(
@@ -31,6 +32,7 @@ namespace Api\Contact {
         $parameters["captcha"] = new StringType("captcha");
       }
 
+      $this->messageId = null;
       parent::__construct($user, $externalCall, $parameters);
     }
 
@@ -48,15 +50,28 @@ namespace Api\Contact {
         }
       }
 
-      if (!$this->insertContactRequest()) {
-        return false;
+      $sendMail = $this->sendMail();
+      $mailError = $this->getLastError();
+
+      $insertDB = $this->insertContactRequest();
+      $dbError  = $this->getLastError();
+
+      // Create a log entry
+      if (!$sendMail || $mailError) {
+        $message = "Error processing contact request.";
+        if (!$sendMail) {
+          $message .= " Mail: $mailError";
+        }
+
+        if (!$insertDB) {
+          $message .= " Mail: $dbError";
+        }
+
+        error_log($message);
       }
 
-      $this->createNotification();
-      $this->sendMail();
-
-      if (!$this->success) {
-        return $this->createError("The contact request was saved, but the server was unable to create a notification.");
+      if (!$sendMail && !$insertDB) {
+        return $this->createError("The contact request could not be sent. The Administrator is already informed. Please try again later.");
       }
 
       return $this->success;
@@ -67,9 +82,10 @@ namespace Api\Contact {
       $name = $this->getParam("fromName");
       $email = $this->getParam("fromEmail");
       $message = $this->getParam("message");
+      $messageId = $this->messageId ?? null;
 
-      $res = $sql->insert("ContactRequest", array("from_name", "from_email", "message"))
-        ->addRow($name, $email, $message)
+      $res = $sql->insert("ContactRequest", array("from_name", "from_email", "message", "messageId"))
+        ->addRow($name, $email, $message, $messageId)
         ->returning("uid")
         ->execute();
 
@@ -112,15 +128,24 @@ namespace Api\Contact {
       return $this->success;
     }
 
-    private function sendMail() {
-      /*$email = $this->getParam("fromEmail");
-      $settings = $this->user->getConfiguration()->getSettings();
+    private function sendMail(): bool {
+      $name = $this->getParam("fromName");
+      $email = $this->getParam("fromEmail");
+      $message = $this->getParam("message");
+
       $request = new \Api\Mail\Send($this->user);
       $this->success = $request->execute(array(
-        "to" => $settings->get,
-        "subject" => "[$siteName] Account Invitation",
-        "body" => $messageBody
-      ));*/
+        "subject" => "Contact Request",
+        "body" => $message,
+        "replyTo" => $email,
+        "replyName" => $name
+      ));
+
+      if ($this->success) {
+        $this->messageId = $request->getResult()["messageId"];
+      }
+
+      return $this->success;
     }
   }
 

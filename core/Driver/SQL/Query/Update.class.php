@@ -32,7 +32,7 @@ class Update extends Query {
   public function getConditions(): array { return $this->conditions; }
   public function getValues(): array { return $this->values; }
 
-  public function build(array &$params, Query $context = NULL): ?string {
+  public function build(array &$params): ?string {
     $table = $this->sql->tableName($this->getTable());
 
     $valueStr = array();

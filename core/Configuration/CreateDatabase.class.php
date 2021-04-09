@@ -151,6 +151,7 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("mail_username", "", false, false)
       ->addRow("mail_password", "", true, false)
       ->addRow("mail_from", "", false, false)
+      ->addRow("mail_last_sync", "", true, false)
       ->addRow("message_confirm_email", self::MessageConfirmEmail(), false, false)
       ->addRow("message_accept_invite", self::MessageAcceptInvite(), false, false)
       ->addRow("message_reset_password", self::MessageResetPassword(), false, false);
@@ -163,8 +164,21 @@ class CreateDatabase extends DatabaseScript {
       ->addString("from_name", 32)
       ->addString("from_email", 64)
       ->addString("message", 512)
+      ->addString("messageId", 78, true) # null = don't sync with mails (usually if mail could not be sent)
       ->addDateTime("created_at", false, $sql->currentTimestamp())
+      ->unique("messageId")
       ->primaryKey("uid");
+
+    $queries[] = $sql->createTable("ContactMessage")
+      ->addSerial("uid")
+      ->addInt("request_id")
+      ->addInt("user_id", true) # null = customer has sent this message
+      ->addString("message", 512)
+      ->addString("messageId", 78)
+      ->addDateTime("created_at", false, $sql->currentTimestamp())
+      ->unique("messageId")
+      ->primaryKey("uid")
+      ->foreignKey("request_id", "ContactRequest", "uid", new CascadeStrategy());
 
     $queries[] = $sql->createTable("ApiPermission")
       ->addString("method", 32)
@@ -183,6 +197,7 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("Routes/fetch", array(USER_GROUP_ADMIN), "Allows users to list all configured routes")
       ->addRow("Routes/save", array(USER_GROUP_ADMIN), "Allows users to create, delete and modify routes")
       ->addRow("Mail/test", array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN), "Allows users to send a test email to a given address")
+      ->addRow("Mail/Sync", array(USER_GROUP_SUPPORT, USER_GROUP_ADMIN), "Allows users to synchronize mails with the database")
       ->addRow("Settings/get", array(USER_GROUP_ADMIN), "Allows users to fetch server settings")
       ->addRow("Settings/set", array(USER_GROUP_ADMIN), "Allows users create, delete or modify server settings")
       ->addRow("Stats", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to fetch server stats")

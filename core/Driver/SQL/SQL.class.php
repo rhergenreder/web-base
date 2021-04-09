@@ -315,6 +315,8 @@ abstract class SQL {
   protected function createExpression(Expression $exp, array &$params) {
     if ($exp instanceof Column) {
       return $this->columnName($exp);
+    } else if ($exp instanceof Query) {
+      return "(" . $exp->build($params) . ")";
     } else {
       $this->lastError = "Unsupported expression type: " . get_class($exp);
       return null;

@@ -1,6 +1,7 @@
 <?php
 
 include_once 'core/core.php';
+require_once 'core/datetime.php';
 include_once 'core/constants.php';
 
 use Configuration\Configuration;
@@ -459,6 +460,26 @@ function onTest($argv) {
 
 }
 
+function onMail($argv) {
+  $action = $argv[2] ?? null;
+  if ($action === "sync") {
+    $user = getUser() or die();
+    if (!$user->getConfiguration()->getSettings()->isMailEnabled()) {
+      _exit("Mails are not configured yet.");
+    }
+
+    $req = new Api\Mail\Sync($user);
+    printLine("Syncing emails…");
+    if (!$req->execute()) {
+      _exit("Error syncing mails: " . $req->getLastError());
+    }
+
+    _exit("Done.");
+  } else {
+    _exit("Usage: cli.php mail <sync> [options...]");
+  }
+}
+
 $argv = $_SERVER['argv'];
 if (count($argv) < 2) {
   _exit("Usage: cli.php <db|routes|settings|maintenance> [options...]");
@@ -480,6 +501,9 @@ switch ($command) {
     break;
   case 'test':
     onTest($argv);
+    break;
+  case 'mail':
+    onMail($argv);
     break;
   default:
     printLine("Unknown command '$command'");

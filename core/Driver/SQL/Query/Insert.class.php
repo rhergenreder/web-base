@@ -43,7 +43,7 @@ class Insert extends Query {
   public function onDuplicateKey(): ?Strategy { return $this->onDuplicateKey; }
   public function getReturning(): ?string { return $this->returning; }
 
-  public function build(array &$params, Query $context = NULL): ?string {
+  public function build(array &$params): ?string {
     $tableName = $this->sql->tableName($this->getTableName());
     $columns = $this->getColumns();
     $rows = $this->getRows();

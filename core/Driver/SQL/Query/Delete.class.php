@@ -24,7 +24,7 @@ class Delete extends Query {
   public function getTable(): string { return $this->table; }
   public function getConditions(): array { return $this->conditions; }
 
-  public function build(array &$params, Query $context = NULL): ?string {
+  public function build(array &$params): ?string {
     $table = $this->sql->tableName($this->getTable());
     $where = $this->sql->getWhereClause($this->getConditions(), $params);
     return "DELETE FROM $table$where";

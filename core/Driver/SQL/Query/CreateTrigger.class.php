@@ -61,7 +61,7 @@ class CreateTrigger extends Query {
   public function getTable(): string { return $this->tableName; }
   public function getProcedure(): CreateProcedure { return $this->procedure; }
 
-  public function build(array &$params, Query $context = NULL): ?string {
+  public function build(array &$params): ?string {
     $name = $this->sql->tableName($this->getName());
     $time = $this->getTime();
     $event = $this->getEvent();

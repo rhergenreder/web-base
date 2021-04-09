@@ -24,4 +24,6 @@ abstract class Query extends Expression {
   public function execute() {
     return $this->sql->executeQuery($this);
   }
+
+  public abstract function build(array &$params): ?string;
 }

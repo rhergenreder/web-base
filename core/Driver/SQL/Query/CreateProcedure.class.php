@@ -36,7 +36,7 @@ class CreateProcedure extends Query {
     return $this;
   }
 
-  public function build(array &$params, Query $context = NULL): ?string {
+  public function build(array &$params): ?string {
     $head = $this->sql->getProcedureHead($this);
     $body = $this->sql->getProcedureBody($this);
     $tail = $this->sql->getProcedureTail();

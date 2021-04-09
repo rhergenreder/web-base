@@ -23,7 +23,7 @@ class Drop extends Query {
     return $this->table;
   }
 
-  public function build(array &$params, Query $context = NULL): ?string {
+  public function build(array &$params): ?string {
     return "DROP TABLE " . $this->sql->tableName($this->getTable());
   }
 }

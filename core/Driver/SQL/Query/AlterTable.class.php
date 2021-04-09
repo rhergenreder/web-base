@@ -59,7 +59,7 @@ class AlterTable extends Query {
   public function getConstraint(): ?Constraint { return $this->constraint; }
   public function getTable(): string { return $this->table; }
 
-  public function build(array &$params, Query $context = NULL): ?string {
+  public function build(array &$params): ?string {
     $tableName = $this->sql->tableName($this->getTable());
     $action = $this->getAction();
     $column = $this->getColumn();

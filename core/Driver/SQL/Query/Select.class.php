@@ -95,7 +95,7 @@ class Select extends Query {
   public function getOffset(): int { return $this->offset; }
   public function getGroupBy(): array { return $this->groupColumns; }
 
-  public function build(array &$params, Query $context = NULL): ?string {
+  public function build(array &$params): ?string {
     $columns = $this->sql->columnName($this->getColumns());
     $tables = $this->getTables();
 

@@ -110,4 +110,8 @@ class Settings {
   public function isRegistrationAllowed(): bool {
     return $this->registrationAllowed;
   }
+
+  public function isMailEnabled(): bool {
+    return $this->mailEnabled;
+  }
 }

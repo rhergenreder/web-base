@@ -290,7 +290,7 @@ class MySQL extends SQL {
     }
   }
 
-  public function addValue($val, &$params = NULL) {
+  public function addValue($val, &$params = NULL, bool $unsafe = false) {
     if ($val instanceof Keyword) {
       return $val->getValue();
     } else if ($val instanceof CurrentColumn) {
@@ -300,8 +300,12 @@ class MySQL extends SQL {
     } else if ($val instanceof Expression) {
       return $this->createExpression($val, $params);
     } else {
-      $params[] = $val;
-      return "?";
+      if ($unsafe) {
+        return $this->getUnsafeValue($val);
+      } else {
+        $params[] = $val;
+        return "?";
+      }
     }
   }
 
@@ -403,7 +407,7 @@ class MySQL extends SQL {
     return $query;
   }
 
-  protected function createExpression(Expression $exp, array &$params) {
+  protected function createExpression(Expression $exp, array &$params): ?string {
     if ($exp instanceof DateAdd || $exp instanceof DateSub) {
       $lhs = $this->addValue($exp->getLHS(), $params);
       $rhs = $this->addValue($exp->getRHS(), $params);

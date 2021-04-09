@@ -11,6 +11,8 @@ namespace Api {
     public function __construct(User $user, bool $externalCall, array $params) {
       parent::__construct($user, $externalCall, $params);
       $this->messageId = null;
+      $this->csrfTokenRequired = false;
+
     }
 
     protected function sendMail(string $name, ?string $fromEmail, string $subject, string $message, ?string $to = null): bool {
@@ -23,6 +25,7 @@ namespace Api {
         "to" => $to
       ));
 
+      $this->lastError = $request->getLastError();
       if ($this->success) {
         $this->messageId = $request->getResult()["messageId"];
       }
@@ -39,6 +42,9 @@ namespace Api\Contact {
   use Api\Parameter\StringType;
   use Api\VerifyCaptcha;
   use Driver\SQL\Condition\Compare;
+  use Driver\SQL\Condition\CondNot;
+  use Driver\SQL\Expression\CaseWhen;
+  use Driver\SQL\Expression\Sum;
   use Objects\User;
 
   class Request extends ContactAPI {
@@ -219,9 +225,10 @@ namespace Api\Contact {
       }
 
       $sql = $this->user->getSQL();
-      $res = $sql->select("ContactRequest.uid", "from_name", "from_email", "from_name", $sql->sum("read"))
+      $res = $sql->select("ContactRequest.uid", "from_name", "from_email", "from_name",
+          new Sum(new CaseWhen(new CondNot("ContactMessage.read"), 1, 0), "unread"))
         ->from("ContactRequest")
-        ->groupBy("uid")
+        ->groupBy("ContactRequest.uid")
         ->leftJoin("ContactMessage", "ContactRequest.uid", "ContactMessage.request_id")
         ->execute();
 

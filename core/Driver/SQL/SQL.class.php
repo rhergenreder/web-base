@@ -15,8 +15,10 @@ use Driver\SQL\Constraint\Constraint;
 use \Driver\SQL\Constraint\Unique;
 use \Driver\SQL\Constraint\PrimaryKey;
 use \Driver\SQL\Constraint\ForeignKey;
+use Driver\SQL\Expression\CaseWhen;
 use Driver\SQL\Expression\CurrentTimeStamp;
 use Driver\SQL\Expression\Expression;
+use Driver\SQL\Expression\Sum;
 use Driver\SQL\Query\AlterTable;
 use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\Query\CreateTable;
@@ -187,8 +189,10 @@ abstract class SQL {
   }
 
   protected function getUnsafeValue($value): ?string {
-    if (is_string($value) || is_numeric($value) || is_bool($value)) {
+    if (is_string($value)) {
       return "'" . addslashes("$value") . "'"; // unsafe operation here...
+    } else if (is_numeric($value) || is_bool($value)) {
+      return $value;
     } else if ($value instanceof Column) {
       return $this->columnName($value);
     } else if ($value === null) {
@@ -200,7 +204,7 @@ abstract class SQL {
   }
 
   protected abstract function getValueDefinition($val);
-  public abstract function addValue($val, &$params = NULL);
+  public abstract function addValue($val, &$params = NULL, bool $unsafe = false);
   protected abstract function buildUnsafe(Query $statement): string;
 
   public abstract function tableName($table): string;
@@ -220,12 +224,6 @@ abstract class SQL {
       $col = $this->columnName($col);
       return new Keyword("COUNT($col) AS $countCol");
     }
-  }
-
-  public function sum($col): Keyword {
-    $sumCol = strtolower(str_replace(".","_", $col)) .  "_sum";
-    $col = $this->columnName($col);
-    return new Keyword("SUM($col) AS $sumCol");
   }
 
   public function distinct($col): Keyword {
@@ -312,11 +310,23 @@ abstract class SQL {
     }
   }
 
-  protected function createExpression(Expression $exp, array &$params) {
+  protected function createExpression(Expression $exp, array &$params): ?string {
     if ($exp instanceof Column) {
       return $this->columnName($exp);
     } else if ($exp instanceof Query) {
       return "(" . $exp->build($params) . ")";
+    } else if ($exp instanceof CaseWhen) {
+      $condition = $this->buildCondition($exp->getCondition(), $params);
+
+      // psql requires constant values here
+      $trueCase = $this->addValue($exp->getTrueCase(), $params, true);
+      $falseCase = $this->addValue($exp->getFalseCase(), $params, true);
+
+      return "CASE WHEN $condition THEN $trueCase ELSE $falseCase END";
+    } else if ($exp instanceof Sum) {
+      $value = $this->addValue($exp->getValue(), $params);
+      $alias = $exp->getAlias();
+      return "SUM($value) AS $alias";
     } else {
       $this->lastError = "Unsupported expression type: " . get_class($exp);
       return null;

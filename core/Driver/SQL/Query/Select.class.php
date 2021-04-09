@@ -8,7 +8,7 @@ use Driver\SQL\SQL;
 
 class Select extends Query {
 
-  private array $columns;
+  private array $selectValues;
   private array $tables;
   private array $conditions;
   private array $joins;
@@ -18,9 +18,9 @@ class Select extends Query {
   private int $limit;
   private int $offset;
 
-  public function __construct($sql, ...$columns) {
+  public function __construct($sql, ...$selectValues) {
     parent::__construct($sql);
-    $this->columns = (!empty($columns) && is_array($columns[0])) ? $columns[0] : $columns;
+    $this->selectValues = (!empty($selectValues) && is_array($selectValues[0])) ? $selectValues[0] : $selectValues;
     $this->tables = array();
     $this->conditions = array();
     $this->joins = array();
@@ -85,7 +85,7 @@ class Select extends Query {
     return $this->sql->executeQuery($this, true);
   }
 
-  public function getColumns(): array { return $this->columns; }
+  public function getSelectValues(): array { return $this->selectValues; }
   public function getTables(): array { return $this->tables; }
   public function getConditions(): array { return $this->conditions; }
   public function getJoins(): array { return $this->joins; }
@@ -96,11 +96,21 @@ class Select extends Query {
   public function getGroupBy(): array { return $this->groupColumns; }
 
   public function build(array &$params): ?string {
-    $columns = $this->sql->columnName($this->getColumns());
+
+    $selectValues = [];
+    foreach ($this->selectValues as $value) {
+      if (is_string($value)) {
+        $selectValues[] = $this->sql->columnName($value);
+      } else {
+        $selectValues[] = $this->sql->addValue($value, $params);
+      }
+    }
+
     $tables = $this->getTables();
+    $selectValues = implode(",", $selectValues);
 
     if (!$tables) {
-      return "SELECT $columns";
+      return "SELECT $selectValues";
     }
 
     $tables = $this->sql->tableName($tables);
@@ -135,6 +145,6 @@ class Select extends Query {
 
     $limit = ($this->getLimit() > 0 ? (" LIMIT " . $this->getLimit()) : "");
     $offset = ($this->getOffset() > 0 ? (" OFFSET " . $this->getOffset()) : "");
-    return "SELECT $columns FROM $tables$joinStr$where$groupBy$orderBy$limit$offset";
+    return "SELECT $selectValues FROM $tables$joinStr$where$groupBy$orderBy$limit$offset";
   }
 }

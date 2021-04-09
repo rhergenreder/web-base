@@ -276,7 +276,7 @@ class PostgreSQL extends SQL {
     }
   }
 
-  public function addValue($val, &$params = NULL) {
+  public function addValue($val, &$params = NULL, bool $unsafe = false) {
     if ($val instanceof Keyword) {
       return $val->getValue();
     } else if ($val instanceof CurrentTable) {
@@ -288,8 +288,12 @@ class PostgreSQL extends SQL {
     } else if ($val instanceof Expression) {
       return $this->createExpression($val, $params);
     } else {
-      $params[] = is_bool($val) ? ($val ? "TRUE" : "FALSE") : $val;
-      return '$' . count($params);
+      if ($unsafe) {
+        return $this->getUnsafeValue($val);
+      } else {
+        $params[] = is_bool($val) ? ($val ? "TRUE" : "FALSE") : $val;
+        return '$' . count($params);
+      }
     }
   }
 
@@ -419,7 +423,7 @@ class PostgreSQL extends SQL {
     return $query;
   }
 
-  protected function createExpression(Expression $exp, array &$params) {
+  protected function createExpression(Expression $exp, array &$params): ?string {
     if ($exp instanceof DateAdd || $exp instanceof DateSub) {
       $lhs = $this->addValue($exp->getLHS(), $params);
       $rhs = $this->addValue($exp->getRHS(), $params);

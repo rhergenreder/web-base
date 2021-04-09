@@ -187,7 +187,7 @@ namespace Api\Mail {
       $sql = $this->user->getSQL();
 
       $query = $sql->insert("ContactMessage", ["request_id", "user_id", "message", "messageId", "created_at"])
-        ->onDuplicateKeyStrategy(new UpdateStrategy(["message_id"], ["message" => new Column("message")]));
+        ->onDuplicateKeyStrategy(new UpdateStrategy(["messageId"], ["message" => new Column("message")]));
 
       $entityIds = [];
       foreach ($messages as $message) {
@@ -279,6 +279,7 @@ namespace Api\Mail {
     }
 
     private function runSearch($mbox, string $searchCriteria, ?\DateTime $lastSyncDateTime, array $messageIds, array &$messages) {
+
       $result = @imap_search($mbox, $searchCriteria);
       if ($result === false) {
         $err = imap_last_error(); // might return false, if not messages were found, so we can just abort without throwing an error
@@ -287,7 +288,7 @@ namespace Api\Mail {
 
       foreach ($result as $msgNo) {
         $header = imap_headerinfo($mbox, $msgNo);
-        $date   = $this->parseDate($header->date);
+        $date = $this->parseDate($header->date);
         if ($date === false) {
           return false;
         }
@@ -309,7 +310,9 @@ namespace Api\Mail {
               foreach ($structure->parts as $part) {
                 $disposition = (property_exists($part, "disposition") ? $part->disposition : null);
                 if ($disposition === "attachment") {
-                  $fileName = array_filter($part->dparameters, function($param) { return $param->attribute === "filename"; });
+                  $fileName = array_filter($part->dparameters, function ($param) {
+                    return $param->attribute === "filename";
+                  });
                   if (count($fileName) > 0) {
                     $attachments[] = $fileName[0]->value;
                   }
@@ -320,14 +323,16 @@ namespace Api\Mail {
             $body = imap_fetchbody($mbox, $msgNo, "1");
             $body = $this->parseBody($body);
 
-            $messages[] = [
-              "messageId" => $messageId,
-              "requestId" => $requestId,
-              "timestamp" => $date->getTimestamp(),
-              "from" => $senderAddress,
-              "body" => $body,
-              "attachments" => $attachments
-            ];
+            if (!isset($messageId[$messageId])) {
+              $messages[$messageId] = [
+                "messageId" => $messageId,
+                "requestId" => $requestId,
+                "timestamp" => $date->getTimestamp(),
+                "from" => $senderAddress,
+                "body" => $body,
+                "attachments" => $attachments
+              ];
+            }
           }
         }
       }
@@ -381,7 +386,7 @@ namespace Api\Mail {
       $messages = [];
       foreach ($boxes as $box) {
         imap_reopen($mbox, $box);
-        if (!$this->runSearch($mbox, $searchCriteria, $lastSyncDateTime, $messageIds,$messages)) {
+        if (!$this->runSearch($mbox, $searchCriteria, $lastSyncDateTime, $messageIds, $messages)) {
           return false;
         }
       }

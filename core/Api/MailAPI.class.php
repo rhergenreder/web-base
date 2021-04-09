@@ -43,6 +43,7 @@ namespace Api\Mail {
   use Driver\SQL\Strategy\UpdateStrategy;
   use External\PHPMailer\Exception;
   use External\PHPMailer\PHPMailer;
+  use Objects\ConnectionData;
   use Objects\User;
 
   class Test extends MailAPI {
@@ -137,6 +138,7 @@ namespace Api\Mail {
     }
   }
 
+  // TODO: IMAP mail settings :(
   class Sync extends MailAPI {
 
     public function __construct(User $user, bool $externalCall = false) {
@@ -200,10 +202,13 @@ namespace Api\Mail {
     }
 
     private function parseDate($date) {
-      $formats = [null, "D M d Y H:i:s e+"];
+      $formats = [null, "D M d Y H:i:s e+", "D, j M Y H:i:s e+"];
       foreach ($formats as $format) {
         try {
-          return ($format === null ? new \DateTime($date) : \DateTime::createFromFormat($format, $date));
+          $dateObj = ($format === null ? new \DateTime($date) : \DateTime::createFromFormat($format, $date));
+          if ($dateObj) {
+            return $dateObj;
+          }
         } catch (\Exception $exception) {
         }
       }
@@ -211,59 +216,42 @@ namespace Api\Mail {
       return $this->createError("Could not parse date: $date");
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
-      $mailConfig = $this->getMailConfig();
-      if (!$this->success) {
-        return false;
-      }
-
-      if (!function_exists("imap_open")) {
-        return $this->createError("IMAP is not enabled. Enable it inside the php config. For more information visit: https://www.php.net/manual/en/imap.setup.php");
-      }
-
-      $messageIds = $this->fetchMessageIds();
-      if ($messageIds === false) {
-        return false;
-      } else if (count($messageIds) === 0) {
-        // nothing to sync here
-        return true;
-      }
-
-      // TODO: IMAP mail settings :(
+    private function getReference(ConnectionData $mailConfig): string {
       $port = 993;
-      $folder = "";  // $folder = "INBOX";
       $host = str_replace("smtp", "imap", $mailConfig->getHost());
+      $flags = ["/ssl"];
+      return '{' . $host . ':' . $port . implode("", $flags) . '}';
+    }
+
+    private function connect(ConnectionData $mailConfig) {
+
       $username = $mailConfig->getLogin();
       $password = $mailConfig->getPassword();
-      $lastSync = intval($mailConfig->getProperty("last_sync", "0"));
-      $flags = ["/ssl"];
-
-      $mailboxStr = '{' . $host . ':' . $port . implode("", $flags) . '}' . $folder;
-      $mbox = @imap_open($mailboxStr, $username, $password, OP_READONLY);
+      $ref = $this->getReference($mailConfig);
+      $mbox = @imap_open($ref, $username, $password, OP_READONLY);
       if (!$mbox) {
         return $this->createError("Can't connect to mail server via IMAP: " . imap_last_error());
       }
 
-      if ($lastSync > 0) {
-        $lastSyncDateTime = (new \DateTime())->setTimeStamp($lastSync);
-        $dateStr = $lastSyncDateTime->format("d-M-Y");
-        $searchCriteria = "SINCE \"$dateStr\"";
-      } else {
-        $lastSyncDateTime = null;
-        $searchCriteria = "ALL";
+      return $mbox;
+    }
+
+    private function listFolders(ConnectionData $mailConfig, $mbox) {
+
+      $boxes = @imap_list($mbox, $this->getReference($mailConfig), '*');
+      if (!$boxes) {
+        return $this->createError("Error listing imap folders: " . imap_last_error());
       }
 
-      $now = (new \DateTime())->getTimestamp();
+      return $boxes;
+    }
+
+    private function runSearch($mbox, string $searchCriteria, ?\DateTime $lastSyncDateTime, &$messages) {
       $result = @imap_search($mbox, $searchCriteria);
       if ($result === false) {
         return $this->createError("Could not run search: " . imap_last_error());
       }
 
-      $messages = [];
       foreach ($result as $msgNo) {
         $header = imap_headerinfo($mbox, $msgNo);
         $date   = $this->parseDate($header->date);
@@ -271,7 +259,7 @@ namespace Api\Mail {
           return false;
         }
 
-        if ($lastSync === 0 || \datetimeDiff($lastSyncDateTime, $date) > 0) {
+        if ($lastSyncDateTime === null || \datetimeDiff($lastSyncDateTime, $date) > 0) {
 
           $references = property_exists($header, "references") ?
             explode(" ", $header->references) : [];
@@ -279,12 +267,8 @@ namespace Api\Mail {
           $requestId = $this->findContactRequest($messageIds, $references);
           if ($requestId) {
             $messageId = $header->message_id;
-            $senderAddress = null;
-            if (count($header->from) > 0) {
-              $senderAddress = $header->from[0]->mailbox . "@" . $header->from[0]->host;
-            }
+            $senderAddress = $header->senderaddress;
 
-            // $body = imap_body($mbox, $msgNo);
             $structure = imap_fetchstructure($mbox, $msgNo);
             $attachments = [];
             $hasAttachments = (property_exists($structure, "parts"));
@@ -312,6 +296,60 @@ namespace Api\Mail {
               "attachments" => $attachments
             ];
           }
+        }
+      }
+
+      return true;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      if (!function_exists("imap_open")) {
+        return $this->createError("IMAP is not enabled. Enable it inside the php config. For more information visit: https://www.php.net/manual/en/imap.setup.php");
+      }
+
+      $messageIds = $this->fetchMessageIds();
+      if ($messageIds === false) {
+        return false;
+      } else if (count($messageIds) === 0) {
+        // nothing to sync here
+        return true;
+      }
+
+      $mailConfig = $this->getMailConfig();
+      if (!$this->success) {
+        return false;
+      }
+
+      $mbox = $this->connect($mailConfig);
+      if ($mbox === false) {
+        return false;
+      }
+
+      $boxes = $this->listFolders($mailConfig, $mbox);
+      if ($boxes === false) {
+        return false;
+      }
+
+      $now = (new \DateTime())->getTimestamp();
+      $lastSync = intval($mailConfig->getProperty("last_sync", "0"));
+      if ($lastSync > 0) {
+        $lastSyncDateTime = (new \DateTime())->setTimeStamp($lastSync);
+        $dateStr = $lastSyncDateTime->format("d-M-Y");
+        $searchCriteria = "SINCE \"$dateStr\"";
+      } else {
+        $lastSyncDateTime = null;
+        $searchCriteria = "ALL";
+      }
+
+      $messages = [];
+      foreach ($boxes as $box) {
+        imap_reopen($mbox, $box);
+        if (!$this->runSearch($mbox, $searchCriteria, $lastSyncDateTime, $messages)) {
+          return false;
         }
       }
 

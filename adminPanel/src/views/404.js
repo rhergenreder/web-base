@@ -1,6 +1,6 @@
 import * as React from "react";
 import {Link, useLocation, useHistory} from "react-router-dom";
-import Icon from "./elements/icon";
+import Icon from "../elements/icon";
 
 export default function View404() {
 

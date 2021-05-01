@@ -3,24 +3,25 @@ import ReactDOM from 'react-dom';
 import './include/adminlte.min.css';
 import './include/index.css';
 import API from './api.js';
-import Header from './header.js';
-import Sidebar from './sidebar.js';
+import Header from './elements/header.js';
+import Sidebar from './elements/sidebar.js';
 import UserOverview from './views/users.js';
 import Overview from './views/overview.js'
 import CreateUser from "./views/adduser";
 import Icon from "./elements/icon";
 import Dialog from "./elements/dialog";
 import {BrowserRouter as Router, Route, Switch} from 'react-router-dom'
-import View404 from "./404";
+import View404 from "./views/404";
 import Logs from "./views/logs";
 import PageOverview from "./views/pages";
 import HelpPage from "./views/help";
-import Footer from "./footer";
+import Footer from "./elements/footer";
 import EditUser from "./views/edituser";
 import CreateGroup from "./views/addgroup";
 import Settings from "./views/settings";
 import PermissionSettings from "./views/permissions";
 import Visitors from "./views/visitors";
+import ContactRequestOverview from "./views/contact";
 
 class AdminDashboard extends React.Component {
 
@@ -31,12 +32,14 @@ class AdminDashboard extends React.Component {
       loaded: false,
       dialog: { onClose: () => this.hideDialog() },
       notifications: [ ],
+      contactRequests: [ ],
       filesPath: null
     };
   }
 
   onUpdate() {
     this.fetchNotifications();
+    this.fetchContactRequests();
   }
 
   showDialog(message, title, options=["Close"], onOption = null) {
@@ -54,6 +57,16 @@ class AdminDashboard extends React.Component {
         this.showDialog("Error fetching notifications: " + res.msg, "Error fetching notifications");
       } else {
         this.setState({...this.state, notifications: res.notifications });
+      }
+    });
+  }
+
+  fetchContactRequests() {
+    this.api.fetchContactRequests().then((res) => {
+      if (!res.success) {
+        this.showDialog("Error fetching contact requests: " + res.msg, "Error fetching contact requests");
+      } else {
+        this.setState({...this.state, contactRequests: res.contactRequests });
       }
     });
   }
@@ -87,6 +100,7 @@ class AdminDashboard extends React.Component {
       } else {
         this.fetchNotifications();
         this.fetchFilesPath();
+        this.fetchContactRequests();
         setInterval(this.onUpdate.bind(this), 60*1000);
         this.setState({...this.state, loaded: true});
       }
@@ -107,7 +121,7 @@ class AdminDashboard extends React.Component {
 
     return <Router>
         <Header {...this.controlObj} notifications={this.state.notifications} />
-        <Sidebar {...this.controlObj} notifications={this.state.notifications} filesPath={this.state.filesPath} />
+        <Sidebar {...this.controlObj} notifications={this.state.notifications} contactRequests={this.state.contactRequests} filesPath={this.state.filesPath} />
         <div className={"content-wrapper p-2"}>
           <section className={"content"}>
             <Switch>
@@ -120,6 +134,7 @@ class AdminDashboard extends React.Component {
               }}/>
               <Route path={"/admin/user/permissions"}><PermissionSettings {...this.controlObj}/></Route>
               <Route path={"/admin/group/add"}><CreateGroup {...this.controlObj} /></Route>
+              <Route exact={true} path={"/admin/contact/"}><ContactRequestOverview {...this.controlObj} /></Route>
               <Route path={"/admin/visitors"}><Visitors {...this.controlObj} /></Route>
               <Route path={"/admin/logs"}><Logs {...this.controlObj} notifications={this.state.notifications} /></Route>
               <Route path={"/admin/settings"}><Settings {...this.controlObj} /></Route>

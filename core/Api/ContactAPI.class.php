@@ -236,7 +236,15 @@ namespace Api\Contact {
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $this->result["contactRequests"] = $res;
+        $this->result["contactRequests"] = [];
+        foreach ($res as $row) {
+          $this->result["contactRequests"][] = array(
+            "uid" => intval($row["uid"]),
+            "from_name" => $row["from_name"],
+            "from_email" => $row["from_email"],
+            "unread" => intval($row["unread"]),
+          );
+        }
       }
 
       return $this->success;

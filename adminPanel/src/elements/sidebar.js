@@ -1,5 +1,5 @@
 import React from 'react';
-import Icon from "./elements/icon";
+import Icon from "./icon";
 import {Link, NavLink} from "react-router-dom";
 
 export default function Sidebar(props) {
@@ -8,6 +8,7 @@ export default function Sidebar(props) {
         showDialog: props.showDialog || function() {},
         api: props.api,
         notifications: props.notifications || [ ],
+        contactRequests: props.contactRequests || [ ],
         filesPath: props.filesPath || null
     };
 
@@ -46,6 +47,10 @@ export default function Sidebar(props) {
             "name": "Logs & Notifications",
             "icon": "file-medical-alt"
         },
+        "contact": {
+            "name": "Contact Requests",
+            "icon": "comments"
+        },
         "help": {
             "name": "Help",
             "icon": "question-circle"
@@ -56,6 +61,15 @@ export default function Sidebar(props) {
     if (numNotifications > 0) {
         if (numNotifications > 9) numNotifications = "9+";
         menuItems["logs"]["badge"] = { type: "warning", value: numNotifications };
+    }
+
+    console.log("sidebar", parent.contactRequests);
+    let numUnreadContactMessages = 0;
+    for (const contactRequest of parent.contactRequests) {
+        numUnreadContactMessages += contactRequest.unread;
+    }
+    if (numUnreadContactMessages > 0) {
+        menuItems["contact"]["badge"] = { type: "info", value: numUnreadContactMessages };
     }
 
     let li = [];

@@ -1,7 +1,7 @@
 import * as React from "react";
-import Icon from "./elements/icon";
+import Icon from "./icon";
 import {useState} from "react";
-import {getPeriodString} from "./global";
+import {getPeriodString} from "../global";
 import {Link} from "react-router-dom";
 
 export default function Header(props) {

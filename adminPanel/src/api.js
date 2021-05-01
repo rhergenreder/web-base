@@ -118,4 +118,16 @@ export default class API {
     async getVisitors(type, date) {
         return this.apiCall("visitors/stats", { type: type, date: date });
     }
+
+    async fetchContactRequests() {
+        return this.apiCall('contact/fetch');
+    }
+
+    async getContactMessages(id) {
+        return this.apiCall('contact/get', { requestId: id });
+    }
+
+    async sendContactMessage(id, message) {
+        return this.apiCall('contact/respond', { requestId: id, message: message });
+    }
 };

@@ -687,7 +687,6 @@ export default class Settings extends React.Component {
     onSendTestMail() {
         this.setState({...this.state, mail: {...this.state.mail, isSending: true}});
 
-        console.log(this.state.mail);
         this.parent.api.sendTestMail(this.state.mail.test_email).then((res) => {
             let alerts = this.state.mail.alerts.slice();
             let newState = {...this.state.mail, isSending: false};

@@ -2,12 +2,13 @@ version: "3.9"
 services:
   web:
     container_name: web
-    image: nginx:latest
     ports:
       - "80:80"
     volumes:
     - .:/application:rw
     - ./docker/nginx/site.conf:/etc/nginx/conf.d/default.conf:ro
+    build:
+      context: './docker/nginx/'
     links:
       - db
       - php
@@ -28,4 +29,5 @@ services:
       context: './docker/php/'
     links:
       - db
+    
 

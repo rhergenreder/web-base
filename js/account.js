@@ -4,9 +4,13 @@ $(document).ready(function () {
         return (typeof grecaptcha !== 'undefined');
     }
 
-    function showAlert(type, msg) {
+    function showAlert(type, msg, raw=false) {
         let alert = $("#alertMessage");
-        alert.text(msg);
+        if (raw) {
+            alert.html(msg);
+        } else {
+            alert.text(msg);
+        }
         alert.attr("class", "mt-2 alert alert-" + type);
         alert.show();
     }
@@ -51,7 +55,11 @@ $(document).ready(function () {
                 btn.prop("disabled", false);
                 $("#password").val("");
                 createdDiv.hide();
-                showAlert("danger", res.msg);
+                if (res.emailConfirmed === false) {
+                    showAlert("danger", res.msg + ' <a href="/resendConfirmation">Click here</a> to resend the confirmation mail.', true);
+                } else {
+                    showAlert("danger", res.msg);
+                }
             }
         });
     });
@@ -79,14 +87,14 @@ $(document).ready(function () {
                         params["captcha"] = captcha;
                         submitForm(btn, "user/register", params, () => {
                             showAlert("success", "Account successfully created, check your emails.");
-                            $("input").val("");
+                            $("input:not([id='siteKey'])").val("");
                         });
                     });
                 });
             } else {
                 submitForm(btn, "user/register", params, () => {
                     showAlert("success", "Account successfully created, check your emails.");
-                    $("input").val("");
+                    $("input:not([id='siteKey'])").val("");
                 });
             }
         }
@@ -137,14 +145,14 @@ $(document).ready(function () {
                     params["captcha"] = captcha;
                     submitForm(btn, "user/requestPasswordReset", params, () => {
                         showAlert("success", "If the e-mail address exists and is linked to a account, you will receive a password reset token.");
-                        $("input").val("");
+                        $("input:not([id='siteKey'])").val("");
                     });
                 });
             });
         } else {
             submitForm(btn, "user/requestPasswordReset", params, () => {
                 showAlert("success", "If the e-mail address exists and is linked to a account, you will receive a password reset token.");
-                $("input").val("");
+                $("input:not([id='siteKey'])").val("");
             });
         }
     });
@@ -173,8 +181,34 @@ $(document).ready(function () {
                     showAlert("danger", res.msg);
                 } else {
                     showAlert("success", "Your password was successfully changed. You may now login.");
-                    $("input").val("");
+                    $("input:not([id='siteKey'])").val("");
                 }
+            });
+        }
+    });
+
+    $("#btnResendConfirmEmail").click(function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let btn = $(this);
+        let email = $("#email").val();
+        let params = { email: email };
+        if (isRecaptchaEnabled()) {
+            let siteKey = $("#siteKey").val().trim();
+            grecaptcha.ready(function() {
+                grecaptcha.execute(siteKey, {action: 'resendConfirmation'}).then(function(captcha) {
+                    params["captcha"] = captcha;
+                    submitForm(btn, "user/resendConfirmEmail", params, () => {
+                        showAlert("success", "If the e-mail address exists and is linked to a account, you will receive a new confirmation email.");
+                        $("input:not([id='siteKey'])").val("");
+                    });
+                });
+            });
+        } else {
+            submitForm(btn, "user/resendConfirmEmail", params, () => {
+                showAlert("success", "\"If the e-mail address exists and is linked to a account, you will receive a new confirmation email.");
+                $("input:not([id='siteKey'])").val("");
             });
         }
     });

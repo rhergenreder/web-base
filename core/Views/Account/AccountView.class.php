@@ -34,14 +34,14 @@ abstract class AccountView extends View {
 
     $html .= "<div class=\"container mt-5\">
         <div class=\"row\">
-          <div class=\"col-md-4 py-5 bg-primary text-white text-center\" style='border-top-left-radius:.4em;border-bottom-left-radius:.4em'>
+          <div class=\"col-md-3 py-5 bg-primary text-white text-center\" style='border-top-left-radius:.4em;border-bottom-left-radius:.4em;margin-left: auto'>
             <div class=\"card-body\">
               $icon
               <h2 class=\"py-3\">$this->title</h2>
               <p>$this->description</p>
             </div>
           </div>
-          <div class=\"col-md-8 pt-5 pb-2 border border-info\" style='border-top-right-radius:.4em;border-bottom-right-radius:.4em'>
+          <div class=\"col-md-5 pt-5 pb-2 border border-info\" style='border-top-right-radius:.4em;border-bottom-right-radius:.4em;margin-right:auto'>
             $content
             <div class='alert mt-2' style='display:none' id='alertMessage'></div>
           </div>

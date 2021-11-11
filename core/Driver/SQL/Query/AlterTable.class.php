@@ -54,6 +54,11 @@ class AlterTable extends Query {
     return $this;
   }
 
+  public function resetAutoIncrement(): AlterTable {
+    $this->action = "RESET_AUTO_INCREMENT";
+    return $this;
+  }
+
   public function getAction(): string { return $this->action; }
   public function getColumn(): ?Column { return $this->column; }
   public function getConstraint(): ?Constraint { return $this->constraint; }
@@ -64,6 +69,10 @@ class AlterTable extends Query {
     $action = $this->getAction();
     $column = $this->getColumn();
     $constraint = $this->getConstraint();
+
+    if ($action === "RESET_AUTO_INCREMENT") {
+      return "ALTER TABLE $tableName AUTO_INCREMENT=1";
+    }
 
     $query = "ALTER TABLE $tableName $action ";
 

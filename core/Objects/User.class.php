@@ -27,7 +27,7 @@ class User extends ApiObject {
     $this->connectDb();
 
     if (!is_cli()) {
-      session_start();
+      @session_start();
       $this->setLanguage(Language::DEFAULT_LANGUAGE());
       $this->parseCookies();
     }
@@ -227,9 +227,12 @@ class User extends ApiObject {
     }
 
     $res = $this->sql->select("ApiKey.user_id as uid", "User.name", "User.email", "User.confirmed",
-      "Language.uid as langId", "Language.code as langCode", "Language.name as langName")
+      "Language.uid as langId", "Language.code as langCode", "Language.name as langName",
+      "Group.uid as groupId", "Group.name as groupName")
       ->from("ApiKey")
       ->innerJoin("User", "ApiKey.user_id", "User.uid")
+      ->leftJoin("UserGroup", "UserGroup.user_id", "User.uid")
+      ->leftJoin("Group", "UserGroup.group_id", "Group.uid")
       ->leftJoin("Language", "User.language_id", "Language.uid")
       ->where(new Compare("ApiKey.api_key", $apiKey))
       ->where(new Compare("valid_until", $this->sql->currentTimestamp(), ">"))
@@ -252,6 +255,10 @@ class User extends ApiObject {
 
         if(!is_null($row['langId'])) {
           $this->setLanguage(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
+        }
+
+        foreach($res as $row) {
+          $this->groups[$row["groupId"]] = $row["groupName"];
         }
       }
     }

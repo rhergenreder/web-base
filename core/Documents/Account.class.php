@@ -17,6 +17,7 @@ namespace Documents {
 namespace Documents\Account {
 
   use Elements\Head;
+  use Elements\Link;
   use Elements\Script;
   use Elements\SimpleBody;
 
@@ -32,6 +33,7 @@ namespace Documents\Account {
       $this->addJS(Script::ACCOUNT);
       $this->loadBootstrap();
       $this->loadFontawesome();
+      $this->addCSS(Link::CORE);
     }
 
     protected function initMetas(): array {

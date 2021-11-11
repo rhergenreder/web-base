@@ -5,42 +5,51 @@ namespace Views\Account;
 
 
 use Elements\Document;
+use Elements\Script;
 
 class ConfirmEmail extends AccountView {
-
-  private bool $success;
-  private string $message;
 
   public function __construct(Document $document, $loadView = true) {
     parent::__construct($document, $loadView);
     $this->title = "Confirm Email";
+    $this->description = "Request a password reset, once you got the e-mail address, you can choose a new password";
     $this->icon = "user-check";
-    $this->success = false;
-    $this->message = "No content";
   }
 
   public function loadView() {
     parent::loadView();
-
-    if (isset($_GET["token"]) && is_string($_GET["token"]) && !empty($_GET["token"])) {
-      $req = new \Api\User\ConfirmEmail($this->getDocument()->getUser());
-      $this->success = $req->execute(array("token" => $_GET["token"]));
-      if ($this->success) {
-        $this->message = "Your e-mail address was successfully confirmed, you may now log in";
-      } else {
-        $this->message = "Error confirming e-mail address: " . $req->getLastError();
-      }
-    } else {
-      $this->success = false;
-      $this->message = "The link you visited is no longer valid";
-    }
+    $this->getDocument()->getHead()->addScript(Script::MIME_TEXT_JAVASCRIPT, "", '
+      $(document).ready(function() {
+         var token = jsCore.getParameter("token");
+         if (token) {
+           jsCore.apiCall("/user/confirmEmail", { token: token }, (res) => {
+              $("#confirm-status").removeClass("alert-info");
+              if (!res.success) {
+                  $("#confirm-status").addClass("alert-danger");
+                  $("#confirm-status").text("Error confirming e-mail address: " + res.msg);
+              } else {
+                  $("#confirm-status").addClass("alert-success");
+                  $("#confirm-status").text("Your e-mail address was successfully confirmed, you may now log in.");
+              }
+          });
+        } else {
+          $("#confirm-status").removeClass("alert-info");
+          $("#confirm-status").addClass("alert-danger");
+          $("#confirm-status").text("The link you visited is no longer valid");
+        }
+      });'
+    );
   }
 
   protected function getAccountContent() {
-    if ($this->success) {
-      return $this->createSuccessText($this->message);
-    } else {
-      return $this->createErrorText($this->message);
-    }
+
+    $spinner = $this->createIcon("spinner");
+    $html = "<noscript><div class=\"alert alert-danger\">Javascript is required</div></noscript>
+             <div class=\"alert alert-info\" id=\"confirm-status\">
+                Confirming email… $spinner
+             </div>";
+
+    $html .= "<a href='/login'><button class='btn btn-primary' style='position: absolute; bottom: 10px' type='button'>Proceed to Login</button></a>";
+    return $html;
   }
 }

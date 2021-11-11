@@ -47,9 +47,9 @@ class VerifyCaptcha extends Request {
     $this->success = false;
     $this->lastError = "Could not verify captcha: No response from google received.";
 
-    if($response) {
+    if ($response) {
       $this->success = $response["success"];
-      if(!$this->success) {
+      if (!$this->success) {
         $this->lastError = "Could not verify captcha: " . implode(";", $response["error-codes"]);
       } else {
         $score = $response["score"];

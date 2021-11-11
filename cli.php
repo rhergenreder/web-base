@@ -1,5 +1,7 @@
 <?php
 
+define('WEBROOT', realpath("."));
+
 include_once 'core/core.php';
 require_once 'core/datetime.php';
 include_once 'core/constants.php';

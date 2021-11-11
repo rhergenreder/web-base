@@ -11,7 +11,8 @@ class Script extends StaticView {
   const INSTALL   = "/js/install.js";
   const BOOTSTRAP = "/js/bootstrap.bundle.min.js";
   const ACCOUNT   = "/js/account.js";
-  const FILES     = "/js/files.min.js";
+  const SECLAB    = "/js/seclab.min.js";
+  const FONTAWESOME = "/js/fontawesome-all.min.js";
 
   private string $type;
   private string $content;

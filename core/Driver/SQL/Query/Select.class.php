@@ -23,6 +23,7 @@ class Select extends Query {
     $this->selectValues = (!empty($selectValues) && is_array($selectValues[0])) ? $selectValues[0] : $selectValues;
     $this->tables = array();
     $this->conditions = array();
+    $this->havings = array();
     $this->joins = array();
     $this->orderColumns = array();
     $this->groupColumns = array();
@@ -38,6 +39,11 @@ class Select extends Query {
 
   public function where(...$conditions): Select {
     $this->conditions[] = (count($conditions) === 1 ? $conditions : new CondOr($conditions));
+    return $this;
+  }
+
+  public function having(...$conditions): Select {
+    $this->havings[] = (count($conditions) === 1 ? $conditions : new CondOr($conditions));
     return $this;
   }
 
@@ -94,6 +100,7 @@ class Select extends Query {
   public function getLimit(): int { return $this->limit; }
   public function getOffset(): int { return $this->offset; }
   public function getGroupBy(): array { return $this->groupColumns; }
+  public function getHavings(): array { return $this->havings; }
 
   public function build(array &$params): ?string {
 
@@ -101,6 +108,17 @@ class Select extends Query {
     foreach ($this->selectValues as $value) {
       if (is_string($value)) {
         $selectValues[] = $this->sql->columnName($value);
+      } else if ($value instanceof Select) {
+        $subSelect = $value->build($params);
+        if (count($value->getSelectValues()) !== 1) {
+          $selectValues[] = "($subSelect)";
+        } else {
+          $columnName = $value->getSelectValues()[0];
+          if(($index = stripos($columnName, " as ")) !== FALSE) {
+            $columnName = substr($columnName, $index + 4);
+          }
+          $selectValues[] = "($subSelect) as $columnName";
+        }
       } else {
         $selectValues[] = $this->sql->addValue($value, $params);
       }
@@ -115,6 +133,10 @@ class Select extends Query {
 
     $tables = $this->sql->tableName($tables);
     $where = $this->sql->getWhereClause($this->getConditions(), $params);
+    $havingClause = "";
+    if (count($this->havings) > 0) {
+      $havingClause  = " HAVING " . $this->sql->buildCondition($this->getHavings(), $params);
+    }
 
     $joinStr = "";
     $joins = $this->getJoins();
@@ -145,6 +167,6 @@ class Select extends Query {
 
     $limit = ($this->getLimit() > 0 ? (" LIMIT " . $this->getLimit()) : "");
     $offset = ($this->getOffset() > 0 ? (" OFFSET " . $this->getOffset()) : "");
-    return "SELECT $selectValues FROM $tables$joinStr$where$groupBy$orderBy$limit$offset";
+    return "SELECT $selectValues FROM $tables$joinStr$where$groupBy$havingClause$orderBy$limit$offset";
   }
 }

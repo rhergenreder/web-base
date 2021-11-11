@@ -3,7 +3,7 @@
 namespace Api {
 
   abstract class PermissionAPI extends Request {
-    protected function checkStaticPermission() {
+    protected function checkStaticPermission(): bool {
       if (!$this->user->isLoggedIn() || !$this->user->hasGroup(USER_GROUP_ADMIN)) {
         return $this->createError("Permission denied.");
       }
@@ -21,6 +21,7 @@ namespace Api\Permission {
   use Driver\SQL\Column\Column;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondIn;
+  use Driver\SQL\Condition\CondLike;
   use Driver\SQL\Condition\CondNot;
   use Driver\SQL\Strategy\UpdateStrategy;
   use Objects\User;
@@ -44,14 +45,14 @@ namespace Api\Permission {
       $sql = $this->user->getSQL();
       $res = $sql->select("groups")
         ->from("ApiPermission")
-        ->where(new Compare("method", $method))
+        ->where(new CondLike($method, new Column("method")))
         ->execute();
 
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        if (empty($res)) {
+        if (empty($res) || !is_array($res)) {
           return true;
         }
 

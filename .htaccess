@@ -3,6 +3,7 @@ Options -Indexes
 
 DirectorySlash Off
 
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 RewriteEngine On
 RewriteRule ^api(/.*)?$ /index.php?api=$1 [L,QSA]
 

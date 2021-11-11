@@ -1,11 +1,11 @@
 <?php
 
-define("WEBBASE_VERSION", "1.2.5");
+define("WEBBASE_VERSION", "1.3.0");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {
-  $full_path = getClassPath($class);
-  if(file_exists($full_path)) {
+  $full_path = WEBROOT . "/" . getClassPath($class);
+  if (file_exists($full_path)) {
     include_once $full_path;
   } else {
     include_once getClassPath($class, false);
@@ -24,10 +24,24 @@ function getProtocol(): string {
   return $isSecure ? 'https' : 'http';
 }
 
-function generateRandomString($length): string {
+function generateRandomString($length, $type = "ascii"): string {
   $randomString = '';
+
+  $lowercase = "abcdefghijklmnopqrstuvwxyz";
+  $uppercase = strtoupper($lowercase);
+  $digits    = "0123456789";
+  $hex       = $digits . substr($lowercase, 0, 6);
+  $ascii     = $lowercase . $uppercase . $digits;
+
   if ($length > 0) {
-    $numCharacters = 26 + 26 + 10; // a-z + A-Z + 0-9
+    $type = strtolower($type);
+    if ($type === "hex") {
+      $charset = $hex;
+    } else {
+      $charset = $ascii;
+    }
+
+    $numCharacters = strlen($charset);
     for ($i = 0; $i < $length; $i++) {
       try {
         $num = random_int(0, $numCharacters - 1);
@@ -35,9 +49,7 @@ function generateRandomString($length): string {
         $num = rand(0, $numCharacters - 1);
       }
 
-      if ($num < 26) $randomString .= chr(ord('a') + $num);
-      else if ($num - 26 < 26) $randomString .= chr(ord('A') + $num - 26);
-      else $randomString .= chr(ord('0') + $num - 26 - 26);
+      $randomString .= $charset[$num];
     }
   }
 
@@ -124,7 +136,7 @@ function urlId($str) {
   return urlencode(htmlspecialchars(preg_replace("[: ]","-", $str)));
 }
 
-function getClassPath($class, $suffix = true) {
+function getClassPath($class, $suffix = true): string {
   $path = str_replace('\\', '/', $class);
   $path = array_values(array_filter(explode("/", $path)));
 

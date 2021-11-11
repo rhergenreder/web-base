@@ -138,6 +138,7 @@ namespace Api\Routes {
         ->from("Route")
         ->where(new CondBool("active"))
         ->where(new CondRegex($request, new Column("request")))
+        ->orderBy("uid")->ascending()
         ->limit(1)
         ->execute();
 

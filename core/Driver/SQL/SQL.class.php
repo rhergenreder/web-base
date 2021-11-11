@@ -4,6 +4,7 @@ namespace Driver\SQL;
 
 use Driver\SQL\Column\Column;
 use Driver\SQL\Condition\Compare;
+use Driver\SQL\Condition\CondAnd;
 use Driver\SQL\Condition\CondBool;
 use Driver\SQL\Condition\CondIn;
 use Driver\SQL\Condition\Condition;
@@ -11,6 +12,7 @@ use Driver\SQL\Condition\CondKeyword;
 use Driver\SQL\Condition\CondNot;
 use Driver\Sql\Condition\CondNull;
 use Driver\SQL\Condition\CondOr;
+use Driver\SQL\Condition\Exists;
 use Driver\SQL\Constraint\Constraint;
 use \Driver\SQL\Constraint\Unique;
 use \Driver\SQL\Constraint\PrimaryKey;
@@ -234,7 +236,7 @@ abstract class SQL {
   // Statements
   protected abstract function execute($query, $values=NULL, $returnValues=false);
 
-  protected function buildCondition($condition, &$params) {
+  public function buildCondition($condition, &$params) {
 
     if ($condition instanceof CondOr) {
       $conditions = array();
@@ -242,6 +244,12 @@ abstract class SQL {
         $conditions[] = $this->buildCondition($cond, $params);
       }
       return "(" . implode(" OR ", $conditions) . ")";
+    } else if ($condition instanceof CondAnd) {
+      $conditions = array();
+      foreach($condition->getConditions() as $cond) {
+        $conditions[] = $this->buildCondition($cond, $params);
+      }
+      return "(" . implode(" AND ", $conditions) . ")";
     } else if ($condition instanceof Compare) {
       $column = $this->columnName($condition->getColumn());
       $value = $condition->getValue();
@@ -302,8 +310,10 @@ abstract class SQL {
       }
 
       return "NOT $expression";
-    } else if($condition instanceof CondNull) {
-      return $this->columnName($condition->getColumn()) . " IS NULL";
+    } else if ($condition instanceof CondNull) {
+        return $this->columnName($condition->getColumn()) . " IS NULL";
+    } else if ($condition instanceof Exists) {
+        return "EXISTS(" .$condition->getSubQuery()->build($params) . ")";
     } else {
       $this->lastError = "Unsupported condition type: " . get_class($condition);
       return null;

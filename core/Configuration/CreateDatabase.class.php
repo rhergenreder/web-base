@@ -131,10 +131,11 @@ class CreateDatabase extends DatabaseScript {
 
     $queries[] = $sql->insert("Route", array("request", "action", "target", "extra"))
       ->addRow("^/admin(/.*)?$", "dynamic", "\\Documents\\Admin", NULL)
-      ->addRow("^/register(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\Register")
-      ->addRow("^/confirmEmail(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ConfirmEmail")
-      ->addRow("^/acceptInvite(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\AcceptInvite")
-      ->addRow("^/resetPassword(/)?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ResetPassword")
+      ->addRow("^/register/?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\Register")
+      ->addRow("^/confirmEmail/?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ConfirmEmail")
+      ->addRow("^/acceptInvite/?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\AcceptInvite")
+      ->addRow("^/resetPassword/?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ResetPassword")
+      ->addRow("^/resendConfirmEmail/?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ResendConfirmEmail")
       ->addRow("^/$", "static", "/static/welcome.html", NULL);
 
     $queries[] = $sql->createTable("Settings")

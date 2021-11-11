@@ -95,8 +95,7 @@ function getMonthName($month) {
 
 function isInPast($d) {
   $now = date('Y-m-d H:i:s');
-  if(is_a($d, "DateTime")) $d = $d->format('Y-m-d H:i:s');
-  return (strtotime($d) < strtotime($now));
+  return datetimeDiff($d, $now) > 0;
 }
 
 function datetimeDiff($d1, $d2) {

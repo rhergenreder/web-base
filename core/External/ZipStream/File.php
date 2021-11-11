@@ -68,6 +68,13 @@ namespace External\ZipStream {
       $this->fileHandle = fopen($filename, 'rb');
     }
 
+    public function loadFromBuffer($buf) {
+      $this->crc32 = hash('crc32b', $buf, true);
+      $this->sha256 = hash('sha256', $buf);
+      $this->fileSize = strlen($buf);
+      $this->content = $buf;
+    }
+
     public function name() {
       return $this->name;
     }

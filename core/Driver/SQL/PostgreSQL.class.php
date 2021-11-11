@@ -340,7 +340,7 @@ class PostgreSQL extends SQL {
     return ($statusTexts[$status] ?? "Unknown") . " (v$version)";
   }
 
-  protected function buildCondition($condition, &$params) {
+  public function buildCondition($condition, &$params) {
     if($condition instanceof CondRegex) {
       $left = $condition->getLeftExp();
       $right = $condition->getRightExp();

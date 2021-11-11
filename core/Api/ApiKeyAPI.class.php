@@ -6,7 +6,7 @@ namespace Api {
 
   abstract class ApiKeyAPI extends Request {
 
-    protected function apiKeyExists($id) {
+    protected function apiKeyExists($id): bool {
       $sql = $this->user->getSQL();
       $res = $sql->select($sql->count())
         ->from("ApiKey")

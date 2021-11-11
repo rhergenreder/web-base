@@ -45,9 +45,13 @@ class Request {
     }
   }
 
-  public function parseParams($values): bool {
+  public function parseParams($values, $structure = NULL): bool {
 
-    foreach ($this->params as $name => $param) {
+    if ($structure === NULL) {
+      $structure = $this->params;
+    }
+
+    foreach ($structure as $name => $param) {
       $value = $values[$name] ?? NULL;
 
       $isEmpty = (is_string($value) && strlen($value) === 0) || (is_array($value) && empty($value));
@@ -90,7 +94,7 @@ class Request {
       $values = $_REQUEST;
       if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER["CONTENT_TYPE"]) && in_array("application/json", explode(";", $_SERVER["CONTENT_TYPE"]))) {
         $jsonData = json_decode(file_get_contents('php://input'), true);
-        if ($jsonData) {
+        if ($jsonData !== null) {
           $values = array_merge($values, $jsonData);
         } else {
           $this->lastError = 'Invalid request body.';
@@ -124,9 +128,12 @@ class Request {
 
       // Logged in or api key authorized?
       if ($this->loginRequired) {
-        if (isset($values['api_key']) && $this->apiKeyAllowed) {
-          $apiKey = $values['api_key'];
-          $apiKeyAuthorized = $this->user->authorize($apiKey);
+        if (isset($_SERVER["HTTP_AUTHORIZATION"]) && $this->apiKeyAllowed) {
+          $authHeader = $_SERVER["HTTP_AUTHORIZATION"];
+          if (startsWith($authHeader, "Bearer ")) {
+            $apiKey = substr($authHeader, strlen("Bearer "));
+            $apiKeyAuthorized = $this->user->authorize($apiKey);
+          }
         }
 
         if (!$this->user->isLoggedIn() && !$apiKeyAuthorized) {
@@ -182,9 +189,13 @@ class Request {
     return false;
   }
 
-  protected function getParam($name) {
+  protected function getParam($name, $obj = NULL) {
     // i don't know why phpstorm
-    return (isset($this->params[$name]) ? $this->params[$name]->value : NULL);
+    if ($obj === NULL) {
+      $obj = $this->params;
+    }
+
+    return (isset($obj[$name]) ? $obj[$name]->value : NULL);
   }
 
   public function isPublic(): bool {
@@ -221,5 +232,17 @@ class Request {
     $this->result['success'] = $this->success;
     $this->result['msg'] = $this->lastError;
     return json_encode($this->result);
+  }
+
+  protected function disableOutputBuffer() {
+    header('X-Accel-Buffering: no');
+    header("Cache-Control: no-transform, no-store, max-age=0");
+
+    ob_implicit_flush(true);
+    $levels = ob_get_level();
+    for ( $i = 0; $i < $levels; $i ++ ) {
+      ob_end_flush();
+    }
+    flush();
   }
 }

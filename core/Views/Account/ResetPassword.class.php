@@ -56,10 +56,17 @@ class ResetPassword extends AccountView {
           <div class=\"input-group-append\">
             <span class=\"input-group-text\"><i class=\"fas fa-at\"></i></span>  
           </div>
-          <input id=\"email\" name=\"email\" placeholder=\"E-Mail address\" class=\"form-control\" type=\"email\" maxlength=\"64\" />
+          <input id=\"email\" autocomplete='email' name=\"email\" placeholder=\"E-Mail address\" class=\"form-control\" type=\"email\" maxlength=\"64\" />
         </div>
-        <div class=\"input-group mt-2\">
-          <button id='btnRequestPasswordReset' class='btn btn-primary'>Request</button>
+        <div class=\"input-group mt-2\" style='position: absolute;bottom: 15px'>
+          <button id='btnRequestPasswordReset' class='btn btn-primary'>
+            Request
+          </button>
+          <a href='/login' style='margin-left: 10px'>
+            <button class='btn btn-secondary' type='button'>
+              Back to Login
+            </button>
+          </a>
         </div>
       ";
     } else {
@@ -70,13 +77,13 @@ class ResetPassword extends AccountView {
           <div class=\"input-group-append\">
             <span class=\"input-group-text\"><i class=\"fas fa-key\"></i></span>
           </div>
-          <input type=\"password\" name='password' id='password' class=\"form-control\" placeholder=\"Password\">
+          <input type=\"password\" autocomplete='new-password' name='password' id='password' class=\"form-control\" placeholder=\"Password\">
         </div>
         <div class=\"input-group mt-3\">
           <div class=\"input-group-append\">
             <span class=\"input-group-text\"><i class=\"fas fa-key\"></i></span>
           </div>
-          <input type=\"password\" name='confirmPassword' id='confirmPassword' class=\"form-control\" placeholder=\"Confirm Password\">
+          <input type=\"password\" autocomplete='new-password' name='confirmPassword' id='confirmPassword' class=\"form-control\" placeholder=\"Confirm Password\">
         </div>
         <div class=\"input-group mt-3\">
           <button type=\"button\" class=\"btn btn-success\" id='btnResetPassword'>Submit</button>

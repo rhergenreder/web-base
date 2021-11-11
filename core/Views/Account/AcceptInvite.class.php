@@ -73,13 +73,13 @@ class AcceptInvite extends AccountView {
           <div class=\"input-group-append\">
             <span class=\"input-group-text\"><i class=\"fas fa-key\"></i></span>
           </div>
-          <input type=\"password\" name='password' id='password' class=\"form-control\" placeholder=\"Password\">
+          <input type=\"password\" autocomplete='new-password' name='password' id='password' class=\"form-control\" placeholder=\"Password\">
         </div>
         <div class=\"input-group mt-3\">
           <div class=\"input-group-append\">
             <span class=\"input-group-text\"><i class=\"fas fa-key\"></i></span>
           </div>
-          <input type=\"password\" name='confirmPassword' id='confirmPassword' class=\"form-control\" placeholder=\"Confirm Password\">
+          <input type=\"password\" autocomplete='new-password' name='confirmPassword' id='confirmPassword' class=\"form-control\" placeholder=\"Confirm Password\">
         </div>
         <div class=\"input-group mt-3\">
           <button type=\"button\" class=\"btn btn-success\" id='btnAcceptInvite'>Submit</button>

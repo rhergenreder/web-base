@@ -16,7 +16,14 @@ class Register extends AccountView {
 
   public function getAccountContent() {
 
-    $settings = $this->getDocument()->getUser()->getConfiguration()->getSettings();
+    $user = $this->getDocument()->getUser();
+    if ($user->isLoggedIn()) {
+      header(302);
+      header("Location: /");
+      die("You are already logged in.");
+    }
+
+    $settings = $user->getConfiguration()->getSettings();
     if (!$settings->isRegistrationAllowed()) {
       return $this->createErrorText(
         "Registration is not enabled on this website. If you are an administrator,
@@ -30,28 +37,33 @@ class Register extends AccountView {
           <div class=\"input-group-append\">
             <span class=\"input-group-text\"><i class=\"fas fa-hashtag\"></i></span>  
           </div>
-          <input id=\"username\" name=\"username\" placeholder=\"Username\" class=\"form-control\" type=\"text\" maxlength=\"32\">
+          <input id=\"username\" autocomplete='username' name=\"username\" placeholder=\"Username\" class=\"form-control\" type=\"text\" maxlength=\"32\">
         </div>
         <div class=\"input-group mt-3\">
          <div class=\"input-group-append\">
             <span class=\"input-group-text\"><i class=\"fas fa-at\"></i></span>
           </div>
-          <input type=\"email\" name='email' id='email' class=\"form-control\" placeholder=\"Email\" maxlength=\"64\">
+          <input type=\"email\" autocomplete='email' name='email' id='email' class=\"form-control\" placeholder=\"Email\" maxlength=\"64\">
         </div>
         <div class=\"input-group mt-3\">
           <div class=\"input-group-append\">
             <span class=\"input-group-text\"><i class=\"fas fa-key\"></i></span>
           </div>
-          <input type=\"password\" name='password' id='password' class=\"form-control\" placeholder=\"Password\">
+          <input type=\"password\" autocomplete='new-password' name='password' id='password' class=\"form-control\" placeholder=\"Password\">
         </div>
         <div class=\"input-group mt-3\">
           <div class=\"input-group-append\">
             <span class=\"input-group-text\"><i class=\"fas fa-key\"></i></span>
           </div>
-          <input type=\"password\" name='confirmPassword' id='confirmPassword' class=\"form-control\" placeholder=\"Confirm Password\">
+          <input type=\"password\" autocomplete='new-password' name='confirmPassword' id='confirmPassword' class=\"form-control\" placeholder=\"Confirm Password\">
         </div>
         <div class=\"input-group mt-3\">
-          <button type=\"button\" class=\"btn btn-success\" id='btnRegister'>Submit</button>
+          <button type=\"button\" class=\"btn btn-primary\" id='btnRegister'>Submit</button>          
+          <a href='/login' style='margin-left: 10px'>
+            <button class='btn btn-secondary' type='button'>
+              Back to Login
+            </button>
+          </a>
         </div>
      </form>";
   }

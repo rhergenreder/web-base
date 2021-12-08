@@ -123,8 +123,8 @@ $(document).ready(function () {
                 if (!res.success) {
                     showAlert("danger", res.msg);
                 } else {
-                    showAlert("success", "Account successfully created. You may now login.");
                     $("input").val("");
+                    document.location = "/login?success=" +  encodeURIComponent("Account successfully created. You may now login.");
                 }
             });
         }
@@ -182,6 +182,8 @@ $(document).ready(function () {
                 } else {
                     showAlert("success", "Your password was successfully changed. You may now login.");
                     $("input:not([id='siteKey'])").val("");
+                    btn.hide();
+                    $("#backToLogin").show();
                 }
             });
         }

@@ -1,0 +1,7 @@
+{% extends "base.twig" %}
+{% block head %}
+    <meta http-equiv="refresh" content="0;url={{ url }}">
+{% endblock %}
+{% block body %}
+    You will be automatically redirected to <b>{{ url }}</b>. If that doesn't work, click <a href="{{ url }}">here</a>.
+{% endblock %}

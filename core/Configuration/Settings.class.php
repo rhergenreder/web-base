@@ -57,6 +57,7 @@ class Settings {
     if ($success) {
       $result = $req->getResult()["settings"];
       $this->siteName = $result["site_name"] ?? $this->siteName;
+      $this->baseUrl = $result["base_url"] ?? $this->baseUrl;
       $this->registrationAllowed = $result["user_registration_enabled"] ?? $this->registrationAllowed;
       $this->installationComplete = $result["installation_completed"] ?? $this->installationComplete;
       $this->jwtSecret = $result["jwt_secret"] ?? $this->jwtSecret;

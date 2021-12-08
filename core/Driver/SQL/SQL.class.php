@@ -278,22 +278,29 @@ abstract class SQL {
       }
     } else if($condition instanceof CondIn) {
 
-      $expression = $condition->getExpression();
-      if (is_array($expression)) {
+      $needle = $condition->getNeedle();
+      $haystack = $condition->getHaystack();
+      if (is_array($haystack)) {
         $values = array();
-        foreach ($expression as $value) {
+        foreach ($haystack as $value) {
           $values[] = $this->addValue($value, $params);
         }
 
         $values = implode(",", $values);
-      } else if($expression instanceof Select) {
-        $values = $expression->build($params);
+      } else if($haystack instanceof Select) {
+        $values = $haystack->build($params);
       } else {
         $this->lastError = "Unsupported in-expression value: " . get_class($condition);
         return false;
       }
 
-      return $this->columnName($condition->getColumn()) . " IN ($values)";
+      if ($needle instanceof Column) {
+        $lhs = $this->createExpression($needle, $params);
+      } else {
+        $lhs = $this->addValue($needle, $params);
+      }
+
+      return "$lhs IN ($values)";
     } else if($condition instanceof CondKeyword) {
       $left = $condition->getLeftExp();
       $right = $condition->getRightExp();
@@ -315,14 +322,14 @@ abstract class SQL {
     } else if ($condition instanceof Exists) {
         return "EXISTS(" .$condition->getSubQuery()->build($params) . ")";
     } else {
-      $this->lastError = "Unsupported condition type: " . get_class($condition);
+      $this->lastError = "Unsupported condition type: " . gettype($condition);
       return null;
     }
   }
 
   protected function createExpression(Expression $exp, array &$params): ?string {
     if ($exp instanceof Column) {
-      return $this->columnName($exp);
+      return $this->columnName($exp->getName());
     } else if ($exp instanceof Query) {
       return "(" . $exp->build($params) . ")";
     } else if ($exp instanceof CaseWhen) {
@@ -335,7 +342,7 @@ abstract class SQL {
       return "CASE WHEN $condition THEN $trueCase ELSE $falseCase END";
     } else if ($exp instanceof Sum) {
       $value = $this->addValue($exp->getValue(), $params);
-      $alias = $exp->getAlias();
+      $alias = $this->columnName($exp->getAlias());
       return "SUM($value) AS $alias";
     } else {
       $this->lastError = "Unsupported expression type: " . get_class($exp);

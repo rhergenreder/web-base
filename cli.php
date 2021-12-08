@@ -203,7 +203,7 @@ function handleDatabase(array $argv) {
     // 2nd: delete!
     foreach ($tables as $table => $uids) {
       $success = $sql->delete($table)
-        ->where(new CondIn("uid", $uids))
+        ->where(new CondIn(new Column("uid"), $uids))
         ->execute();
 
       if (!$success) {
@@ -342,6 +342,18 @@ function onMaintenance(array $argv) {
   }
 }
 
+function getConsoleWidth(): int {
+  $width = getenv('COLUMNS');
+  if (!$width) {
+    $width = exec('tput cols');
+    if (!$width) {
+      $width = 80; // default gnome-terminal column count
+    }
+  }
+
+  return intval($width);
+}
+
 function printTable(array $head, array $body) {
 
   $columns = [];
@@ -349,6 +361,7 @@ function printTable(array $head, array $body) {
     $columns[$key] = strlen($key);
   }
 
+  $maxWidth = getConsoleWidth();
   foreach ($body as $row) {
     foreach ($head as $key) {
       $value = $row[$key] ?? "";
@@ -364,14 +377,61 @@ function printTable(array $head, array $body) {
   printLine();
 
   foreach ($body as $row) {
+    $line = 0;
     foreach ($head as $key) {
-      echo str_pad($row[$key] ?? "", $columns[$key]) . '   ';
+      $width = min(max($maxWidth - $line, 0), $columns[$key]);
+      $line += $width;
+      echo str_pad($row[$key] ?? "", $width) . '   ';
     }
     printLine();
   }
 }
 
-// TODO: add missing api functions (should be all internal only i guess)
+function onSettings(array $argv) {
+  $user = getUser() or die();
+  $action = $argv[2] ?? "list";
+
+  if ($action === "list" || $action === "get") {
+    $key = (($action === "list" || count($argv) < 4) ? null : $argv[3]);
+    $req = new Api\Settings\Get($user);
+    $success = $req->execute(["key" => $key]);
+    if (!$success) {
+      _exit("Error listings settings: " . $req->getLastError());
+    } else {
+      $settings = [];
+      foreach ($req->getResult()["settings"] as $key => $value) {
+        $settings[] = ["key" => $key, "value" => $value];
+      }
+      printTable(["key", "value"], $settings);
+    }
+  } else if ($action === "set" || $action === "update") {
+    if (count($argv) < 5) {
+      _exit("Usage: $argv[0] settings $argv[2] <key> <value>");
+    } else {
+      $key = $argv[3];
+      $value = $argv[4];
+      $req = new Api\Settings\Set($user);
+      $success = $req->execute(["settings" => [$key => $value]]);
+      if (!$success) {
+        _exit("Error updating settings: " . $req->getLastError());
+      }
+    }
+  } else if ($action === "unset" || $action === "delete") {
+    if (count($argv) < 4) {
+      _exit("Usage: $argv[0] settings $argv[2] <key>");
+    } else {
+      $key = $argv[3];
+      $req = new Api\Settings\Set($user);
+      $success = $req->execute(["settings" => [$key => null]]);
+      if (!$success) {
+        _exit("Error updating settings: " . $req->getLastError());
+      }
+    }
+  } else {
+    _exit("Usage: $argv[0] settings <get|set|unset>");
+  }
+}
+
 function onRoutes(array $argv) {
 
   $user = getUser() or die();
@@ -459,7 +519,60 @@ function onRoutes(array $argv) {
 }
 
 function onTest($argv) {
+  $files = glob(WEBROOT . '/test/*.test.php');
+  $requestedTests = array_filter(array_slice($argv, 2), function ($t) {
+    return !startsWith($t, "-");
+  });
+  $verbose = in_array("-v", $requestedTests);
 
+  foreach ($files as $file) {
+    include_once $file;
+    $baseName = substr(basename($file), 0, - strlen(".test.php"));
+    if (!empty($requestedTests) && !in_array($baseName, $requestedTests)) {
+      continue;
+    }
+
+    $className =  $baseName . "Test";
+    if (class_exists($className)) {
+      echo "=== Running $className ===" . PHP_EOL;
+      $testClass = new \PHPUnit\Framework\TestSuite();
+      $testClass->addTestSuite($className);
+      $result = $testClass->run();
+      echo "Done after " . $result->time() . "s" . PHP_EOL;
+      $stats = [
+        "total" => $result->count(),
+        "skipped" => $result->skippedCount(),
+        "error" => $result->errorCount(),
+        "failure" => $result->failureCount(),
+        "warning" => $result->warningCount(),
+      ];
+
+      // Summary
+      echo implode(", ", array_map(function ($key) use ($stats) {
+          return "$key: " . $stats[$key];
+        }, array_keys($stats))) . PHP_EOL;
+
+      $reports = array_merge($result->errors(), $result->failures());
+      foreach ($reports as $error) {
+        $exception = $error->thrownException();
+        echo $error->toString();
+        if ($verbose) {
+          echo ". Stacktrace:" . PHP_EOL . $exception->getTraceAsString() . PHP_EOL;
+        } else {
+          $location = array_filter($exception->getTrace(), function ($t) use ($file) {
+            return isset($t["file"]) && $t["file"] === $file;
+          });
+          $location = array_reverse($location);
+          $location = array_pop($location);
+          if ($location)  {
+            echo " in " . substr($location["file"], strlen(WEBROOT)) . "#" . $location["line"] . PHP_EOL;
+          } else {
+            echo PHP_EOL;
+          }
+        }
+      }
+    }
+  }
 }
 
 function onMail($argv) {
@@ -506,6 +619,9 @@ switch ($command) {
     break;
   case 'mail':
     onMail($argv);
+    break;
+  case 'settings':
+    onSettings($argv);
     break;
   default:
     printLine("Unknown command '$command'");

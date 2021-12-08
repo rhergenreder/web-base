@@ -141,7 +141,7 @@ namespace Api\Settings {
       $res = $sql->select("name")
         ->from("Settings")
         ->where(new CondBool("readonly"))
-        ->where(new CondIn("name", $keys))
+        ->where(new CondIn(new Column("name"), $keys))
         ->limit(1)
         ->execute();
 
@@ -158,7 +158,7 @@ namespace Api\Settings {
     private function deleteKeys(array $keys) {
       $sql = $this->user->getSQL();
       $res = $sql->delete("Settings")
-        ->where(new CondIn("name", $keys))
+        ->where(new CondIn(new Column("name"), $keys))
         ->execute();
 
       $this->success = ($res !== FALSE);

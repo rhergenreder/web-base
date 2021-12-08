@@ -1,74 +1,62 @@
 <?php
 
-namespace Documents {
 
-  use Documents\Account\AccountBody;
-  use Documents\Account\AccountHead;
-  use Elements\Document;
-  use Objects\User;
+namespace Documents;
 
-  class Account extends Document {
-    public function __construct(User $user, ?string $view) {
-      parent::__construct($user, AccountHead::class, AccountBody::class, $view);
-    }
-  }
-}
+use Elements\TemplateDocument;
+use Objects\User;
 
-namespace Documents\Account {
 
-  use Elements\Head;
-  use Elements\Link;
-  use Elements\Script;
-  use Elements\SimpleBody;
-
-  class AccountHead extends Head {
-
-    public function __construct($document) {
-      parent::__construct($document);
-    }
-
-    protected function initSources() {
-      $this->loadJQuery();
-      $this->addJS(Script::CORE);
-      $this->addJS(Script::ACCOUNT);
-      $this->loadBootstrap();
-      $this->loadFontawesome();
-      $this->addCSS(Link::CORE);
-    }
-
-    protected function initMetas(): array {
-      return array(
-        array('name' => 'viewport', 'content' => 'width=device-width, initial-scale=1.0'),
-        array('name' => 'format-detection', 'content' => 'telephone=yes'),
-        array('charset' => 'utf-8'),
-        array("http-equiv" => 'expires', 'content' => '0'),
-        array("name" => 'robots', 'content' => 'noarchive'),
-      );
-    }
-
-    protected function initRawFields(): array {
-      return array();
-    }
-
-    protected function initTitle(): string {
-      return "Account";
-    }
+class Account extends TemplateDocument {
+  public function __construct(User $user, ?string $template) {
+    parent::__construct($user, $template);
+    $this->enableCSP();
   }
 
-  class AccountBody extends SimpleBody {
+  private function createError(string $message) {
+    $this->parameters["view"]["success"] = false;
+    $this->parameters["view"]["message"] = $message;
+  }
 
-    public function __construct($document) {
-      parent::__construct($document);
-    }
-
-    protected function getContent(): string {
-
-      $view = $this->getDocument()->getView();
-      if ($view === null) {
-        return "The page you does not exist or is no longer valid. <a href='/'>Return to start page</a>";
+  protected function loadParameters() {
+    $this->parameters["view"] = ["success" => true];
+    if ($this->getTemplateName() === "account/reset_password.twig") {
+      if (isset($_GET["token"]) && is_string($_GET["token"]) && !empty($_GET["token"])) {
+        $this->parameters["view"]["token"] = $_GET["token"];
+        $req = new \Api\User\CheckToken($this->getUser());
+        $this->parameters["view"]["success"] = $req->execute(array("token" => $_GET["token"]));
+        if ($this->parameters["view"]["success"]) {
+          if (strcmp($req->getResult()["token"]["type"], "password_reset") !== 0) {
+            $this->createError("The given token has a wrong type.");
+          }
+        } else {
+          $this->createError("Error requesting password reset: " . $req->getLastError());
+        }
       }
-
-      return $view->getCode();
+    } else if ($this->getTemplateName() === "account/register.twig") {
+      $settings = $this->user->getConfiguration()->getSettings();
+      if ($this->user->isLoggedIn()) {
+        $this->createError("You are already logged in.");
+      } else if (!$settings->isRegistrationAllowed()) {
+        $this->createError("Registration is not enabled on this website.");
+      }
+    } else if ($this->getTemplateName() === "account/accept_invite.twig") {
+      if (isset($_GET["token"]) && is_string($_GET["token"]) && !empty($_GET["token"])) {
+        $this->parameters["view"]["token"] = $_GET["token"];
+        $req = new \Api\User\CheckToken($this->getUser());
+        $this->parameters["view"]["success"] = $req->execute(array("token" => $_GET["token"]));
+        if ($this->parameters["view"]["success"]) {
+          if (strcmp($req->getResult()["token"]["type"], "invite") !== 0) {
+            $this->createError("The given token has a wrong type.");
+          } else {
+            $this->parameters["view"]["invited_user"] = $req->getResult()["user"];
+          }
+        } else {
+          $this->createError("Error confirming e-mail address: " . $req->getLastError());
+        }
+      } else {
+        $this->createError("The link you visited is no longer valid");
+      }
     }
   }
 }

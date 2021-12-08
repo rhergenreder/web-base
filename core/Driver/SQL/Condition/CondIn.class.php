@@ -4,14 +4,14 @@ namespace Driver\SQL\Condition;
 
 class CondIn extends Condition {
 
-  private string $column;
-  private $expression;
+  private $needle;
+  private $haystack;
 
-  public function __construct(string $column, $expression) {
-    $this->column = $column;
-    $this->expression = $expression;
+  public function __construct($needle, $haystack) {
+    $this->needle = $needle;
+    $this->haystack = $haystack;
   }
 
-  public function getColumn(): string { return $this->column; }
-  public function getExpression() { return $this->expression; }
+  public function getNeedle() { return $this->needle; }
+  public function getHaystack() { return $this->haystack; }
 }

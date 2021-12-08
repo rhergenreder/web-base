@@ -15,15 +15,30 @@ class Link extends StaticView {
   private string $type;
   private string $rel;
   private string $href;
+  private ?string $nonce;
 
   function __construct($rel, $href, $type = "") {
     $this->href = $href;
     $this->type = $type;
     $this->rel = $rel;
+    $this->nonce = null;
   }
 
   function getCode(): string {
-    $type = (empty($this->type) ? "" : " type=\"$this->type\"");
-    return "<link rel=\"$this->rel\" href=\"$this->href\"$type/>";
+    $attributes = ["rel" => $this->rel, "href" => $this->href];
+
+    if (!empty($this->type)) {
+      $attributes["type"] = $this->type;
+    }
+    if (!empty($this->nonce)) {
+      $attributes["nonce"] = $this->nonce;
+    }
+
+    $attributes = html_attributes($attributes);
+    return "<link $attributes/>";
+  }
+
+  public function setNonce(string $nonce) {
+    $this->nonce = $nonce;
   }
 }

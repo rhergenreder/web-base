@@ -1,14 +1,18 @@
 <?php
 
-define("WEBBASE_VERSION", "1.3.0");
+require_once "External/vendor/autoload.php";
+
+define("WEBBASE_VERSION", "1.3.0-beta");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {
-  $full_path = WEBROOT . "/" . getClassPath($class);
-  if (file_exists($full_path)) {
-    include_once $full_path;
-  } else {
-    include_once getClassPath($class, false);
+  if (!class_exists($class)) {
+    $full_path = WEBROOT . "/" . getClassPath($class);
+    if (file_exists($full_path)) {
+      include_once $full_path;
+    } else {
+      include_once getClassPath($class, false);
+    }
   }
 });
 
@@ -24,6 +28,13 @@ function getProtocol(): string {
   return $isSecure ? 'https' : 'http';
 }
 
+function uuidv4(): string {
+  $data = random_bytes(16);
+  $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // set version to 0100
+  $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // set bits 6-7 to 10
+  return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+
 function generateRandomString($length, $type = "ascii"): string {
   $randomString = '';
 
@@ -31,12 +42,14 @@ function generateRandomString($length, $type = "ascii"): string {
   $uppercase = strtoupper($lowercase);
   $digits    = "0123456789";
   $hex       = $digits . substr($lowercase, 0, 6);
-  $ascii     = $lowercase . $uppercase . $digits;
+  $ascii     = $uppercase . $lowercase . $digits;
 
   if ($length > 0) {
     $type = strtolower($type);
     if ($type === "hex") {
       $charset = $hex;
+    } else if ($type === "base64") {
+      $charset = $ascii . "/+";
     } else {
       $charset = $ascii;
     }
@@ -134,6 +147,13 @@ function replaceCssSelector($sel) {
 
 function urlId($str) {
   return urlencode(htmlspecialchars(preg_replace("[: ]","-", $str)));
+}
+
+function html_attributes(array $attributes): string {
+  return implode(" ", array_map(function ($key) use ($attributes) {
+    $value = $attributes[$key];
+    return "$key=\"$value\"";
+  }, array_keys($attributes)));
 }
 
 function getClassPath($class, $suffix = true): string {

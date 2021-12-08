@@ -14,12 +14,12 @@ use \Driver\SQL\Column\DateTimeColumn;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\JsonColumn;
 
-use Driver\SQL\Condition\CondRegex;
 use Driver\SQL\Expression\Add;
 use Driver\SQL\Expression\CurrentTimeStamp;
 use Driver\SQL\Expression\DateAdd;
 use Driver\SQL\Expression\DateSub;
 use Driver\SQL\Expression\Expression;
+use Driver\SQL\Expression\JsonArrayAgg;
 use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\Query\CreateTrigger;
 use Driver\SQL\Query\Query;
@@ -228,7 +228,8 @@ class MySQL extends SQL {
     } else if($column instanceof SerialColumn) {
       return "INTEGER AUTO_INCREMENT";
     } else if($column instanceof IntColumn) {
-      return "INTEGER";
+      $unsigned = $column->isUnsigned() ? " UNSIGNED" : "";
+      return $column->getType() . $unsigned;
     } else if($column instanceof DateTimeColumn) {
       return "DATETIME";
     } else if($column instanceof BoolColumn) {
@@ -416,6 +417,10 @@ class MySQL extends SQL {
       return "$dateFunction($lhs, INTERVAL $rhs $unit)";
     } else if ($exp instanceof CurrentTimeStamp) {
       return "NOW()";
+    } else if ($exp instanceof JsonArrayAgg) {
+      $value = $this->addValue($exp->getValue(), $params);
+      $alias = $this->columnName($exp->getAlias());
+      return "JSON_ARRAYAGG($value) as $alias";
     } else {
       return parent::createExpression($exp, $params);
     }

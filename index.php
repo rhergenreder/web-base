@@ -4,10 +4,11 @@ include_once 'core/core.php';
 include_once 'core/datetime.php';
 include_once 'core/constants.php';
 
-if (is_file("MAINTENANCE")) {
+define("WEBROOT", realpath("."));
+
+if (is_file("MAINTENANCE") && !in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1'])) {
   http_response_code(503);
-  $currentDir = dirname(__FILE__);
-  serveStatic($currentDir, "/static/maintenance.html");
+  serveStatic(WEBROOT, "/static/maintenance.html");
   die();
 }
 
@@ -34,10 +35,10 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
   } else {
     $apiFunction = $_GET["api"];
     if(empty($apiFunction)) {
-      header("403 Forbidden");
+      http_response_code(403);
       $response = "";
     } else if(!preg_match("/[a-zA-Z]+(\/[a-zA-Z]+)*/", $apiFunction)) {
-      header("400 Bad Request");
+      http_response_code(400);
       $response = createError("Invalid Method");
     } else {
       $apiFunction = array_filter(array_map('ucfirst', explode("/", $apiFunction)));
@@ -52,13 +53,13 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       try {
         $file = getClassPath($parentClass);
         if(!file_exists($file) || !class_exists($parentClass) || !class_exists($apiClass)) {
-          header("404 Not Found");
+          http_response_code(404);
           $response = createError("Not found");
         } else {
           $parentClass = new ReflectionClass($parentClass);
           $apiClass = new ReflectionClass($apiClass);
           if(!$apiClass->isSubclassOf(Request::class) || !$apiClass->isInstantiable()) {
-            header("400 Bad Request");
+            http_response_code(400);
             $response = createError("Invalid Method");
           } else {
             $request = $apiClass->newInstanceArgs(array($user, true));

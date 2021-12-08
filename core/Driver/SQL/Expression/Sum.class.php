@@ -2,8 +2,6 @@
 
 namespace Driver\SQL\Expression;
 
-use Driver\SQL\Condition\Condition;
-
 class Sum extends Expression {
 
   private $value;

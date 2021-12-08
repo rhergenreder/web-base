@@ -38,9 +38,14 @@ namespace Api\Mail {
   use Api\MailAPI;
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
+  use DateTimeInterface;
   use Driver\SQL\Column\Column;
   use Driver\SQL\Condition\Compare;
+  use Driver\SQL\Condition\CondBool;
   use Driver\SQL\Condition\CondIn;
+  use Driver\SQL\Condition\CondNot;
+  use Driver\SQL\Expression\CurrentTimeStamp;
+  use Driver\SQL\Expression\JsonArrayAgg;
   use Driver\SQL\Strategy\UpdateStrategy;
   use External\PHPMailer\Exception;
   use External\PHPMailer\PHPMailer;
@@ -100,6 +105,14 @@ namespace Api\Mail {
       $subject = $this->getParam('subject');
       $replyTo = $this->getParam('replyTo');
       $replyName = $this->getParam('replyName');
+      $body = $this->getParam('body');
+
+      if (stripos($body, "<body") === false) {
+        $body = "<body>$body</body>";
+      }
+      if (stripos($body, "<html") === false) {
+        $body = "<html>$body</html>";
+      }
 
       try {
         $mail = new PHPMailer;
@@ -119,9 +132,9 @@ namespace Api\Mail {
         $mail->Username = $mailConfig->getLogin();
         $mail->Password = $mailConfig->getPassword();
         $mail->SMTPSecure = 'tls';
-        $mail->IsHTML(true);
         $mail->CharSet = 'UTF-8';
-        $mail->Body = $this->getParam('body');
+        $mail->msgHTML($body);
+        $mail->AltBody = strip_tags($body);
 
         $this->success = @$mail->Send();
         if (!$this->success) {
@@ -212,7 +225,7 @@ namespace Api\Mail {
       if ($this->success && count($entityIds) > 0) {
         $sql->update("EntityLog")
           ->set("modified", $sql->now())
-          ->where(new CondIn("entityId", $entityIds))
+          ->where(new CondIn(new Column("entityId"), $entityIds))
           ->execute();
       }
 

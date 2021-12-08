@@ -11,5 +11,9 @@ class EnumColumn extends Column {
     $this->values = $values;
   }
 
+  public function addValues(string $value) {
+    $this->values[] = $value;
+  }
+
   public function getValues(): array { return $this->values; }
 }

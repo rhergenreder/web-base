@@ -4,6 +4,7 @@ namespace Objects;
 
 use DateTime;
 use \Driver\SQL\Condition\Compare;
+use Driver\SQL\Expression\CurrentTimeStamp;
 use Exception;
 use External\JWT;
 
@@ -118,7 +119,7 @@ class Session extends ApiObject {
     return false;
   }
 
-  public function destroy() {
+  public function destroy(): bool {
     return $this->user->getSQL()->update("Session")
       ->set("active", false)
       ->where(new Compare("Session.uid", $this->sessionId))
@@ -126,21 +127,26 @@ class Session extends ApiObject {
       ->execute();
   }
 
-  public function update() {
+  public function update(): bool {
     $this->updateMetaData();
     $minutes = Session::DURATION;
 
     $sql = $this->user->getSQL();
-    return $sql->update("Session")
-      ->set("Session.expires", (new DateTime())->modify("+$minutes minute"))
-      ->set("Session.ipAddress", $this->ipAddress)
-      ->set("Session.os", $this->os)
-      ->set("Session.browser", $this->browser)
-      ->set("Session.data", json_encode($_SESSION))
-      ->set("Session.csrf_token", $this->csrfToken)
-      ->where(new Compare("Session.uid", $this->sessionId))
-      ->where(new Compare("Session.user_id", $this->user->getId()))
-      ->execute();
+    return
+      $sql->update("User")
+        ->set("last_online", new CurrentTimeStamp())
+        ->where(new Compare("uid", $this->user->getId()))
+        ->execute() &&
+      $sql->update("Session")
+        ->set("Session.expires", (new DateTime())->modify("+$minutes minute"))
+        ->set("Session.ipAddress", $this->ipAddress)
+        ->set("Session.os", $this->os)
+        ->set("Session.browser", $this->browser)
+        ->set("Session.data", json_encode($_SESSION))
+        ->set("Session.csrf_token", $this->csrfToken)
+        ->where(new Compare("Session.uid", $this->sessionId))
+        ->where(new Compare("Session.user_id", $this->user->getId()))
+        ->execute();
   }
 
   public function getCsrfToken(): string {

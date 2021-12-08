@@ -20,6 +20,7 @@ use Driver\SQL\Expression\CurrentTimeStamp;
 use Driver\SQL\Expression\DateAdd;
 use Driver\SQL\Expression\DateSub;
 use Driver\SQL\Expression\Expression;
+use Driver\SQL\Expression\JsonArrayAgg;
 use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\Query\CreateTrigger;
 use Driver\SQL\Query\Insert;
@@ -219,7 +220,7 @@ class PostgreSQL extends SQL {
     } else if($column instanceof SerialColumn) {
       return "SERIAL";
     } else if($column instanceof IntColumn) {
-      return "INTEGER";
+      return $column->getType();
     } else if($column instanceof DateTimeColumn) {
       return "TIMESTAMP";
     } else if($column instanceof EnumColumn) {
@@ -439,6 +440,10 @@ class PostgreSQL extends SQL {
       return "$lhs $operator $rhs";
     } else if ($exp instanceof CurrentTimeStamp) {
       return "CURRENT_TIMESTAMP";
+    } else if ($exp instanceof JsonArrayAgg) {
+      $value = $this->addValue($exp->getValue(), $params);
+      $alias = $this->columnName($exp->getAlias());
+      return "JSON_AGG($value) as $alias";
     } else {
       return parent::createExpression($exp, $params);
     }

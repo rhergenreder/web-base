@@ -24,53 +24,16 @@ class AesStream {
     }
   }
 
-  public function setInput($file) {
+  public function setInputFile(string $file) {
     $this->inputFile = $file;
   }
 
-  public function setOutput($callback) {
+  public function setOutput(callable $callback) {
     $this->callback = $callback;
   }
 
   public function setOutputFile(string $file) {
     $this->outputFile = $file;
-  }
-
-  private function add(string $a, int $b): string {
-    // counter $b is n = PHP_INT_SIZE bytes large
-    $b_arr = pack('I', $b);
-    $b_size = strlen($b_arr);
-    $a_size = strlen($a);
-
-    $prefix = "";
-    if ($a_size > $b_size) {
-      $prefix = substr($a, 0, $a_size - $b_size);
-    }
-
-    // xor last n bytes of $a with $b
-    $xor = substr($a, strlen($prefix), $b_size);
-    if (strlen($xor) !== strlen($b_arr)) {
-      var_dump($xor);
-      var_dump($b_arr);
-      die();
-    }
-    $xor = $this->xor($xor, $b_arr);
-    return $prefix . $xor;
-  }
-
-  private function xor(string $a, string $b): string {
-    $arr_a = str_split($a);
-    $arr_b = str_split($b);
-    if (strlen($a) !== strlen($b)) {
-      var_dump($a);
-      var_dump($b);
-      var_dump(range(0, strlen($a) - 1));
-      die();
-    }
-
-    return implode("", array_map(function($i) use ($arr_a, $arr_b) {
-      return chr(ord($arr_a[$i]) ^ ord($arr_b[$i]));
-    }, range(0, strlen($a) - 1)));
   }
 
   public function start(): bool {
@@ -79,8 +42,7 @@ class AesStream {
     }
 
     $blockSize = 16;
-    $bitStrength = strlen($this->key) * 8;
-    $aesMode   = "AES-$bitStrength-ECB";
+    $aesMode   = $this->getCipherMode();
 
     $outputHandle = null;
     $inputHandle = fopen($this->inputFile, "rb");
@@ -91,25 +53,30 @@ class AesStream {
     if ($this->outputFile !== null) {
       $outputHandle = fopen($this->outputFile, "wb");
       if (!$outputHandle) {
+        fclose($inputHandle);
         return false;
       }
     }
 
-    $counter = 0;
-    while (!feof($inputHandle)) {
-      $chunk = fread($inputHandle, 4096);
-      $chunkSize = strlen($chunk);
-      for ($offset = 0; $offset < $chunkSize; $offset += $blockSize) {
-        $block = substr($chunk, $offset, $blockSize);
-        if (strlen($block) !== $blockSize) {
-          $padding = ($blockSize - strlen($block));
-          $block .= str_repeat(chr($padding), $padding);
-        }
+    set_time_limit(0);
 
-        $ivCounter = $this->add($this->iv, $counter + 1);
-        $encrypted = substr(openssl_encrypt($ivCounter, $aesMode, $this->key, OPENSSL_RAW_DATA), 0, $blockSize);
-        $encrypted = $this->xor($encrypted, $block);
-        if (is_callable($this->callback)) {
+    $ivCounter = $this->iv;
+    $modulo = \gmp_init("0x1" . str_repeat("00", $blockSize), 16);
+
+    while (!feof($inputHandle)) {
+      $chunk = fread($inputHandle, 65536);
+      $chunkSize = strlen($chunk);
+      if ($chunkSize > 0) {
+        $blockCount = intval(ceil($chunkSize / $blockSize));
+        $encrypted = openssl_encrypt($chunk, $aesMode, $this->key, OPENSSL_RAW_DATA | OPENSSL_NO_PADDING, $ivCounter);
+
+        $ivNumber = \gmp_init(bin2hex($ivCounter), 16);
+        $ivNumber = \gmp_add($ivNumber, $blockCount);
+        $ivNumber = \gmp_mod($ivNumber, $modulo);
+        $ivNumber = str_pad(\gmp_strval($ivNumber, 16), $blockSize * 2, "0", STR_PAD_LEFT);
+        $ivCounter = hex2bin($ivNumber);
+
+        if ($this->callback !== null) {
           call_user_func($this->callback, $encrypted);
         }
 
@@ -122,5 +89,18 @@ class AesStream {
     fclose($inputHandle);
     if ($outputHandle) fclose($outputHandle);
     return true;
+  }
+
+  public function getCipherMode(): string {
+    $bitStrength = strlen($this->key) * 8;
+    return "aes-$bitStrength-ctr";
+  }
+
+  public function getKey(): string {
+    return $this->key;
+  }
+
+  public function getIV(): string {
+    return $this->iv;
   }
 }

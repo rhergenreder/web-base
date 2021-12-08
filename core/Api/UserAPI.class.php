@@ -6,7 +6,7 @@ namespace Api {
 
   abstract class UserAPI extends Request {
 
-    protected function userExists(?string $username, ?string $email = null) {
+    protected function userExists(?string $username, ?string $email = null): bool {
 
       $conditions = array();
       if ($username) {
@@ -42,8 +42,8 @@ namespace Api {
       return $this->success;
     }
 
-    protected function checkPasswordRequirements($password, $confirmPassword) {
-      if(strcmp($password, $confirmPassword) !== 0) {
+    protected function checkPasswordRequirements($password, $confirmPassword): bool {
+      if ((($password === null) !== ($confirmPassword === null)) || strcmp($password, $confirmPassword) !== 0) {
         return $this->createError("The given passwords do not match");
       } else if(strlen($password) < 6) {
         return $this->createError("The password should be at least 6 characters long");
@@ -91,7 +91,8 @@ namespace Api {
 
     protected function getUser($id) {
       $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at", "User.confirmed",
+      $res = $sql->select("User.uid as userId", "User.name", "User.fullName", "User.email",
+        "User.registered_at", "User.confirmed", "User.last_online", "User.profilePicture",
         "Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor")
         ->from("User")
         ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
@@ -103,24 +104,6 @@ namespace Api {
       $this->lastError = $sql->getLastError();
 
       return ($this->success && !empty($res) ? $res : array());
-    }
-
-    protected function getMessageTemplate($key) {
-      $req = new \Api\Settings\Get($this->user);
-      $this->success = $req->execute(array("key" => "^($key|mail_enabled)$"));
-      $this->lastError = $req->getLastError();
-
-      if ($this->success) {
-        $settings = $req->getResult()["settings"];
-        $isEnabled = ($settings["mail_enabled"] ?? "0") === "1";
-        if (!$isEnabled) {
-          return $this->createError("Mail is not enabled.");
-        }
-
-        return $settings[$key] ?? "{{link}}";
-      }
-
-      return $this->success;
     }
 
     protected function invalidateToken($token) {
@@ -142,6 +125,14 @@ namespace Api {
       $this->lastError = $sql->getLastError();
       return $this->success;
     }
+
+    protected function formatDuration(int $count, string $string): string {
+      if ($count === 1) {
+        return $string;
+      } else {
+        return "the next $count ${string}s";
+      }
+    }
   }
 
 }
@@ -150,12 +141,17 @@ namespace Api\User {
 
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
+  use Api\Template\Render;
   use Api\UserAPI;
   use Api\VerifyCaptcha;
   use DateTime;
+  use Driver\SQL\Column\Column;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondBool;
   use Driver\SQL\Condition\CondIn;
+  use Driver\SQL\Condition\CondNot;
+  use Driver\SQL\Expression\JsonArrayAgg;
+  use ImagickException;
   use Objects\User;
 
   class Create extends UserAPI {
@@ -239,10 +235,10 @@ namespace Api\User {
       $this->success = ($res !== NULL);
       $this->lastError = $sql->getLastError();
 
-      if ($this->success) {
-        $ids = array();
-        foreach($res as $row) $ids[] = $row["uid"];
-        return $ids;
+      if ($this->success && is_array($res)) {
+        return array_map(function ($row) {
+            return intval($row["uid"]);
+          }, $res);
       }
 
       return false;
@@ -274,11 +270,12 @@ namespace Api\User {
 
       $sql = $this->user->getSQL();
       $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at", "User.confirmed",
-        "Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor")
+        "User.profilePicture", "User.fullName", "Group.uid as groupId", "User.last_online",
+        "Group.name as groupName", "Group.color as groupColor")
         ->from("User")
         ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
         ->leftJoin("Group", "Group.uid", "UserGroup.group_id")
-        ->where(new CondIn("User.uid", $userIds))
+        ->where(new CondIn(new Column("User.uid"), $userIds))
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -291,15 +288,29 @@ namespace Api\User {
           $groupId = intval($row["groupId"]);
           $groupName = $row["groupName"];
           $groupColor = $row["groupColor"];
+
+          $fullInfo = ($userId === $this->user->getId()) ||
+            ($this->user->hasGroup(USER_GROUP_ADMIN) || $this->user->hasGroup(USER_GROUP_SUPPORT));
+
           if (!isset($this->result["users"][$userId])) {
-            $this->result["users"][$userId] = array(
+            $user = array(
               "uid" => $userId,
               "name" => $row["name"],
+              "fullName" => $row["fullName"],
+              "profilePicture" => $row["profilePicture"],
               "email" => $row["email"],
-              "registered_at" => $row["registered_at"],
               "confirmed" => $sql->parseBool($row["confirmed"]),
               "groups" => array(),
             );
+
+            if ($fullInfo) {
+              $user["registered_at"] = $row["registered_at"];
+              $user["last_online"] = $row["last_online"];
+            } else if (!$sql->parseBool($row["confirmed"])) {
+              continue;
+            }
+
+            $this->result["users"][$userId] = $user;
           }
 
           if (!is_null($groupId)) {
@@ -323,6 +334,7 @@ namespace Api\User {
       parent::__construct($user, $externalCall, array(
         'id' => new Parameter('id', Parameter::TYPE_INT)
       ));
+      $this->loginRequired = true;
     }
 
     public function execute($values = array()): bool {
@@ -331,30 +343,79 @@ namespace Api\User {
       }
 
       $sql = $this->user->getSQL();
-      $id = $this->getParam("id");
-      $user = $this->getUser($id);
-
+      $userId = $this->getParam("id");
+      $user = $this->getUser($userId);
       if ($this->success) {
         if (empty($user)) {
           return $this->createError("User not found");
         } else {
-          $this->result["user"] = array(
-            "uid" => $user[0]["userId"],
+
+          $queriedUser = array(
+            "uid" => $userId,
             "name" => $user[0]["name"],
+            "fullName" => $user[0]["fullName"],
             "email" => $user[0]["email"],
             "registered_at" => $user[0]["registered_at"],
+            "last_online" => $user[0]["last_online"],
+            "profilePicture" => $user[0]["profilePicture"],
             "confirmed" => $sql->parseBool($user["0"]["confirmed"]),
-            "groups" => array()
+            "groups" => array(),
           );
 
           foreach($user as $row) {
             if (!is_null($row["groupId"])) {
-              $this->result["user"]["groups"][$row["groupId"]] = array(
+              $queriedUser["groups"][$row["groupId"]] = array(
                 "name" => $row["groupName"],
                 "color" => $row["groupColor"],
               );
             }
           }
+
+          // either we are querying own info or we are internal employees
+          // as internal employees can add arbitrary users to projects
+          $canView = ($userId === $this->user->getId() ||
+                $this->user->hasGroup(USER_GROUP_ADMIN) ||
+                $this->user->hasGroup(USER_GROUP_SUPPORT));
+
+          // full info only when we have administrative privileges, or we are querying ourselves
+          $fullInfo = ($userId === $this->user->getId()) ||
+            ($this->user->hasGroup(USER_GROUP_ADMIN) || $this->user->hasGroup(USER_GROUP_SUPPORT));
+
+          if (!$canView) {
+            $res = $sql->select(new JsonArrayAgg(new Column("projectId"), "projectIds"))
+              ->from("ProjectMember")
+              ->where(new Compare("userId", $this->user->getId()), new Compare("userId", $userId))
+              ->groupBy("projectId")
+              ->execute();
+
+            $this->success = ($res !== false);
+            $this->lastError = $sql->getLastError();
+            if (!$this->success ) {
+              return false;
+            } else if (is_array($res)) {
+              foreach ($res as $row) {
+                if (count(json_decode($row["projectIds"])) > 1) {
+                  $canView = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (!$canView) {
+            return $this->createError("No permissions to access this user");
+          }
+
+          if (!$fullInfo) {
+            if (!$queriedUser["confirmed"]) {
+              return $this->createError("No permissions to access this user");
+            }
+            unset($queriedUser["registered_at"]);
+            unset($queriedUser["confirmed"]);
+            unset($queriedUser["last_online"]);
+          }
+
+          $this->result["user"] = $queriedUser;
         }
       }
 
@@ -424,11 +485,6 @@ namespace Api\User {
         return false;
       }
 
-      $messageBody = $this->getMessageTemplate("message_accept_invite");
-      if ($messageBody === false) {
-        return false;
-      }
-
       // Create user
       $id = $this->insertUser($username, $email, "", false);
       if (!$this->success) {
@@ -437,7 +493,8 @@ namespace Api\User {
 
       // Create Token
       $token = generateRandomString(36);
-      $valid_until = (new DateTime())->modify("+7 day");
+      $validDays = 7;
+      $valid_until = (new DateTime())->modify("+$validDays day");
       $sql = $this->user->getSQL();
       $res = $sql->insert("UserToken", array("user_id", "token", "token_type", "valid_until"))
         ->addRow($id, $token, "invite", $valid_until)
@@ -449,28 +506,33 @@ namespace Api\User {
       if ($this->success) {
 
         $settings = $this->user->getConfiguration()->getSettings();
-        $baseUrl = htmlspecialchars($settings->getBaseUrl());
-        $siteName = htmlspecialchars($settings->getSiteName());
+        $baseUrl = $settings->getBaseUrl();
+        $siteName = $settings->getSiteName();
 
-        $replacements = array(
-          "link" => "$baseUrl/acceptInvite?token=$token",
-          "site_name" => $siteName,
-          "base_url" => $baseUrl,
-          "username" => htmlspecialchars($username)
-        );
+        $req = new Render($this->user);
+        $this->success = $req->execute([
+          "file" => "mail/accept_invite.twig",
+          "parameters" => [
+            "link" => "$baseUrl/acceptInvite?token=$token",
+            "site_name" => $siteName,
+            "base_url" => $baseUrl,
+            "username" => $username,
+            "valid_time" => $this->formatDuration($validDays, "day")
+          ]
+        ]);
+        $this->lastError = $req->getLastError();
 
-        foreach($replacements as $key => $value) {
-          $messageBody = str_replace("{{{$key}}}", $value, $messageBody);
+        if ($this->success) {
+          $messageBody = $req->getResult()["html"];
+          $request = new \Api\Mail\Send($this->user);
+          $this->success = $request->execute(array(
+            "to" => $email,
+            "subject" => "[$siteName] Account Invitation",
+            "body" => $messageBody
+          ));
+
+          $this->lastError = $request->getLastError();
         }
-
-        $request = new \Api\Mail\Send($this->user);
-        $this->success = $request->execute(array(
-          "to" => $email,
-          "subject" => "[$siteName] Account Invitation",
-          "body" => $messageBody
-        ));
-
-        $this->lastError = $request->getLastError();
 
         if (!$this->success) {
           $this->lastError = "The invitation was created but the confirmation email could not be sent. " .
@@ -607,7 +669,7 @@ namespace Api\User {
 
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall, array(
-        'username' => new StringType('username', 32),
+        'username' => new StringType('username'),
         'password' => new StringType('password'),
         'stayLoggedIn' => new Parameter('stayLoggedIn', Parameter::TYPE_BOOLEAN, true, true)
       ));
@@ -641,7 +703,8 @@ namespace Api\User {
       $sql = $this->user->getSQL();
       $res = $sql->select("User.uid", "User.password", "User.confirmed")
         ->from("User")
-        ->where(new Compare("User.name", $username))
+        ->where(new Compare("User.name", $username), new Compare("User.email", $username))
+        ->limit(1)
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -753,35 +816,38 @@ namespace Api\User {
         return false;
       }
 
-      $messageBody = $this->getMessageTemplate("message_confirm_email");
-      if ($messageBody === false) {
-        return false;
-      }
-
       $this->userId = $this->insertUser($username, $email, $password, false);
       if (!$this->success) {
         return false;
       }
 
+      // add internal group
+      $this->user->getSQL()->insert("UserGroup", ["user_id", "group_id"])
+        ->addRow($this->userId, USER_GROUP_INTERNAL)
+        ->execute();
+
+      $validHours = 48;
       $this->token = generateRandomString(36);
-      if ($this->insertToken($this->userId, $this->token, "email_confirm", 48)) {
+      if ($this->insertToken($this->userId, $this->token, "email_confirm", $validHours)) {
+
         $settings = $this->user->getConfiguration()->getSettings();
-        $baseUrl = htmlspecialchars($settings->getBaseUrl());
-        $siteName = htmlspecialchars($settings->getSiteName());
-
-        if ($this->success) {
-
-          $replacements = array(
+        $baseUrl = $settings->getBaseUrl();
+        $siteName = $settings->getSiteName();
+        $req = new Render($this->user);
+        $this->success = $req->execute([
+          "file" => "mail/confirm_email.twig",
+          "parameters" => [
             "link" => "$baseUrl/confirmEmail?token=$this->token",
             "site_name" => $siteName,
             "base_url" => $baseUrl,
-            "username" => htmlspecialchars($username)
-          );
+            "username" => $username,
+            "valid_time" => $this->formatDuration($validHours, "hour")
+          ]
+        ]);
+        $this->lastError = $req->getLastError();
 
-          foreach($replacements as $key => $value) {
-            $messageBody = str_replace("{{{$key}}}", $value, $messageBody);
-          }
-
+        if ($this->success) {
+          $messageBody = $req->getResult()["html"];
           $request = new \Api\Mail\Send($this->user);
           $this->success = $request->execute(array(
             "to" => $email,
@@ -862,6 +928,7 @@ namespace Api\User {
       parent::__construct($user, $externalCall, array(
         'id' => new Parameter('id', Parameter::TYPE_INT),
         'username' => new StringType('username', 32, true, NULL),
+        'fullName' => new StringType('fullName', 64, true, NULL),
         'email' => new Parameter('email', Parameter::TYPE_EMAIL, true, NULL),
         'password' => new StringType('password', -1, true, NULL),
         'groups' => new Parameter('groups', Parameter::TYPE_ARRAY, true, NULL),
@@ -886,6 +953,7 @@ namespace Api\User {
         }
 
         $username = $this->getParam("username");
+        $fullName = $this->getParam("fullName");
         $email = $this->getParam("email");
         $password = $this->getParam("password");
         $groups = $this->getParam("groups");
@@ -913,6 +981,7 @@ namespace Api\User {
 
         // Check for duplicate username, email
         $usernameChanged = !is_null($username) && strcasecmp($username, $user[0]["name"]) !== 0;
+        $fullNameChanged = !is_null($fullName) && strcasecmp($fullName, $user[0]["fullName"]) !== 0;
         $emailChanged = !is_null($email) && strcasecmp($email, $user[0]["email"]) !== 0;
         if($usernameChanged || $emailChanged) {
           if (!$this->userExists($usernameChanged ? $username : NULL, $emailChanged ? $email : NULL)) {
@@ -924,6 +993,7 @@ namespace Api\User {
         $query = $sql->update("User");
 
         if ($usernameChanged) $query->set("name", $username);
+        if ($fullNameChanged) $query->set("fullName", $fullName);
         if ($emailChanged) $query->set("email", $email);
         if (!is_null($password)) $query->set("password", $this->hashPassword($password));
 
@@ -1028,50 +1098,51 @@ namespace Api\User {
         }
       }
 
-      $messageBody = $this->getMessageTemplate("message_reset_password");
-      if ($messageBody === false) {
-        return false;
-      }
-
       $email = $this->getParam("email");
       $user = $this->findUser($email);
-      if ($user === false) {
+      if ($this->success === false) {
         return false;
       }
 
       if ($user !== null) {
+        $validHours = 1;
         $token = generateRandomString(36);
-        if (!$this->insertToken($user["uid"], $token, "password_reset", 1)) {
+        if (!$this->insertToken($user["uid"], $token, "password_reset", $validHours)) {
           return false;
         }
 
-        $baseUrl = htmlspecialchars($settings->getBaseUrl());
-        $siteName = htmlspecialchars($settings->getSiteName());
+        $baseUrl = $settings->getBaseUrl();
+        $siteName = $settings->getSiteName();
 
-        $replacements = array(
-          "link" => "$baseUrl/resetPassword?token=$token",
-          "site_name" => $siteName,
-          "base_url" => $baseUrl,
-          "username" => htmlspecialchars($user["name"])
-        );
+        $req = new Render($this->user);
+        $this->success = $req->execute([
+          "file" => "mail/reset_password.twig",
+          "parameters" => [
+            "link" => "$baseUrl/resetPassword?token=$token",
+            "site_name" => $siteName,
+            "base_url" => $baseUrl,
+            "username" => $user["name"],
+            "valid_time" => $this->formatDuration($validHours, "hour")
+          ]
+        ]);
+        $this->lastError = $req->getLastError();
 
-        foreach($replacements as $key => $value) {
-          $messageBody = str_replace("{{{$key}}}", $value, $messageBody);
+        if ($this->success) {
+          $messageBody = $req->getResult()["html"];
+          $request = new \Api\Mail\Send($this->user);
+          $this->success = $request->execute(array(
+            "to" => $email,
+            "subject" => "[$siteName] Password Reset",
+            "body" => $messageBody
+          ));
+          $this->lastError = $request->getLastError();
         }
-
-        $request = new \Api\Mail\Send($this->user);
-        $this->success = $request->execute(array(
-          "to" => $email,
-          "subject" => "[$siteName] Password Reset",
-          "body" => $messageBody
-        ));
-        $this->lastError = $request->getLastError();
       }
 
       return $this->success;
     }
 
-    private function findUser($email) {
+    private function findUser($email): ?array {
       $sql = $this->user->getSQL();
       $res = $sql->select("User.uid", "User.name")
         ->from("User")
@@ -1082,14 +1153,12 @@ namespace Api\User {
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
       if ($this->success) {
-        if (empty($res)) {
-          return null;
-        } else {
+        if (!empty($res)) {
           return $res[0];
         }
       }
 
-      return $this->success;
+      return null;
     }
   }
 
@@ -1125,11 +1194,6 @@ namespace Api\User {
         }
       }
 
-      $messageBody = $this->getMessageTemplate("message_confirm_email");
-      if ($messageBody === false) {
-        return false;
-      }
-
       $email = $this->getParam("email");
       $sql = $this->user->getSQL();
       $res = $sql->select("User.uid", "User.name", "UserToken.token", "UserToken.token_type", "UserToken.used")
@@ -1157,36 +1221,49 @@ namespace Api\User {
         }))
       );
 
+      $validHours = 48;
       if (!$token) {
         // no token generated yet, let's generate one
         $token = generateRandomString(36);
-        if (!$this->insertToken($userId, $token, "email_confirm", 48)) {
+        if (!$this->insertToken($userId, $token, "email_confirm", $validHours)) {
           return false;
         }
+      } else {
+        $sql->update("UserToken")
+          ->set("valid_until", (new DateTime())->modify("+$validHours hour"))
+          ->where(new Compare("token", $token))
+          ->execute();
       }
 
       $username = $res[0]["name"];
-      $baseUrl = htmlspecialchars($settings->getBaseUrl());
-      $siteName = htmlspecialchars($settings->getSiteName());
-      $replacements = array(
-        "link" => "$baseUrl/confirmEmail?token=$token",
-        "site_name" => $siteName,
-        "base_url" => $baseUrl,
-        "username" => htmlspecialchars($username)
-      );
+      $baseUrl = $settings->getBaseUrl();
+      $siteName = $settings->getSiteName();
 
-      foreach($replacements as $key => $value) {
-        $messageBody = str_replace("{{{$key}}}", $value, $messageBody);
+      $req = new Render($this->user);
+      $this->success = $req->execute([
+        "file" => "mail/confirm_email.twig",
+        "parameters" => [
+          "link" => "$baseUrl/confirmEmail?token=$token",
+          "site_name" => $siteName,
+          "base_url" => $baseUrl,
+          "username" => $username,
+          "valid_time" => $this->formatDuration($validHours, "hour")
+        ]
+      ]);
+      $this->lastError = $req->getLastError();
+
+      if ($this->success) {
+        $messageBody = $req->getResult()["html"];
+        $request = new \Api\Mail\Send($this->user);
+        $this->success = $request->execute(array(
+          "to" => $email,
+          "subject" => "[$siteName] E-Mail Confirmation",
+          "body" => $messageBody
+        ));
+
+        $this->lastError = $request->getLastError();
       }
 
-      $request = new \Api\Mail\Send($this->user);
-      $this->success = $request->execute(array(
-        "to" => $email,
-        "subject" => "[$siteName] E-Mail Confirmation",
-        "body" => $messageBody
-      ));
-
-      $this->lastError = $request->getLastError();
       return $this->success;
     }
   }
@@ -1203,7 +1280,7 @@ namespace Api\User {
       $this->csrfTokenRequired = false;
     }
 
-    private function updateUser($uid, $password) {
+    private function updateUser($uid, $password): bool {
       $sql = $this->user->getSQL();
       $res = $sql->update("User")
         ->set("password", $this->hashPassword($password))
@@ -1254,7 +1331,10 @@ namespace Api\User {
     public function __construct(User $user, bool $externalCall = false) {
       parent::__construct($user, $externalCall, array(
         'username' => new StringType('username', 32, true, NULL),
+        'fullName' => new StringType('fullName', 64, true, NULL),
         'password' => new StringType('password', -1, true, NULL),
+        'confirmPassword' => new StringType('confirmPassword', -1, true, NULL),
+        'oldPassword' => new StringType('oldPassword', -1, true, NULL),
       ));
       $this->loginRequired = true;
       $this->csrfTokenRequired = true;
@@ -1267,14 +1347,17 @@ namespace Api\User {
       }
 
       $newUsername = $this->getParam("username");
+      $oldPassword = $this->getParam("oldPassword");
       $newPassword = $this->getParam("password");
+      $newPasswordConfirm = $this->getParam("confirmPassword");
+      $newFullName = $this->getParam("fullName");
 
-      if ($newUsername === null && $newPassword === null) {
-        return $this->createError("You must either provide an updated username or password");
+      if ($newUsername === null && $newPassword === null && $newPasswordConfirm === null && $newFullName === null) {
+        return $this->createError("You must either provide an updated username, fullName or password");
       }
 
       $sql = $this->user->getSQL();
-      $query = $sql->update("User")->where(new Compare("id", $this->user->getId()));
+      $query = $sql->update("User")->where(new Compare("uid", $this->user->getId()));
       if ($newUsername !== null) {
         if (!$this->checkUsernameRequirements($newUsername) || $this->userExists($newUsername)) {
           return false;
@@ -1283,16 +1366,183 @@ namespace Api\User {
         }
       }
 
-      if ($newPassword !== null) { // TODO: confirm password?
-        if (!$this->checkPasswordRequirements($newPassword, $newPassword)) {
+      if ($newFullName !== null) {
+        $query->set("fullName", $newFullName);
+      }
+
+      if ($newPassword !== null || $newPasswordConfirm !== null) {
+        if (!$this->checkPasswordRequirements($newPassword, $newPasswordConfirm)) {
           return false;
         } else {
+          $res = $sql->select("password")
+            ->from("User")
+            ->where(new Compare("uid", $this->user->getId()))
+            ->execute();
+
+          $this->success = ($res !== false);
+          $this->lastError = $sql->getLastError();
+          if (!$this->success) {
+            return false;
+          }
+
+          if (!password_verify($oldPassword, $res[0]["password"])) {
+            return $this->createError("Wrong password");
+          }
+
           $query->set("password", $this->hashPassword($newPassword));
         }
       }
 
       $this->success = $query->execute();
       $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
+  }
+
+  class UploadPicture extends UserAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, [
+        "scale" => new Parameter("scale", Parameter::TYPE_FLOAT, true, NULL),
+      ]);
+      $this->loginRequired = true;
+      $this->forbidMethod("GET");
+    }
+
+    /**
+     * @throws ImagickException
+     */
+    protected function onTransform(\Imagick $im, $uploadDir) {
+
+      $minSize = 75;
+      $maxSize = 500;
+
+      $width = $im->getImageWidth();
+      $height = $im->getImageHeight();
+      $doResize = false;
+
+      if ($width < $minSize || $height < $minSize) {
+        if ($width < $height) {
+          $newWidth = $minSize;
+          $newHeight = intval(($minSize / $width) * $height);
+        } else {
+          $newHeight = $minSize;
+          $newWidth = intval(($minSize / $height) * $width);
+        }
+
+        $doResize = true;
+      } else if ($width > $maxSize || $height > $maxSize) {
+        if ($width > $height) {
+          $newWidth = $maxSize;
+          $newHeight = intval($height * ($maxSize / $width));
+        } else {
+          $newHeight = $maxSize;
+          $newWidth = intval($width * ($maxSize / $height));
+        }
+
+        $doResize = true;
+      } else {
+        $newWidth = $width;
+        $newHeight = $height;
+      }
+
+      if ($width < $minSize || $height < $minSize) {
+        return $this->createError("Error processing image. Bad dimensions.");
+      }
+
+      if ($doResize) {
+        $width = $newWidth;
+        $height = $newHeight;
+        $im->resizeImage($width, $height, \Imagick::FILTER_SINC, 1);
+      }
+
+      $size = $this->getParam("size");
+      if (is_null($size)) {
+        $size = min($width, $height);
+      }
+
+      $offset = [$this->getParam("offsetX"), $this->getParam("offsetY")];
+      if ($size < $minSize or $size > $maxSize) {
+        return $this->createError("Invalid size. Must be in range of $minSize-$maxSize.");
+      }/* else if ($offset[0] < 0 || $offset[1] < 0 || $offset[0]+$size > $width ||  $offset[1]+$size > $height) {
+        return $this->createError("Offsets out of bounds.");
+      }*/
+
+      if ($offset[0] !== 0 || $offset[1] !== 0 || $size !== $width || $size !== $height) {
+        $im->cropImage($size, $size, $offset[0], $offset[1]);
+      }
+
+      $fileName = uuidv4() . ".jpg";
+      $im->writeImage("$uploadDir/$fileName");
+      $im->destroy();
+      return $fileName;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $userId = $this->user->getId();
+      $uploadDir = WEBROOT . "/img/uploads/user/$userId";
+      list ($fileName, $imageName) = $this->processImageUpload($uploadDir, ["png","jpg","jpeg"], "onTransform");
+      if (!$this->success) {
+        return false;
+      }
+
+      $oldPfp = $this->user->getProfilePicture();
+      if ($oldPfp) {
+        $path = "$uploadDir/$oldPfp";
+        if (is_file($path)) {
+          @unlink($path);
+        }
+      }
+
+      $sql = $this->user->getSQL();
+      $this->success = $sql->update("User")
+        ->set("profilePicture", $fileName)
+        ->where(new Compare("uid", $userId))
+        ->execute();
+
+      $this->lastError = $sql->getLastError();
+      if ($this->success) {
+        $this->result["profilePicture"] = $fileName;
+      }
+
+      return $this->success;
+    }
+  }
+
+  class RemovePicture extends UserAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, []);
+      $this->loginRequired = true;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $pfp = $this->user->getProfilePicture();
+      if (!$pfp) {
+        return $this->createError("You did not upload a profile picture yet");
+      }
+
+      $userId = $this->user->getId();
+      $sql = $this->user->getSQL();
+      $this->success = $sql->update("User")
+        ->set("profilePicture", NULL)
+        ->where(new Compare("uid", $userId))
+        ->execute();
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success) {
+        $path = WEBROOT . "/img/uploads/user/$userId/$pfp";
+        if (is_file($path)) {
+          @unlink($path);
+        }
+      }
+
       return $this->success;
     }
   }

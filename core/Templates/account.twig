@@ -1,0 +1,36 @@
+{% extends "base.twig" %}
+
+{% block head %}
+    <script src="/js/jquery.min.js" nonce="{{ site.csp.nonce }}"></script>
+    <script src="/js/script.js" nonce="{{ site.csp.nonce }}"></script>
+    <script src="/js/account.js" nonce="{{ site.csp.nonce }}"></script>
+    <link rel="stylesheet" href="/css/bootstrap.min.css" nonce="{{ site.csp.nonce }}">
+    <script src="/js/bootstrap.bundle.min.js" nonce="{{ site.csp.nonce }}"></script>
+    <link rel="stylesheet" href="/css/fontawesome.min.css" nonce="{{ site.csp.nonce }}">
+    <link rel="stylesheet" href="/css/account.css" nonce="{{ site.csp.nonce }}">
+    <title>Account - {{ view_title }}</title>
+    {% if site.recaptcha.enabled %}
+        <script src="https://www.google.com/recaptcha/api.js?render={{ site.recaptcha.key }}" nonce="{{ site.csp.nonce }}"></script>
+    {% endif %}
+{% endblock %}
+
+{% block body %}
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-3 py-5 bg-primary text-white text-center" style='border-top-left-radius:.4em;border-bottom-left-radius:.4em;margin-left: auto'>
+                <div class="card-body">
+                    <i class="fas fa-{{ view_icon }} fa-3x"></i>
+                    <h2 class="py-3">{{ view_title }}</h2>
+                    <p>{{ view_description }}</p>
+                </div>
+            </div>
+            <div class="col-md-5 pt-5 pb-2 border border-info" style='border-top-right-radius:.4em;border-bottom-right-radius:.4em;margin-right:auto'>
+                {% block view_content %}{% endblock %}
+                <div class='alert mt-2' style='display:none' id='alertMessage'></div>
+            </div>
+        </div>
+    </div>
+    {% if site.recaptcha.enabled %}
+        <input type='hidden' value='{{ site.recaptcha.key }}' id='siteKey' />
+    {% endif %}
+{% endblock %}

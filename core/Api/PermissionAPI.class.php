@@ -61,8 +61,9 @@ namespace Api\Permission {
           return true;
         }
 
-        if (!$this->user->isLoggedIn() || empty(array_intersect($groups, array_keys($this->user->getGroups())))) {
-          header('HTTP 1.1 401 Unauthorized');
+        $userGroups = $this->user->getGroups();
+        if (empty($userGroups) || empty(array_intersect($groups, array_keys($this->user->getGroups())))) {
+          http_response_code(401);
           return $this->createError("Permission denied.");
         }
       }
@@ -197,7 +198,7 @@ namespace Api\Permission {
       if ($this->success) {
         $res = $sql->delete("ApiPermission")
           ->where(new Compare("description", "")) // only delete non default permissions
-          ->where(new CondNot(new CondIn("method", $insertedMethods)))
+          ->where(new CondNot(new CondIn(new Column("method"), $insertedMethods)))
           ->execute();
 
         $this->success = ($res !== FALSE);

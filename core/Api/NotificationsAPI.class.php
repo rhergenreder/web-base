@@ -11,6 +11,7 @@ namespace Api\Notifications {
   use Api\NotificationsAPI;
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
+  use Driver\SQL\Column\Column;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondIn;
   use Driver\SQL\Query\Select;
@@ -252,7 +253,7 @@ namespace Api\Notifications {
       if ($this->success) {
         $res = $sql->update("GroupNotification")
           ->set("seen", true)
-          ->where(new CondIn("group_id",
+          ->where(new CondIn(new Column("group_id"),
             $sql->select("group_id")
               ->from("UserGroup")
               ->where(new Compare("user_id", $this->user->getId()))))

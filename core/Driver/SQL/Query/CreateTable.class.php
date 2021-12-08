@@ -46,8 +46,13 @@ class CreateTable extends Query {
     return $this;
   }
 
-  public function addInt(string $name, bool $nullable = false, $defaultValue = NULL): CreateTable {
-    $this->columns[$name] = new IntColumn($name, $nullable, $defaultValue);
+  public function addInt(string $name, bool $nullable = false, $defaultValue = NULL, bool $unsigned = false): CreateTable {
+    $this->columns[$name] = new IntColumn($name, $nullable, $defaultValue, $unsigned);
+    return $this;
+  }
+
+  public function addBigInt(string $name, bool $nullable = false, $defaultValue = NULL, bool $unsigned = false): CreateTable {
+    $this->columns[$name] = new BigIntColumn($name, $nullable, $defaultValue, $unsigned);
     return $this;
   }
 

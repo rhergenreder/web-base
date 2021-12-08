@@ -1,0 +1,37 @@
+{% extends "account.twig" %}
+
+{% set view_title = 'Confirm Email' %}
+{% set view_icon = 'user-check' %}
+{% set view_description = 'Request a password reset, once you got the e-mail address, you can choose a new password' %}
+
+{% block view_content %}
+    <noscript>
+        <div class="alert alert-danger">Javascript is required</div>
+    </noscript>
+    <div class="alert alert-info" id="confirm-status">
+        Confirming email… <i class="fas fa-spinner fa-spin"></i>
+    </div>
+    <a href='/login'><button class='btn btn-primary' style='position: absolute; bottom: 10px' type='button'>Proceed to Login</button></a>
+    <script nonce="{{ site.csp.nonce }}">
+        $(document).ready(function() {
+            let token = jsCore.getParameter("token");
+            let confirmStatus = $("#confirm-status");
+            if (token) {
+                jsCore.apiCall("/user/confirmEmail", { token: token }, (res) => {
+                    confirmStatus.removeClass("alert-info");
+                    if (!res.success) {
+                        confirmStatus.addClass("alert-danger");
+                        confirmStatus.text("Error confirming e-mail address: " + res.msg);
+                    } else {
+                        confirmStatus.addClass("alert-success");
+                        confirmStatus.text("Your e-mail address was successfully confirmed, you may now log in.");
+                    }
+                });
+            } else {
+                confirmStatus.removeClass("alert-info");
+                confirmStatus.addClass("alert-danger");
+                confirmStatus.text("The link you visited is no longer valid");
+            }
+        });
+    </script>
+{% endblock %}

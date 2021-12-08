@@ -1,0 +1,12 @@
+{% extends "base.twig" %}
+
+{% block head %}
+    <title>{{ site.name }} - Administration</title>
+    <script src="/js/fontawesome-all.min.js" nonce="{{ site.csp.nonce }}"></script>
+{% endblock %}
+
+{% block body %}
+    <noscript>You need Javascript enabled to run this app</noscript>
+    <div class="wrapper" id="root"></div>
+    <script src="/js/admin.min.js" nonce="{{ site.csp.nonce }}"></script>
+{% endblock %}

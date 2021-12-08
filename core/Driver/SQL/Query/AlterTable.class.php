@@ -3,15 +3,19 @@
 namespace Driver\SQL\Query;
 
 use Driver\SQL\Column\Column;
+use Driver\SQL\Column\EnumColumn;
 use Driver\SQL\Constraint\Constraint;
 use Driver\SQL\Constraint\ForeignKey;
 use Driver\SQL\Constraint\PrimaryKey;
+use Driver\SQL\MySQL;
+use Driver\SQL\PostgreSQL;
 use Driver\SQL\SQL;
 
 class AlterTable extends Query {
 
   private string $table;
   private string $action;
+  private $data;
 
   private ?Column $column;
   private ?Constraint $constraint;
@@ -59,6 +63,13 @@ class AlterTable extends Query {
     return $this;
   }
 
+  public function addToEnum(EnumColumn $column, string $newValue): AlterTable {
+    $this->action = "MODIFY";
+    $this->column = $column;
+    $this->data = $newValue;
+    return $this;
+  }
+
   public function getAction(): string { return $this->action; }
   public function getColumn(): ?Column { return $this->column; }
   public function getConstraint(): ?Constraint { return $this->constraint; }
@@ -82,6 +93,15 @@ class AlterTable extends Query {
         $query .= $this->sql->columnName($column->getName());
       } else {
         // ADD or modify
+        if ($column instanceof EnumColumn) {
+          if ($this->sql instanceof PostgreSQL) {
+            $typeName = $this->sql->getColumnType($column);
+            $value = $this->sql->addValue($this->data, $params);
+            return "ALTER TYPE $typeName ADD VALUE $value";
+          }
+          $column->addValue($this->data);
+        }
+
         $query .= $this->sql->getColumnDefinition($column);
       }
     } else if ($constraint) {

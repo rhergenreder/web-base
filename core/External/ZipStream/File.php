@@ -26,16 +26,16 @@ namespace External\ZipStream {
     private $content = '';
     private $fileHandle = false;
     private $lastModificationTimestamp;
-    private $crc32 = null;
-    private $fileSize = 0;
-    private $compressedSize = 0;
+    protected $fileSize = 0;
+    protected $compressedSize = 0;
     private $offset = 0;
     private $bitField = 0;
-    private $useCompression = true;
+    protected $useCompression = true;
     private $deflateState = null;
 
     //check for duplications //currently not used
-    private $sha256;
+    protected $crc32 = null;
+    protected $sha256;
 
     public const BIT_NO_SIZE_IN_HEADER = 0b0000000000001000;
     public const BIT_UTF8_NAMES = 0b0000100000000000;
@@ -45,12 +45,17 @@ namespace External\ZipStream {
       $this->lastModificationTimestamp = time();
       $this->crc32 = hash('crc32b', '', true);
       $this->compressedSize = 0;
+      $this->fileSize = 0;
 
       $this->bitField = 0;
       $this->bitField |= self::BIT_NO_SIZE_IN_HEADER;
       $this->bitField |= self::BIT_UTF8_NAMES;
 
-      $this->deflateState = deflate_init(ZLIB_ENCODING_RAW, ['level' => 9]);
+      $this->deflateState = deflate_init(ZLIB_ENCODING_RAW);
+    }
+
+    public function disableCompression() {
+      $this->useCompression = false;
     }
 
     public function setContent($content) {
@@ -66,13 +71,6 @@ namespace External\ZipStream {
       $this->sha256 = hash_file('sha256', $filename);
       $this->fileSize = filesize($filename);
       $this->fileHandle = fopen($filename, 'rb');
-    }
-
-    public function loadFromBuffer($buf) {
-      $this->crc32 = hash('crc32b', $buf, true);
-      $this->sha256 = hash('sha256', $buf);
-      $this->fileSize = strlen($buf);
-      $this->content = $buf;
     }
 
     public function name() {
@@ -101,14 +99,14 @@ namespace External\ZipStream {
         ($day);
     }
 
-    public function readLocalFileHeader() {
+    public function readLocalFileHeader(bool $zip64 = false) {
       if (!$this->useCompression) {
         $this->compressedSize = $this->fileSize;
       }
-
+      
       $header = "";
       $header .= "\x50\x4b\x03\x04";
-      $header .= "\x14\x00"; //version 2.0 and MS-DOS compatible
+      $header .= $zip64 ? "\x2d\x00" : "\x14\x00"; //version 2.0 and MS-DOS compatible
       $header .= pack("v", $this->bitField); //general purpose bit flag
       if ($this->useCompression) {
         $header .= "\x08\x00"; //compression Method - deflate
@@ -117,28 +115,59 @@ namespace External\ZipStream {
       }
       $header .= pack("v", $this->unixTimeToDosTime($this->lastModificationTimestamp)); //dos time
       $header .= pack("v", $this->unixTimeToDosDate($this->lastModificationTimestamp)); //dos date
-      if ($this->bitField & self::BIT_NO_SIZE_IN_HEADER) {
-        $header .= pack("V", 0); //crc32
-        $header .= pack("V", 0); //compressed Size
-        $header .= pack("V", 0); //uncompressed Size
+
+      if ($zip64) {
+        if ($this->bitField & self::BIT_NO_SIZE_IN_HEADER) {
+          $header .= pack("V", 0); //crc32
+        } else {
+          $header .= strrev($this->crc32);
+        }
+        $header .= "\xFF\xFF\xFF\xFF"; //compressed Size
+        $header .= "\xFF\xFF\xFF\xFF"; //uncompressed Size
       } else {
-        $header .= strrev($this->crc32);
-        $header .= pack("V", $this->compressedSize); //compressed Size
-        $header .= pack("V", $this->fileSize); //uncompressed Size
+        if ($this->bitField & self::BIT_NO_SIZE_IN_HEADER) {
+          $header .= pack("V", 0); //crc32
+          $header .= pack("V", 0); //compressed Size
+          $header .= pack("V", 0); //uncompressed Size
+        } else {
+          $header .= strrev($this->crc32);
+          $header .= pack("V", $this->compressedSize); //compressed Size
+          $header .= pack("V", $this->fileSize); //uncompressed Size
+        }
       }
+
       $header .= pack("v", strlen($this->name)); //filename
-      $header .= "\x00\x00"; //extra field length
-      $header .= $this->name;
+      if ($zip64) {
+        $header .= pack("v", 16+4); //extra field length (signatures + data)
+        $header .= $this->name;
+        $header .= pack("v", 0x0001); # Zip64 extended information extra field
+        $header .= pack("v", 16); // 2 * 8 byte
+        if ($this->bitField & self::BIT_NO_SIZE_IN_HEADER) {
+          $header .= pack("P", 0);
+          $header .= pack("P", 0);
+        } else {
+          $header .= pack("P", $this->compressedSize);
+          $header .= pack("P", $this->fileSize);
+        }
+      } else {
+        $header .= "\x00\x00"; //extra field length
+        $header .= $this->name;
+      }
 
       return $header;
     }
 
-    public function readDataDescriptor() {
+    public function readDataDescriptor(bool $zip64 = false) {
+
+      if (!$this->useCompression) {
+        $this->compressedSize = $this->fileSize;
+      }
+
       $data = "";
       $data .= "\x50\x4b\x07\x08";
       $data .= strrev($this->crc32);
-      $data .= pack("V", $this->compressedSize); //compressed Size
-      $data .= pack("V", $this->fileSize); //uncompressed Size
+      $data .= $zip64 ? pack("P", $this->compressedSize) : pack("V", $this->compressedSize); //compressed Size
+      $data .= $zip64 ? pack("P", $this->fileSize) : pack("V", $this->fileSize); //uncompressed Size
       return $data;
     }
 
@@ -156,21 +185,28 @@ namespace External\ZipStream {
       return $ret;
     }
 
+    protected function compress($block) {
+
+      $ret = null;
+      if ($this->deflateState !== null) {
+        if (!empty($block)) {
+          $ret = deflate_add($this->deflateState, $block, ZLIB_NO_FLUSH);
+        } else {
+          $ret = deflate_add($this->deflateState, '', ZLIB_FINISH);
+          $this->deflateState = null;
+        }
+
+        $this->compressedSize += strlen($ret);
+      }
+
+      return $ret;
+    }
+
     public function readFileData() {
       $ret = null;
       if ($this->useCompression) {
         $block = $this->readFileDataImp();
-        if ($this->deflateState !== null) {
-          if ($block !== null) {
-            $ret = deflate_add($this->deflateState, $block, ZLIB_NO_FLUSH);
-          } else {
-            $ret = deflate_add($this->deflateState, '', ZLIB_FINISH);
-            $this->deflateState = null;
-          }
-        }
-        if ($ret !== null) {
-          $this->compressedSize += strlen($ret);
-        }
+        $ret = $this->compress($block);
       } else {
         $ret = $this->readFileDataImp();
       }
@@ -181,26 +217,60 @@ namespace External\ZipStream {
       $this->offset = $offset;
     }
 
-    public function readCentralDirectoryHeader() {
+    public function readCentralDirectoryHeader(bool $zip64 = false) {
+
+      $maxInt32 = 0xFFFFFFFF;
+      $extraFields = "";
+
+      // Compressed Size
+      if ($zip64 && $this->compressedSize >= $maxInt32) {
+        $compressedSize = "\xFF\xFF\xFF\xFF";
+        $extraFields .= pack("P", $this->compressedSize);
+      } else {
+        $compressedSize = pack("V", $this->compressedSize);
+      }
+
+      // Uncompressed Size
+      if ($zip64 && $this->fileSize >= $maxInt32) {
+        $fileSize = "\xFF\xFF\xFF\xFF";
+        $extraFields .= pack("P", $this->fileSize);
+      } else {
+        $fileSize = pack("V", $this->fileSize);
+      }
+
+      // Offset
+      if ($zip64 && $this->offset >= $maxInt32) {
+        $offset = "\xFF\xFF\xFF\xFF";
+        $extraFields .= pack("P", $this->offset);
+      } else {
+        $offset = pack("V", $this->offset);
+      }
+
       $header = "";
       $header .= "\x50\x4b\x01\x02";
-      $header .= "\x14\x00"; //version 2.0 and MS-DOS compatible
-      $header .= "\x14\x00"; //version 2.0 and MS-DOS compatible
+      $header .= $zip64 ? "\x2d\x00" : "\x14\x00"; //version 2.0 and MS-DOS compatible
+      $header .= $zip64 ? "\x2d\x00" : "\x14\x00"; //version 2.0 and MS-DOS compatible
       $header .= pack("v", $this->bitField); //general purpose bit flag
-      $header .= "\x00\x00"; //compression Method - no
+      $header .= $this->useCompression ? "\x08\x00" : "\x00\x00"; //compression Method - no
       $header .= pack("v", $this->unixTimeToDosTime($this->lastModificationTimestamp)); //dos time
       $header .= pack("v", $this->unixTimeToDosDate($this->lastModificationTimestamp)); //dos date
       $header .= strrev($this->crc32);
-      $header .= pack("V", $this->compressedSize); //compressed Size
-      $header .= pack("V", $this->fileSize); //uncompressed Size
+      $header .= $compressedSize; //compressed Size
+      $header .= $fileSize; //uncompressed Size
       $header .= pack("v", strlen($this->name)); //filename
-      $header .= "\x00\x00"; //extra field length
+      $header .= (strlen($extraFields) > 0) ? pack('v', strlen($extraFields) + 4) : "\x00\x00"; //extra field length
       $header .= "\x00\x00"; //comment length
       $header .= "\x00\x00"; //disk num start
       $header .= "\x00\x00"; //int file attr
       $header .= "\x00\x00\x00\x00"; //ext file attr
-      $header .= pack("V", $this->offset); //relative offset
+      $header .= $offset; //relative offset
       $header .= $this->name;
+
+      if (strlen($extraFields) > 0) {
+        $header .= pack("v", 0x0001); # Zip64 extended information extra field
+        $header .= pack("v", strlen($extraFields));
+        $header .= $extraFields;
+      }
 
       return $header;
     }

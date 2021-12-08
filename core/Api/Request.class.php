@@ -45,6 +45,17 @@ class Request {
     }
   }
 
+  protected function allowMethod($method) {
+    $availableMethods = ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "TRACE", "CONNECT"];
+    if (in_array($method, $availableMethods) && !in_array($method, $this->allowedMethods)) {
+      $this->allowedMethods[] = $method;
+    }
+  }
+
+  protected function getRequestMethod() {
+    return $_SERVER["REQUEST_METHOD"];
+  }
+
   public function parseParams($values, $structure = NULL): bool {
 
     if ($structure === NULL) {
@@ -80,6 +91,11 @@ class Request {
     }
   }
 
+  // wrapper for unit tests
+  protected function _die(string $data = ""): bool {
+    die($data);
+  }
+
   public function execute($values = array()): bool {
     $this->params = array_merge([], $this->defaultParams);
     $this->success = false;
@@ -98,7 +114,7 @@ class Request {
           $values = array_merge($values, $jsonData);
         } else {
           $this->lastError = 'Invalid request body.';
-          header('HTTP 1.1 400 Bad Request');
+          http_response_code(400);
           return false;
         }
       }
@@ -106,39 +122,48 @@ class Request {
 
     if ($this->isDisabled) {
       $this->lastError = "This function is currently disabled.";
+      http_response_code(503);
       return false;
     }
 
     if ($this->externalCall && !$this->isPublic) {
       $this->lastError = 'This function is private.';
-      header('HTTP 1.1 403 Forbidden');
+      http_response_code(403);
       return false;
     }
 
     if ($this->externalCall) {
 
+      if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(204); # No content
+        header("Allow: OPTIONS, " . implode(", ", $this->allowedMethods));
+        return $this->_die();
+      }
+
       // check the request method
       if (!in_array($_SERVER['REQUEST_METHOD'], $this->allowedMethods)) {
         $this->lastError = 'This method is not allowed';
-        header('HTTP 1.1 405 Method Not Allowed');
+        http_response_code(405);
         return false;
       }
 
       $apiKeyAuthorized = false;
 
-      // Logged in or api key authorized?
-      if ($this->loginRequired) {
-        if (isset($_SERVER["HTTP_AUTHORIZATION"]) && $this->apiKeyAllowed) {
+      if (!$this->user->isLoggedIn() && $this->apiKeyAllowed) {
+        if (isset($_SERVER["HTTP_AUTHORIZATION"])) {
           $authHeader = $_SERVER["HTTP_AUTHORIZATION"];
           if (startsWith($authHeader, "Bearer ")) {
             $apiKey = substr($authHeader, strlen("Bearer "));
             $apiKeyAuthorized = $this->user->authorize($apiKey);
           }
         }
+      }
 
+      // Logged in or api key authorized?
+      if ($this->loginRequired) {
         if (!$this->user->isLoggedIn() && !$apiKeyAuthorized) {
           $this->lastError = 'You are not logged in.';
-          header('HTTP 1.1 401 Unauthorized');
+          http_response_code(401);
           return false;
         }
       }
@@ -149,7 +174,7 @@ class Request {
         // if it's not a call with API_KEY, check for csrf_token
         if (!isset($values["csrf_token"]) || strcmp($values["csrf_token"], $this->user->getSession()->getCsrfToken()) !== 0) {
           $this->lastError = "CSRF-Token mismatch";
-          header('HTTP 1.1 403 Forbidden');
+          http_response_code(403);
           return false;
         }
       }
@@ -235,14 +260,91 @@ class Request {
   }
 
   protected function disableOutputBuffer() {
-    header('X-Accel-Buffering: no');
-    header("Cache-Control: no-transform, no-store, max-age=0");
-
     ob_implicit_flush(true);
     $levels = ob_get_level();
     for ( $i = 0; $i < $levels; $i ++ ) {
       ob_end_flush();
     }
     flush();
+  }
+
+  protected function setupSSE() {
+    $this->user->getSQL()->close();
+    $this->user->sendCookies();
+    set_time_limit(0);
+    ignore_user_abort(true);
+    header('Content-Type: text/event-stream');
+    header('Connection: keep-alive');
+    header('X-Accel-Buffering: no');
+    header('Cache-Control: no-cache');
+
+    $this->disableOutputBuffer();
+  }
+
+  protected function processImageUpload(string $uploadDir, array $allowedExtensions = ["jpg","jpeg","png","gif"], $transformCallback = null) {
+    if (empty($_FILES)) {
+      return $this->createError("You need to upload an image.");
+    } else if (count($_FILES) > 1) {
+      return $this->createError("You can only upload one image at once.");
+    }
+
+    $upload = array_values($_FILES)[0];
+    if (is_array($upload["name"])) {
+      return $this->createError("You can only upload one image at once.");
+    } else if ($upload["error"] !== UPLOAD_ERR_OK) {
+      return $this->createError("There was an error uploading the image, code: " . $upload["error"]);
+    }
+
+    $imageName = $upload["name"];
+    $ext = strtolower(pathinfo($imageName, PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowedExtensions)) {
+      return $this->createError("Only the following file extensions are allowed: " . implode(",", $allowedExtensions));
+    }
+
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true)) {
+      return $this->createError("Upload directory does not exist and could not be created.");
+    }
+
+    $srcPath = $upload["tmp_name"];
+    $mimeType = mime_content_type($srcPath);
+    if (!startsWith($mimeType, "image/")) {
+      return $this->createError("Uploaded file is not an image.");
+    }
+
+    try {
+      $image = new \Imagick($srcPath);
+
+      // strip exif
+      $profiles = $image->getImageProfiles("icc", true);
+      $image->stripImage();
+      if (!empty($profiles)) {
+        $image->profileImage("icc", $profiles['icc']);
+      }
+    } catch (\ImagickException $ex) {
+      return $this->createError("Error loading image: " . $ex->getMessage());
+    }
+
+    try {
+      if ($transformCallback) {
+        $fileName = call_user_func([$this, $transformCallback], $image, $uploadDir);
+      } else {
+
+        $image->writeImage($srcPath);
+        $image->destroy();
+
+        $uuid = uuidv4();
+        $fileName = "$uuid.$ext";
+        $destPath = "$uploadDir/$fileName";
+        if (!file_exists($destPath)) {
+          if (!@move_uploaded_file($srcPath, $destPath)) {
+            return $this->createError("Could not store uploaded file.");
+          }
+        }
+      }
+
+      return [$fileName, $imageName];
+    } catch (\ImagickException $ex) {
+      return $this->createError("Error processing image: " . $ex->getMessage());
+    }
   }
 }

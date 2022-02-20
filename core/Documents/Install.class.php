@@ -104,8 +104,8 @@ namespace Documents\Install {
       return NULL;
     }
 
-    private function composerUpdate(bool $dryRun = false): array {
-      $command = "composer update";
+    private function composerInstall(bool $dryRun = false): array {
+      $command = "composer install";
       if ($dryRun) {
         $command .= " --dry-run";
       }
@@ -127,8 +127,12 @@ namespace Documents\Install {
       return [$status, $output];
     }
 
-    private function getExternalDirectory(): string {
-      return implode(DIRECTORY_SEPARATOR, [WEBROOT, "core", "External"]);;
+    private function getExternalDirectory(bool $absolute = true): string {
+      if ($absolute) {
+        return implode(DIRECTORY_SEPARATOR, [WEBROOT, "core", "External"]);;
+      } else {
+        return implode(DIRECTORY_SEPARATOR, ["core", "External"]);
+      }
     }
 
     private function getCurrentStep(): int {
@@ -138,17 +142,16 @@ namespace Documents\Install {
       }
 
       $externalDir = $this->getExternalDirectory();
-      $vendorDir = $externalDir . DIRECTORY_SEPARATOR . "vendor";
-      if (!is_dir($vendorDir)) {
+      $autoload = implode(DIRECTORY_SEPARATOR, [$externalDir, "vendor", "autoload.php"]);
+      if (!is_file($autoload)) {
         return self::INSTALL_DEPENDENCIES;
       } else {
-        list ($status, $output) = $this->composerUpdate(true);
+        list ($status, $output) = $this->composerInstall(true);
         if ($status !== 0) {
-          $this->errorString = "Error executing 'composer update --dry-run'. Please verify that the command succeeds locally and then try again. Status Code: $status, Output: $output";
+          $this->errorString = "Error executing 'composer install --dry-run'. Please verify that the command succeeds locally and then try again. Status Code: $status, Output: $output";
           return self::CHECKING_REQUIREMENTS;
         } else {
-          if (!contains($output, "Nothing to modify in lock file")
-            || !contains($output, "Nothing to install, update or remove")) {
+          if (!contains($output, "Nothing to install, update or remove")) {
             return self::INSTALL_DEPENDENCIES;
           }
         }
@@ -219,17 +222,19 @@ namespace Documents\Install {
       $success = true;
       $failedRequirements = array();
 
-      $configDir = "core/Configuration/";
-      if (!is_writeable($configDir)) {
-        $failedRequirements[] = "<b>$configDir</b> is not writeable. Try running <b>chmod 700 $configDir</b>";
+      if (!is_writeable(WEBROOT)) {
+        $failedRequirements[] = sprintf("<b>%s</b> is not writeable. Try running <b>chmod 700 %s</b>", WEBROOT, WEBROOT);
         $success = false;
       }
 
       if (function_exists("posix_getuid")) {
         $userId = posix_getuid();
-        if (fileowner($configDir) !== $userId) {
+        if (fileowner(WEBROOT) !== $userId) {
           $username = posix_getpwuid($userId)['name'];
-          $failedRequirements[] = "<b>$configDir</b> is not owned by current user: $username ($userId). Try running <b>chown -R $username $configDir</b>";
+          $failedRequirements[] = sprintf("<b>%s</b> is not owned by current user: $username ($userId). " .
+              "Try running <b>chown -R $userId %s</b> or give the required directories write permissions: " .
+              "<b>core/Configuration</b>, <b>core/TemplateCache</b>, <b>core/External</b>",
+            WEBROOT, WEBROOT);
           $success = false;
         }
       }
@@ -259,7 +264,7 @@ namespace Documents\Install {
     }
 
     private function installDependencies(): array {
-      list ($status, $output) = $this->composerUpdate();
+      list ($status, $output) = $this->composerInstall();
       return ["success" => $status === 0, "msg" => $output];
     }
 

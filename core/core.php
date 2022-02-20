@@ -1,11 +1,11 @@
 <?php
 
-$vendorDir = implode(DIRECTORY_SEPARATOR, [__DIR__, "External", "vendor"]);
-if (is_dir($vendorDir)) {
-  require_once $vendorDir . DIRECTORY_SEPARATOR .  "autoload.php";
+$autoLoad = implode(DIRECTORY_SEPARATOR, [__DIR__, "External", "vendor", "autoload.php"]);
+if (is_file($autoLoad)) {
+  require_once $autoLoad;
 }
 
-define("WEBBASE_VERSION", "1.4.2");
+define("WEBBASE_VERSION", "1.4.3");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {

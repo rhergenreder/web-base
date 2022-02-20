@@ -74,10 +74,11 @@ namespace Documents\Install {
 
     // Step enum
     const CHECKING_REQUIREMENTS = 1;
-    const DATABASE_CONFIGURATION = 2;
-    const CREATE_USER = 3;
-    const ADD_MAIL_SERVICE = 4;
-    const FINISH_INSTALLATION = 5;
+    const INSTALL_DEPENDENCIES = 2;
+    const DATABASE_CONFIGURATION = 3;
+    const CREATE_USER = 4;
+    const ADD_MAIL_SERVICE = 5;
+    const FINISH_INSTALLATION = 6;
 
     //
     private string $errorString;
@@ -103,10 +104,54 @@ namespace Documents\Install {
       return NULL;
     }
 
+    private function composerUpdate(bool $dryRun = false): array {
+      $command = "composer update";
+      if ($dryRun) {
+        $command .= " --dry-run";
+      }
+
+      $fds = [
+        "1" => ["pipe", "w"],
+        "2" => ["pipe", "w"],
+      ];
+
+      $dir = $this->getExternalDirectory();
+      $env = null;
+      if (!getenv("HOME")) {
+        $env = ["COMPOSER_HOME" => $dir];
+      }
+
+      $proc = proc_open($command, $fds, $pipes, $dir, $env);
+      $output = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+      $status = proc_close($proc);
+      return [$status, $output];
+    }
+
+    private function getExternalDirectory(): string {
+      return implode(DIRECTORY_SEPARATOR, [WEBROOT, "core", "External"]);;
+    }
+
     private function getCurrentStep(): int {
 
       if (!$this->checkRequirements()["success"]) {
         return self::CHECKING_REQUIREMENTS;
+      }
+
+      $externalDir = $this->getExternalDirectory();
+      $vendorDir = $externalDir . DIRECTORY_SEPARATOR . "vendor";
+      if (!is_dir($vendorDir)) {
+        return self::INSTALL_DEPENDENCIES;
+      } else {
+        list ($status, $output) = $this->composerUpdate(true);
+        if ($status !== 0) {
+          $this->errorString = "Error executing 'composer update --dry-run'. Please verify that the command succeeds locally and then try again. Status Code: $status, Output: $output";
+          return self::CHECKING_REQUIREMENTS;
+        } else {
+          if (!contains($output, "Nothing to modify in lock file")
+            || !contains($output, "Nothing to install, update or remove")) {
+            return self::INSTALL_DEPENDENCIES;
+          }
+        }
       }
 
       $user = $this->getDocument()->getUser();
@@ -163,6 +208,11 @@ namespace Documents\Install {
       return $step;
     }
 
+    private function command_exist(string $cmd): bool {
+      $return = shell_exec(sprintf("which %s 2>/dev/null", escapeshellarg($cmd)));
+      return !empty($return);
+    }
+
     private function checkRequirements(): array {
 
       $msg = $this->errorString;
@@ -184,8 +234,18 @@ namespace Documents\Install {
         }
       }
 
+      if (!function_exists("yaml_emit")) {
+        $failedRequirements[] = "<b>YAML</b> extension is not installed.";
+        $success = false;
+      }
+
       if (version_compare(PHP_VERSION, '7.4', '<')) {
         $failedRequirements[] = "PHP Version <b>>= 7.4</b> is required. Got: <b>" . PHP_VERSION . "</b>";
+        $success = false;
+      }
+
+      if (!$this->command_exist("composer")) {
+        $failedRequirements[] = "<b>Composer</b> is not installed or cannot be found.";
         $success = false;
       }
 
@@ -198,6 +258,11 @@ namespace Documents\Install {
       return array("success" => $success, "msg" => $msg);
     }
 
+    private function installDependencies(): array {
+      list ($status, $output) = $this->composerUpdate();
+      return ["success" => $status === 0, "msg" => $output];
+    }
+
     private function databaseConfiguration(): array {
 
       $host = $this->getParameter("host");
@@ -206,22 +271,21 @@ namespace Documents\Install {
       $password = $this->getParameter("password");
       $database = $this->getParameter("database");
       $type = $this->getParameter("type");
-      $encoding = $this->getParameter("encoding");
-      $encoding = ($encoding ? $encoding : "UTF-8");
+      $encoding = $this->getParameter("encoding") ?? "UTF8";
       $success = true;
 
       $missingInputs = array();
-      if (is_null($host) || empty($host)) {
+      if (empty($host)) {
         $success = false;
         $missingInputs[] = "Host";
       }
 
-      if (is_null($port) || empty($port)) {
+      if (empty($port)) {
         $success = false;
         $missingInputs[] = "Port";
       }
 
-      if (is_null($username) || empty($username)) {
+      if (empty($username)) {
         $success = false;
         $missingInputs[] = "Username";
       }
@@ -231,12 +295,12 @@ namespace Documents\Install {
         $missingInputs[] = "Password";
       }
 
-      if (is_null($database) || empty($database)) {
+      if (empty($database)) {
         $success = false;
         $missingInputs[] = "Database";
       }
 
-      if (is_null($type) || empty($type)) {
+      if (empty($type)) {
         $success = false;
         $missingInputs[] = "Type";
       }
@@ -323,17 +387,17 @@ namespace Documents\Install {
       $success = true;
       $missingInputs = array();
 
-      if (is_null($username) || empty($username)) {
+      if (empty($username)) {
         $success = false;
         $missingInputs[] = "Username";
       }
 
-      if (is_null($password) || empty($password)) {
+      if (empty($password)) {
         $success = false;
         $missingInputs[] = "Password";
       }
 
-      if (is_null($confirmPassword) || empty($confirmPassword)) {
+      if (empty($confirmPassword)) {
         $success = false;
         $missingInputs[] = "Confirm Password";
       }
@@ -464,6 +528,9 @@ namespace Documents\Install {
 
         case self::CHECKING_REQUIREMENTS:
           return $this->checkRequirements();
+
+        case self::INSTALL_DEPENDENCIES:
+          return $this->installDependencies();
 
         case self::DATABASE_CONFIGURATION:
           return $this->databaseConfiguration();
@@ -612,6 +679,10 @@ namespace Documents\Install {
           "title" => "Application Requirements",
           "progressText" => "Checking requirements, please wait a moment…"
         ),
+        self::INSTALL_DEPENDENCIES => array(
+          "title" => "Installing Dependencies",
+          "progressText" => "Please wait while required dependencies are being installed…",
+        ),
         self::DATABASE_CONFIGURATION => array(
           "title" => "Database configuration",
           "form" => array(
@@ -690,7 +761,9 @@ namespace Documents\Install {
 
       if (isset($currentView["progressText"])) {
         $progressText = $currentView["progressText"];
-        $html .= "<div id=\"progressText\" style=\"display:none\" class=\"my-3\">$progressText$spinnerIcon</i></div>";
+        $hidden = (!in_array($this->currentStep, [self::CHECKING_REQUIREMENTS, self::INSTALL_DEPENDENCIES]))
+          ? " hidden" : "";
+        $html .= "<div id=\"progressText\" class=\"my-3$hidden\">$progressText$spinnerIcon</i></div>";
       }
 
       if (isset($currentView["form"])) {
@@ -709,8 +782,7 @@ namespace Documents\Install {
           }
         }
 
-        $html .= "
-          </form>";
+        $html .= "</form>";
       }
 
       $buttons = array(
@@ -718,8 +790,8 @@ namespace Documents\Install {
       );
 
       if ($this->currentStep != self::FINISH_INSTALLATION) {
-        if ($this->currentStep == self::CHECKING_REQUIREMENTS) {
-          $buttons[] = array("title" => "Retry", "type" => "success", "id" => "btnRetry", "float" => "right");
+        if (in_array($this->currentStep, [self::CHECKING_REQUIREMENTS, self::INSTALL_DEPENDENCIES])) {
+          $buttons[] = array("title" => "Retry", "type" => "success", "id" => "btnRetry", "float" => "right", "hidden" => true);
         } else {
           $buttons[] = array("title" => "Submit", "type" => "success", "id" => "btnSubmit", "float" => "right");
         }
@@ -740,7 +812,8 @@ namespace Documents\Install {
         $id = $button["id"];
         $float = $button["float"];
         $disabled = (isset($button["disabled"]) && $button["disabled"]) ? " disabled" : "";
-        $button = "<button type=\"button\" id=\"$id\" class=\"btn btn-$type m-1\"$disabled>$title</button>";
+        $hidden = (isset($button["hidden"]) && $button["hidden"]) ? " hidden" : "";
+        $button = "<button type=\"button\" id=\"$id\" class=\"btn btn-$type m-1$hidden\"$disabled>$title</button>";
 
         if ($float === "left") {
           $buttonsLeft .= $button;
@@ -765,6 +838,10 @@ namespace Documents\Install {
         self::CHECKING_REQUIREMENTS => array(
           "title" => "Checking requirements",
           "status" => self::ERROR
+        ),
+        self::INSTALL_DEPENDENCIES => array(
+          "title" => "Install dependencies",
+          "status" => self::NOT_STARTED
         ),
         self::DATABASE_CONFIGURATION => array(
           "title" => "Database configuration",
@@ -797,7 +874,11 @@ namespace Documents\Install {
 
       // POST
       if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-        $response = $this->performStep();
+        if (!isset($_REQUEST['status'])) {
+          $response = $this->performStep();
+        } else {
+          $response = ["error" => $this->errorString];
+        }
         $response["step"] = $this->currentStep;
         die(json_encode($response));
       }

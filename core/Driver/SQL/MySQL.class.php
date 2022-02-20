@@ -86,7 +86,7 @@ class MySQL extends SQL {
     return $lastError;
   }
 
-  private function getPreparedParams($values) {
+  private function getPreparedParams($values): array {
     $sqlParams = array('');
     foreach($values as $value) {
       $paramType = Parameter::parseType($value);
@@ -138,48 +138,54 @@ class MySQL extends SQL {
 
     $resultRows = array();
     $this->lastError = "";
+    $stmt = null;
+    $res = null;
+    $success = false;
 
-    if (is_null($values) || empty($values)) {
-      $res = mysqli_query($this->connection, $query);
-      $success = $res !== FALSE;
-      if ($success && $returnValues) {
-        while($row = $res->fetch_assoc()) {
-          $resultRows[] = $row;
+    try {
+      if (empty($values)) {
+        $res = mysqli_query($this->connection, $query);
+        $success = $res !== FALSE;
+        if ($success && $returnValues) {
+          while ($row = $res->fetch_assoc()) {
+            $resultRows[] = $row;
+          }
         }
-        $res->close();
-      }
-    } else if($stmt = $this->connection->prepare($query)) {
+      } else if ($stmt = $this->connection->prepare($query)) {
 
-      $success = false;
-      $sqlParams = $this->getPreparedParams($values);
-      $tmp = array();
-      foreach($sqlParams as $key => $value) $tmp[$key] = &$sqlParams[$key];
-      if(call_user_func_array(array($stmt, "bind_param"), $tmp)) {
-        if($stmt->execute()) {
-          if ($returnValues) {
-            $res = $stmt->get_result();
-            if($res) {
-              while($row = $res->fetch_assoc()) {
-                $resultRows[] = $row;
+        $sqlParams = $this->getPreparedParams($values);
+        if ($stmt->bind_param(...$sqlParams)) {
+          if ($stmt->execute()) {
+            if ($returnValues) {
+              $res = $stmt->get_result();
+              if ($res) {
+                while ($row = $res->fetch_assoc()) {
+                  $resultRows[] = $row;
+                }
+                $success = true;
+              } else {
+                $this->lastError = "PreparedStatement::get_result failed: $stmt->error ($stmt->errno)";
               }
-              $res->close();
-              $success = true;
             } else {
-              $this->lastError = "PreparedStatement::get_result failed: $stmt->error ($stmt->errno)";
+              $success = true;
             }
           } else {
-            $success = true;
+            $this->lastError = "PreparedStatement::execute failed: $stmt->error ($stmt->errno)";
           }
         } else {
-          $this->lastError = "PreparedStatement::execute failed: $stmt->error ($stmt->errno)";
+          $this->lastError = "PreparedStatement::prepare failed: $stmt->error ($stmt->errno)";
         }
-      } else {
-        $this->lastError = "PreparedStatement::prepare failed: $stmt->error ($stmt->errno)";
+      }
+    } catch (\mysqli_sql_exception $exception) {
+      $this->lastError = "MySQL::execute failed: $stmt->error ($stmt->errno)";
+    } finally {
+      if ($res !== null && !is_bool($res)) {
+        $res->close();
       }
 
-      $stmt->close();
-    } else {
-      $success = false;
+      if ($stmt !== null && !is_bool($stmt)) {
+        $stmt->close();
+      }
     }
 
     return ($success && $returnValues) ? $resultRows : $success;
@@ -195,7 +201,7 @@ class MySQL extends SQL {
         if ($value instanceof Column) {
           $columnName = $this->columnName($value->getName());
           $updateValues[] = "$leftColumn=VALUES($columnName)";
-        } else if($value instanceof Add) {
+        } else if ($value instanceof Add) {
           $columnName = $this->columnName($value->getColumn());
           $operator = $value->getOperator();
           $value = $value->getValue();

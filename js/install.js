@@ -1,11 +1,14 @@
 const NOT_STARTED = 0;
 const PENDING = 1;
-const SUCCESFULL = 2;
+const SUCCESSFUL = 2;
 const ERROR = 3;
+
+let currentState = PENDING;
 
 function setState(state) {
   let li = $("#currentStep");
   let icon, color, text;
+  currentState = state;
 
   switch (state) {
     case PENDING:
@@ -14,7 +17,7 @@ function setState(state) {
       color = "muted";
       break;
 
-    case SUCCESFULL:
+    case SUCCESSFUL:
       icon  = 'fas fa-check-circle';
       text  = "Successfull";
       color = "success";
@@ -24,6 +27,7 @@ function setState(state) {
       icon  = 'fas fa-times-circle';
       text  = "Failed";
       color = "danger";
+      $("#btnRetry").show();
       break;
 
     default:
@@ -42,6 +46,14 @@ function getCurrentStep() {
   return $("#currentStep").index() + 1;
 }
 
+function requestCurrentStep(callback) {
+  $.post("/index.php?status", {}, function(data) {
+    callback(data.step ?? null);
+  }, "json").fail(function() {
+    callback(null);
+  });
+}
+
 function sendRequest(params, done) {
   setState(PENDING);
   let success = false;
@@ -55,13 +67,13 @@ function sendRequest(params, done) {
     } else {
       setState(ERROR);
       statusBox.addClass("alert-danger");
-      statusBox.html("An error occurred during intallation: " + data.msg);
+      statusBox.html("An error occurred during installation: " + data.msg);
       statusBox.show();
     }
   }, "json").fail(function() {
     setState(ERROR);
     statusBox.addClass("alert-danger");
-    statusBox.html("An error occurred during intallation. Try <a href=\"/index.php\">restarting the process</a>.");
+    statusBox.html("An error occurred during installation. Try <a href=\"/index.php\">restarting the process</a>.");
     statusBox.show();
   }).always(function() {
     if(done) done(success);
@@ -69,12 +81,32 @@ function sendRequest(params, done) {
 }
 
 function retry() {
+  let progressText = $("#progressText");
+  let wasHidden = progressText.hasClass("hidden");
   $("#btnRetry").hide();
-  $("#progressText").show();
+  progressText.removeClass("hidden");
   sendRequest({ }, function(success) {
-    $("#progressText").hide();
-    if(!success) $("#btnRetry").show();
+    if (wasHidden) {
+      $("#progressText").addClass("hidden");
+    }
+    if(!success) {
+      $("#btnRetry").show();
+    }
   });
+}
+
+function waitForStatusChange() {
+  setTimeout(() => {
+    requestCurrentStep((step) => {
+      if (currentState === PENDING) {
+        if (step !== 2 || step == null) {
+          document.location.reload();
+        } else {
+          waitForStatusChange();
+        }
+      }
+    })
+  }, 2500);
 }
 
 $(document).ready(function() {
@@ -101,7 +133,7 @@ $(document).ready(function() {
           submitButton.prop("disabled",false);
           submitButton.text(textBefore);
         } else {
-          setState(SUCCESFULL);
+          setState(SUCCESSFUL);
         }
       });
     });
@@ -160,4 +192,11 @@ $(document).ready(function() {
   typeField.change(function() {
     updateDefaultPort();
   });
+
+  // INSTALL_DEPENDENCIES ?
+  if (getCurrentStep() === 2) {
+    sendRequest({}, () => {
+      waitForStatusChange();
+    });
+  }
 });

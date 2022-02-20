@@ -41,13 +41,13 @@
                     SwaggerUIBundle.plugins.DownloadUrl
                 ],
                 layout: "StandaloneLayout",
-            {% if user.loggedIn %}
+                {% if user.loggedIn %}
                 requestInterceptor: request => {
                     request.headers['XSRF-Token'] = '{{ user.session.csrfToken }}';
                     return request;
                 }
+                {% endif %}
             });
-            {% endif %}
         };
     </script>
 </body>

@@ -192,7 +192,7 @@ class Swagger extends Request {
       "definitions" => $definitions
     ];
 
-    return yaml_emit($yamlData);
+    return \yaml_emit($yamlData);
 
   }
 }

@@ -590,14 +590,42 @@ function onMail($argv) {
     }
 
     _exit("Done.");
+  } else if ($action === "send_news") {
+    $user = getUser() or die();
+    $debug = in_array("debug", $argv);
+    $req = new \Api\Mail\SendNews($user);
+    if (!$req->execute(["debug" => $debug])) {
+      _exit("Error sending news mails: " . $req->getLastError());
+    }
+
+    _exit("Done.");
+  } else if ($action === "send_queue") {
+    $user = getUser() or die();
+    $req = new \Api\Mail\SendQueue($user);
+    $debug = in_array("debug", $argv);
+    if (!$req->execute(["debug" => $debug])) {
+      _exit("Error processing mail queue: " . $req->getLastError());
+    }
   } else {
-    _exit("Usage: cli.php mail <sync> [options...]");
+    _exit("Usage: cli.php mail <sync|send_news|send_queue> [options...]");
   }
+}
+
+function onImpersonate($argv) {
+  if (count($argv) < 3) {
+    _exit("Usage: cli.php impersonate <user_id>");
+  }
+
+  $user = getUser() or exit;
+  $user->createSession(intval($argv[2]));
+  $session = $user->getSession();
+  $session->setData(["2faAuthenticated" => true]);
+  echo "session=" . $session->getCookie() . PHP_EOL;
 }
 
 $argv = $_SERVER['argv'];
 if (count($argv) < 2) {
-  _exit("Usage: cli.php <db|routes|settings|maintenance> [options...]");
+  _exit("Usage: cli.php <db|routes|settings|maintenance|impersonate> [options...]");
 }
 
 $command = $argv[1];
@@ -622,6 +650,9 @@ switch ($command) {
     break;
   case 'settings':
     onSettings($argv);
+    break;
+  case 'impersonate':
+    onImpersonate($argv);
     break;
   default:
     printLine("Unknown command '$command'");

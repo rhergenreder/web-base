@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Swagger UI</title>
+    <link nonce="{{ site.csp.nonce }}" rel="stylesheet" type="text/css" href="/css/swagger-ui.css" />
+    <style nonce="{{ site.csp.nonce }}">
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+
+        body {
+            margin:0;
+            background: #fafafa;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="swagger-ui"></div>
+    <script nonce="{{ site.csp.nonce }}" src="/js/swagger-ui-bundle.js" charset="UTF-8"></script>
+    <script nonce="{{ site.csp.nonce }}" src="/js/swagger-ui-standalone-preset.js" charset="UTF-8"></script>
+    <script nonce="{{ site.csp.nonce }}">
+        window.onload = function() {
+            // Begin Swagger UI call region
+            window.ui = SwaggerUIBundle({
+                url: "{{ site.baseUrl }}/api/swagger",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+            {% if user.loggedIn %}
+                requestInterceptor: request => {
+                    request.headers['XSRF-Token'] = '{{ user.session.csrfToken }}';
+                    return request;
+                }
+            });
+            {% endif %}
+        };
+    </script>
+</body>
+</html>

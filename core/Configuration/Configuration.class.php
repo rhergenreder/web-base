@@ -14,7 +14,7 @@ class Configuration {
     $this->settings = Settings::loadDefaults();
 
     $class = \Configuration\Database::class;
-    $path = getClassPath($class, true);
+    $path = getClassPath($class, ".class");
     if (file_exists($path) && is_readable($path)) {
       include_once $path;
       if (class_exists($class)) {
@@ -53,7 +53,7 @@ class Configuration {
       } else if ($data instanceof ConnectionData) {
         $superClass = get_class($data);
         $host = addslashes($data->getHost());
-        $port = intval($data->getPort());
+        $port = $data->getPort();
         $login = addslashes($data->getLogin());
         $password = addslashes($data->getPassword());
 

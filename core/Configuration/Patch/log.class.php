@@ -5,12 +5,39 @@ namespace Configuration\Patch;
 use Configuration\DatabaseScript;
 use Driver\SQL\Column\IntColumn;
 use Driver\SQL\Condition\Compare;
+use Driver\SQL\Query\CreateProcedure;
 use Driver\SQL\SQL;
 use Driver\SQL\Type\CurrentColumn;
 use Driver\SQL\Type\CurrentTable;
 use Driver\SQL\Type\Trigger;
 
 class log extends DatabaseScript {
+
+  public static function createTableLog(SQL $sql, string $table, int $lifetime = 90): array {
+    return [
+      $sql->createTrigger("${table}_trg_insert")
+        ->after()->insert($table)
+        ->exec(new CreateProcedure($sql, "InsertEntityLog"), [
+          "tableName" => new CurrentTable(),
+          "entityId" => new CurrentColumn("uid"),
+          "lifetime" => $lifetime,
+        ]),
+
+      $sql->createTrigger("${table}_trg_update")
+        ->after()->update($table)
+        ->exec(new CreateProcedure($sql, "UpdateEntityLog"), [
+          "tableName" => new CurrentTable(),
+          "entityId" => new CurrentColumn("uid"),
+        ]),
+
+      $sql->createTrigger("${table}_trg_delete")
+        ->after()->delete($table)
+        ->exec(new CreateProcedure($sql, "DeleteEntityLog"), [
+          "tableName" => new CurrentTable(),
+          "entityId" => new CurrentColumn("uid"),
+        ])
+    ];
+  }
 
   public static function createQueries(SQL $sql): array {
 
@@ -25,10 +52,11 @@ class log extends DatabaseScript {
     $insertProcedure = $sql->createProcedure("InsertEntityLog")
       ->param(new CurrentTable())
       ->param(new IntColumn("uid"))
+      ->param(new IntColumn("lifetime", false, 90))
       ->returns(new Trigger())
       ->exec(array(
-        $sql->insert("EntityLog", ["entityId", "tableName"])
-          ->addRow(new CurrentColumn("uid"), new CurrentTable())
+        $sql->insert("EntityLog", ["entityId", "tableName", "lifetime"])
+          ->addRow(new CurrentColumn("uid"), new CurrentTable(), new CurrentColumn("lifetime"))
       ));
 
     $updateProcedure = $sql->createProcedure("UpdateEntityLog")
@@ -58,18 +86,7 @@ class log extends DatabaseScript {
 
     $tables = ["ContactRequest"];
     foreach ($tables as $table) {
-
-      $queries[] = $sql->createTrigger("${table}_trg_insert")
-        ->after()->insert($table)
-        ->exec($insertProcedure);
-
-      $queries[] = $sql->createTrigger("${table}_trg_update")
-        ->after()->update($table)
-        ->exec($updateProcedure);
-
-      $queries[] = $sql->createTrigger("${table}_trg_delete")
-        ->after()->delete($table)
-        ->exec($deleteProcedure);
+      $queries = array_merge($queries, self::createTableLog($sql, $table));
     }
 
     return $queries;

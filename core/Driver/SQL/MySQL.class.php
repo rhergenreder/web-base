@@ -316,7 +316,13 @@ class MySQL extends SQL {
       foreach($table as $t) $tables[] = $this->tableName($t);
       return implode(",", $tables);
     } else {
-      return "`$table`";
+      $parts = explode(" ", $table);
+      if (count($parts) === 2) {
+        list ($name, $alias) = $parts;
+        return "`$name` $alias";
+      } else {
+        return "`$table`";
+      }
     }
   }
 
@@ -346,15 +352,17 @@ class MySQL extends SQL {
     return mysqli_stat($this->connection);
   }
 
-  public function createTriggerBody(CreateTrigger $trigger): ?string {
+  public function createTriggerBody(CreateTrigger $trigger, array $parameters = []): ?string {
     $values = array();
 
-    foreach ($trigger->getProcedure()->getParameters() as $param) {
-      if ($param instanceof CurrentTable) {
+    foreach ($parameters as $paramValue) {
+      if ($paramValue instanceof CurrentTable) {
         $values[] = $this->getUnsafeValue($trigger->getTable());
-      } else {
+      } elseif ($paramValue instanceof CurrentColumn) {
         $prefix = ($trigger->getEvent() !== "DELETE" ? "NEW." : "OLD.");
-        $values[] = $this->columnName($prefix . $param->getName());
+        $values[] = $this->columnName($prefix . $paramValue->getName());
+      } else {
+        $values[] = $paramValue;
       }
     }
 

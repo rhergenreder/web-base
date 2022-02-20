@@ -32,13 +32,20 @@ class CreateDatabase extends DatabaseScript {
       ->addString("email", 64, true)
       ->addString("name", 32)
       ->addString("password", 128)
+      ->addString("fullName", 64, false, "")
+      ->addString("profilePicture", 64, true)
+      ->addDateTime("last_online", true, NULL)
       ->addBool("confirmed", false)
       ->addInt("language_id", true, 1)
+      ->addInt("gpg_id", true)
+      ->addInt("2fa_id", true)
       ->addDateTime("registered_at", false, $sql->currentTimestamp())
       ->primaryKey("uid")
       ->unique("email")
       ->unique("name")
-      ->foreignKey("language_id", "Language", "uid", new SetNullStrategy());
+      ->foreignKey("language_id", "Language", "uid", new SetNullStrategy())
+      ->foreignKey("gpg_id", "GpgKey", "uid", new SetNullStrategy())
+      ->foreignKey("2fa_id", "2FA", "uid", new SetNullStrategy());
 
     $queries[] = $sql->createTable("Session")
       ->addSerial("uid")
@@ -57,7 +64,7 @@ class CreateDatabase extends DatabaseScript {
     $queries[] = $sql->createTable("UserToken")
       ->addInt("user_id")
       ->addString("token", 36)
-      ->addEnum("token_type", array("password_reset", "email_confirm", "invite"))
+      ->addEnum("token_type", array("password_reset", "email_confirm", "invite", "gpg_confirm"))
       ->addDateTime("valid_until")
       ->addBool("used", false)
       ->foreignKey("user_id", "User", "uid", new CascadeStrategy());
@@ -131,11 +138,11 @@ class CreateDatabase extends DatabaseScript {
 
     $queries[] = $sql->insert("Route", array("request", "action", "target", "extra"))
       ->addRow("^/admin(/.*)?$", "dynamic", "\\Documents\\Admin", NULL)
-      ->addRow("^/register/?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\Register")
-      ->addRow("^/confirmEmail/?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ConfirmEmail")
-      ->addRow("^/acceptInvite/?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\AcceptInvite")
-      ->addRow("^/resetPassword/?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ResetPassword")
-      ->addRow("^/resendConfirmEmail/?$", "dynamic", "\\Documents\\Account", "\\Views\\Account\\ResendConfirmEmail")
+      ->addRow("^/register/?$", "dynamic", "\\Documents\\Account", "account/register.twig")
+      ->addRow("^/confirmEmail/?$", "dynamic", "\\Documents\\Account", "account/confirm_email.twig")
+      ->addRow("^/acceptInvite/?$", "dynamic", "\\Documents\\Account", "account/accept_invite.twig")
+      ->addRow("^/resetPassword/?$", "dynamic", "\\Documents\\Account", "account/reset_password.twig")
+      ->addRow("^/resendConfirmEmail/?$", "dynamic", "\\Documents\\Account", "account/resend_confirm_email.twig")
       ->addRow("^/$", "static", "/static/welcome.html", NULL);
 
     $queries[] = $sql->createTable("Settings")
@@ -152,10 +159,8 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("mail_username", "", false, false)
       ->addRow("mail_password", "", true, false)
       ->addRow("mail_from", "", false, false)
-      ->addRow("mail_last_sync", "", true, false)
-      ->addRow("message_confirm_email", self::MessageConfirmEmail(), false, false)
-      ->addRow("message_accept_invite", self::MessageAcceptInvite(), false, false)
-      ->addRow("message_reset_password", self::MessageResetPassword(), false, false);
+      ->addRow("mail_last_sync", "", false, false)
+      ->addRow("mail_footer", "", false, false);
 
     (Settings::loadDefaults())->addRows($settingsQuery);
     $queries[] = $settingsQuery;
@@ -183,12 +188,53 @@ class CreateDatabase extends DatabaseScript {
       ->foreignKey("request_id", "ContactRequest", "uid", new CascadeStrategy())
       ->foreignKey("user_id", "User", "uid", new SetNullStrategy());
 
-
     $queries[] = $sql->createTable("ApiPermission")
       ->addString("method", 32)
       ->addJson("groups", true, '[]')
       ->addString("description", 128, false, "")
       ->primaryKey("method");
+
+    $queries[] = $sql->createTable("MailQueue")
+      ->addSerial("uid")
+      ->addString("from", 64)
+      ->addString("to", 64)
+      ->addString("subject")
+      ->addString("body")
+      ->addString("replyTo", 64, true)
+      ->addString("replyName", 32, true)
+      ->addString("gpgFingerprint", 64, true)
+      ->addEnum("status", ["waiting","success","error"], false, 'waiting')
+      ->addInt("retryCount", false, 5)
+      ->addDateTime("nextTry", false, $sql->now())
+      ->addString("errorMessage", NULL,  true)
+      ->primaryKey("uid");
+    $queries = array_merge($queries, \Configuration\Patch\log::createTableLog($sql, "MailQueue", 30));
+
+    $queries[] = $sql->createTable("GpgKey")
+      ->addSerial("uid")
+      ->addString("fingerprint", 64)
+      ->addDateTime("added", false, $sql->now())
+      ->addDateTime("expires")
+      ->addBool("confirmed")
+      ->addString("algorithm", 32)
+      ->primaryKey("uid");
+
+    $queries[] = $sql->createTable("2FA")
+      ->addSerial("uid")
+      ->addEnum("type", ["totp","fido"])
+      ->addString("data", 512) // either totp secret, fido challenge or fido public key information
+      ->addBool("confirmed", false)
+      ->addDateTime("added", false, $sql->now())
+      ->primaryKey("uid");
+
+    $queries[] = $sql->createTable("News")
+      ->addSerial("uid")
+      ->addInt("publishedBy")
+      ->addDateTime("publishedAt", false, $sql->now())
+      ->addString("title", 128)
+      ->addString("text", 1024)
+      ->foreignKey("publishedBy", "User", "uid", new CascadeStrategy())
+      ->primaryKey("uid");
 
     $queries[] = $sql->insert("ApiPermission", array("method", "groups", "description"))
       ->addRow("ApiKey/create", array(), "Allows users to create API-Keys for themselves")
@@ -220,35 +266,6 @@ class CreateDatabase extends DatabaseScript {
     self::loadPatches($queries, $sql);
 
     return $queries;
-  }
-
-  private static function MessageConfirmEmail(): string {
-    return "Hello {{username}},<br>" .
-      "You recently created an account on {{site_name}}. Please click on the following link to " .
-      "confirm your email address and complete your registration. If you haven't registered an " .
-      "account, you can simply ignore this email. The link is valid for the next 48 hours:<br><br> " .
-      "<a href=\"{{link}}\">{{link}}</a><br><br> " .
-      "Best Regards<br> " .
-      "{{site_name}} Administration";
-  }
-
-  private static function MessageAcceptInvite(): string {
-    return "Hello {{username}},<br>" .
-      "You were invited to create an account on {{site_name}}. Please click on the following link to " .
-      "confirm your email address and complete your registration by choosing a new password. " .
-      "If you want to decline the invitation, you can simply ignore this email. The link is valid for the next 7 days:<br><br>" .
-      "<a href=\"{{link}}\">{{link}}</a><br><br>" .
-      "Best Regards<br>" .
-      "{{site_name}} Administration";
-  }
-
-  private static function MessageResetPassword(): string {
-    return "Hello {{username}},<br>" .
-      "you requested a password reset on {{site_name}}. Please click on the following link to " .
-      "choose a new password. If this request was not intended, you can simply ignore the email. The Link is valid for one hour:<br><br>" .
-      "<a href=\"{{link}}\">{{link}}</a><br><br>" .
-      "Best Regards<br>" .
-      "{{site_name}} Administration";
   }
 
   private static function loadPatches(&$queries, $sql) {

@@ -3,6 +3,7 @@
 namespace Driver\SQL\Query;
 
 use Driver\SQL\Condition\CondOr;
+use Driver\SQL\Expression\JsonArrayAgg;
 use Driver\SQL\Join;
 use Driver\SQL\SQL;
 
@@ -47,13 +48,13 @@ class Select extends Query {
     return $this;
   }
 
-  public function innerJoin(string $table, string $columnA, string $columnB, ?string $tableAlias = null): Select {
-    $this->joins[] = new Join("INNER", $table, $columnA, $columnB, $tableAlias);
+  public function innerJoin(string $table, string $columnA, string $columnB, ?string $tableAlias = null, array $conditions = []): Select {
+    $this->joins[] = new Join("INNER", $table, $columnA, $columnB, $tableAlias, $conditions);
     return $this;
   }
 
-  public function leftJoin(string $table, string $columnA, string $columnB, ?string $tableAlias = null): Select {
-    $this->joins[] = new Join("LEFT", $table, $columnA, $columnB, $tableAlias);
+  public function leftJoin(string $table, string $columnA, string $columnB, ?string $tableAlias = null, array $conditions = []): Select {
+    $this->joins[] = new Join("LEFT", $table, $columnA, $columnB, $tableAlias, $conditions);
     return $this;
   }
 
@@ -113,11 +114,19 @@ class Select extends Query {
         if (count($value->getSelectValues()) !== 1) {
           $selectValues[] = "($subSelect)";
         } else {
-          $columnName = $value->getSelectValues()[0];
-          if(($index = stripos($columnName, " as ")) !== FALSE) {
-            $columnName = substr($columnName, $index + 4);
+          $columnAlias = null;
+          $subSelectColumn = $value->getSelectValues()[0];
+          if (is_string($subSelectColumn) && ($index = stripos($subSelectColumn, " as ")) !== FALSE) {
+            $columnAlias = substr($subSelectColumn, $index + 4);
+          } else if ($subSelectColumn instanceof JsonArrayAgg) {
+            $columnAlias = $subSelectColumn->getAlias();
           }
-          $selectValues[] = "($subSelect) as $columnName";
+
+          if ($columnAlias) {
+            $selectValues[] = "($subSelect) as $columnAlias";
+          } else {
+            $selectValues[] = "($subSelect)";
+          }
         }
       } else {
         $selectValues[] = $this->sql->addValue($value, $params);
@@ -144,11 +153,9 @@ class Select extends Query {
       foreach ($joins as $join) {
         $type = $join->getType();
         $joinTable = $this->sql->tableName($join->getTable());
-        $columnA = $this->sql->columnName($join->getColumnA());
-        $columnB = $this->sql->columnName($join->getColumnB());
         $tableAlias = ($join->getTableAlias() ? " " . $join->getTableAlias() : "");
-
-        $joinStr .= " $type JOIN $joinTable$tableAlias ON $columnA=$columnB";
+        $condition = $this->sql->buildCondition($join->getConditions(), $params);
+        $joinStr .= " $type JOIN $joinTable$tableAlias ON ($condition)";
       }
     }
 

@@ -17,12 +17,18 @@ class Parameter {
   // only internal access
   const TYPE_RAW       = 8;
 
-  // only json will work here i guess
+  // only json will work here I guess
   // nope. also name[]=value
   const TYPE_ARRAY     = 9;
   const TYPE_MIXED     = 10;
 
   const names = array('Integer', 'Float', 'Boolean', 'String', 'Date', 'Time', 'DateTime', 'E-Mail', 'Raw', 'Array', 'Mixed');
+
+  const DATE_FORMAT = "Y-m-d";
+  const TIME_FORMAT = "H:i:s";
+  const DATE_TIME_FORMAT = self::DATE_FORMAT . " " . self::TIME_FORMAT;
+
+  private $defaultValue;
 
   public string $name;
   public $value;
@@ -33,9 +39,42 @@ class Parameter {
   public function __construct(string $name, int $type, bool $optional = FALSE, $defaultValue = NULL) {
     $this->name = $name;
     $this->optional = $optional;
+    $this->defaultValue = $defaultValue;
     $this->value = $defaultValue;
     $this->type = $type;
     $this->typeName = $this->getTypeName();
+  }
+
+  public function reset() {
+    $this->value = $this->defaultValue;
+  }
+
+  public function getSwaggerTypeName(): string {
+    $typeName = strtolower(($this->type >= 0 && $this->type < count(Parameter::names)) ? Parameter::names[$this->type] : "invalid");
+    if ($typeName === "mixed" || $typeName === "raw") {
+      return "object";
+    }
+
+    if (!in_array($typeName, ["array", "boolean", "integer", "number", "object", "string"])) {
+      return "string";
+    }
+
+    return $typeName;
+  }
+
+  public function getSwaggerFormat(): ?string {
+    switch ($this->type) {
+      case self::TYPE_DATE:
+        return self::DATE_FORMAT;
+      case self::TYPE_TIME:
+        return self::TIME_FORMAT;
+      case self::TYPE_DATE_TIME:
+        return self::DATE_TIME_FORMAT;
+      case self::TYPE_EMAIL:
+        return "email";
+      default:
+        return null;
+    }
   }
 
   public function getTypeName(): string {
@@ -65,11 +104,11 @@ class Parameter {
       return Parameter::TYPE_BOOLEAN;
     else if(is_a($value, 'DateTime'))
       return Parameter::TYPE_DATE_TIME;
-    else if(($d = DateTime::createFromFormat('Y-m-d', $value)) && $d->format('Y-m-d') === $value)
+    else if(($d = DateTime::createFromFormat(self::DATE_FORMAT, $value)) && $d->format(self::DATE_FORMAT) === $value)
       return Parameter::TYPE_DATE;
-    else if(($d = DateTime::createFromFormat('H:i:s', $value)) && $d->format('H:i:s') === $value)
+    else if(($d = DateTime::createFromFormat(self::TIME_FORMAT, $value)) && $d->format(self::TIME_FORMAT) === $value)
       return Parameter::TYPE_TIME;
-    else if(($d = DateTime::createFromFormat('Y-m-d H:i:s', $value)) && $d->format('Y-m-d H:i:s') === $value)
+    else if(($d = DateTime::createFromFormat(self::DATE_TIME_FORMAT, $value)) && $d->format(self::DATE_TIME_FORMAT) === $value)
       return Parameter::TYPE_DATE_TIME;
     else if (filter_var($value, FILTER_VALIDATE_EMAIL))
       return Parameter::TYPE_EMAIL;
@@ -110,8 +149,8 @@ class Parameter {
           return true;
         }
 
-        $d = DateTime::createFromFormat('Y-m-d', $value);
-        if($d && $d->format('Y-m-d') === $value) {
+        $d = DateTime::createFromFormat(self::DATE_FORMAT, $value);
+        if($d && $d->format(self::DATE_FORMAT) === $value) {
           $this->value = $d;
           return true;
         }
@@ -123,8 +162,8 @@ class Parameter {
           return true;
         }
 
-        $d = DateTime::createFromFormat('H:i:s', $value);
-        if($d && $d->format('H:i:s') === $value) {
+        $d = DateTime::createFromFormat(self::TIME_FORMAT, $value);
+        if($d && $d->format(self::TIME_FORMAT) === $value) {
           $this->value = $d;
           return true;
         }
@@ -135,8 +174,8 @@ class Parameter {
           $this->value = $value;
           return true;
         } else {
-          $d = DateTime::createFromFormat('Y-m-d H:i:s', $value);
-          if($d && $d->format('Y-m-d H:i:s') === $value) {
+          $d = DateTime::createFromFormat(self::DATE_TIME_FORMAT, $value);
+          if($d && $d->format(self::DATE_TIME_FORMAT) === $value) {
             $this->value = $d;
             return true;
           }

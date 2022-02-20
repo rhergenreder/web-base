@@ -47,14 +47,16 @@ namespace Objects {
       return $key;
     }
 
-    public function sendCookie() {
-      setcookie('lang', $this->langCode, 0, "/", "");
+    public function sendCookie(?string $domain = null) {
+      $domain = empty($domain) ? "" : $domain;
+      setcookie('lang', $this->langCode, 0, "/", $domain, false, false);
     }
 
     public function jsonSerialize(): array {
       return array(
         'uid' => $this->languageId,
         'code' => $this->langCode,
+        'shortCode' => explode("_", $this->langCode)[0],
         'name' => $this->langName,
       );
     }

@@ -2,7 +2,9 @@
 
 namespace Api;
 
+use Api\Parameter\Parameter;
 use Objects\User;
+use PhpMqtt\Client\MqttClient;
 
 class Request {
 
@@ -45,6 +47,14 @@ class Request {
     }
   }
 
+  public function getDefaultParams(): array {
+    return $this->defaultParams;
+  }
+
+  public function isDisabled(): bool {
+    return $this->isDisabled;
+  }
+
   protected function allowMethod($method) {
     $availableMethods = ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "TRACE", "CONNECT"];
     if (in_array($method, $availableMethods) && !in_array($method, $this->allowedMethods)) {
@@ -70,6 +80,7 @@ class Request {
         return $this->createError("Missing parameter: $name");
       }
 
+      $param->reset();
       if (!is_null($value) && !$isEmpty) {
         if (!$param->parseParam($value)) {
           $value = print_r($value, true);
@@ -97,6 +108,7 @@ class Request {
   }
 
   public function execute($values = array()): bool {
+
     $this->params = array_merge([], $this->defaultParams);
     $this->success = false;
     $this->result = array();
@@ -165,6 +177,13 @@ class Request {
           $this->lastError = 'You are not logged in.';
           http_response_code(401);
           return false;
+        } else if ($this->user->isLoggedIn()) {
+          $tfaToken = $this->user->getTwoFactorToken();
+          if ($tfaToken && $tfaToken->isConfirmed() && !$tfaToken->isAuthenticated()) {
+            $this->lastError = '2FA-Authorization is required';
+            http_response_code(401);
+            return false;
+          }
         }
       }
 
@@ -172,7 +191,8 @@ class Request {
       if ($this->csrfTokenRequired && $this->user->isLoggedIn()) {
         // csrf token required + external call
         // if it's not a call with API_KEY, check for csrf_token
-        if (!isset($values["csrf_token"]) || strcmp($values["csrf_token"], $this->user->getSession()->getCsrfToken()) !== 0) {
+        $csrfToken = $values["csrf_token"] ?? $_SERVER["HTTP_XSRF_TOKEN"] ?? null;
+        if (!$csrfToken || strcmp($csrfToken, $this->user->getSession()->getCsrfToken()) !== 0) {
           $this->lastError = "CSRF-Token mismatch";
           http_response_code(403);
           return false;
@@ -223,6 +243,10 @@ class Request {
     return (isset($obj[$name]) ? $obj[$name]->value : NULL);
   }
 
+  public function isMethodAllowed(string $method): bool {
+    return in_array($method, $this->allowedMethods);
+  }
+
   public function isPublic(): bool {
     return $this->isPublic;
   }
@@ -268,6 +292,14 @@ class Request {
     flush();
   }
 
+  protected function disableCache() {
+    header("Last-Modified: " . (new \DateTime())->format("D, d M Y H:i:s T"));
+    header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
+    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+    header("Cache-Control: post-check=0, pre-check=0", false);
+    header("Pragma: no-cache");
+  }
+
   protected function setupSSE() {
     $this->user->getSQL()->close();
     $this->user->sendCookies();
@@ -276,9 +308,31 @@ class Request {
     header('Content-Type: text/event-stream');
     header('Connection: keep-alive');
     header('X-Accel-Buffering: no');
-    header('Cache-Control: no-cache');
-
+    $this->disableCache();
     $this->disableOutputBuffer();
+  }
+
+  /**
+   * @throws \PhpMqtt\Client\Exceptions\ProtocolViolationException
+   * @throws \PhpMqtt\Client\Exceptions\DataTransferException
+   * @throws \PhpMqtt\Client\Exceptions\MqttClientException
+   */
+  protected function startMqttSSE(MqttClient $mqtt, callable $onPing) {
+    $lastPing = 0;
+    $mqtt->registerLoopEventHandler(function(MqttClient $mqtt, $elapsed) use (&$lastPing, $onPing) {
+      if ($elapsed - $lastPing >= 5) {
+        $onPing();
+        $lastPing = $elapsed;
+      }
+
+      if (connection_status() !== 0) {
+        $mqtt->interrupt();
+      }
+    });
+
+    $mqtt->loop();
+    $this->lastError = "MQTT Loop disconnected";
+    $mqtt->disconnect();
   }
 
   protected function processImageUpload(string $uploadDir, array $allowedExtensions = ["jpg","jpeg","png","gif"], $transformCallback = null) {

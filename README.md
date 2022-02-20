@@ -36,7 +36,7 @@ I actually don't know what i want to implement here. There are quite to many CMS
 
 ### Afterwards
 
-For any changes made in [/adminPanel](/adminPanel) or [/fileControlPanel](/fileControlPanel), run:
+For any changes made in [/adminPanel](/adminPanel), run:
 1. once: `npm i`
 2. build: `npm run build`
 The compiled dist files will be automatically moved to `/js`.

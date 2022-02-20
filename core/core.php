@@ -2,17 +2,21 @@
 
 require_once "External/vendor/autoload.php";
 
-define("WEBBASE_VERSION", "1.3.0-beta");
+define("WEBBASE_VERSION", "1.4.0");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {
   if (!class_exists($class)) {
-    $full_path = WEBROOT . "/" . getClassPath($class);
-    if (file_exists($full_path)) {
-      include_once $full_path;
-    } else {
-      include_once getClassPath($class, false);
+    $suffixes = ["", ".class", ".trait"];
+    foreach ($suffixes as $suffix) {
+      $full_path = WEBROOT . "/" . getClassPath($class, $suffix);
+      if (file_exists($full_path)) {
+        include_once $full_path;
+        return;
+      }
     }
+
+    throw new Exception("Class or Trait not found: $class");
   }
 });
 
@@ -50,11 +54,13 @@ function generateRandomString($length, $type = "ascii"): string {
       $charset = $hex;
     } else if ($type === "base64") {
       $charset = $ascii . "/+";
+    } else if ($type === "base32") {
+      $charset = $uppercase . substr($digits, 2, 6);
     } else {
       $charset = $ascii;
     }
 
-    $numCharacters = strlen($charset);
+    $numCharacters = $type === "raw" ? 256 : strlen($charset);
     for ($i = 0; $i < $length; $i++) {
       try {
         $num = random_int(0, $numCharacters - 1);
@@ -62,11 +68,16 @@ function generateRandomString($length, $type = "ascii"): string {
         $num = rand(0, $numCharacters - 1);
       }
 
-      $randomString .= $charset[$num];
+      $randomString .= $type === "raw" ? chr($num) : $charset[$num];
     }
   }
 
   return $randomString;
+}
+
+function base64url_decode($data) {
+  $base64 = strtr($data, '-_', '+/');
+  return base64_decode($base64);
 }
 
 function startsWith($haystack, $needle, bool $ignoreCase = false): bool {
@@ -106,6 +117,27 @@ function endsWith($haystack, $needle, bool $ignoreCase = false): bool {
     return str_ends_with($haystack, $needle);
   } else {
     return (substr($haystack, -$length) === $needle);
+  }
+}
+
+
+
+function contains($haystack, $needle, bool $ignoreCase = false): bool {
+
+  if (is_array($haystack)) {
+    return in_array($needle, $haystack);
+  }
+
+  if ($ignoreCase) {
+    $haystack = strtolower($haystack);
+    $needle = strtolower($needle);
+  }
+
+  // PHP 8.0 support
+  if (function_exists("str_contains")) {
+    return str_contains($haystack, $needle);
+  } else {
+    return strpos($haystack, $needle) !== false;
   }
 }
 
@@ -156,7 +188,7 @@ function html_attributes(array $attributes): string {
   }, array_keys($attributes)));
 }
 
-function getClassPath($class, $suffix = true): string {
+function getClassPath($class, string $suffix = ".class"): string {
   $path = str_replace('\\', '/', $class);
   $path = array_values(array_filter(explode("/", $path)));
 
@@ -166,12 +198,31 @@ function getClassPath($class, $suffix = true): string {
     $path = implode("/", $path);
   }
 
-  $suffix = ($suffix ? ".class" : "");
   return "core/$path$suffix.php";
 }
 
 function createError($msg) {
   return json_encode(array("success" => false, "msg" => $msg));
+}
+
+function downloadFile($handle, $offset = 0, $length = null): bool {
+  if($handle === false) {
+    return false;
+  }
+
+  if ($offset > 0) {
+    fseek($handle, $offset);
+  }
+
+  $bytesRead = 0;
+  $bufferSize = 1024*16;
+  while (!feof($handle) && ($length === null || $bytesRead < $length)) {
+    $chunkSize = ($length === null ? $bufferSize : min($length - $bytesRead, $bufferSize));
+    echo fread($handle, $chunkSize);
+  }
+
+  fclose($handle);
+  return true;
 }
 
 function serveStatic(string $webRoot, string $file): string {
@@ -204,7 +255,6 @@ function serveStatic(string $webRoot, string $file): string {
   header('Accept-Ranges: bytes');
 
   if (strcasecmp($_SERVER["REQUEST_METHOD"], "HEAD") !== 0) {
-    $bufferSize = 1024*16;
     $handle = fopen($path, "rb");
     if($handle === false) {
       http_response_code(500);
@@ -222,17 +272,7 @@ function serveStatic(string $webRoot, string $file): string {
       header('Content-Range: bytes ' . $offset . '-' . ($offset + $length) . '/' . $size);
     }
 
-    if ($offset > 0) {
-      fseek($handle, $offset);
-    }
-
-    $bytesRead = 0;
-    while (!feof($handle) && $bytesRead < $length) {
-      $chunkSize = min($length - $bytesRead, $bufferSize);
-      echo fread($handle, $chunkSize);
-    }
-
-    fclose($handle);
+    downloadFile($handle, $offset, $length);
   }
 
   return "";

@@ -140,4 +140,33 @@ class AesStreamTest extends PHPUnit\Framework\TestCase {
     $inputData = random_bytes($inputSize);
     $this->testEncryptDecrypt($key, $iv, $inputData);
   }
+
+  public function testEncryptDecryptPartial() {
+    $key = random_bytes(32);
+    $iv  = hex2bin(str_repeat("00", 16));
+    $chunkSize = 65536;
+
+    $ranges = [[500,100,200],[10*$chunkSize,100,5*$chunkSize+100],[10*$chunkSize,0,10*$chunkSize],[10*$chunkSize,$chunkSize-1,3*$chunkSize-1]];
+    foreach ($ranges as $range) {
+      list ($total, $offset, $length) = $range;
+      $inputData = random_bytes($total);
+      file_put_contents(AesStreamTest::$TEMP_FILE, $inputData);
+
+      $output = "";
+      $aesStream = new AesStream($key, $iv);
+      $aesStream->setRange($offset, $length);
+      $aesStream->setInputFile(AesStreamTest::$TEMP_FILE);
+      $aesStream->setOutput(function($chunk) use (&$output) { $this->getOutput($chunk, $output); });
+      $aesStream->start();
+
+      $outputComplete = "";
+      $aesStream = new AesStream($key, $iv);
+      $aesStream->setInputFile(AesStreamTest::$TEMP_FILE);
+      $aesStream->setOutput(function($chunk) use (&$outputComplete) { $this->getOutput($chunk, $outputComplete); });
+      $aesStream->start();
+
+      $this->assertEquals($length, strlen($output), "total=$total offset=$offset length=$length");
+      $this->assertEquals(substr($outputComplete, $offset, $length), $output, "total=$total offset=$offset length=$length");
+    }
+  }
 }

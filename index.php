@@ -28,15 +28,16 @@ $sql    = $user->getSQL();
 $settings = $config->getSettings();
 $installation = !$sql || ($sql->isConnected() && !$settings->isInstalled());
 
-if(isset($_GET["api"]) && is_string($_GET["api"])) {
-  header("Content-Type: application/json");
-  if($installation) {
+if (isset($_GET["api"]) && is_string($_GET["api"])) {
+  $isApiResponse = true;
+  if ($installation) {
     $response = createError("Not installed");
   } else {
     $apiFunction = $_GET["api"];
-    if(empty($apiFunction)) {
-      http_response_code(403);
-      $response = "";
+    if (empty($apiFunction) || $apiFunction === "/") {
+      $document = new \Elements\TemplateDocument($user, "swagger.twig");
+      $response = $document->getCode();
+      $isApiResponse = false;
     } else if(!preg_match("/[a-zA-Z]+(\/[a-zA-Z]+)*/", $apiFunction)) {
       http_response_code(400);
       $response = createError("Invalid Method");
@@ -71,6 +72,12 @@ if(isset($_GET["api"]) && is_string($_GET["api"])) {
       } catch (ReflectionException $e) {
         $response = createError("Error instantiating class: $e");
       }
+    }
+
+    if ($isApiResponse) {
+      header("Content-Type: application/json");
+    } else {
+      header("Content-Type: text/html");
     }
   }
 } else {

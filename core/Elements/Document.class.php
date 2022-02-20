@@ -11,12 +11,16 @@ abstract class Document {
   protected bool $databaseRequired;
   private bool $cspEnabled;
   private ?string $cspNonce;
+  private array $cspWhitelist;
+  private string $domain;
 
   public function __construct(User $user) {
     $this->user = $user;
     $this->cspEnabled = false;
     $this->cspNonce = null;
     $this->databaseRequired = true;
+    $this->cspWhitelist = [];
+    $this->domain = $user->getConfiguration()->getSettings()->getBaseUrl();
   }
 
   public function getSQL(): ?SQL {
@@ -40,6 +44,10 @@ abstract class Document {
     $this->cspNonce = generateRandomString(16, "base62");
   }
 
+  protected function addCSPWhitelist(string $path) {
+    $this->cspWhitelist[] = $this->domain . $path;
+  }
+
   public function getCode(): string {
     if ($this->databaseRequired) {
       $sql = $this->user->getSQL();
@@ -51,12 +59,22 @@ abstract class Document {
     }
 
     if ($this->cspEnabled) {
-      $csp = ["default-src 'self'", "object-src 'none'", "base-uri 'self'", "style-src 'self' 'unsafe-inline'", "script-src 'nonce-$this->cspNonce'"];
+
+      $cspWhiteList = implode(" ", $this->cspWhitelist);
+
+      $csp = [
+        "default-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data:",
+        "script-src $cspWhiteList 'nonce-$this->cspNonce'"
+      ];
       if ($this->user->getConfiguration()->getSettings()->isRecaptchaEnabled()) {
         $csp[] = "frame-src https://www.google.com/ 'self'";
       }
 
-      $compiledCSP = implode(";", $csp);
+      $compiledCSP = implode("; ", $csp);
       header("Content-Security-Policy: $compiledCSP;");
     }
 

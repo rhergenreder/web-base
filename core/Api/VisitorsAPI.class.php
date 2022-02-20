@@ -2,8 +2,12 @@
 
 namespace Api {
 
-  abstract class VisitorsAPI extends Request {
+  use Objects\User;
 
+  abstract class VisitorsAPI extends Request {
+    public function __construct(User $user, bool $externalCall = false, array $params = []) {
+      parent::__construct($user, $externalCall, $params);
+    }
   }
 }
 

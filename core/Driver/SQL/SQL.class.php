@@ -14,9 +14,9 @@ use Driver\Sql\Condition\CondNull;
 use Driver\SQL\Condition\CondOr;
 use Driver\SQL\Condition\Exists;
 use Driver\SQL\Constraint\Constraint;
-use \Driver\SQL\Constraint\Unique;
-use \Driver\SQL\Constraint\PrimaryKey;
-use \Driver\SQL\Constraint\ForeignKey;
+use Driver\SQL\Constraint\Unique;
+use Driver\SQL\Constraint\PrimaryKey;
+use Driver\SQL\Constraint\ForeignKey;
 use Driver\SQL\Expression\CaseWhen;
 use Driver\SQL\Expression\CurrentTimeStamp;
 use Driver\SQL\Expression\Expression;
@@ -176,7 +176,7 @@ abstract class SQL {
   protected abstract function fetchReturning($res, string $returningCol);
   public abstract function getColumnDefinition(Column $column): ?string;
   public abstract function getOnDuplicateStrategy(?Strategy $strategy, &$params): ?string;
-  public abstract function createTriggerBody(CreateTrigger $trigger): ?string;
+  public abstract function createTriggerBody(CreateTrigger $trigger, array $params = []): ?string;
   public abstract function getProcedureHead(CreateProcedure $procedure): ?string;
   public abstract function getColumnType(Column $column): ?string;
   public function getProcedureTail(): string { return ""; }

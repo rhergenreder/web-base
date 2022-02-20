@@ -15,9 +15,11 @@ class TemplateDocument extends Document {
   protected array $parameters;
   private Environment $twigEnvironment;
   private FilesystemLoader $twigLoader;
+  protected string $title;
 
   public function __construct(User $user, string $templateName, array $initialParameters = []) {
     parent::__construct($user);
+    $this->title = "";
     $this->templateName = $templateName;
     $this->parameters = $initialParameters;
     $this->twigLoader = new FilesystemLoader(WEBROOT . '/core/Templates');
@@ -47,12 +49,16 @@ class TemplateDocument extends Document {
       $params["user"] = [
         "lang" => $this->user->getLanguage()->getShortCode(),
         "loggedIn" => $this->user->isLoggedIn(),
+        "session" => (!$this->user->isLoggedIn() ? null : [
+          "csrfToken" => $this->user->getSession()->getCsrfToken()
+        ])
       ];
 
       $settings = $this->user->getConfiguration()->getSettings();
       $params["site"] = [
         "name" => $settings->getSiteName(),
         "baseUrl" => $settings->getBaseUrl(),
+        "title" => $this->title,
         "recaptcha" => [
           "key" => $settings->isRecaptchaEnabled() ? $settings->getRecaptchaSiteKey() : null,
           "enabled" => $settings->isRecaptchaEnabled(),

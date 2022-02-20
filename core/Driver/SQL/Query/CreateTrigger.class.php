@@ -11,6 +11,7 @@ class CreateTrigger extends Query {
   private string $time;
   private string $event;
   private string $tableName;
+  private array $parameters;
   private ?CreateProcedure $procedure;
 
   public function __construct(SQL $sql, string $triggerName) {
@@ -19,6 +20,7 @@ class CreateTrigger extends Query {
     $this->time = "AFTER";
     $this->tableName = "";
     $this->event = "";
+    $this->parameters = [];
     $this->procedure = null;
   }
 
@@ -50,8 +52,9 @@ class CreateTrigger extends Query {
     return $this;
   }
 
-  public function exec(CreateProcedure $procedure): CreateTrigger {
+  public function exec(CreateProcedure $procedure, array $parameters = []): CreateTrigger {
     $this->procedure = $procedure;
+    $this->parameters = $parameters;
     return $this;
   }
 
@@ -69,7 +72,7 @@ class CreateTrigger extends Query {
 
     $params = array();
     $query = "CREATE TRIGGER $name $time $event ON $tableName FOR EACH ROW ";
-    $triggerBody = $this->sql->createTriggerBody($this);
+    $triggerBody = $this->sql->createTriggerBody($this, $this->parameters);
     if ($triggerBody === null) {
       return null;
     }

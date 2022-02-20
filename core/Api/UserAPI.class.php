@@ -67,11 +67,11 @@ namespace Api {
         $this->checkPasswordRequirements($password, $confirmPassword);
     }
 
-    protected function insertUser($username, $email, $password, $confirmed) {
+    protected function insertUser($username, $email, $password, $confirmed, $fullName = null) {
       $sql = $this->user->getSQL();
       $hash = $this->hashPassword($password);
-      $res = $sql->insert("User", array("name", "password", "email", "confirmed"))
-        ->addRow($username, $hash, $email, $confirmed)
+      $res = $sql->insert("User", array("name", "password", "email", "confirmed", "fullName"))
+        ->addRow($username, $hash, $email, $confirmed, $fullName)
         ->returning("uid")
         ->execute();
 
@@ -93,10 +93,13 @@ namespace Api {
       $sql = $this->user->getSQL();
       $res = $sql->select("User.uid as userId", "User.name", "User.fullName", "User.email",
         "User.registered_at", "User.confirmed", "User.last_online", "User.profilePicture",
+        "User.gpg_id", "GpgKey.confirmed as gpg_confirmed", "GpgKey.fingerprint as gpg_fingerprint",
+          "GpgKey.expires as gpg_expires", "GpgKey.algorithm as gpg_algorithm",
         "Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor")
         ->from("User")
         ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
         ->leftJoin("Group", "Group.uid", "UserGroup.group_id")
+        ->leftJoin("GpgKey", "GpgKey.uid", "User.gpg_id")
         ->where(new Compare("User.uid", $id))
         ->execute();
 
@@ -152,6 +155,9 @@ namespace Api\User {
   use Driver\SQL\Condition\CondNot;
   use Driver\SQL\Expression\JsonArrayAgg;
   use ImagickException;
+  use Objects\GpgKey;
+  use Objects\TwoFactor\KeyBasedTwoFactorToken;
+  use Objects\TwoFactor\TwoFactorToken;
   use Objects\User;
 
   class Create extends UserAPI {
@@ -350,6 +356,11 @@ namespace Api\User {
           return $this->createError("User not found");
         } else {
 
+          $gpgFingerprint = null;
+          if ($user[0]["gpg_id"] && $sql->parseBool($user[0]["gpg_confirmed"])) {
+            $gpgFingerprint = $user[0]["gpg_fingerprint"];
+          }
+
           $queriedUser = array(
             "uid" => $userId,
             "name" => $user[0]["name"],
@@ -360,6 +371,7 @@ namespace Api\User {
             "profilePicture" => $user[0]["profilePicture"],
             "confirmed" => $sql->parseBool($user["0"]["confirmed"]),
             "groups" => array(),
+            "gpgFingerprint" => $gpgFingerprint,
           );
 
           foreach($user as $row) {
@@ -371,10 +383,9 @@ namespace Api\User {
             }
           }
 
-          // either we are querying own info or we are internal employees
-          // as internal employees can add arbitrary users to projects
-          $canView = ($userId === $this->user->getId() ||
-                $this->user->hasGroup(USER_GROUP_ADMIN) ||
+          // either we are querying own info or we are support / admin
+          $canView = ($userId === $this->user->getId()) ||
+                ($this->user->hasGroup(USER_GROUP_ADMIN) ||
                 $this->user->hasGroup(USER_GROUP_SUPPORT));
 
           // full info only when we have administrative privileges, or we are querying ourselves
@@ -382,23 +393,17 @@ namespace Api\User {
             ($this->user->hasGroup(USER_GROUP_ADMIN) || $this->user->hasGroup(USER_GROUP_SUPPORT));
 
           if (!$canView) {
-            $res = $sql->select(new JsonArrayAgg(new Column("projectId"), "projectIds"))
-              ->from("ProjectMember")
-              ->where(new Compare("userId", $this->user->getId()), new Compare("userId", $userId))
-              ->groupBy("projectId")
-              ->execute();
 
+            // check if user posted something publicly
+            $res = $sql->select(new JsonArrayAgg(new Column("publishedBy"), "publisherIds"))
+              ->from("News")
+              ->execute();
             $this->success = ($res !== false);
             $this->lastError = $sql->getLastError();
             if (!$this->success ) {
               return false;
-            } else if (is_array($res)) {
-              foreach ($res as $row) {
-                if (count(json_decode($row["projectIds"])) > 1) {
-                  $canView = true;
-                  break;
-                }
-              }
+            } else {
+              $canView = in_array($userId, json_decode($res[0]["publisherIds"], true));
             }
           }
 
@@ -598,6 +603,7 @@ namespace Api\User {
       } else if (!$this->updateUser($result["user"]["uid"], $password)) {
         return false;
       } else {
+
         // Invalidate token
         $this->user->getSQL()
           ->update("UserToken")
@@ -671,7 +677,7 @@ namespace Api\User {
       parent::__construct($user, $externalCall, array(
         'username' => new StringType('username'),
         'password' => new StringType('password'),
-        'stayLoggedIn' => new Parameter('stayLoggedIn', Parameter::TYPE_BOOLEAN, true, true)
+        'stayLoggedIn' => new Parameter('stayLoggedIn', Parameter::TYPE_BOOLEAN, true, false)
       ));
       $this->forbidMethod("GET");
     }
@@ -701,9 +707,11 @@ namespace Api\User {
       $stayLoggedIn = $this->getParam('stayLoggedIn');
 
       $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid", "User.password", "User.confirmed")
+      $res = $sql->select("User.uid", "User.password", "User.confirmed",
+          "User.2fa_id", "2FA.type as 2fa_type", "2FA.confirmed as 2fa_confirmed", "2FA.data as 2fa_data")
         ->from("User")
         ->where(new Compare("User.name", $username), new Compare("User.email", $username))
+        ->leftJoin("2FA", "2FA.uid", "User.2fa_id")
         ->limit(1)
         ->execute();
 
@@ -717,6 +725,7 @@ namespace Api\User {
           $row = $res[0];
           $uid = $row['uid'];
           $confirmed = $sql->parseBool($row["confirmed"]);
+          $token = $row["2fa_id"] ? TwoFactorToken::newInstance($row["2fa_type"], $row["2fa_data"], $row["2fa_id"], $sql->parseBool($row["2fa_confirmed"])) : null;
           if (password_verify($password, $row['password'])) {
             if (!$confirmed) {
               $this->result["emailConfirmed"] = false;
@@ -727,6 +736,14 @@ namespace Api\User {
               $this->result["loggedIn"] = true;
               $this->result["logoutIn"] = $this->user->getSession()->getExpiresSeconds();
               $this->result["csrf_token"] = $this->user->getSession()->getCsrfToken();
+              if ($token && $token->isConfirmed()) {
+                $this->result["2fa"] = ["type" => $token->getType()];
+                if ($token instanceof KeyBasedTwoFactorToken) {
+                  $challenge = base64_encode(generateRandomString(32, "raw"));
+                  $this->result["2fa"]["challenge"] = $challenge;
+                  $_SESSION["challenge"] = $challenge;
+                }
+              }
               $this->success = true;
             }
           } else {
@@ -743,13 +760,18 @@ namespace Api\User {
 
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall);
-      $this->loginRequired = true;
+      $this->loginRequired = false;
       $this->apiKeyAllowed = false;
+      $this->forbidMethod("GET");
     }
 
     public function execute($values = array()): bool {
       if (!parent::execute($values)) {
         return false;
+      }
+
+      if (!$this->user->isLoggedIn()) {
+        return $this->createError("You are not logged in.");
       }
 
       $this->success = $this->user->logout();
@@ -807,7 +829,6 @@ namespace Api\User {
       $email = $this->getParam('email');
       $password = $this->getParam("password");
       $confirmPassword = $this->getParam("confirmPassword");
-
       if (!$this->userExists($username, $email)) {
         return false;
       }
@@ -816,15 +837,16 @@ namespace Api\User {
         return false;
       }
 
-      $this->userId = $this->insertUser($username, $email, $password, false);
+      $fullName = substr($email, 0, strrpos($email, "@"));
+      $fullName = implode(" ", array_map(function ($part) {
+        return ucfirst(strtolower($part));
+        }, explode(".", $fullName))
+      );
+
+      $this->userId = $this->insertUser($username, $email, $password, false, $fullName);
       if (!$this->success) {
         return false;
       }
-
-      // add internal group
-      $this->user->getSQL()->insert("UserGroup", ["user_id", "group_id"])
-        ->addRow($this->userId, USER_GROUP_INTERNAL)
-        ->execute();
 
       $validHours = 48;
       $this->token = generateRandomString(36);
@@ -924,7 +946,7 @@ namespace Api\User {
 
   class Edit extends UserAPI {
 
-    public function __construct(User $user, bool $externalCall) {
+    public function __construct(User $user, bool $externalCall = false) {
       parent::__construct($user, $externalCall, array(
         'id' => new Parameter('id', Parameter::TYPE_INT),
         'username' => new StringType('username', 32, true, NULL),
@@ -1032,7 +1054,7 @@ namespace Api\User {
 
   class Delete extends UserAPI {
 
-    public function __construct(User $user, bool $externalCall) {
+    public function __construct(User $user, bool $externalCall = false) {
       parent::__construct($user, $externalCall, array(
         'id' => new Parameter('id', Parameter::TYPE_INT)
       ));
@@ -1055,6 +1077,7 @@ namespace Api\User {
         if (empty($user)) {
           return $this->createError("User not found");
         } else {
+
           $sql = $this->user->getSQL();
           $res = $sql->delete("User")->where(new Compare("uid", $id))->execute();
           $this->success = ($res !== FALSE);
@@ -1129,11 +1152,18 @@ namespace Api\User {
 
         if ($this->success) {
           $messageBody = $req->getResult()["html"];
+
+          $gpgFingerprint = null;
+          if ($user["gpg_id"] && $user["gpg_confirmed"]) {
+            $gpgFingerprint = $user["gpg_fingerprint"];
+          }
+
           $request = new \Api\Mail\Send($this->user);
           $this->success = $request->execute(array(
             "to" => $email,
             "subject" => "[$siteName] Password Reset",
-            "body" => $messageBody
+            "body" => $messageBody,
+            "gpgFingerprint" => $gpgFingerprint
           ));
           $this->lastError = $request->getLastError();
         }
@@ -1144,8 +1174,10 @@ namespace Api\User {
 
     private function findUser($email): ?array {
       $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid", "User.name")
+      $res = $sql->select("User.uid", "User.name",
+          "User.gpg_id", "GpgKey.confirmed as gpg_confirmed", "GpgKey.fingerprint as gpg_fingerprint")
         ->from("User")
+        ->leftJoin("GpgKey", "GpgKey.uid", "User.gpg_id")
         ->where(new Compare("User.email", $email))
         ->where(new CondBool("User.confirmed"))
         ->execute();
@@ -1396,6 +1428,321 @@ namespace Api\User {
       $this->success = $query->execute();
       $this->lastError = $sql->getLastError();
       return $this->success;
+    }
+  }
+
+  class ImportGPG extends UserAPI {
+
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "pubkey" => new StringType("pubkey")
+      ));
+      $this->loginRequired = true;
+      $this->forbidMethod("GET");
+    }
+
+    private function testKey(string $keyString) {
+      $res = GpgKey::getKeyInfo($keyString);
+      if (!$res["success"]) {
+        return $this->createError($res["error"]);
+      }
+
+      $keyData = $res["data"];
+      $keyType = $keyData["type"];
+      $expires = $keyData["expires"];
+
+      if ($keyType === "sec#") {
+        return self::createError("ATTENTION! It seems like you've imported a PGP PRIVATE KEY instead of a public key. 
+            It is recommended to immediately revoke your private key and create a new key pair.");
+      } else if ($keyType !== "pub") {
+        return self::createError("Unknown key type: $keyType");
+      } else if (isInPast($expires)) {
+        return self::createError("It seems like the gpg key is already expired.");
+      } else {
+        return $keyData;
+      }
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $gpgKey = $this->user->getGPG();
+      if ($gpgKey) {
+        return $this->createError("You already added a GPG key to your account.");
+      }
+
+      // fix key first, enforce a newline after
+      $keyString = $this->getParam("pubkey");
+      $keyString = preg_replace("/(-{2,})\n([^\n])/", "$1\n\n$2", $keyString);
+      $keyData = $this->testKey($keyString);
+      if ($keyData === false) {
+        return false;
+      }
+
+      $res = GpgKey::importKey($keyString);
+      if (!$res["success"]) {
+        return $this->createError($res["error"]);
+      }
+
+      $sql = $this->user->getSQL();
+      $res = $sql->insert("GpgKey", ["fingerprint", "algorithm", "expires"])
+        ->addRow($keyData["fingerprint"], $keyData["algorithm"], $keyData["expires"])
+        ->returning("uid")
+        ->execute();
+
+      $this->success = ($res !== false);
+      $this->lastError = $sql->getLastError();
+      if (!$this->success) {
+        return false;
+      }
+
+      $gpgKeyId = $sql->getLastInsertId();
+      $res = $sql->update("User")
+        ->set("gpg_id", $gpgKeyId)
+        ->where(new Compare("uid", $this->user->getId()))
+        ->execute();
+
+      $this->success = ($res !== false);
+      $this->lastError = $sql->getLastError();
+      if (!$this->success) {
+        return false;
+      }
+
+      $token = generateRandomString(36);
+      $res = $sql->insert("UserToken", ["user_id", "token", "token_type", "valid_until"])
+        ->addRow($this->user->getId(), $token, "gpg_confirm", (new DateTime())->modify("+1 hour"))
+        ->execute();
+
+      $this->success = ($res !== false);
+      $this->lastError = $sql->getLastError();
+      if (!$this->success) {
+        return false;
+      }
+
+      $name = htmlspecialchars($this->user->getFullName());
+      if (!$name) {
+        $name = htmlspecialchars($this->user->getUsername());
+      }
+
+      $settings = $this->user->getConfiguration()->getSettings();
+      $baseUrl = htmlspecialchars($settings->getBaseUrl());
+      $token = htmlspecialchars(urlencode($token));
+      $mailBody = "Hello $name,<br><br>" .
+        "you imported a GPG public key for end-to-end encrypted mail communication. " .
+        "To confirm the key and verify, you own the corresponding private key, please click on the following link. " .
+        "The link is active for one hour.<br><br>" .
+        "<a href='$baseUrl/confirmGPG?token=$token'>$baseUrl/settings?confirmGPG&token=$token</a><br>
+        Best Regards<br>
+        ilum:e Security Lab";
+
+      $sendMail = new \Api\Mail\Send($this->user);
+      $this->success = $sendMail->execute(array(
+        "to" => $this->user->getEmail(),
+        "subject" => "Security Lab - Confirm GPG-Key",
+        "body" => $mailBody,
+        "gpgFingerprint" => $keyData["fingerprint"]
+      ));
+
+      $this->lastError = $sendMail->getLastError();
+
+      if ($this->success) {
+        $this->result["gpg"] = array(
+          "fingerprint" => $keyData["fingerprint"],
+          "confirmed" => false,
+          "algorithm" => $keyData["algorithm"],
+          "expires" => $keyData["expires"]->getTimestamp()
+        );
+      }
+
+      return $this->success;
+    }
+  }
+
+  class RemoveGPG extends UserAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "password" => new StringType("password")
+      ));
+      $this->loginRequired = true;
+      $this->forbidMethod("GET");
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $gpgKey = $this->user->getGPG();
+      if (!$gpgKey) {
+        return $this->createError("You have not added a GPG public key to your account yet.");
+      }
+
+      $sql = $this->user->getSQL();
+      $res = $sql->select("password")
+        ->from("User")
+        ->where(new Compare("User.uid", $this->user->getId()))
+        ->execute();
+
+      $this->success = ($res !== false);
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success && is_array($res)) {
+        $hash = $res[0]["password"];
+        $password = $this->getParam("password");
+        if (!password_verify($password, $hash)) {
+          return $this->createError("Incorrect password.");
+        } else {
+          $res = $sql->delete("GpgKey")
+            ->where(new Compare("uid",
+              $sql->select("User.gpg_id")
+                  ->from("User")
+                  ->where(new Compare("User.uid", $this->user->getId()))
+            ))->execute();
+          $this->success = ($res !== false);
+          $this->lastError = $sql->getLastError();
+        }
+      }
+
+      return $this->success;
+    }
+  }
+
+  class ConfirmGPG extends UserAPI {
+
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, [
+        "token" => new StringType("token", 36)
+      ]);
+      $this->loginRequired = true;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $gpgKey = $this->user->getGPG();
+      if (!$gpgKey) {
+        return $this->createError("You have not added a GPG key yet.");
+      } else if ($gpgKey->isConfirmed()) {
+        return $this->createError("Your GPG key is already confirmed");
+      }
+
+      $token = $this->getParam("token");
+      $sql = $this->user->getSQL();
+      $res = $sql->select($sql->count())
+        ->from("UserToken")
+        ->where(new Compare("token", $token))
+        ->where(new Compare("valid_until", $sql->now(), ">="))
+        ->where(new Compare("user_id", $this->user->getId()))
+        ->where(new Compare("token_type", "gpg_confirm"))
+        ->where(new CondNot(new CondBool("used")))
+        ->execute();
+
+      $this->success = ($res !== false);
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success && is_array($res)) {
+        if ($res[0]["count"] === 0) {
+          return $this->createError("Invalid token");
+        } else {
+          $res = $sql->update("GpgKey")
+            ->set("confirmed", 1)
+            ->where(new Compare("uid", $gpgKey->getId()))
+            ->execute();
+
+          $this->success = ($res !== false);
+          $this->lastError = $sql->getLastError();
+          if (!$this->success) {
+            return false;
+          }
+
+          $res = $sql->update("UserToken")
+            ->set("used", 1)
+            ->where(new Compare("token", $token))
+            ->execute();
+
+          $this->success = ($res !== false);
+          $this->lastError = $sql->getLastError();
+        }
+      }
+
+      return $this->success;
+    }
+  }
+
+  class DownloadGPG extends UserAPI {
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        "id" => new Parameter("id", Parameter::TYPE_INT, true, null),
+        "format" => new StringType("format", 16, true, "ascii")
+      ));
+      $this->loginRequired = true;
+      $this->csrfTokenRequired = false;
+    }
+
+    public function execute($values = array()): bool {
+      if (!parent::execute($values)) {
+        return false;
+      }
+
+      $allowedFormats = ["json", "ascii", "gpg"];
+      $format = $this->getParam("format");
+      if (!in_array($format, $allowedFormats)) {
+        return $this->getParam("Invalid requested format. Allowed formats: " . implode(",", $allowedFormats));
+      }
+
+      $userId = $this->getParam("id");
+      if ($userId === null || $userId == $this->user->getId()) {
+        $gpgKey = $this->user->getGPG();
+        if (!$gpgKey) {
+          return $this->createError("You did not add a gpg key yet.");
+        }
+
+        $email = $this->user->getEmail();
+        $gpgFingerprint = $gpgKey->getFingerprint();
+      } else {
+        $req = new Get($this->user);
+        $this->success = $req->execute(["id" => $userId]);
+        $this->lastError = $req->getLastError();
+        if (!$this->success) {
+          return false;
+        }
+
+        $res = $req->getResult()["user"];
+        $email = $res["email"];
+        $gpgFingerprint = $res["gpgFingerprint"];
+        if (!$gpgFingerprint) {
+          return $this->createError("This user has not added a gpg key yet");
+        }
+      }
+
+      $res = GpgKey::export($gpgFingerprint, $format !== "gpg");
+      if (!$res["success"]) {
+        return $this->createError($res["error"]);
+      }
+
+      $key = $res["data"];
+      if ($format === "json") {
+        $this->result["key"] = $key;
+        return true;
+      } else if ($format === "ascii") {
+        $contentType = "application/pgp-keys";
+        $ext = "asc";
+      } else if ($format === "gpg") {
+        $contentType = "application/octet-stream";
+        $ext = "gpg";
+      } else {
+        die("Invalid format");
+      }
+
+      $fileName = "$email.$ext";
+      header("Content-Type: $contentType");
+      header("Content-Length: " . strlen($key));
+      header("Content-Disposition: attachment; filename=\"$fileName\"");
+      die($key);
     }
   }
 

@@ -23,6 +23,8 @@ class Settings {
   private bool $mailEnabled;
   private string $recaptchaPublicKey;
   private string $recaptchaPrivateKey;
+  private string $mailSender;
+  private string $mailFooter;
 
   public function getJwtSecret(): string {
     return $this->jwtSecret;
@@ -47,6 +49,9 @@ class Settings {
     $settings->recaptchaPrivateKey = "";
     $settings->recaptchaEnabled = false;
     $settings->mailEnabled = false;
+    $settings->mailSender = "webmaster@localhost";
+    $settings->mailFooter = "";
+
     return $settings;
   }
 
@@ -65,6 +70,8 @@ class Settings {
       $this->recaptchaPublicKey = $result["recaptcha_public_key"] ?? $this->recaptchaPublicKey;
       $this->recaptchaPrivateKey = $result["recaptcha_private_key"] ?? $this->recaptchaPrivateKey;
       $this->mailEnabled = $result["mail_enabled"] ?? $this->mailEnabled;
+      $this->mailSender = $result["mail_from"] ?? $this->mailSender;
+      $this->mailFooter = $result["mail_footer"] ?? $this->mailFooter;
 
       if (!isset($result["jwt_secret"])) {
         $req = new \Api\Settings\Set($user);
@@ -114,5 +121,9 @@ class Settings {
 
   public function isMailEnabled(): bool {
     return $this->mailEnabled;
+  }
+
+  public function getMailSender(): string {
+    return $this->mailSender;
   }
 }

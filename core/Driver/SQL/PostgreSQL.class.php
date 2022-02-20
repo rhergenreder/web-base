@@ -4,7 +4,6 @@ namespace Driver\SQL;
 
 use \Api\Parameter\Parameter;
 
-use Api\User\Create;
 use Driver\SQL\Column\Column;
 use \Driver\SQL\Column\IntColumn;
 use \Driver\SQL\Column\SerialColumn;
@@ -304,7 +303,13 @@ class PostgreSQL extends SQL {
       foreach($table as $t) $tables[] = $this->tableName($t);
       return implode(",", $tables);
     } else {
-      return "\"$table\"";
+      $parts = explode(" ", $table);
+      if (count($parts) === 2) {
+        list ($name, $alias) = $parts;
+        return "\"$name\" $alias";
+      } else {
+        return "\"$table\"";
+      }
     }
   }
 
@@ -366,13 +371,10 @@ class PostgreSQL extends SQL {
     $query .= "END;";
     $query .= "\$table\$ LANGUAGE plpgsql;";
 
-    var_dump($query);
-    var_dump($params);
-
     return $this->execute($query, $params);
   }
 
-  public function createTriggerBody(CreateTrigger $trigger): ?string {
+  public function createTriggerBody(CreateTrigger $trigger, array $params = []): ?string {
     $procName = $this->tableName($trigger->getProcedure()->getName());
     return "EXECUTE PROCEDURE $procName()";
   }

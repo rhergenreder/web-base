@@ -104,11 +104,11 @@ class Parameter {
       return Parameter::TYPE_BOOLEAN;
     else if(is_a($value, 'DateTime'))
       return Parameter::TYPE_DATE_TIME;
-    else if(($d = DateTime::createFromFormat(self::DATE_FORMAT, $value)) && $d->format(self::DATE_FORMAT) === $value)
+    else if($value !== null && ($d = DateTime::createFromFormat(self::DATE_FORMAT, $value)) && $d->format(self::DATE_FORMAT) === $value)
       return Parameter::TYPE_DATE;
-    else if(($d = DateTime::createFromFormat(self::TIME_FORMAT, $value)) && $d->format(self::TIME_FORMAT) === $value)
+    else if($value !== null && ($d = DateTime::createFromFormat(self::TIME_FORMAT, $value)) && $d->format(self::TIME_FORMAT) === $value)
       return Parameter::TYPE_TIME;
-    else if(($d = DateTime::createFromFormat(self::DATE_TIME_FORMAT, $value)) && $d->format(self::DATE_TIME_FORMAT) === $value)
+    else if($value !== null && ($d = DateTime::createFromFormat(self::DATE_TIME_FORMAT, $value)) && $d->format(self::DATE_TIME_FORMAT) === $value)
       return Parameter::TYPE_DATE_TIME;
     else if (filter_var($value, FILTER_VALIDATE_EMAIL))
       return Parameter::TYPE_EMAIL;

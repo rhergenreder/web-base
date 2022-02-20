@@ -67,11 +67,11 @@ namespace Api {
         $this->checkPasswordRequirements($password, $confirmPassword);
     }
 
-    protected function insertUser($username, $email, $password, $confirmed, $fullName = null) {
+    protected function insertUser($username, $email, $password, $confirmed, $fullName = "") {
       $sql = $this->user->getSQL();
       $hash = $this->hashPassword($password);
       $res = $sql->insert("User", array("name", "password", "email", "confirmed", "fullName"))
-        ->addRow($username, $hash, $email, $confirmed, $fullName)
+        ->addRow($username, $hash, $email, $confirmed, $fullName ?? "")
         ->returning("uid")
         ->execute();
 

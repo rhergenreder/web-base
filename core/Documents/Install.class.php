@@ -17,6 +17,9 @@ namespace Documents {
 namespace Documents\Install {
 
   use Configuration\CreateDatabase;
+  use Driver\SQL\Query\Commit;
+  use Driver\SQL\Query\RollBack;
+  use Driver\SQL\Query\StartTransaction;
   use Driver\SQL\SQL;
   use Elements\Body;
   use Elements\Head;
@@ -271,10 +274,21 @@ namespace Documents\Install {
           $msg = "";
           $success = true;
           $queries = CreateDatabase::createQueries($sql);
+          array_unshift($queries, new StartTransaction($sql));
+          $queries[] = new Commit($sql);
           foreach ($queries as $query) {
-            if (!($res = $query->execute())) {
-              $msg = "Error creating tables: " . $sql->getLastError();
-              $success = false;
+            try {
+              if (!$query->execute()) {
+                $msg = "Error creating tables: " . $sql->getLastError();
+                $success = false;
+              }
+            } finally {
+              if (!$success) {
+                (new RollBack($sql))->execute();
+              }
+            }
+
+            if (!$success) {
               break;
             }
           }
@@ -619,7 +633,7 @@ namespace Documents\Install {
             )),
             array(
               "title" => "Encoding", "name" => "encoding", "type" => "text", "required" => false,
-              "value" => "UTF-8"
+              "value" => "UTF8"
             ),
           )
         ),

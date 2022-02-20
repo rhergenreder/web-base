@@ -2,7 +2,7 @@
 
 require_once "External/vendor/autoload.php";
 
-define("WEBBASE_VERSION", "1.4.0");
+define("WEBBASE_VERSION", "1.4.1");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {

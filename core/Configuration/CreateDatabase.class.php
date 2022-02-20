@@ -27,6 +27,24 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("en_US", 'American English')
       ->addRow("de_DE", 'Deutsch Standard');
 
+
+    $queries[] = $sql->createTable("GpgKey")
+      ->addSerial("uid")
+      ->addString("fingerprint", 64)
+      ->addDateTime("added", false, $sql->now())
+      ->addDateTime("expires")
+      ->addBool("confirmed")
+      ->addString("algorithm", 32)
+      ->primaryKey("uid");
+
+    $queries[] = $sql->createTable("2FA")
+      ->addSerial("uid")
+      ->addEnum("type", ["totp","fido"])
+      ->addString("data", 512) // either totp secret, fido challenge or fido public key information
+      ->addBool("confirmed", false)
+      ->addDateTime("added", false, $sql->now())
+      ->primaryKey("uid");
+
     $queries[] = $sql->createTable("User")
       ->addSerial("uid")
       ->addString("email", 64, true)
@@ -209,23 +227,6 @@ class CreateDatabase extends DatabaseScript {
       ->addString("errorMessage", NULL,  true)
       ->primaryKey("uid");
     $queries = array_merge($queries, \Configuration\Patch\log::createTableLog($sql, "MailQueue", 30));
-
-    $queries[] = $sql->createTable("GpgKey")
-      ->addSerial("uid")
-      ->addString("fingerprint", 64)
-      ->addDateTime("added", false, $sql->now())
-      ->addDateTime("expires")
-      ->addBool("confirmed")
-      ->addString("algorithm", 32)
-      ->primaryKey("uid");
-
-    $queries[] = $sql->createTable("2FA")
-      ->addSerial("uid")
-      ->addEnum("type", ["totp","fido"])
-      ->addString("data", 512) // either totp secret, fido challenge or fido public key information
-      ->addBool("confirmed", false)
-      ->addDateTime("added", false, $sql->now())
-      ->primaryKey("uid");
 
     $queries[] = $sql->createTable("News")
       ->addSerial("uid")

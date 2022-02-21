@@ -106,13 +106,13 @@ function handleDatabase(array $argv) {
   } else if ($action === "export" || $action === "import") {
 
     // database config
-    $dbConfig = getDatabaseConfig();
-    $dbType = $dbConfig->getProperty("type") ?? null;
-    $user = $dbConfig->getLogin();
-    $password = $dbConfig->getPassword();
-    $database = $dbConfig->getProperty("database");
-    $host = $dbConfig->getHost();
-    $port = $dbConfig->getPort();
+    $config = getDatabaseConfig();
+    $dbType = $config->getProperty("type") ?? null;
+    $user = $config->getLogin();
+    $password = $config->getPassword();
+    $database = $config->getProperty("database");
+    $host = $config->getHost();
+    $port = $config->getPort();
 
     // subprocess config
     $env = [];
@@ -172,7 +172,7 @@ function handleDatabase(array $argv) {
     }
 
     $command = array_merge([$command_bin], $command_args);
-    if ($dbConfig->getProperty("isDocker", false)) {
+    if ($config->getProperty("isDocker", false)) {
       $command =  array_merge(["docker", "exec", "-it", "db"], $command);
     }
 
@@ -601,15 +601,6 @@ function onMail($argv) {
     printLine("Syncing emails…");
     if (!$req->execute()) {
       _exit("Error syncing mails: " . $req->getLastError());
-    }
-
-    _exit("Done.");
-  } else if ($action === "send_news") {
-    $user = getUser() or die();
-    $debug = in_array("debug", $argv);
-    $req = new \Api\Mail\SendNews($user);
-    if (!$req->execute(["debug" => $debug])) {
-      _exit("Error sending news mails: " . $req->getLastError());
     }
 
     _exit("Done.");

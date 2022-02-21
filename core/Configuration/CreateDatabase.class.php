@@ -160,6 +160,7 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("^/confirmEmail/?$", "dynamic", "\\Documents\\Account", "account/confirm_email.twig")
       ->addRow("^/acceptInvite/?$", "dynamic", "\\Documents\\Account", "account/accept_invite.twig")
       ->addRow("^/resetPassword/?$", "dynamic", "\\Documents\\Account", "account/reset_password.twig")
+      ->addRow("^/login/?$", "dynamic", "\\Documents\\Account", "account/login.twig")
       ->addRow("^/resendConfirmEmail/?$", "dynamic", "\\Documents\\Account", "account/resend_confirm_email.twig")
       ->addRow("^/$", "static", "/static/welcome.html", NULL);
 

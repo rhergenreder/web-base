@@ -621,13 +621,29 @@ function onMail($argv) {
 
 function onImpersonate($argv) {
   if (count($argv) < 3) {
-    _exit("Usage: cli.php impersonate <user_id>");
+    _exit("Usage: cli.php impersonate <user_id|user_name>");
   }
 
   $user = getUser() or exit;
-  $user->createSession(intval($argv[2]));
+
+  $userId = $argv[2];
+  if (!is_numeric($userId)) {
+    $sql = $user->getSQL();
+    $res = $sql->select("uid")
+      ->from("User")
+      ->where(new Compare("name", $userId))
+      ->execute();
+    if ($res === false) {
+      _exit("SQL error: " . $sql->getLastError());
+    } else {
+      $userId = $res[0]["uid"];
+    }
+  }
+
+  $user->createSession(intval($userId));
   $session = $user->getSession();
   $session->setData(["2faAuthenticated" => true]);
+  $session->update(false);
   echo "session=" . $session->getCookie() . PHP_EOL;
 }
 

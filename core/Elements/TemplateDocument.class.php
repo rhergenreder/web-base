@@ -58,6 +58,7 @@ class TemplateDocument extends Document {
       $params["site"] = [
         "name" => $settings->getSiteName(),
         "baseUrl" => $settings->getBaseUrl(),
+        "registrationEnabled" => $settings->isRegistrationAllowed(),
         "title" => $this->title,
         "recaptcha" => [
           "key" => $settings->isRecaptchaEnabled() ? $settings->getRecaptchaSiteKey() : null,

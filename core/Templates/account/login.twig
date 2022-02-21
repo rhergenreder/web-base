@@ -1,0 +1,31 @@
+{% extends "account.twig" %}
+
+{% set view_title = 'Sign In' %}
+{% set view_icon = 'user-lock' %}
+{% set view_description = 'Sign In into your account' %}
+
+{% block view_content %}
+
+    <h4 class="pb-4">Please fill with your details</h4>
+    <form>
+        <div class="input-group">
+            <div class="input-group-append">
+                <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+            </div>
+            <input id="username" autocomplete='username' name="username" placeholder="Username or E-Mail" class="form-control" type="text" maxlength="32">
+        </div>
+        <div class="input-group mt-3">
+            <div class="input-group-append">
+                <span class="input-group-text"><i class="fas fa-key"></i></span>
+            </div>
+            <input type="password" autocomplete='password' name='password' id='password' class="form-control" placeholder="Password">
+        </div>
+        <div class="input-group mt-5 mb-4">
+            <button type="button" class="btn btn-primary" id='btnLogin'>Sign In</button>
+            {% if site.registrationEnabled %}
+                <div class="ml-2" style="line-height: 38px;">Don't have an account yet? <a href="/register">Click here</a> to register.</div>
+            {% endif %}
+        </div>
+    </form>
+
+{% endblock %}

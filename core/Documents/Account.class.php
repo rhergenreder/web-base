@@ -40,6 +40,9 @@ class Account extends TemplateDocument {
       } else if (!$settings->isRegistrationAllowed()) {
         $this->createError("Registration is not enabled on this website.");
       }
+    } else if ($this->getTemplateName() === "account/login.twig" && $this->user->isLoggedIn()) {
+      header("Location: /admin");
+      exit();
     } else if ($this->getTemplateName() === "account/accept_invite.twig") {
       if (isset($_GET["token"]) && is_string($_GET["token"]) && !empty($_GET["token"])) {
         $this->parameters["view"]["token"] = $_GET["token"];

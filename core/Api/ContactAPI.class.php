@@ -64,11 +64,7 @@ namespace Api\Contact {
       parent::__construct($user, $externalCall, $parameters);
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $settings = $this->user->getConfiguration()->getSettings();
       if ($settings->isRecaptchaEnabled()) {
         $captcha = $this->getParam("captcha");
@@ -184,11 +180,7 @@ namespace Api\Contact {
         ->execute();
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $message = $this->getParam("message");
       $senderMail = $this->getSenderMail();
       if (!$this->success) {
@@ -219,11 +211,7 @@ namespace Api\Contact {
       $this->csrfTokenRequired = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $sql = $this->user->getSQL();
       $res = $sql->select("ContactRequest.uid", "from_name", "from_email", "from_name",
           new Sum(new CaseWhen(new CondNot("ContactMessage.read"), 1, 0), "unread"))
@@ -270,11 +258,7 @@ namespace Api\Contact {
         ->execute();
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $requestId = $this->getParam("requestId");
       $sql = $this->user->getSQL();
 

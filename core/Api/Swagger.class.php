@@ -12,11 +12,7 @@ class Swagger extends Request {
     $this->csrfTokenRequired = false;
   }
 
-  public function execute($values = array()): bool {
-    if (!parent::execute($values)) {
-      return false;
-    }
-
+  public function _execute(): bool {
     header("Content-Type: application/x-yaml");
     header("Access-Control-Allow-Origin: *");
     die($this->getDocumentation());

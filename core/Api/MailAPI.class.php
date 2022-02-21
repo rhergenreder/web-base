@@ -59,10 +59,7 @@ namespace Api\Mail {
       ));
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $receiver = $this->getParam("receiver");
       $req = new \Api\Mail\Send($this->user);
@@ -94,10 +91,7 @@ namespace Api\Mail {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $mailConfig = $this->getMailConfig();
       if (!$this->success) {
@@ -402,10 +396,7 @@ namespace Api\Mail {
       return true;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if (!function_exists("imap_open")) {
         return $this->createError("IMAP is not enabled. Enable it inside the php config. For more information visit: https://www.php.net/manual/en/imap.setup.php");
@@ -473,10 +464,7 @@ namespace Api\Mail {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $debug = $this->getParam("debug");
       $startTime = time();

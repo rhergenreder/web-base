@@ -325,6 +325,7 @@ namespace Documents\Install {
         $connectionData->setProperty('database', $database);
         $connectionData->setProperty('encoding', $encoding);
         $connectionData->setProperty('type', $type);
+        $connectionData->setProperty('isDocker', $this->isDocker());
         $sql = SQL::createConnection($connectionData);
         $success = false;
         if (is_string($sql)) {

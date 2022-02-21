@@ -45,12 +45,7 @@ namespace Api\ApiKey {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $apiKey = generateRandomString(64);
       $sql = $this->user->getSQL();
       $validUntil = (new \DateTime())->modify("+30 DAY");
@@ -83,11 +78,7 @@ namespace Api\ApiKey {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $sql = $this->user->getSQL();
       $query = $sql->select("uid", "api_key", "valid_until", "active")
         ->from("ApiKey")
@@ -129,11 +120,7 @@ namespace Api\ApiKey {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $id = $this->getParam("id");
       if(!$this->apiKeyExists($id))
         return false;
@@ -164,11 +151,7 @@ namespace Api\ApiKey {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $id = $this->getParam("id");
       if (!$this->apiKeyExists($id))
         return false;

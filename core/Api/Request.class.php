@@ -6,7 +6,7 @@ use Api\Parameter\Parameter;
 use Objects\User;
 use PhpMqtt\Client\MqttClient;
 
-class Request {
+abstract class Request {
 
   protected User $user;
   protected array $params;
@@ -107,7 +107,9 @@ class Request {
     die($data);
   }
 
-  public function execute($values = array()): bool {
+  protected abstract function _execute(): bool;
+
+  public final function execute($values = array()): bool {
 
     $this->params = array_merge([], $this->defaultParams);
     $this->success = false;
@@ -223,9 +225,15 @@ class Request {
       return false;
     }
 
+    $success = $this->_execute();
+    if ($this->success !== $success) {
+      // _execute returns a different value then it set for $this->success
+      // this should actually not occur, how to handle this case?
+      $this->success = $success;
+    }
+
     $this->user->getSQL()->setLastError('');
-    $this->success = true;
-    return true;
+    return $this->success;
   }
 
   protected function createError($err): bool {

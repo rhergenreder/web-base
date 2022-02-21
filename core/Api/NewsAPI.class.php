@@ -29,11 +29,7 @@ namespace Api\News {
       ]);
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $sql = $this->user->getSQL();
       $query = $sql->select("News.uid", "title", "text", "publishedAt",
         "User.uid as publisherId", "User.name as publisherName", "User.fullName as publisherFullName")
@@ -88,11 +84,7 @@ namespace Api\News {
       ]);
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $sql = $this->user->getSQL();
       $title = $this->getParam("title");
       $text  = $this->getParam("text");
@@ -120,11 +112,7 @@ namespace Api\News {
       ]);
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $sql = $this->user->getSQL();
       $id = $this->getParam("id");
       $res = $sql->select("publishedBy")
@@ -161,10 +149,7 @@ namespace Api\News {
       ]);
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $sql = $this->user->getSQL();
       $id = $this->getParam("id");

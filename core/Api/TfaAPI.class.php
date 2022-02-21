@@ -72,10 +72,7 @@ namespace Api\TFA {
       ]);
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $token = $this->user->getTwoFactorToken();
       if (!$token) {
@@ -148,10 +145,7 @@ namespace Api\TFA {
       $this->csrfTokenRequired = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $twoFactorToken = $this->user->getTwoFactorToken();
       if ($twoFactorToken && $twoFactorToken->isConfirmed()) {
@@ -188,10 +182,7 @@ namespace Api\TFA {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $twoFactorToken = $this->user->getTwoFactorToken();
       if ($twoFactorToken->isConfirmed()) {
@@ -218,10 +209,7 @@ namespace Api\TFA {
       $this->csrfTokenRequired = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $session = $this->user->getSession();
       if (!$session) {
@@ -254,10 +242,7 @@ namespace Api\TFA {
       ]);
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $clientDataJSON = json_decode($this->getParam("clientDataJSON"), true);
       $attestationObjectRaw = base64_decode($this->getParam("attestationObject"));
@@ -358,10 +343,7 @@ namespace Api\TFA {
       $this->csrfTokenRequired = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $session = $this->user->getSession();
       if (!$session) {

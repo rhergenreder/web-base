@@ -173,10 +173,7 @@ namespace Api\User {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $username = $this->getParam('username');
       $email = $this->getParam('email');
@@ -250,10 +247,7 @@ namespace Api\User {
       return false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $page = $this->getParam("page");
       if ($page < 1) {
@@ -343,10 +337,7 @@ namespace Api\User {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $sql = $this->user->getSQL();
       $userId = $this->getParam("id");
@@ -435,10 +426,7 @@ namespace Api\User {
       $this->csrfTokenRequired = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if (!$this->user->isLoggedIn()) {
         $this->result["loggedIn"] = false;
@@ -479,10 +467,7 @@ namespace Api\User {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $username = $this->getParam('username');
       $email = $this->getParam('email');
@@ -572,10 +557,7 @@ namespace Api\User {
       return $this->success;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if ($this->user->isLoggedIn()) {
         return $this->createError("You are already logged in.");
@@ -637,10 +619,7 @@ namespace Api\User {
       return $this->success;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if ($this->user->isLoggedIn()) {
         return $this->createError("You are already logged in.");
@@ -689,10 +668,7 @@ namespace Api\User {
       return $this->createError(L('Wrong username or password'));
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if ($this->user->isLoggedIn()) {
         $this->lastError = L('You are already logged in');
@@ -765,10 +741,7 @@ namespace Api\User {
       $this->forbidMethod("GET");
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if (!$this->user->isLoggedIn()) {
         return $this->createError("You are not logged in.");
@@ -802,10 +775,7 @@ namespace Api\User {
       $this->csrfTokenRequired = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if ($this->user->isLoggedIn()) {
         return $this->createError(L('You are already logged in'));
@@ -916,10 +886,7 @@ namespace Api\User {
       return array();
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $token = $this->getParam('token');
       $tokenEntry = $this->checkToken($token);
@@ -961,10 +928,7 @@ namespace Api\User {
       $this->forbidMethod("GET");
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $id = $this->getParam("id");
       $user = $this->getUser($id);
@@ -1062,10 +1026,7 @@ namespace Api\User {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $id = $this->getParam("id");
       if ($id === $this->user->getId()) {
@@ -1103,10 +1064,7 @@ namespace Api\User {
       parent::__construct($user, $externalCall, $parameters);
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if ($this->user->isLoggedIn()) {
         return $this->createError("You already logged in.");
@@ -1208,10 +1166,7 @@ namespace Api\User {
       parent::__construct($user, $externalCall, $parameters);
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if ($this->user->isLoggedIn()) {
         return $this->createError("You already logged in.");
@@ -1324,10 +1279,7 @@ namespace Api\User {
       return $this->success;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if ($this->user->isLoggedIn()) {
         return $this->createError("You are already logged in.");
@@ -1373,10 +1325,7 @@ namespace Api\User {
       $this->forbidMethod("GET");
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $newUsername = $this->getParam("username");
       $oldPassword = $this->getParam("oldPassword");
@@ -1463,10 +1412,7 @@ namespace Api\User {
       }
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $gpgKey = $this->user->getGPG();
       if ($gpgKey) {
@@ -1569,10 +1515,7 @@ namespace Api\User {
       $this->forbidMethod("GET");
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $gpgKey = $this->user->getGPG();
       if (!$gpgKey) {
@@ -1618,10 +1561,7 @@ namespace Api\User {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $gpgKey = $this->user->getGPG();
       if (!$gpgKey) {
@@ -1683,10 +1623,7 @@ namespace Api\User {
       $this->csrfTokenRequired = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $allowedFormats = ["json", "ascii", "gpg"];
       $format = $this->getParam("format");
@@ -1824,10 +1761,7 @@ namespace Api\User {
       return $fileName;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $userId = $this->user->getId();
       $uploadDir = WEBROOT . "/img/uploads/user/$userId";
@@ -1865,10 +1799,7 @@ namespace Api\User {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $pfp = $this->user->getProfilePicture();
       if (!$pfp) {

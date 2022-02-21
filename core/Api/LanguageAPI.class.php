@@ -23,11 +23,7 @@ namespace Api\Language {
       parent::__construct($user, $externalCall, array());
     }
 
-    public function execute($values = array()): bool {
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $sql = $this->user->getSQL();
       $res = $sql->select("uid", "code", "name")
         ->from("Language")
@@ -108,11 +104,7 @@ namespace Api\Language {
       return $this->success;
     }
 
-    public function execute($values = array()): bool {
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       if(!$this->checkLanguage())
         return false;
 

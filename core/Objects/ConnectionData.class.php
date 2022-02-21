@@ -18,7 +18,7 @@ class ConnectionData {
     $this->properties = array();
   }
 
-  public function getProperties() {
+  public function getProperties(): array {
     return $this->properties;
   }
 
@@ -26,8 +26,8 @@ class ConnectionData {
     return $this->properties[$key] ?? $defaultValue;
   }
 
-  public function setProperty($key, $val) {
-    if(!is_string($val)) {
+  public function setProperty($key, $val): bool {
+    if (!is_scalar($val)) {
       return false;
     }
 
@@ -35,8 +35,8 @@ class ConnectionData {
     return true;
   }
 
-  public function getHost() { return $this->host; }
-  public function getPort() { return $this->port; }
-  public function getLogin() { return $this->login; }
-  public function getPassword() { return $this->password; }
+  public function getHost(): string { return $this->host; }
+  public function getPort(): int { return $this->port; }
+  public function getLogin(): string { return $this->login; }
+  public function getPassword(): string { return $this->password; }
 }

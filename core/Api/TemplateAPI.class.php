@@ -35,11 +35,7 @@ namespace Api\Template {
       ]);
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $templateFile = $this->getParam("file");
       $parameters   = $this->getParam("parameters");
       $extension = pathinfo($templateFile, PATHINFO_EXTENSION);

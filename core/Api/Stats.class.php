@@ -66,11 +66,7 @@ class Stats extends Request {
     return ($this->success ? $res[0]["count"] : $this->success);
   }
 
-  public function execute($values = array()): bool {
-    if(!parent::execute($values)) {
-      return false;
-    }
-
+  public function _execute(): bool {
     $userCount = $this->getUserCount();
     $pageCount = $this->getPageCount();
     $req = new \Api\Visitors\Stats($this->user);
@@ -108,7 +104,6 @@ class Stats extends Request {
       "mail" => $this->mailConfigured,
       "reCaptcha" => $this->recaptchaConfigured
     );
-
     return $this->success;
   }
 

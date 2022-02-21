@@ -74,11 +74,7 @@ namespace Api\Routes {
     parent::__construct($user, $externalCall, array());
   }
 
-  public function execute($values = array()): bool {
-    if(!parent::execute($values)) {
-      return false;
-    }
-
+  public function _execute(): bool {
     $sql = $this->user->getSQL();
 
     $res = $sql
@@ -121,11 +117,7 @@ namespace Api\Routes {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()): bool {
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $request = $this->getParam('request');
       if (!startsWith($request, '/')) {
         $request = "/$request";
@@ -174,11 +166,7 @@ namespace Api\Routes {
       ));
     }
 
-    public function execute($values = array()): bool {
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       if (!$this->validateRoutes()) {
         return false;
       }
@@ -263,10 +251,7 @@ namespace Api\Routes {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $request = $this->formatRegex($this->getParam("request"), true);
       $action = $this->getParam("action");
@@ -299,10 +284,7 @@ namespace Api\Routes {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $uid = $this->getParam("uid");
       if (!$this->routeExists($uid)) {
@@ -339,10 +321,7 @@ namespace Api\Routes {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $uid = $this->getParam("uid");
       if (!$this->routeExists($uid)) {
@@ -367,10 +346,7 @@ namespace Api\Routes {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $uid = $this->getParam("uid");
       return $this->toggleRoute($uid, true);
@@ -385,10 +361,7 @@ namespace Api\Routes {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $uid = $this->getParam("uid");
       return $this->toggleRoute($uid, false);

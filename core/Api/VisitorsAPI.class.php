@@ -31,11 +31,7 @@ namespace Api\Visitors {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $sql = $this->user->getSQL();
       $cookie = $this->getParam("cookie");
       $day = (new DateTime())->format("Ymd");
@@ -58,7 +54,7 @@ namespace Api\Visitors {
       ));
     }
 
-    private function setConditions(string $type, DateTime $date, Select $query) {
+    private function setConditions(string $type, DateTime $date, Select $query): bool {
       if ($type === "yearly") {
         $yearStart = $date->format("Y0000");
         $yearEnd = $date->modify("+1 year")->format("Y0000");
@@ -75,15 +71,13 @@ namespace Api\Visitors {
         $query->where(new Compare("day", $weekStart, ">="));
         $query->where(new Compare("day", $weekEnd, "<="));
       } else {
-        $this->createError("Invalid scope: $type");
+        return $this->createError("Invalid scope: $type");
       }
+
+      return true;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $date = $this->getParam("date");
       $type = $this->getParam("type");
 
@@ -95,7 +89,7 @@ namespace Api\Visitors {
         ->orderBy("day")
         ->ascending();
 
-      $this->setConditions($type, $date, $query);
+      $this->success = $this->setConditions($type, $date, $query);
       if (!$this->success) {
         return false;
       }

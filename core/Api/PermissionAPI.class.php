@@ -36,10 +36,7 @@ namespace Api\Permission {
       $this->isPublic = false;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $method = $this->getParam("method");
       $sql = $this->user->getSQL();
@@ -104,10 +101,7 @@ namespace Api\Permission {
       return $this->success;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if (!$this->fetchGroups()) {
         return false;
@@ -149,10 +143,7 @@ namespace Api\Permission {
       ));
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       if (!$this->checkStaticPermission()) {
         return false;

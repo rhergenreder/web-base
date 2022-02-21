@@ -54,11 +54,7 @@ namespace Api\Groups {
       return $this->success;
     }
 
-    public function execute($values = array()): bool {
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $page = $this->getParam("page");
       if($page < 1) {
         return $this->createError("Invalid page count");
@@ -116,11 +112,7 @@ namespace Api\Groups {
       ));
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $name = $this->getParam("name");
       if (preg_match("/^[a-zA-Z][a-zA-Z0-9_-]*$/", $name) !== 1) {
         return $this->createError("Invalid name");
@@ -162,11 +154,7 @@ namespace Api\Groups {
       ));
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $id = $this->getParam("uid");
       if (in_array($id, DEFAULT_GROUPS)) {
         return $this->createError("You cannot delete a default group.");

@@ -108,11 +108,7 @@ namespace Api\Notifications {
       return $this->success;
     }
 
-    public function execute($values = array()): bool {
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $userId = $this->getParam("userId");
       $groupId = $this->getParam("groupId");
       $title = $this->getParam("title");
@@ -214,11 +210,7 @@ namespace Api\Notifications {
       return $this->success;
     }
 
-    public function execute($values = array()): bool {
-      if(!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $this->notifications = array();
       $this->notificationids = array();
       if ($this->fetchUserNotifications() && $this->fetchGroupNotifications()) {
@@ -236,10 +228,7 @@ namespace Api\Notifications {
       $this->loginRequired = true;
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
+    public function _execute(): bool {
 
       $sql = $this->user->getSQL();
       $res = $sql->update("UserNotification")

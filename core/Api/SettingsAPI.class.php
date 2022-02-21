@@ -29,11 +29,7 @@ namespace Api\Settings {
       ));
     }
 
-    public function execute($values = array()): bool {
-       if(!parent::execute($values)) {
-         return false;
-       }
-
+    public function _execute(): bool {
        $key = $this->getParam("key");
        $sql = $this->user->getSQL();
 
@@ -72,11 +68,7 @@ namespace Api\Settings {
       ));
     }
 
-    public function execute($values = array()): bool {
-      if (!parent::execute($values)) {
-        return false;
-      }
-
+    public function _execute(): bool {
       $values = $this->getParam("settings");
       if (empty($values)) {
         return $this->createError("No values given.");

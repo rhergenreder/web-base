@@ -42,9 +42,11 @@ function getDatabaseConfig(): ConnectionData {
 $config = new Configuration();
 $database = $config->getDatabase();
 if ($database !== null && $database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
-  $command = array_merge(["docker", "exec", "-it", "php", "php"], $argv);
-  $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes, "/application");
-  exit(proc_close($proc));
+  if (count($argv) < 2 || $argv[1] !== "db") {
+    $command = array_merge(["docker", "exec", "-it", "php", "php"], $argv);
+    $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes, "/application");
+    exit(proc_close($proc));
+  }
 }
 
 function getUser(): ?User {
@@ -104,13 +106,13 @@ function handleDatabase(array $argv) {
   } else if ($action === "export" || $action === "import") {
 
     // database config
-    $config = getDatabaseConfig();
-    $dbType = $config->getProperty("type") ?? null;
-    $user = $config->getLogin();
-    $password = $config->getPassword();
-    $database = $config->getProperty("database");
-    $host = $config->getHost();
-    $port = $config->getPort();
+    $dbConfig = getDatabaseConfig();
+    $dbType = $dbConfig->getProperty("type") ?? null;
+    $user = $dbConfig->getLogin();
+    $password = $dbConfig->getPassword();
+    $database = $dbConfig->getProperty("database");
+    $host = $dbConfig->getHost();
+    $port = $dbConfig->getPort();
 
     // subprocess config
     $env = [];
@@ -170,6 +172,10 @@ function handleDatabase(array $argv) {
     }
 
     $command = array_merge([$command_bin], $command_args);
+    if ($dbConfig->getProperty("isDocker", false)) {
+      $command =  array_merge(["docker", "exec", "-it", "db"], $command);
+    }
+
     $process = proc_open($command, $descriptorSpec, $pipes, null, $env);
 
     if (is_resource($process)) {

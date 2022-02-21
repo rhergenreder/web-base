@@ -42,12 +42,8 @@ function getDatabaseConfig(): ConnectionData {
 $config = new Configuration();
 $database = $config->getDatabase();
 if ($database !== null && $database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
-  $command = array_merge(["docker", "exec", "-it", "php", "php"], /*array_map(function ($arg) { return escapeshellarg($arg); }, */$argv);
-  var_dump(implode(" ", $command));
+  $command = array_merge(["docker", "exec", "-it", "php", "php"], $argv);
   $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes, "/application");
-  sleep(1);
-  /*var_dump(stream_get_contents($pipes[1]));
-  var_dump(stream_get_contents($pipes[2]));*/
   exit(proc_close($proc));
 }
 

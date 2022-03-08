@@ -18,6 +18,7 @@ class Select extends Query {
   private bool $sortAscending;
   private int $limit;
   private int $offset;
+  private bool $forUpdate;
 
   public function __construct($sql, ...$selectValues) {
     parent::__construct($sql);
@@ -31,6 +32,7 @@ class Select extends Query {
     $this->limit = 0;
     $this->offset = 0;
     $this->sortAscending = true;
+    $this->forUpdate = false;
   }
 
   public function from(...$tables): Select {
@@ -85,6 +87,11 @@ class Select extends Query {
 
   public function offset(int $offset): Select {
     $this->offset = $offset;
+    return $this;
+  }
+
+  public function lockForUpdate(): Select {
+    $this->forUpdate = true;
     return $this;
   }
 
@@ -174,6 +181,7 @@ class Select extends Query {
 
     $limit = ($this->getLimit() > 0 ? (" LIMIT " . $this->getLimit()) : "");
     $offset = ($this->getOffset() > 0 ? (" OFFSET " . $this->getOffset()) : "");
-    return "SELECT $selectValues FROM $tables$joinStr$where$groupBy$havingClause$orderBy$limit$offset";
+    $forUpdate = ($this->forUpdate ? " FOR UPDATE" : "");
+    return "SELECT $selectValues FROM $tables$joinStr$where$groupBy$havingClause$orderBy$limit$offset$forUpdate";
   }
 }

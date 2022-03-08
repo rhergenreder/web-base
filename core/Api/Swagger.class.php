@@ -105,7 +105,7 @@ class Swagger extends Request {
     foreach (self::getApiEndpoints() as $endpoint => $apiClass) {
       $body = null;
       $requiredProperties = [];
-      $apiObject = $apiClass->newInstance($this->user);
+      $apiObject = $apiClass->newInstance($this->user, false);
       if (!$this->canView($permissions[strtolower($endpoint)] ?? [], $apiObject)) {
         continue;
       }

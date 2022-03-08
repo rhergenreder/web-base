@@ -6,7 +6,7 @@ namespace Api {
 
   abstract class UserAPI extends Request {
 
-    protected function userExists(?string $username, ?string $email = null): bool {
+    protected function checkUserExists(?string $username, ?string $email = null): bool {
 
       $conditions = array();
       if ($username) {
@@ -184,7 +184,7 @@ namespace Api\User {
         return false;
       }
 
-      if (!$this->userExists($username, $email)) {
+      if (!$this->checkUserExists($username, $email)) {
         return false;
       }
 
@@ -471,7 +471,7 @@ namespace Api\User {
 
       $username = $this->getParam('username');
       $email = $this->getParam('email');
-      if (!$this->userExists($username, $email)) {
+      if (!$this->checkUserExists($username, $email)) {
         return false;
       }
 
@@ -799,7 +799,7 @@ namespace Api\User {
       $email = $this->getParam('email');
       $password = $this->getParam("password");
       $confirmPassword = $this->getParam("confirmPassword");
-      if (!$this->userExists($username, $email)) {
+      if (!$this->checkUserExists($username, $email)) {
         return false;
       }
 
@@ -970,7 +970,7 @@ namespace Api\User {
         $fullNameChanged = !is_null($fullName) && strcasecmp($fullName, $user[0]["fullName"]) !== 0;
         $emailChanged = !is_null($email) && strcasecmp($email, $user[0]["email"]) !== 0;
         if($usernameChanged || $emailChanged) {
-          if (!$this->userExists($usernameChanged ? $username : NULL, $emailChanged ? $email : NULL)) {
+          if (!$this->checkUserExists($usernameChanged ? $username : NULL, $emailChanged ? $email : NULL)) {
             return false;
           }
         }
@@ -1340,7 +1340,7 @@ namespace Api\User {
       $sql = $this->user->getSQL();
       $query = $sql->update("User")->where(new Compare("uid", $this->user->getId()));
       if ($newUsername !== null) {
-        if (!$this->checkUsernameRequirements($newUsername) || $this->userExists($newUsername)) {
+        if (!$this->checkUsernameRequirements($newUsername) || !$this->checkUserExists($newUsername)) {
           return false;
         } else {
           $query->set("name", $newUsername);

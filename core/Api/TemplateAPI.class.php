@@ -66,7 +66,7 @@ namespace Api\Template {
         return $this->createError("Error rendering twig template: " . $e->getMessage());
       }
 
-      return $this->success;
+      return true;
     }
 
   }

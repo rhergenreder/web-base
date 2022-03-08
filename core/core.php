@@ -5,7 +5,7 @@ if (is_file($autoLoad)) {
   require_once $autoLoad;
 }
 
-define("WEBBASE_VERSION", "1.4.4");
+define("WEBBASE_VERSION", "1.4.5");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {
@@ -57,6 +57,8 @@ function generateRandomString($length, $type = "ascii"): string {
       $charset = $hex;
     } else if ($type === "base64") {
       $charset = $ascii . "/+";
+    } else if ($type === "base58") {
+      $charset = preg_replace("/[0Oo1Il]/", "", $ascii);
     } else if ($type === "base32") {
       $charset = $uppercase . substr($digits, 2, 6);
     } else {
@@ -103,6 +105,15 @@ function startsWith($haystack, $needle, bool $ignoreCase = false): bool {
   }
 }
 
+function startsWithAny($haystack, array $needles, bool $ignoreCase = false): bool {
+  foreach ($needles as $needle) {
+    if (startsWith($haystack, $needle, $ignoreCase)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function endsWith($haystack, $needle, bool $ignoreCase = false): bool {
 
   $length = strlen($needle);
@@ -144,7 +155,7 @@ function contains($haystack, $needle, bool $ignoreCase = false): bool {
   }
 }
 
-function intendCode($code, $escape = true) {
+function intendCode($code, $escape = true): string {
   $newCode = "";
   $first = true;
   $brackets = array();
@@ -166,10 +177,10 @@ function intendCode($code, $escape = true) {
 
     if (endsWith($line, "{")) {
       $intend += 2;
-      array_push($brackets, "}");
+      $brackets[] = "}";
     } else if (endsWith($line, "(")) {
       $intend += 2;
-      array_push($brackets, ")");
+      $brackets[] = ")";
     }
   }
 
@@ -186,7 +197,7 @@ function urlId($str) {
 
 function html_attributes(array $attributes): string {
   return implode(" ", array_map(function ($key) use ($attributes) {
-    $value = $attributes[$key];
+    $value = htmlspecialchars($attributes[$key]);
     return "$key=\"$value\"";
   }, array_keys($attributes)));
 }
@@ -281,7 +292,7 @@ function serveStatic(string $webRoot, string $file): string {
   return "";
 }
 
-function parseClass($class) {
+function parseClass($class): string {
   if (!startsWith($class, "\\")) {
     $class = "\\$class";
   }

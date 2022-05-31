@@ -14,8 +14,7 @@ if (is_file("MAINTENANCE") && !in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '
 
 use Api\Request;
 use Configuration\Configuration;
-use Documents\Document404;
-use Elements\Document;
+use Objects\Router;
 
 if (!is_readable(getClassPath(Configuration::class))) {
   header("Content-Type: application/json");
@@ -28,6 +27,8 @@ $sql    = $user->getSQL();
 $settings = $config->getSettings();
 $installation = !$sql || ($sql->isConnected() && !$settings->isInstalled());
 
+// API routes, prefix: /api/
+// TODO: move this to Router?
 if (isset($_GET["api"]) && is_string($_GET["api"])) {
   $isApiResponse = true;
   if ($installation) {
@@ -81,18 +82,10 @@ if (isset($_GET["api"]) && is_string($_GET["api"])) {
     }
   }
 } else {
+
+  // all other routes
   $requestedUri = $_GET["site"] ?? $_SERVER["REQUEST_URI"];
-  if (($index = strpos($requestedUri, "?")) !== false) {
-    $requestedUri = substr($requestedUri, 0, $index);
-  }
-
-  if (($index = strpos($requestedUri, "#")) !== false) {
-    $requestedUri = substr($requestedUri, 0, $index);
-  }
-
-  if (startsWith($requestedUri, "/")) {
-    $requestedUri = substr($requestedUri, 1);
-  }
+  $requestedUri = Router::cleanURL($requestedUri);
 
   if ($installation) {
     if ($requestedUri !== "" && $requestedUri !== "index.php") {
@@ -104,59 +97,29 @@ if (isset($_GET["api"]) && is_string($_GET["api"])) {
     }
   } else {
 
-    $req = new \Api\Routes\Find($user);
-    $success = $req->execute(array("request" => $requestedUri));
-    $response = "";
-    if (!$success) {
-      http_response_code(500);
-      $response = "Unable to find route: " . $req->getLastError();
-    } else {
-      $route = $req->getResult()["route"];
-      if (is_null($route)) {
-        $response = (new Document404($user))->getCode();
-      } else {
-        $target = trim(explode("\n", $route["target"])[0]);
-        $extra = $route["extra"] ?? "";
+    $router = null;
 
-        $pattern = str_replace("/","\\/", $route["request"]);
-        $pattern = "/$pattern/i";
-        if (!startsWith($requestedUri, '/')) {
-          $requestedUri = "/$requestedUri";
-        }
-
-        @preg_match("$pattern", $requestedUri, $match);
-        if (is_array($match) && !empty($match)) {
-          foreach($match as $index => $value) {
-            $target = str_replace("$$index", $value, $target);
-            $extra  = str_replace("$$index", $value, $extra);
-          }
-        }
-
-        switch ($route["action"]) {
-          case "redirect_temporary":
-            http_response_code(307);
-            header("Location: $target");
-            break;
-          case "redirect_permanently":
-            http_response_code(308);
-            header("Location: $target");
-            break;
-          case "static":
-            $currentDir = dirname(__FILE__);
-            $response = serveStatic($currentDir, $target);
-            break;
-          case "dynamic":
-            $file = getClassPath($target);
-            if (!file_exists($file) || !is_subclass_of($target, Document::class)) {
-              $document = new Document404($user, $extra);
-            } else {
-              $document = new $target($user, $extra);
-            }
-
-            $response = $document->getCode();
-            break;
-        }
+    $routerCacheClass = '\Cache\RouterCache';
+    $routerCachePath = getClassPath($routerCacheClass);
+    if (is_file($routerCachePath)) {
+      @include_once $routerCachePath;
+      if (class_exists($routerCacheClass)) {
+        $router = new $routerCacheClass($user);
       }
+    }
+
+    if ($router === null) {
+      $req = new \Api\Routes\GenerateCache($user);
+      if ($req->execute()) {
+        $router = $req->getRouter();
+      } else {
+        $message = "Unable to generate router cache: " . $req->getLastError();
+        $response = (new Router($user))->returnStatusCode(500, [ "message" => $message ]);
+      }
+    }
+
+    if ($router !== null) {
+      $response = $router->run($requestedUri);
     }
 
     $user->processVisit();

@@ -17,14 +17,14 @@ class TemplateDocument extends Document {
   private FilesystemLoader $twigLoader;
   protected string $title;
 
-  public function __construct(User $user, string $templateName, array $initialParameters = []) {
+  public function __construct(User $user, string $templateName, array $params = []) {
     parent::__construct($user);
     $this->title = "";
     $this->templateName = $templateName;
-    $this->parameters = $initialParameters;
+    $this->parameters = $params;
     $this->twigLoader = new FilesystemLoader(WEBROOT . '/core/Templates');
     $this->twigEnvironment = new Environment($this->twigLoader, [
-      'cache' => WEBROOT . '/core/TemplateCache',
+      'cache' => WEBROOT . '/core/Cache/Templates/',
       'auto_reload' => true
     ]);
   }
@@ -37,8 +37,8 @@ class TemplateDocument extends Document {
 
   }
 
-  public function getCode(): string {
-    parent::getCode();
+  public function getCode(array $params = []): string {
+    parent::getCode($params);
     $this->loadParameters();
     return $this->renderTemplate($this->templateName, $this->parameters);
   }

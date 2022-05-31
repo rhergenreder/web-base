@@ -2,6 +2,7 @@
 
 namespace Driver\SQL;
 
+use Driver\Logger\Logger;
 use Driver\SQL\Column\Column;
 use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondAnd;
@@ -40,6 +41,7 @@ use Objects\ConnectionData;
 
 abstract class SQL {
 
+  protected Logger $logger;
   protected string $lastError;
   protected $connection;
   protected ConnectionData $connectionData;
@@ -50,6 +52,7 @@ abstract class SQL {
     $this->lastError = 'Unknown Error';
     $this->connectionData = $connectionData;
     $this->lastInsertId = 0;
+    $this->logger = new Logger(getClassName($this), $this);
   }
 
   public function isConnected(): bool {
@@ -168,7 +171,7 @@ abstract class SQL {
 
       return $code;
     } else {
-      $this->lastError = "Unsupported constraint type: " . get_class($constraint);
+      $this->lastError = $this->logger->error("Unsupported constraint type: " . get_class($constraint));
       return null;
     }
   }
@@ -200,7 +203,7 @@ abstract class SQL {
     } else if ($value === null) {
       return "NULL";
     } else {
-      $this->lastError = "Cannot create unsafe value of type: " . gettype($value);
+      $this->lastError = $this->logger->error("Cannot create unsafe value of type: " . gettype($value));
       return null;
     }
   }
@@ -290,7 +293,7 @@ abstract class SQL {
       } else if($haystack instanceof Select) {
         $values = $haystack->build($params);
       } else {
-        $this->lastError = "Unsupported in-expression value: " . get_class($condition);
+        $this->lastError = $this->logger->error("Unsupported in-expression value: " . get_class($condition));
         return false;
       }
 
@@ -322,7 +325,7 @@ abstract class SQL {
     } else if ($condition instanceof Exists) {
         return "EXISTS(" .$condition->getSubQuery()->build($params) . ")";
     } else {
-      $this->lastError = "Unsupported condition type: " . gettype($condition);
+      $this->lastError = $this->logger->error("Unsupported condition type: " . gettype($condition));
       return null;
     }
   }
@@ -345,7 +348,7 @@ abstract class SQL {
       $alias = $this->columnName($exp->getAlias());
       return "SUM($value) AS $alias";
     } else {
-      $this->lastError = "Unsupported expression type: " . get_class($exp);
+      $this->lastError = $this->logger->error("Unsupported expression type: " . get_class($exp));
       return null;
     }
   }
@@ -370,6 +373,7 @@ abstract class SQL {
     } else if ($type === "postgres") {
       $sql = new PostgreSQL($connectionData);
     } else {
+      Logger::instance()->error("Unknown database type: $type");
       return "Unknown database type";
     }
 

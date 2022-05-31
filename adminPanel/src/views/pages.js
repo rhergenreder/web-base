@@ -91,6 +91,12 @@ export default class PageOverview extends React.Component {
                             checked={route.active === 1}
                             onChange={(e) => this.changeActive(i, e)} />
                     </td>
+                    <td className={"text-center"}>
+                        <input
+                            type={"checkbox"}
+                            checked={route.exact === 1}
+                            onChange={(e) => this.changeExact(i, e)} />
+                    </td>
                     <td>
                         <ReactTooltip id={"delete-" + i} />
                         <Icon icon={"trash"} style={{color: "red", cursor: "pointer"}}
@@ -158,6 +164,12 @@ export default class PageOverview extends React.Component {
                                                   data-tip={"True, if the route is currently active."}
                                                   data-type={"info"} data-place={"bottom"}/>
                                         </th>
+                                        <th className={"text-center"}>
+                                            Exact&nbsp;
+                                            <Icon icon={"question-circle"} style={{"color": "#17a2b8"}}
+                                                  data-tip={"True, if the URL must match exactly."}
+                                                  data-type={"info"} data-place={"bottom"}/>
+                                        </th>
                                         <th/>
                                     </tr>
                                 </thead>
@@ -200,7 +212,8 @@ export default class PageOverview extends React.Component {
                 action: typeof route.action === 'object' ? route.action.value : route.action,
                 target: route.target,
                 extra: route.extra ?? "",
-                active: route.active === 1
+                active: route.active === 1,
+                exact: route.exact === 1,
             });
         }
 
@@ -235,7 +248,7 @@ export default class PageOverview extends React.Component {
 
     onAddRoute() {
         let routes = this.state.routes.slice();
-        routes.push({ request: "", action: "dynamic", target: "", extra: "", active: 1 });
+        routes.push({ request: "", action: "dynamic", target: "", extra: "", active: 1, exact: 1 });
         this.setState({ ...this.state, routes: routes });
     }
 
@@ -245,6 +258,10 @@ export default class PageOverview extends React.Component {
 
     changeActive(index, e) {
         this.changeRoute(index, "active", e.target.checked ? 1 : 0);
+    }
+
+    changeExact(index, e) {
+        this.changeRoute(index, "exact", e.target.checked ? 1 : 0);
     }
 
     changeRequest(index, e) {

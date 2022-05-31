@@ -30,7 +30,7 @@ class User extends ApiObject {
   public function __construct($configuration) {
     $this->configuration = $configuration;
     $this->reset();
-    $this->connectDb();
+    $this->connectDB();
 
     if (!is_cli()) {
       @session_start();
@@ -45,17 +45,20 @@ class User extends ApiObject {
     }
   }
 
-  private function connectDb() {
+  public function connectDB(): bool {
     $databaseConf = $this->configuration->getDatabase();
-    if($databaseConf) {
+    if ($databaseConf) {
       $this->sql = SQL::createConnection($databaseConf);
       if ($this->sql->isConnected()) {
         $settings = $this->configuration->getSettings();
         $settings->loadFromDatabase($this);
+        return true;
       }
     } else {
       $this->sql = null;
     }
+
+    return false;
   }
 
   public function getId(): int { return $this->uid; }

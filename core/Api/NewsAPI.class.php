@@ -101,7 +101,7 @@ namespace Api\News {
         $this->result["newsId"] = $sql->getLastInsertId();
       }
 
-      return true;
+      return $this->success;
     }
   }
 

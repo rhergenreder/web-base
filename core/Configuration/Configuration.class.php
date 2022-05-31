@@ -31,12 +31,12 @@ class Configuration {
     return $this->settings;
   }
 
-  public function create(string $className, $data) {
+  public static function create(string $className, $data) {
     $path = getClassPath("\\Configuration\\$className");
 
     if ($data) {
       if (is_string($data)) {
-        $key = addslashes($data);
+        $key = var_export($data, true);
         $code = intendCode(
           "<?php
 
@@ -45,23 +45,23 @@ class Configuration {
           class $className extends KeyData {
           
             public function __construct() {
-              parent::__construct('$key');
+              parent::__construct($key);
             }
             
           }", false
         );
       } else if ($data instanceof ConnectionData) {
         $superClass = get_class($data);
-        $host = addslashes($data->getHost());
-        $port = $data->getPort();
-        $login = addslashes($data->getLogin());
-        $password = addslashes($data->getPassword());
+        $host = var_export($data->getHost(), true);
+        $port = var_export($data->getPort(), true);
+        $login = var_export($data->getLogin(), true);
+        $password = var_export($data->getPassword(), true);
 
         $properties = "";
         foreach ($data->getProperties() as $key => $val) {
-          $key = addslashes($key);
-          $val = is_string($val) ? "'" . addslashes($val) . "'" : $val;
-          $properties .= "\n\$this->setProperty('$key', $val);";
+          $key = var_export($key, true);
+          $val = var_export($val, true);
+          $properties .= "\n\$this->setProperty($key, $val);";
         }
 
         $code = intendCode(
@@ -72,7 +72,7 @@ class Configuration {
           class $className extends \\$superClass {
 
             public function __construct() {
-              parent::__construct('$host', $port, '$login', '$password');$properties
+              parent::__construct($host, $port, $login, $password);$properties
             }
           }", false
         );
@@ -93,5 +93,9 @@ class Configuration {
     }
 
     return true;
+  }
+
+  public function setDatabase(ConnectionData $connectionData) {
+    $this->database = $connectionData;
   }
 }

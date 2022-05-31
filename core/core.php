@@ -5,7 +5,7 @@ if (is_file($autoLoad)) {
   require_once $autoLoad;
 }
 
-define("WEBBASE_VERSION", "1.4.5");
+define("WEBBASE_VERSION", "1.5.0");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {
@@ -213,6 +213,15 @@ function getClassPath($class, string $suffix = ".class"): string {
   }
 
   return "core/$path$suffix.php";
+}
+
+function getClassName($class, bool $short = true): string {
+  $reflection = new \ReflectionClass($class);
+  if ($short) {
+    return $reflection->getShortName();
+  } else {
+    return $reflection->getName();
+  }
 }
 
 function createError($msg) {

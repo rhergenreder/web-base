@@ -2,13 +2,14 @@
 
 namespace Api;
 
-use Api\Parameter\Parameter;
+use Driver\Logger\Logger;
 use Objects\User;
 use PhpMqtt\Client\MqttClient;
 
 abstract class Request {
 
   protected User $user;
+  protected Logger $logger;
   protected array $params;
   protected string $lastError;
   protected array $result;
@@ -26,6 +27,7 @@ abstract class Request {
 
   public function __construct(User $user, bool $externalCall = false, array $params = array()) {
     $this->user = $user;
+    $this->logger = new Logger($this->getAPIName(), $this->user->getSQL());
     $this->defaultParams = $params;
 
     $this->success = false;
@@ -39,6 +41,19 @@ abstract class Request {
     $this->allowedMethods = array("GET", "POST");
     $this->lastError = "";
     $this->csrfTokenRequired = true;
+  }
+
+  public function getAPIName(): string {
+    if (get_class($this) === Request::class) {
+      return "API";
+    }
+
+    $reflection = new \ReflectionClass($this);
+    if ($reflection->getParentClass()->isAbstract() && $reflection->getParentClass()->isSubclassOf(Request::class)) {
+      return $reflection->getParentClass()->getShortName() . "/" . $reflection->getShortName();
+    } else {
+      return $reflection->getShortName();
+    }
   }
 
   protected function forbidMethod($method) {
@@ -225,6 +240,7 @@ abstract class Request {
       return false;
     }
 
+    $this->success = true;
     $success = $this->_execute();
     if ($this->success !== $success) {
       // _execute returns a different value then it set for $this->success

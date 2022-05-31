@@ -67,7 +67,7 @@ class PostgreSQL extends SQL {
 
     $this->connection = @pg_connect(implode(" ", $connectionString), PGSQL_CONNECT_FORCE_NEW);
     if (!$this->connection) {
-      $this->lastError = "Failed to connect to Database";
+      $this->lastError = $this->logger->severe("Failed to connect to Database");
       $this->connection = NULL;
       return false;
     }
@@ -170,7 +170,7 @@ class PostgreSQL extends SQL {
           return " ON CONFLICT ($conflictingColumns) DO UPDATE SET $updateValues";
         } else {
           $strategyClass = get_class($strategy);
-          $this->lastError = "ON DUPLICATE Strategy $strategyClass is not supported yet.";
+          $this->lastError = $this->logger->error("ON DUPLICATE Strategy $strategyClass is not supported yet.");
           return null;
         }
       } else {
@@ -233,7 +233,7 @@ class PostgreSQL extends SQL {
     } else if($column instanceof JsonColumn) {
       return "JSON";
     } else {
-      $this->lastError = "Unsupported Column Type: " . get_class($column);
+      $this->lastError = $this->logger->error("Unsupported Column Type: " . get_class($column));
       return NULL;
     }
   }
@@ -317,8 +317,7 @@ class PostgreSQL extends SQL {
     if ($col instanceof KeyWord) {
       return $col->getValue();
     } elseif(is_array($col)) {
-      $columns = array();
-      foreach($col as $c) $columns[] = $this->columnName($c);
+      $columns = array_map(function ($c) { return $this->columnName($c); }, $col);
       return implode(",", $columns);
     } else {
       if (($index = strrpos($col, ".")) !== FALSE) {

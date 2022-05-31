@@ -16,6 +16,7 @@ namespace Documents {
 
 namespace Documents\Install {
 
+  use Configuration\Configuration;
   use Configuration\CreateDatabase;
   use Driver\SQL\Query\Commit;
   use Driver\SQL\Query\RollBack;
@@ -233,7 +234,7 @@ namespace Documents\Install {
           $username = posix_getpwuid($userId)['name'];
           $failedRequirements[] = sprintf("<b>%s</b> is not owned by current user: $username ($userId). " .
               "Try running <b>chown -R $userId %s</b> or give the required directories write permissions: " .
-              "<b>core/Configuration</b>, <b>core/TemplateCache</b>, <b>core/External</b>",
+              "<b>core/Configuration</b>, <b>core/Cache</b>, <b>core/External</b>",
             WEBROOT, WEBROOT);
           $success = false;
         }
@@ -363,10 +364,23 @@ namespace Documents\Install {
             }
           }
 
-          $config = $this->getDocument()->getUser()->getConfiguration();
-          if (!$config->create("Database", $connectionData)) {
+          $user = $this->getDocument()->getUser();
+          $config = $user->getConfiguration();
+          if (Configuration::create("Database", $connectionData) === false) {
             $success = false;
-            $msg = "Unable to write file";
+            $msg = "Unable to write database file";
+          } else {
+            $config->setDatabase($connectionData);
+            if (!$user->connectDB()) {
+              $success = false;
+              $msg = "Unable to verify database connection after installation";
+            } else {
+              $req = new \Api\Routes\GenerateCache($user);
+              if (!$req->execute()) {
+                $success = false;
+                $msg = "Unable to write route file: " . $req->getLastError();
+              }
+            }
           }
 
           $sql->close();

@@ -525,11 +525,13 @@ namespace Api\User {
         }
 
         if (!$this->success) {
+          $this->logger->error("Could not deliver email to=$email type=invite reason=" . $this->lastError);
           $this->lastError = "The invitation was created but the confirmation email could not be sent. " .
-            "Please contact the server administration. Reason: " . $this->lastError;
+            "Please contact the server administration. This issue has been automatically logged. Reason: " . $this->lastError;
         }
       }
 
+      $this->logger->info("Created new user with uid=$id");
       return $this->success;
     }
   }
@@ -844,17 +846,20 @@ namespace Api\User {
           $this->success = $request->execute(array(
             "to" => $email,
             "subject" => "[$siteName] E-Mail Confirmation",
-            "body" => $messageBody
+            "body" => $messageBody,
+            "async" => true,
           ));
           $this->lastError = $request->getLastError();
         }
       }
 
       if (!$this->success) {
+        $this->logger->error("Could not deliver email to=$email type=register reason=" . $this->lastError);
         $this->lastError = "Your account was registered but the confirmation email could not be sent. " .
-          "Please contact the server administration. Reason: " . $this->lastError;
+          "Please contact the server administration. This issue has been automatically logged. Reason: " . $this->lastError;
       }
 
+      $this->logger->info("Registered new user with uid=" . $this->userId);
       return $this->success;
     }
   }
@@ -1124,6 +1129,7 @@ namespace Api\User {
             "gpgFingerprint" => $gpgFingerprint
           ));
           $this->lastError = $request->getLastError();
+          $this->logger->info("Requested password reset for user uid=" . $user["uid"] . " by ip_address=" . $_SERVER["REMOTE_ADDR"]);
         }
       }
 
@@ -1304,6 +1310,7 @@ namespace Api\User {
       } else if (!$this->updateUser($result["user"]["uid"], $password)) {
         return false;
       } else {
+        $this->logger->info("Issued password reset for user uid=" . $result["user"]["uid"]);
         $this->invalidateToken($token);
         return true;
       }
@@ -1475,11 +1482,12 @@ namespace Api\User {
       $settings = $this->user->getConfiguration()->getSettings();
       $baseUrl = htmlspecialchars($settings->getBaseUrl());
       $token = htmlspecialchars(urlencode($token));
+      $url = "$baseUrl/settings?confirmGPG&token=$token";
       $mailBody = "Hello $name,<br><br>" .
         "you imported a GPG public key for end-to-end encrypted mail communication. " .
         "To confirm the key and verify, you own the corresponding private key, please click on the following link. " .
         "The link is active for one hour.<br><br>" .
-        "<a href='$baseUrl/confirmGPG?token=$token'>$baseUrl/settings?confirmGPG&token=$token</a><br>
+        "<a href='$url'>$url</a><br>
         Best Regards<br>
         ilum:e Security Lab";
 

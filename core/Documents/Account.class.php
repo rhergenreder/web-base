@@ -8,8 +8,8 @@ use Objects\User;
 
 
 class Account extends TemplateDocument {
-  public function __construct(User $user, ?string $template) {
-    parent::__construct($user, $template);
+  public function __construct(User $user, string $templateName) {
+    parent::__construct($user, $templateName);
     $this->enableCSP();
   }
 

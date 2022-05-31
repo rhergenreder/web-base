@@ -48,7 +48,7 @@ abstract class Document {
     $this->cspWhitelist[] = $this->domain . $path;
   }
 
-  public function getCode(): string {
+  public function getCode(array $params = []): string {
     if ($this->databaseRequired) {
       $sql = $this->user->getSQL();
       if (is_null($sql)) {

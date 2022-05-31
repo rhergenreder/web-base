@@ -59,7 +59,7 @@ class MySQL extends SQL {
     );
 
     if (mysqli_connect_errno()) {
-      $this->lastError = "Failed to connect to MySQL: " . mysqli_connect_error();
+      $this->lastError = $this->logger->severe("Failed to connect to MySQL: " . mysqli_connect_error());
       $this->connection = NULL;
       return false;
     }
@@ -164,20 +164,20 @@ class MySQL extends SQL {
                 }
                 $success = true;
               } else {
-                $this->lastError = "PreparedStatement::get_result failed: $stmt->error ($stmt->errno)";
+                $this->lastError = $this->logger->error("PreparedStatement::get_result failed: $stmt->error ($stmt->errno)");
               }
             } else {
               $success = true;
             }
           } else {
-            $this->lastError = "PreparedStatement::execute failed: $stmt->error ($stmt->errno)";
+            $this->lastError = $this->logger->error("PreparedStatement::execute failed: $stmt->error ($stmt->errno)");
           }
         } else {
-          $this->lastError = "PreparedStatement::prepare failed: $stmt->error ($stmt->errno)";
+          $this->lastError = $this->logger->error("PreparedStatement::prepare failed: $stmt->error ($stmt->errno)");
         }
       }
     } catch (\mysqli_sql_exception $exception) {
-      $this->lastError = "MySQL::execute failed: $stmt->error ($stmt->errno)";
+      $this->lastError = $this->logger->error("MySQL::execute failed: $stmt->error ($stmt->errno)");
     } finally {
       if ($res !== null && !is_bool($res)) {
         $res->close();
@@ -214,7 +214,7 @@ class MySQL extends SQL {
       return " ON DUPLICATE KEY UPDATE " . implode(",", $updateValues);
     } else {
       $strategyClass = get_class($strategy);
-      $this->lastError = "ON DUPLICATE Strategy $strategyClass is not supported yet.";
+      $this->lastError = $this->logger->error("ON DUPLICATE Strategy $strategyClass is not supported yet.");
       return null;
     }
   }
@@ -243,7 +243,7 @@ class MySQL extends SQL {
     } else if($column instanceof JsonColumn) {
       return "LONGTEXT"; # some maria db setups don't allow JSON here…
     } else {
-      $this->lastError = "Unsupported Column Type: " . get_class($column);
+      $this->lastError = $this->logger->error("Unsupported Column Type: " . get_class($column));
       return NULL;
     }
   }
@@ -251,17 +251,17 @@ class MySQL extends SQL {
   public function getColumnDefinition(Column $column): ?string {
     $columnName = $this->columnName($column->getName());
     $defaultValue = $column->getDefaultValue();
-    $type = $this->getColumnType($column);
-    if (!$type) {
-      if ($column instanceof EnumColumn) {
-        $values = array();
-        foreach($column->getValues() as $value) {
-          $values[] = $this->getValueDefinition($value);
-        }
+    if ($column instanceof EnumColumn) { // check this, shouldn't it be in getColumnType?
+      $values = array();
+      foreach($column->getValues() as $value) {
+        $values[] = $this->getValueDefinition($value);
+      }
 
-        $values = implode(",", $values);
-        $type = "ENUM($values)";
-      } else {
+      $values = implode(",", $values);
+      $type = "ENUM($values)";
+    } else {
+      $type = $this->getColumnType($column);
+      if (!$type) {
         return null;
       }
     }
@@ -393,7 +393,7 @@ class MySQL extends SQL {
       if ($param instanceof Column) {
         $paramDefs[] = $this->getParameterDefinition($param);
       } else {
-        $this->setLastError("PROCEDURE parameter type " . gettype($returns) . "  is not implemented yet");
+        $this->lastError = $this->logger->error("PROCEDURE parameter type " . gettype($returns) . "  is not implemented yet");
         return null;
       }
     }
@@ -402,7 +402,7 @@ class MySQL extends SQL {
       if ($returns instanceof Column) {
         $paramDefs[] = $this->getParameterDefinition($returns, true);
       } else if (!($returns instanceof Trigger)) { // mysql does not need to return triggers here
-        $this->setLastError("PROCEDURE RETURN type " . gettype($returns) . "  is not implemented yet");
+        $this->lastError = $this->logger->error("PROCEDURE RETURN type " . gettype($returns) . "  is not implemented yet");
         return null;
       }
     }

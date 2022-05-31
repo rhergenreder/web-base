@@ -103,7 +103,7 @@ function handleDatabase(array $argv) {
     $user = getUser() or die();
     $sql = $user->getSQL();
     applyPatch($sql, $class);
-  } else if ($action === "export" || $action === "import") {
+  } else if (in_array($action, ["export", "import", "shell"])) {
 
     // database config
     $config = getDatabaseConfig();
@@ -147,6 +147,9 @@ function handleDatabase(array $argv) {
       } else if ($action === "import") {
         $command_bin = "mysql";
         $descriptorSpec[0] = ["pipe", "r"];
+      } else if ($action === "shell") {
+        $command_bin = "mysql";
+        $descriptorSpec = [];
       }
     } else if ($dbType === "postgres") {
 
@@ -161,6 +164,9 @@ function handleDatabase(array $argv) {
       } else if ($action === "import") {
         $command_bin = "/usr/bin/psql";
         $descriptorSpec[0] = ["pipe", "r"];
+      } else if ($action === "shell") {
+        $command_bin = "/usr/bin/psql";
+        $descriptorSpec = [];
       }
 
     } else {
@@ -173,7 +179,7 @@ function handleDatabase(array $argv) {
 
     $command = array_merge([$command_bin], $command_args);
     if ($config->getProperty("isDocker", false)) {
-      $command =  array_merge(["docker", "exec", "-it", "db"], $command);
+      $command = array_merge(["docker", "exec", "-it", "db"], $command);
     }
 
     $process = proc_open($command, $descriptorSpec, $pipes, null, $env);
@@ -227,7 +233,7 @@ function handleDatabase(array $argv) {
 
     printLine("Done!");
   } else {
-    _exit("Usage: cli.php db <migrate|import|export> [options...]");
+    _exit("Usage: cli.php db <migrate|import|export|shell> [options...]");
   }
 }
 
@@ -537,7 +543,7 @@ function onTest($argv) {
   $requestedTests = array_filter(array_slice($argv, 2), function ($t) {
     return !startsWith($t, "-");
   });
-  $verbose = in_array("-v", $requestedTests);
+  $verbose = in_array("-v", $argv);
 
   foreach ($files as $file) {
     include_once $file;

@@ -2,24 +2,20 @@
 
 namespace Api {
 
+  use Api\Routes\GenerateCache;
   use Driver\SQL\Condition\Compare;
+  use Objects\User;
 
   abstract class RoutesAPI extends Request {
 
     const ACTIONS = array("redirect_temporary", "redirect_permanently", "static", "dynamic");
+    const ROUTER_CACHE_CLASS = "\\Cache\\RouterCache";
 
-    protected function formatRegex(string $input, bool $append) : string {
-      $start = startsWith($input, "^");
-      $end = endsWith($input, "$");
-      if ($append) {
-        if (!$start) $input = "^$input";
-        if (!$end) $input = "$input$";
-      } else {
-        if ($start) $input = substr($input, 1);
-        if ($end) $input = substr($input, 0, strlen($input)-1);
-      }
+    protected string $routerCachePath;
 
-      return $input;
+    public function __construct(User $user, bool $externalCall, array $params) {
+      parent::__construct($user, $externalCall, $params);
+      $this->routerCachePath = getClassPath(self::ROUTER_CACHE_CLASS);
     }
 
     protected function routeExists($uid): bool {
@@ -52,6 +48,14 @@ namespace Api {
         ->execute();
 
       $this->lastError = $sql->getLastError();
+      $this->success = $this->success && $this->regenerateCache();
+      return $this->success;
+    }
+
+    protected function regenerateCache(): bool {
+      $req = new GenerateCache($this->user);
+      $this->success = $req->execute();
+      $this->lastError = $req->getLastError();
       return $this->success;
     }
   }
@@ -62,94 +66,45 @@ namespace Api\Routes {
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
   use Api\RoutesAPI;
-  use Driver\SQL\Column\Column;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondBool;
-  use Driver\SQL\Condition\CondRegex;
+  use Objects\Router;
   use Objects\User;
 
   class Fetch extends RoutesAPI {
 
-  public function __construct($user, $externalCall = false) {
-    parent::__construct($user, $externalCall, array());
-  }
-
-  public function _execute(): bool {
-    $sql = $this->user->getSQL();
-
-    $res = $sql
-      ->select("uid", "request", "action", "target", "extra", "active")
-      ->from("Route")
-      ->orderBy("uid")
-      ->ascending()
-      ->execute();
-
-    $this->lastError = $sql->getLastError();
-    $this->success = ($res !== FALSE);
-
-    if ($this->success) {
-      $routes = array();
-      foreach($res as $row) {
-        $routes[] = array(
-          "uid"     => intval($row["uid"]),
-          "request" => $this->formatRegex($row["request"], false),
-          "action"  => $row["action"],
-          "target"  => $row["target"],
-          "extra"   => $row["extra"] ?? "",
-          "active"  => intval($sql->parseBool($row["active"])),
-        );
-      }
-
-      $this->result["routes"] = $routes;
-    }
-
-    return $this->success;
-  }
-}
-
-  class Find extends RoutesAPI {
-
     public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
-        'request' => new StringType('request', 128, true, '/')
-      ));
-
-      $this->isPublic = false;
+      parent::__construct($user, $externalCall, array());
     }
 
     public function _execute(): bool {
-      $request = $this->getParam('request');
-      if (!startsWith($request, '/')) {
-        $request = "/$request";
-      }
-
       $sql = $this->user->getSQL();
 
       $res = $sql
-        ->select("uid", "request", "action", "target", "extra")
+        ->select("uid", "request", "action", "target", "extra", "active", "exact")
         ->from("Route")
-        ->where(new CondBool("active"))
-        ->where(new CondRegex($request, new Column("request")))
-        ->orderBy("uid")->ascending()
-        ->limit(1)
+        ->orderBy("uid")
+        ->ascending()
         ->execute();
 
       $this->lastError = $sql->getLastError();
       $this->success = ($res !== FALSE);
 
       if ($this->success) {
-        if (!empty($res)) {
-          $row = $res[0];
-          $this->result["route"] = array(
-            "uid"     => intval($row["uid"]),
+        $routes = array();
+        foreach ($res as $row) {
+          $routes[] = array(
+            "uid" => intval($row["uid"]),
             "request" => $row["request"],
-            "action"  => $row["action"],
-            "target"  => $row["target"],
-            "extra"   => $row["extra"]
+            "action" => $row["action"],
+            "target" => $row["target"],
+            "extra" => $row["extra"] ?? "",
+            "active" => intval($sql->parseBool($row["active"])),
+            "exact" => intval($sql->parseBool($row["exact"])),
           );
-        } else {
-          $this->result["route"] = NULL;
         }
+
+        $this->result["routes"] = $routes;
       }
 
       return $this->success;
@@ -162,7 +117,7 @@ namespace Api\Routes {
 
     public function __construct($user, $externalCall = false) {
       parent::__construct($user, $externalCall, array(
-        'routes' => new Parameter('routes',Parameter::TYPE_ARRAY, false)
+        'routes' => new Parameter('routes', Parameter::TYPE_ARRAY, false)
       ));
     }
 
@@ -179,15 +134,16 @@ namespace Api\Routes {
 
       // INSERT new routes
       if ($this->success) {
-        $stmt = $sql->insert("Route", array("request", "action", "target", "extra", "active"));
+        $stmt = $sql->insert("Route", array("request", "action", "target", "extra", "active", "exact"));
 
-        foreach($this->routes as $route) {
-          $stmt->addRow($route["request"], $route["action"], $route["target"], $route["extra"], $route["active"]);
+        foreach ($this->routes as $route) {
+          $stmt->addRow($route["request"], $route["action"], $route["target"], $route["extra"], $route["active"], $route["exact"]);
         }
         $this->success = ($stmt->execute() !== FALSE);
         $this->lastError = $sql->getLastError();
       }
 
+      $this->success = $this->success && $this->regenerateCache();
       return $this->success;
     }
 
@@ -195,25 +151,37 @@ namespace Api\Routes {
 
       $this->routes = array();
       $keys = array(
-        "request" => Parameter::TYPE_STRING,
+        "request" => [Parameter::TYPE_STRING, Parameter::TYPE_INT],
         "action" => Parameter::TYPE_STRING,
         "target" => Parameter::TYPE_STRING,
-        "extra"  => Parameter::TYPE_STRING,
-        "active" => Parameter::TYPE_BOOLEAN
+        "extra" => Parameter::TYPE_STRING,
+        "active" => Parameter::TYPE_BOOLEAN,
+        "exact" => Parameter::TYPE_BOOLEAN,
       );
 
-      foreach($this->getParam("routes") as $index => $route) {
-        foreach($keys as $key => $expectedType) {
+      foreach ($this->getParam("routes") as $index => $route) {
+        foreach ($keys as $key => $expectedType) {
           if (!array_key_exists($key, $route)) {
             return $this->createError("Route $index missing key: $key");
           }
 
           $value = $route[$key];
           $type = Parameter::parseType($value);
-          if ($type !== $expectedType) {
-            $expectedTypeName = Parameter::names[$expectedType];
+          if (!is_array($expectedType)) {
+            $expectedType = [$expectedType];
+          }
+
+          if (!in_array($type, $expectedType)) {
+            if (count($expectedType) > 0) {
+              $expectedTypeName = "expected: " . Parameter::names[$expectedType];
+            } else {
+              $expectedTypeName = "expected one of: " . implode(",", array_map(
+                function ($type) {
+                  return Parameter::names[$type];
+                }, $expectedType));
+            }
             $gotTypeName = Parameter::names[$type];
-            return $this->createError("Route $index has invalid value for key: $key, expected: $expectedTypeName, got: $gotTypeName");
+            return $this->createError("Route $index has invalid value for key: $key, $expectedTypeName, got: $gotTypeName");
           }
         }
 
@@ -222,16 +190,14 @@ namespace Api\Routes {
           return $this->createError("Invalid action: $action");
         }
 
-        if(empty($route["request"])) {
+        if (empty($route["request"])) {
           return $this->createError("Request cannot be empty.");
         }
 
-        if(empty($route["target"])) {
+        if (empty($route["target"])) {
           return $this->createError("Target cannot be empty.");
         }
 
-        // add start- and end pattern for database queries
-        $route["request"] = $this->formatRegex($route["request"], true);
         $this->routes[] = $route;
       }
 
@@ -246,14 +212,14 @@ namespace Api\Routes {
         "request" => new StringType("request", 128),
         "action" => new StringType("action"),
         "target" => new StringType("target", 128),
-        "extra"  => new StringType("extra", 64, true, ""),
+        "extra" => new StringType("extra", 64, true, ""),
       ));
       $this->isPublic = false;
     }
 
     public function _execute(): bool {
 
-      $request = $this->formatRegex($this->getParam("request"), true);
+      $request = $this->getParam("request");
       $action = $this->getParam("action");
       $target = $this->getParam("target");
       $extra = $this->getParam("extra");
@@ -268,6 +234,7 @@ namespace Api\Routes {
         ->execute();
 
       $this->lastError = $sql->getLastError();
+      $this->success = $this->success && $this->regenerateCache();
       return $this->success;
     }
   }
@@ -279,7 +246,7 @@ namespace Api\Routes {
         "request" => new StringType("request", 128),
         "action" => new StringType("action"),
         "target" => new StringType("target", 128),
-        "extra"  => new StringType("extra", 64, true, ""),
+        "extra" => new StringType("extra", 64, true, ""),
       ));
       $this->isPublic = false;
     }
@@ -291,7 +258,7 @@ namespace Api\Routes {
         return false;
       }
 
-      $request = $this->formatRegex($this->getParam("request"), true);
+      $request = $this->getParam("request");
       $action = $this->getParam("action");
       $target = $this->getParam("target");
       $extra = $this->getParam("extra");
@@ -309,6 +276,7 @@ namespace Api\Routes {
         ->execute();
 
       $this->lastError = $sql->getLastError();
+      $this->success = $this->success && $this->regenerateCache();
       return $this->success;
     }
   }
@@ -334,6 +302,7 @@ namespace Api\Routes {
         ->execute();
 
       $this->lastError = $sql->getLastError();
+      $this->success = $this->success && $this->regenerateCache();
       return $this->success;
     }
   }
@@ -347,7 +316,6 @@ namespace Api\Routes {
     }
 
     public function _execute(): bool {
-
       $uid = $this->getParam("uid");
       return $this->toggleRoute($uid, true);
     }
@@ -362,9 +330,70 @@ namespace Api\Routes {
     }
 
     public function _execute(): bool {
-
       $uid = $this->getParam("uid");
       return $this->toggleRoute($uid, false);
+    }
+  }
+
+  class GenerateCache extends RoutesAPI {
+
+    private ?Router $router;
+
+    public function __construct(User $user, bool $externalCall = false) {
+      parent::__construct($user, $externalCall, []);
+      $this->isPublic = false;
+      $this->router = null;
+    }
+
+    protected function _execute(): bool {
+      $sql = $this->user->getSQL();
+      $res = $sql
+        ->select("uid", "request", "action", "target", "extra", "exact")
+        ->from("Route")
+        ->where(new CondBool("active"))
+        ->orderBy("uid")->ascending()
+        ->execute();
+
+      $this->success = $res !== false;
+      $this->lastError = $sql->getLastError();
+      if (!$this->success) {
+        return false;
+      }
+
+      $this->router = new Router($this->user);
+      foreach ($res as $row) {
+        $request = $row["request"];
+        $target = $row["target"];
+        $exact = $sql->parseBool($row["exact"]);
+        switch ($row["action"]) {
+          case "redirect_temporary":
+            $this->router->addRoute(new Router\RedirectRoute($request, $exact, $target, 307));
+            break;
+          case "redirect_permanently":
+            $this->router->addRoute(new Router\RedirectRoute($request, $exact, $target, 308));
+            break;
+          case "static":
+            $this->router->addRoute(new Router\StaticFileRoute($request, $exact, $target));
+            break;
+          case "dynamic":
+            $extra = json_decode($row["extra"]) ?? [];
+            $this->router->addRoute(new Router\DocumentRoute($request, $exact, $target, ...$extra));
+            break;
+          default:
+            break;
+        }
+      }
+
+      $this->success = $this->router->writeCache($this->routerCachePath);
+      if (!$this->success) {
+        return $this->createError("Error saving router cache file: " . $this->routerCachePath);
+      }
+
+      return $this->success;
+    }
+
+    public function getRouter(): ?Router {
+      return $this->router;
     }
   }
 }

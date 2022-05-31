@@ -46,7 +46,7 @@ namespace Api\Template {
       }
 
       $templateDir = WEBROOT . "/core/Templates/";
-      $templateCache = WEBROOT . "/core/TemplateCache/";
+      $templateCache = WEBROOT . "/core/Cache/Templates/";
       $path = realpath($templateDir . $templateFile);
       if (!startsWith($path, realpath($templateDir))) {
         return $this->createError("Template file not in template directory");

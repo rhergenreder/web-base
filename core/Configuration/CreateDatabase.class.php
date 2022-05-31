@@ -151,18 +151,19 @@ class CreateDatabase extends DatabaseScript {
       ->addString("target", 128)
       ->addString("extra", 64, true)
       ->addBool("active", true)
+      ->addBool("exact", true)
       ->primaryKey("uid")
       ->unique("request");
 
-    $queries[] = $sql->insert("Route", array("request", "action", "target", "extra"))
-      ->addRow("^/admin(/.*)?$", "dynamic", "\\Documents\\Admin", NULL)
-      ->addRow("^/register/?$", "dynamic", "\\Documents\\Account", "account/register.twig")
-      ->addRow("^/confirmEmail/?$", "dynamic", "\\Documents\\Account", "account/confirm_email.twig")
-      ->addRow("^/acceptInvite/?$", "dynamic", "\\Documents\\Account", "account/accept_invite.twig")
-      ->addRow("^/resetPassword/?$", "dynamic", "\\Documents\\Account", "account/reset_password.twig")
-      ->addRow("^/login/?$", "dynamic", "\\Documents\\Account", "account/login.twig")
-      ->addRow("^/resendConfirmEmail/?$", "dynamic", "\\Documents\\Account", "account/resend_confirm_email.twig")
-      ->addRow("^/$", "static", "/static/welcome.html", NULL);
+    $queries[] = $sql->insert("Route", ["request", "action", "target", "extra", "exact"])
+      ->addRow("/admin", "dynamic", "\\Documents\\Admin", NULL, false)
+      ->addRow("/register", "dynamic", "\\Documents\\Account", json_encode(["account/register.twig"]), true)
+      ->addRow("/confirmEmail", "dynamic", "\\Documents\\Account", json_encode(["account/confirm_email.twig"]), true)
+      ->addRow("/acceptInvite", "dynamic", "\\Documents\\Account", json_encode(["account/accept_invite.twig"]), true)
+      ->addRow("/resetPassword", "dynamic", "\\Documents\\Account", json_encode(["account/reset_password.twig"]), true)
+      ->addRow("/login", "dynamic", "\\Documents\\Account", json_encode(["account/login.twig"]), true)
+      ->addRow("/resendConfirmEmail", "dynamic", "\\Documents\\Account", json_encode(["account/resend_confirm_email.twig"]), true)
+      ->addRow("/", "static", "/static/welcome.html", NULL, true);
 
     $queries[] = $sql->createTable("Settings")
       ->addString("name", 32)

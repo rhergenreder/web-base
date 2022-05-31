@@ -155,6 +155,10 @@ abstract class TestRequest extends Request {
     __new_die_impl($data);
     return true;
   }
+
+  protected function _execute(): bool {
+    return true;
+  }
 }
 
 class RequestAllMethods extends TestRequest {

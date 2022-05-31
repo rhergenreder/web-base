@@ -1,0 +1,32 @@
+{% if var is null %}
+    {% set site = {'title': "#{status_code} - #{status_description}" } %}
+{% else %}
+    {% set site = site|merge({'title': "#{status_code} - #{status_description}"}) %}
+{% endif %}
+
+
+{% extends "base.twig" %}
+
+{% block head %}
+    <link rel="stylesheet" href="/css/bootstrap.min.css" type="text/css">
+    <script type="text/javascript" src="/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="/css/fontawesome.min.css" type="text/css">
+{% endblock %}
+
+{% block body %}
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-lg-9 col-12 mx-auto">
+                <div class="jumbotron">
+                    <h1>{{ site.title }}!</h1>
+                    <hr class="my-4" />
+                    <p>
+                        Something went wrong or the site you wanted to visit does not exist anymore. <br />
+                        You can either <a href="javascript:history.back()">Go Back to previous page</a>
+                        or try to <a href="javascript:document.location.reload()">reload the page</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

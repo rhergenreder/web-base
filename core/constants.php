@@ -54,6 +54,7 @@ const HTTP_STATUS_DESCRIPTIONS = [
   413 => 'Request Entity Too Large',
   414 => 'Request-URI Too Large',
   415 => 'Unsupported Media Type',
+  418 => 'I\'m a teapot',
   500 => 'Internal Server Error',
   501 => 'Not Implemented',
   502 => 'Bad Gateway',

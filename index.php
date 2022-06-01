@@ -60,8 +60,8 @@ if ($installation) {
   }
 
   if ($router !== null) {
-    if (!isset($_GET["site"]) && isset($_GET["error"]) &&
-      is_string($_GET["error"]) && preg_match("^\d+$", $_GET["error"])) {
+    if ((!isset($_GET["site"]) || $_GET["site"] === "/") && isset($_GET["error"]) &&
+      is_string($_GET["error"]) && preg_match("/^\d+$/", $_GET["error"])) {
       $response = $router->returnStatusCode(intval($_GET["error"]));
     } else {
       $response = $router->run($requestedUri);

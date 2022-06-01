@@ -68,7 +68,10 @@ namespace Api\Routes {
   use Api\RoutesAPI;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondBool;
-  use Objects\Router;
+  use Objects\Router\DocumentRoute;
+  use Objects\Router\RedirectRoute;
+  use Objects\Router\Router;
+  use Objects\Router\StaticFileRoute;
   use Objects\User;
 
   class Fetch extends RoutesAPI {
@@ -367,17 +370,17 @@ namespace Api\Routes {
         $exact = $sql->parseBool($row["exact"]);
         switch ($row["action"]) {
           case "redirect_temporary":
-            $this->router->addRoute(new Router\RedirectRoute($request, $exact, $target, 307));
+            $this->router->addRoute(new RedirectRoute($request, $exact, $target, 307));
             break;
           case "redirect_permanently":
-            $this->router->addRoute(new Router\RedirectRoute($request, $exact, $target, 308));
+            $this->router->addRoute(new RedirectRoute($request, $exact, $target, 308));
             break;
           case "static":
-            $this->router->addRoute(new Router\StaticFileRoute($request, $exact, $target));
+            $this->router->addRoute(new StaticFileRoute($request, $exact, $target));
             break;
           case "dynamic":
             $extra = json_decode($row["extra"]) ?? [];
-            $this->router->addRoute(new Router\DocumentRoute($request, $exact, $target, ...$extra));
+            $this->router->addRoute(new DocumentRoute($request, $exact, $target, ...$extra));
             break;
           default:
             break;

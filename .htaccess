@@ -12,3 +12,8 @@ RewriteOptions AllowNoSlash
 RewriteRule ^((\.idea|\.git|src|test|core|docker|files)(/.*)?)$ /index.php?site=$1 [L,QSA]
 
 FallbackResource /index.php
+
+ErrorDocument 400 /index.php?error=400
+ErrorDocument 403 /index.php?error=403
+ErrorDocument 404 /index.php?error=404
+ErrorDocument 500 /index.php?error=500

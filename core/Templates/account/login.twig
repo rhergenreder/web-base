@@ -20,7 +20,10 @@
             </div>
             <input type="password" autocomplete='password' name='password' id='password' class="form-control" placeholder="Password">
         </div>
-        <div class="input-group mt-5 mb-4">
+        <div class="ml-2" style="line-height: 38px;">
+            <a href="/resetPassword">Forgot Password?</a>
+        </div>
+        <div class="input-group mt-3 mb-4">
             <button type="button" class="btn btn-primary" id='btnLogin'>Sign In</button>
             {% if site.registrationEnabled %}
                 <div class="ml-2" style="line-height: 38px;">Don't have an account yet? <a href="/register">Click here</a> to register.</div>

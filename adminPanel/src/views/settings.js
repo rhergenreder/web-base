@@ -3,11 +3,6 @@ import {Link} from "react-router-dom";
 import Alert from "../elements/alert";
 import {Collapse} from "react-collapse/lib/Collapse";
 import Icon from "../elements/icon";
-import { EditorState, ContentState, convertToRaw } from 'draft-js'
-import { Editor } from 'react-draft-wysiwyg'
-import draftToHtml from 'draftjs-to-html';
-import htmlToDraft from 'html-to-draftjs';
-import sanitizeHtml from 'sanitize-html'
 import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
 import ReactTooltip from "react-tooltip";
 
@@ -35,15 +30,6 @@ export default class Settings extends React.Component {
                 test_email: "",
                 unsavedMailSettings: false,
                 keys: ["mail_enabled", "mail_host", "mail_port", "mail_username", "mail_password", "mail_from"]
-            },
-            messages: {
-                alerts: [],
-                isOpen: true,
-                isSaving: false,
-                isResetting: false,
-                editor: EditorState.createEmpty(),
-                isEditing: null,
-                keys: ["message_confirm_email", "message_accept_invite", "message_reset_password"]
             },
             recaptcha: {
                 alerts: [],
@@ -77,7 +63,6 @@ export default class Settings extends React.Component {
         key = key.trim();
         return this.state.general.keys.includes(key)
             || this.state.mail.keys.includes(key)
-            || this.state.messages.keys.includes(key)
             || this.state.recaptcha.keys.includes(key)
             || this.hiddenKeys.includes(key);
     }
@@ -345,6 +330,7 @@ export default class Settings extends React.Component {
                         {this.state.mail.isSending ?
                             <span>Sending&nbsp;<Icon icon={"circle-notch"}/></span> : "Send Mail"}
                     </button>
+
                     <div className={"col-10"}>
                         {this.state.mail.unsavedMailSettings ?
                             <span className={"text-red"}>You need to save your mail settings first.</span> : null}
@@ -352,63 +338,6 @@ export default class Settings extends React.Component {
                 </div>
             </div>
         </>
-    }
-
-    getMessagesForm() {
-
-        const editor = <Editor
-            editorState={this.state.messages.editor}
-            onEditorStateChange={this.onEditorStateChange.bind(this)}
-        />;
-
-        let messageTemplates = {
-            "message_confirm_email": "Confirm E-Mail Message",
-            "message_accept_invite": "Accept Invitation Message",
-            "message_reset_password": "Reset Password Message",
-        };
-
-        let formGroups = [];
-        for (let key in messageTemplates) {
-            let title = messageTemplates[key];
-            if (this.state.messages.isEditing === key) {
-                formGroups.push(
-                    <div className={"form-group"} key={"group-" + key}>
-                        <label htmlFor={key}>
-                            { title }
-                            <ReactTooltip id={"tooltip-" + key} />
-                            <Icon icon={"times"} className={"ml-2 text-danger"} style={{cursor: "pointer"}}
-                                  onClick={() => this.closeEditor(false)} data-type={"error"}
-                                  data-tip={"Discard Changes"} data-place={"top"} data-effect={"solid"}
-                                  data-for={"tooltip-" + key}
-                            />
-                            <Icon icon={"check"} className={"ml-2 text-success"} style={{cursor: "pointer"}}
-                                  onClick={() => this.closeEditor(true)} data-type={"success"}
-                                  data-tip={"Save Changes"} data-place={"top"} data-effect={"solid"}
-                                  data-for={"tooltip-" + key}
-                            />
-                        </label>
-                        { editor }
-                    </div>
-                );
-            } else {
-                formGroups.push(
-                    <div className={"form-group"} key={"group-" + key}>
-                        <ReactTooltip id={"tooltip-" + key} />
-                        <label htmlFor={key}>
-                            { title }
-                            <Icon icon={"pencil-alt"} className={"ml-2"} style={{cursor: "pointer"}}
-                                  onClick={() => this.openEditor(key)} data-type={"info"}
-                                  data-tip={"Edit Template"} data-place={"top"} data-effect={"solid"}
-                                  data-for={"tooltip-" + key}
-                            />
-                        </label>
-                        <div className={"p-2 text-black"} style={{backgroundColor: "#d2d6de"}} dangerouslySetInnerHTML={{ __html: sanitizeHtml(this.state.settings[key] ?? "") }} />
-                    </div>
-                );
-            }
-        }
-
-        return formGroups;
     }
 
     getRecaptchaForm() {
@@ -520,7 +449,6 @@ export default class Settings extends React.Component {
         const categories = {
             "general": {color: "primary", icon: "cogs", title: "General Settings", content: this.createGeneralForm()},
             "mail": {color: "warning", icon: "envelope", title: "Mail Settings", content: this.createMailForm()},
-            "messages": {color: "info", icon: "copy", title: "Message Templates", content: this.getMessagesForm()},
             "recaptcha": {color: "danger", icon: "google", title: "Google reCaptcha", content: this.getRecaptchaForm()},
             "uncategorised": {color: "secondary", icon: "stream", title: "Uncategorised", content: this.getUncategorizedForm()},
         };
@@ -556,16 +484,6 @@ export default class Settings extends React.Component {
             <ReactTooltip />
         </>
     }
-
-    onEditorStateChange(editorState) {
-        this.setState({
-            ...this.state,
-            messages: {
-                ...this.state.messages,
-                editor: editorState
-            }
-        });
-    };
 
     onChangeValue(event) {
         const target = event.target;
@@ -620,8 +538,6 @@ export default class Settings extends React.Component {
 
                     if (category === "mail") {
                         categoryUpdated.unsavedMailSettings = false;
-                    } else if (category === "messages") {
-                        categoryUpdated.isEditing = null;
                     }
                 }
 
@@ -634,10 +550,6 @@ export default class Settings extends React.Component {
 
     onSave(category) {
         this.setState({...this.state, [category]: {...this.state[category], isSaving: true}});
-
-        if (category === "messages" && this.state.messages.isEditing) {
-            this.closeEditor(true, () => this.onSave(category));
-        }
 
         let values = {};
         if (category === "uncategorised") {
@@ -704,39 +616,5 @@ export default class Settings extends React.Component {
             newState.alerts = alerts;
             this.setState({...this.state, mail: newState});
         });
-    }
-
-    closeEditor(save, callback = null) {
-        if (this.state.messages.isEditing) {
-            const key = this.state.messages.isEditing;
-            let newState = { ...this.state, messages: {...this.state.messages, isEditing: null }};
-
-            if (save) {
-                newState.settings = {
-                    ...this.state.settings,
-                    [key]: draftToHtml(convertToRaw(this.state.messages.editor.getCurrentContent())),
-                };
-            }
-
-            callback = callback || function () { };
-            this.setState(newState, callback);
-        }
-    }
-
-    openEditor(message) {
-        this.closeEditor(true);
-        const contentBlock = htmlToDraft(this.state.settings[message] ?? "");
-        if (contentBlock) {
-            const contentState = ContentState.createFromBlockArray(contentBlock.contentBlocks);
-            const editorState = EditorState.createWithContent(contentState);
-            this.setState({
-                ...this.state,
-                messages: {
-                    ...this.state.messages,
-                    isEditing: message,
-                    editor: editorState
-                }
-            });
-        }
     }
 }

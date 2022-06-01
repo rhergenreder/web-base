@@ -94,7 +94,7 @@ namespace Api\Mail {
     public function _execute(): bool {
 
       $mailConfig = $this->getMailConfig();
-      if (!$this->success) {
+      if (!$this->success || $mailConfig === null) {
         return false;
       }
 
@@ -411,7 +411,7 @@ namespace Api\Mail {
       }
 
       $mailConfig = $this->getMailConfig();
-      if (!$this->success) {
+      if (!$this->success || $mailConfig === null) {
         return false;
       }
 

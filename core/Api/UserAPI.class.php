@@ -1076,6 +1076,10 @@ namespace Api\User {
       }
 
       $settings = $this->user->getConfiguration()->getSettings();
+      if (!$settings->isMailEnabled()) {
+        return $this->createError("The mail service is not enabled, please contact the server administration.");
+      }
+
       if ($settings->isRecaptchaEnabled()) {
         $captcha = $this->getParam("captcha");
         $req = new VerifyCaptcha($this->user);

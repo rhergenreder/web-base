@@ -42,7 +42,7 @@ function getDatabaseConfig(): ConnectionData {
 $config = new Configuration();
 $database = $config->getDatabase();
 if ($database !== null && $database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
-  if (count($argv) < 2 || $argv[1] !== "db") {
+  if (count($argv) < 3 || $argv[1] !== "db" || !in_array($argv[2], ["shell", "import", "export"])) {
     $command = array_merge(["docker", "exec", "-it", "php", "php"], $argv);
     $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes, "/application");
     exit(proc_close($proc));
@@ -464,11 +464,12 @@ function onRoutes(array $argv) {
       _exit("Error fetching routes: " . $req->getLastError());
     } else {
       $routes = $req->getResult()["routes"];
-      $head = ["uid", "request", "action", "target", "extra", "active"];
+      $head = ["uid", "request", "action", "target", "extra", "active", "exact"];
 
       // strict boolean
       foreach ($routes as &$route) {
         $route["active"] = $route["active"] ? "true" : "false";
+        $route["exact"] = $route["exact"] ? "true" : "false";
       }
 
       printTable($head, $routes);
@@ -482,7 +483,7 @@ function onRoutes(array $argv) {
       "request" => $argv[3],
       "action" => $argv[4],
       "target" => $argv[5],
-      "extra" => $argv[6] ?? ""
+      "extra" => $argv[7] ?? "",
     );
 
     $req  = new Api\Routes\Add($user);

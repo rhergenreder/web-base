@@ -24,7 +24,6 @@ class Router {
   public function run(string $url): string {
 
     // TODO: do we want a global try cache and return status page 500 on any error?
-    // or do we want to have a global status page function here?
 
     $url = strtok($url, "?");
     foreach ($this->routes as $route) {
@@ -69,6 +68,11 @@ class Router {
 
     $routes = "";
     foreach ($this->routes as $route) {
+      // do not generate cache for static api route
+      if ($route instanceof ApiRoute) {
+        continue;
+      }
+
       $constructor = $route->generateCache();
       $routes .= "\n    \$this->addRoute($constructor);";
     }

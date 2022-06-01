@@ -27,14 +27,14 @@ $settings = $config->getSettings();
 $installation = !$sql || ($sql->isConnected() && !$settings->isInstalled());
 
 $requestedUri = $_GET["site"] ?? $_GET["api"] ?? $_SERVER["REQUEST_URI"];
-$requestedUri = Router::cleanURL($requestedUri);
 
 if ($installation) {
+  $requestedUri = Router::cleanURL($requestedUri);
   if ($requestedUri !== "" && $requestedUri !== "index.php") {
     $response = "Redirecting to <a href=\"/\">/</a>";
     header("Location: /");
   } else {
-    $document = new Documents\Install($user);
+    $document = new Documents\Install(new Router($user));
     $response = $document->getCode();
   }
 } else {

@@ -60,7 +60,7 @@ class DocumentRoute extends AbstractRoute {
     }
 
     try {
-      $args = array_merge([$router->getUser()], $this->args);
+      $args = array_merge([$router], $this->args);
       $document = $this->reflectionClass->newInstanceArgs($args);
       return $document->getCode($params);
     } catch (\ReflectionException $e) {

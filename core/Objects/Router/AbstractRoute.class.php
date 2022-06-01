@@ -58,14 +58,13 @@ abstract class AbstractRoute {
     $patternOffset = 0;
 
     # /test/param/optional/123
-    $urlParts = explode("/", $url);
+    $urlParts = explode("/", Router::cleanURL($url));
     $countUrl = count($urlParts);
     $urlOffset = 0;
 
     $params = [];
     for (; $patternOffset < $countPattern; $patternOffset++) {
-
-      if (!preg_match("/^{.*}$/", $patternParts[$patternOffset])) {
+      if (!preg_match("/^{([^:]+)(:(.*?)(\?)?)?}$/", $patternParts[$patternOffset], $match)) {
 
         // not a parameter? check if it matches
         if ($urlOffset >= $countUrl || $urlParts[$urlOffset] !== $patternParts[$patternOffset]) {
@@ -73,27 +72,32 @@ abstract class AbstractRoute {
         }
 
         $urlOffset++;
-
       } else {
 
         // we got a parameter here
-        $paramDefinition = explode(":", substr($patternParts[$patternOffset], 1, -1));
-        $paramName = array_shift($paramDefinition);
-        $paramType = array_shift($paramDefinition);
-        $paramOptional = endsWith($paramType, "?");
-        if ($paramOptional) {
-          $paramType = substr($paramType, 0, -1);
+        $paramName = $match[1];
+        if (isset($match[2])) {
+          $paramType = self::parseParamType($match[3]) ?? Parameter::TYPE_MIXED;
+          $paramOptional = !empty($match[4] ?? null);
+        } else {
+          $paramType = Parameter::TYPE_MIXED;
+          $paramOptional = false;
         }
 
-        $paramType = self::parseParamType($paramType);
+        $parameter = new Parameter($paramName, $paramType, $paramOptional);
         if ($urlOffset >= $countUrl || $urlParts[$urlOffset] === "") {
-          if ($paramOptional) {
-            $param = $urlParts[$urlOffset] ?? null;
-            if ($param !== null && $paramType !== null && Parameter::parseType($param) !== $paramType) {
-              return false;
+          if ($parameter->optional) {
+            $value = $urlParts[$urlOffset] ?? null;
+            if ($value === null || $value === "") {
+              $params[$paramName] = null;
+            } else {
+              if (!$parameter->parseParam($value)) {
+                return false;
+              } else {
+                $params[$paramName] = $parameter->value;
+              }
             }
 
-            $params[$paramName] = $param;
             if ($urlOffset < $countUrl) {
               $urlOffset++;
             }
@@ -101,13 +105,13 @@ abstract class AbstractRoute {
             return false;
           }
         } else {
-          $param = $urlParts[$urlOffset];
-          if ($paramType !== null && Parameter::parseType($param) !== $paramType) {
+          $value = $urlParts[$urlOffset];
+          if (!$parameter->parseParam($value)) {
             return false;
+          } else {
+            $params[$paramName] = $parameter->value;
+            $urlOffset++;
           }
-
-          $params[$paramName] = $param;
-          $urlOffset++;
         }
       }
     }

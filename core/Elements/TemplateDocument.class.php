@@ -2,7 +2,7 @@
 
 namespace Elements;
 
-use Objects\User;
+use Objects\Router\Router;
 use Twig\Environment;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
@@ -17,8 +17,8 @@ class TemplateDocument extends Document {
   private FilesystemLoader $twigLoader;
   protected string $title;
 
-  public function __construct(User $user, string $templateName, array $params = []) {
-    parent::__construct($user);
+  public function __construct(Router $router, string $templateName, array $params = []) {
+    parent::__construct($router);
     $this->title = "";
     $this->templateName = $templateName;
     $this->parameters = $params;
@@ -46,15 +46,16 @@ class TemplateDocument extends Document {
   public function renderTemplate(string $name, array $params = []): string {
     try {
 
+      $user = $this->getUser();
       $params["user"] = [
-        "lang" => $this->user->getLanguage()->getShortCode(),
-        "loggedIn" => $this->user->isLoggedIn(),
-        "session" => (!$this->user->isLoggedIn() ? null : [
-          "csrfToken" => $this->user->getSession()->getCsrfToken()
+        "lang" => $user->getLanguage()->getShortCode(),
+        "loggedIn" => $user->isLoggedIn(),
+        "session" => (!$user->isLoggedIn() ? null : [
+          "csrfToken" => $user->getSession()->getCsrfToken()
         ])
       ];
 
-      $settings = $this->user->getConfiguration()->getSettings();
+      $settings = $this->getSettings();
       $params["site"] = [
         "name" => $settings->getSiteName(),
         "baseUrl" => $settings->getBaseUrl(),

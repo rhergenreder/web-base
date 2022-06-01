@@ -21,7 +21,7 @@ function __new_header_impl(string $line) {
   RequestTest::$SENT_HEADERS[$key] = $value;
 }
 
-function __new_http_response_code_impl(int $code) {
+function __new_http_response_code_impl($code) {
   RequestTest::$SENT_STATUS_CODE = $code;
 }
 

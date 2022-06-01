@@ -2,7 +2,7 @@
 
 namespace Elements;
 
-use Objects\User;
+use Objects\Router\Router;
 
 class HtmlDocument extends Document {
 
@@ -10,8 +10,8 @@ class HtmlDocument extends Document {
   protected Body $body;
   private ?string $activeView;
 
-  public function __construct(User $user, $headClass, $bodyClass, ?string $view = NULL) {
-    parent::__construct($user);
+  public function __construct(Router $router, $headClass, $bodyClass, ?string $view = NULL) {
+    parent::__construct($router);
     $this->head = $headClass ? new $headClass($this) : null;
     $this->body = $bodyClass ? new $bodyClass($this) : null;
     $this->activeView = $view;
@@ -49,7 +49,7 @@ class HtmlDocument extends Document {
     return $this->activeView;
   }
 
-  function getCode(): string {
+  function getCode(array $params = []): string {
 
     parent::getCode();
 
@@ -65,7 +65,7 @@ class HtmlDocument extends Document {
     }
 
     $head = $this->head->getCode();
-    $lang = $this->user->getLanguage()->getShortCode();
+    $lang = $this->getUser()->getLanguage()->getShortCode();
 
     $html = "<!DOCTYPE html>";
     $html .= "<html lang=\"$lang\">";

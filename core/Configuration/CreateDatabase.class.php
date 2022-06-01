@@ -163,6 +163,7 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("/resetPassword", "dynamic", "\\Documents\\Account", json_encode(["account/reset_password.twig"]), true)
       ->addRow("/login", "dynamic", "\\Documents\\Account", json_encode(["account/login.twig"]), true)
       ->addRow("/resendConfirmEmail", "dynamic", "\\Documents\\Account", json_encode(["account/resend_confirm_email.twig"]), true)
+      ->addRow("/debug", "dynamic", "\\Documents\\Info", NULL, true)
       ->addRow("/", "static", "/static/welcome.html", NULL, true);
 
     $queries[] = $sql->createTable("Settings")
@@ -228,7 +229,7 @@ class CreateDatabase extends DatabaseScript {
       ->addDateTime("nextTry", false, $sql->now())
       ->addString("errorMessage", NULL,  true)
       ->primaryKey("uid");
-    $queries = array_merge($queries, \Configuration\Patch\log::createTableLog($sql, "MailQueue", 30));
+    $queries = array_merge($queries, \Configuration\Patch\EntityLog_2021_04_08::createTableLog($sql, "MailQueue", 30));
 
     $queries[] = $sql->createTable("News")
       ->addSerial("uid")

@@ -11,7 +11,7 @@ use Driver\SQL\Type\CurrentColumn;
 use Driver\SQL\Type\CurrentTable;
 use Driver\SQL\Type\Trigger;
 
-class log extends DatabaseScript {
+class EntityLog_2021_04_08 extends DatabaseScript {
 
   public static function createTableLog(SQL $sql, string $table, int $lifetime = 90): array {
     return [

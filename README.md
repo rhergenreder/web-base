@@ -181,13 +181,13 @@ To create a new document, a class inside [/core/Documents](/core/Documents) is c
 namespace Documents {
 
   use Elements\Document;
-  use Objects\User;
+  use Objects\Router\Router;
   use Documents\Example\ExampleHead;
   use Documents\Example\ExampleBody;
 
   class ExampleDocument extends Document {
-    public function __construct(User $user, ?string $view = NULL) {
-      parent::__construct($user, ExampleHead::class, ExampleBody::class, $view);
+    public function __construct(Router $router, ?string $view = NULL) {
+      parent::__construct($router, ExampleHead::class, ExampleBody::class, $view);
     }
   }
 }

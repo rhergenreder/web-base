@@ -2,33 +2,39 @@
 
 namespace Elements;
 
+use Configuration\Settings;
 use Driver\SQL\SQL;
+use Objects\Router\Router;
 use Objects\User;
 
 abstract class Document {
 
-  protected User $user;
+  protected Router $router;
   protected bool $databaseRequired;
   private bool $cspEnabled;
   private ?string $cspNonce;
   private array $cspWhitelist;
   private string $domain;
 
-  public function __construct(User $user) {
-    $this->user = $user;
+  public function __construct(Router $router) {
+    $this->router = $router;
     $this->cspEnabled = false;
     $this->cspNonce = null;
     $this->databaseRequired = true;
     $this->cspWhitelist = [];
-    $this->domain = $user->getConfiguration()->getSettings()->getBaseUrl();
-  }
-
-  public function getSQL(): ?SQL {
-    return $this->user->getSQL();
+    $this->domain = $this->getSettings()->getBaseUrl();
   }
 
   public function getUser(): User {
-    return $this->user;
+    return $this->router->getUser();
+  }
+
+  public function getSQL(): ?SQL {
+    return $this->getUser()->getSQL();
+  }
+
+  public function getSettings(): Settings {
+    return $this->getUser()->getConfiguration()->getSettings();
   }
 
   public function getCSPNonce(): ?string {
@@ -44,13 +50,17 @@ abstract class Document {
     $this->cspNonce = generateRandomString(16, "base62");
   }
 
+  public function getRouter(): Router {
+    return $this->router;
+  }
+
   protected function addCSPWhitelist(string $path) {
     $this->cspWhitelist[] = $this->domain . $path;
   }
 
   public function getCode(array $params = []): string {
     if ($this->databaseRequired) {
-      $sql = $this->user->getSQL();
+      $sql = $this->getSQL();
       if (is_null($sql)) {
         die("Database is not configured yet.");
       } else if (!$sql->isConnected()) {
@@ -70,7 +80,7 @@ abstract class Document {
         "img-src 'self' data:",
         "script-src $cspWhiteList 'nonce-$this->cspNonce'"
       ];
-      if ($this->user->getConfiguration()->getSettings()->isRecaptchaEnabled()) {
+      if ($this->getSettings()->isRecaptchaEnabled()) {
         $csp[] = "frame-src https://www.google.com/ 'self'";
       }
 

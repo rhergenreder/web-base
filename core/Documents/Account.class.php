@@ -4,12 +4,12 @@
 namespace Documents;
 
 use Elements\TemplateDocument;
-use Objects\User;
+use Objects\Router\Router;
 
 
 class Account extends TemplateDocument {
-  public function __construct(User $user, string $templateName) {
-    parent::__construct($user, $templateName);
+  public function __construct(Router $router, string $templateName) {
+    parent::__construct($router, $templateName);
     $this->enableCSP();
   }
 
@@ -34,13 +34,13 @@ class Account extends TemplateDocument {
         }
       }
     } else if ($this->getTemplateName() === "account/register.twig") {
-      $settings = $this->user->getConfiguration()->getSettings();
-      if ($this->user->isLoggedIn()) {
+      $settings = $this->getSettings();
+      if ($this->getUser()->isLoggedIn()) {
         $this->createError("You are already logged in.");
       } else if (!$settings->isRegistrationAllowed()) {
         $this->createError("Registration is not enabled on this website.");
       }
-    } else if ($this->getTemplateName() === "account/login.twig" && $this->user->isLoggedIn()) {
+    } else if ($this->getTemplateName() === "account/login.twig" && $this->getUser()->isLoggedIn()) {
       header("Location: /admin");
       exit();
     } else if ($this->getTemplateName() === "account/accept_invite.twig") {

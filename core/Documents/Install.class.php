@@ -5,10 +5,11 @@ namespace Documents {
   use Documents\Install\InstallBody;
   use Documents\Install\InstallHead;
   use Elements\HtmlDocument;
+  use Objects\Router\Router;
 
   class Install extends HtmlDocument {
-    public function __construct($user) {
-      parent::__construct($user, InstallHead::class, InstallBody::class);
+    public function __construct(Router $router) {
+      parent::__construct($router, InstallHead::class, InstallBody::class);
       $this->databaseRequired = false;
     }
   }

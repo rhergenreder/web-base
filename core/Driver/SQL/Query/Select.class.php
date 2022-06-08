@@ -15,10 +15,12 @@ class Select extends Query {
   private array $joins;
   private array $orderColumns;
   private array $groupColumns;
+  private array $havings;
   private bool $sortAscending;
   private int $limit;
   private int $offset;
   private bool $forUpdate;
+  private int $fetchType;
 
   public function __construct($sql, ...$selectValues) {
     parent::__construct($sql);
@@ -33,6 +35,7 @@ class Select extends Query {
     $this->offset = 0;
     $this->sortAscending = true;
     $this->forUpdate = false;
+    $this->fetchType = SQL::FETCH_ALL;
   }
 
   public function from(...$tables): Select {
@@ -95,8 +98,19 @@ class Select extends Query {
     return $this;
   }
 
+  public function iterator(): Select {
+    $this->fetchType = SQL::FETCH_ITERATIVE;
+    return $this;
+  }
+
+  public function first(): Select {
+    $this->fetchType = SQL::FETCH_ONE;
+    $this->limit = 1;
+    return $this;
+  }
+
   public function execute() {
-    return $this->sql->executeQuery($this, true);
+    return $this->sql->executeQuery($this, $this->fetchType);
   }
 
   public function getSelectValues(): array { return $this->selectValues; }

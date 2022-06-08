@@ -41,6 +41,11 @@ use Objects\ConnectionData;
 
 abstract class SQL {
 
+  const FETCH_NONE = 0;
+  const FETCH_ONE = 1;
+  const FETCH_ALL = 2;
+  const FETCH_ITERATIVE = 3;
+
   protected Logger $logger;
   protected string $lastError;
   protected $connection;
@@ -116,7 +121,7 @@ abstract class SQL {
   public abstract function connect();
   public abstract function disconnect();
 
-  public function executeQuery(Query $query, bool $fetchResult = false) {
+  public function executeQuery(Query $query, int $fetchType = self::FETCH_NONE) {
 
     $parameters = [];
     $queryStr = $query->build($parameters);
@@ -130,16 +135,16 @@ abstract class SQL {
       return false;
     }
 
-    $res = $this->execute($queryStr, $parameters, $fetchResult);
+    $res = $this->execute($queryStr, $parameters, $fetchType);
     $success = ($res !== FALSE);
 
     // fetch generated serial ids for Insert statements
     $generatedColumn = ($query instanceof Insert ? $query->getReturning() : null);
-    if($success && $generatedColumn) {
+    if ($success && $generatedColumn) {
       $this->fetchReturning($res, $generatedColumn);
     }
 
-    return $fetchResult ? $res : $success;
+    return $fetchType === self::FETCH_NONE ? $success : $res;
   }
 
   public function getWhereClause($conditions, &$params): string {
@@ -237,7 +242,7 @@ abstract class SQL {
   }
 
   // Statements
-  protected abstract function execute($query, $values=NULL, $returnValues=false);
+  protected abstract function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE);
 
   public function buildCondition($condition, &$params) {
 

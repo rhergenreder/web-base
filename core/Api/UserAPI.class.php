@@ -690,21 +690,20 @@ namespace Api\User {
         ->from("User")
         ->where(new Compare("User.name", $username), new Compare("User.email", $username))
         ->leftJoin("2FA", "2FA.uid", "User.2fa_id")
-        ->limit(1)
+        ->first()
         ->execute();
 
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        if (!is_array($res) || count($res) === 0) {
+        if ($res === null) {
           return $this->wrongCredentials();
         } else {
-          $row = $res[0];
-          $uid = $row['uid'];
-          $confirmed = $sql->parseBool($row["confirmed"]);
-          $token = $row["2fa_id"] ? TwoFactorToken::newInstance($row["2fa_type"], $row["2fa_data"], $row["2fa_id"], $sql->parseBool($row["2fa_confirmed"])) : null;
-          if (password_verify($password, $row['password'])) {
+          $uid = $res['uid'];
+          $confirmed = $sql->parseBool($res["confirmed"]);
+          $token = $res["2fa_id"] ? TwoFactorToken::newInstance($res["2fa_type"], $res["2fa_data"], $res["2fa_id"], $sql->parseBool($res["2fa_confirmed"])) : null;
+          if (password_verify($password, $res['password'])) {
             if (!$confirmed) {
               $this->result["emailConfirmed"] = false;
               return $this->createError("Your email address has not been confirmed yet.");

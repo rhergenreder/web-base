@@ -134,9 +134,9 @@ class MySQL extends SQL {
     return $sqlParams;
   }
 
-  protected function execute($query, $values = NULL, $returnValues = false) {
+  protected function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE) {
 
-    $resultRows = array();
+    $result = null;
     $this->lastError = "";
     $stmt = null;
     $res = null;
@@ -145,10 +145,21 @@ class MySQL extends SQL {
     try {
       if (empty($values)) {
         $res = mysqli_query($this->connection, $query);
-        $success = $res !== FALSE;
-        if ($success && $returnValues) {
-          while ($row = $res->fetch_assoc()) {
-            $resultRows[] = $row;
+        $success = ($res !== FALSE);
+        if ($success) {
+          switch ($fetchType) {
+            case self::FETCH_NONE:
+              $result = true;
+              break;
+            case self::FETCH_ONE:
+              $result = $res->fetch_assoc();
+              break;
+            case self::FETCH_ALL:
+              $result = $res->fetch_all(MYSQLI_ASSOC);
+              break;
+            case self::FETCH_ITERATIVE:
+              $result = new RowIteratorMySQL($res);
+              break;
           }
         }
       } else if ($stmt = $this->connection->prepare($query)) {
@@ -156,18 +167,27 @@ class MySQL extends SQL {
         $sqlParams = $this->getPreparedParams($values);
         if ($stmt->bind_param(...$sqlParams)) {
           if ($stmt->execute()) {
-            if ($returnValues) {
+            if ($fetchType === self::FETCH_NONE) {
+              $result = true;
+              $success = true;
+            } else {
               $res = $stmt->get_result();
               if ($res) {
-                while ($row = $res->fetch_assoc()) {
-                  $resultRows[] = $row;
+                switch ($fetchType) {
+                  case self::FETCH_ONE:
+                    $result = $res->fetch_assoc();
+                    break;
+                  case self::FETCH_ALL:
+                    $result = $res->fetch_all(MYSQLI_ASSOC);
+                    break;
+                  case self::FETCH_ITERATIVE:
+                    $result = new RowIteratorMySQL($res);
+                    break;
                 }
                 $success = true;
               } else {
                 $this->lastError = $this->logger->error("PreparedStatement::get_result failed: $stmt->error ($stmt->errno)");
               }
-            } else {
-              $success = true;
             }
           } else {
             $this->lastError = $this->logger->error("PreparedStatement::execute failed: $stmt->error ($stmt->errno)");
@@ -179,16 +199,18 @@ class MySQL extends SQL {
     } catch (\mysqli_sql_exception $exception) {
       $this->lastError = $this->logger->error("MySQL::execute failed: $stmt->error ($stmt->errno)");
     } finally {
-      if ($res !== null && !is_bool($res)) {
+
+      if ($res !== null && !is_bool($res) && $fetchType !== self::FETCH_ITERATIVE) {
         $res->close();
       }
 
       if ($stmt !== null && !is_bool($stmt)) {
         $stmt->close();
       }
+
     }
 
-    return ($success && $returnValues) ? $resultRows : $success;
+    return $success ? $result : false;
   }
 
   public function getOnDuplicateStrategy(?Strategy $strategy, &$params): ?string {
@@ -437,6 +459,45 @@ class MySQL extends SQL {
       return "JSON_ARRAYAGG($value) as $alias";
     } else {
       return parent::createExpression($exp, $params);
+    }
+  }
+}
+
+class RowIteratorMySQL extends RowIterator {
+
+  public function __construct($resultSet, bool $useCache = false) {
+    parent::__construct($resultSet, $useCache);
+  }
+
+  protected function getNumRows(): int {
+    return $this->resultSet->num_rows;
+  }
+
+  protected function fetchRow(int $index): array {
+    // check if we already fetched that row
+    if (!$this->useCache || $index >= count($this->fetchedRows)) {
+      // if not, fetch it from the result set
+      $row = $this->resultSet->fetch_assoc();
+      if ($this->useCache) {
+        $this->fetchedRows[] = $row;
+      }
+
+      // close result set, after everything's fetched
+      if ($index >= $this->numRows - 1) {
+        $this->resultSet->close();
+      }
+    } else {
+      $row = $this->fetchedRows[$index];
+    }
+
+    return $row;
+  }
+
+  public function rewind() {
+    if ($this->useCache) {
+      $this->rowIndex = 0;
+    } else if ($this->rowIndex !== 0) {
+      throw new \Exception("RowIterator::rewind() not supported, when caching is disabled");
     }
   }
 }

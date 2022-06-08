@@ -5,7 +5,7 @@ if (is_file($autoLoad)) {
   require_once $autoLoad;
 }
 
-define("WEBBASE_VERSION", "1.5.0");
+define("WEBBASE_VERSION", "1.5.1");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function($class) {

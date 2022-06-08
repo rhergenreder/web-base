@@ -134,14 +134,14 @@ namespace Api\Settings {
         ->from("Settings")
         ->where(new CondBool("readonly"))
         ->where(new CondIn(new Column("name"), $keys))
-        ->limit(1)
+        ->first()
         ->execute();
 
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
 
-      if ($this->success && !empty($res)) {
-        return $res[0]["name"];
+      if ($this->success && $res !== null) {
+        return $res["name"];
       }
 
       return null;

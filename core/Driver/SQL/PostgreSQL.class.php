@@ -92,7 +92,7 @@ class PostgreSQL extends SQL {
     return $lastError;
   }
 
-  protected function execute($query, $values = NULL, $returnValues = false) {
+  protected function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE) {
 
     $this->lastError = "";
     $stmt_name = uniqid();
@@ -132,17 +132,21 @@ class PostgreSQL extends SQL {
       return false;
     }
 
-    if ($returnValues) {
-      $rows = pg_fetch_all($result);
-      if ($rows === FALSE) {
-        if (empty(trim($this->getLastError()))) {
-          $rows = array();
+    switch ($fetchType) {
+      case self::FETCH_NONE:
+        return true;
+      case self::FETCH_ONE:
+        return pg_fetch_assoc($result);
+      case self::FETCH_ALL:
+        $rows = pg_fetch_all($result);
+        if ($rows === FALSE) {
+          if (empty(trim($this->getLastError()))) {
+            $rows = array();
+          }
         }
-      }
-
-      return $rows;
-    } else {
-      return true;
+        return $rows;
+      case self::FETCH_ITERATIVE:
+        return new RowIteratorPostgreSQL($result);
     }
   }
 
@@ -182,8 +186,13 @@ class PostgreSQL extends SQL {
     return $columns ? (" RETURNING " . $this->columnName($columns)) : "";
   }
 
-  public function executeQuery(Query $query, bool $fetchResult = false) {
-    return parent::executeQuery($query, $fetchResult || ($query instanceof Insert && !empty($query->getReturning())));
+  public function executeQuery(Query $query, int $fetchType = self::FETCH_NONE) {
+
+    if ($query instanceof Insert && !empty($query->getReturning())) {
+      $fetchType = self::FETCH_ONE;
+    }
+
+    return parent::executeQuery($query, $fetchType);
   }
 
   protected function fetchReturning($res, string $returningCol) {
@@ -448,5 +457,24 @@ class PostgreSQL extends SQL {
     } else {
       return parent::createExpression($exp, $params);
     }
+  }
+}
+
+class RowIteratorPostgreSQL extends RowIterator {
+
+  public function __construct($resultSet, bool $useCache = false) {
+    parent::__construct($resultSet, false);  // caching not needed
+  }
+
+  protected function getNumRows(): int {
+    return pg_num_rows($this->resultSet);
+  }
+
+  public function rewind() {
+    $this->rowIndex = 0;
+  }
+
+  protected function fetchRow(int $index): array {
+    return pg_fetch_assoc($this->resultSet, $index);
   }
 }

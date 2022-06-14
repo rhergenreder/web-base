@@ -27,8 +27,9 @@ class Settings {
   private string $mailFooter;
   private array $allowedExtensions;
 
-  public function getJwtSecret(): string {
-    return $this->jwtSecret;
+  public function getJwtKey(): \Firebase\JWT\Key {
+    // TODO: allow the use of other JWT algorithms (e.g. RS256)
+    return new \Firebase\JWT\Key($this->jwtSecret, "HS256");
   }
 
   public function isInstalled(): bool {

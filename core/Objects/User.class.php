@@ -5,9 +5,9 @@ namespace Objects;
 use Configuration\Configuration;
 use Driver\SQL\Condition\CondAnd;
 use Exception;
-use External\JWT;
 use Driver\SQL\SQL;
 use Driver\SQL\Condition\Compare;
+use Firebase\JWT\JWT;
 use Objects\TwoFactor\TwoFactorToken;
 
 class User extends ApiObject {
@@ -232,7 +232,7 @@ class User extends ApiObject {
       try {
         $token = $_COOKIE['session'];
         $settings = $this->configuration->getSettings();
-        $decoded = (array)JWT::decode($token, $settings->getJwtSecret());
+        $decoded = (array)JWT::decode($token, $settings->getJwtKey());
         if (!is_null($decoded)) {
           $userId = ($decoded['userId'] ?? NULL);
           $sessionId = ($decoded['sessionId'] ?? NULL);

@@ -7,7 +7,6 @@ use Driver\SQL\Column\EnumColumn;
 use Driver\SQL\Constraint\Constraint;
 use Driver\SQL\Constraint\ForeignKey;
 use Driver\SQL\Constraint\PrimaryKey;
-use Driver\SQL\MySQL;
 use Driver\SQL\PostgreSQL;
 use Driver\SQL\SQL;
 
@@ -121,7 +120,7 @@ class AlterTable extends Query {
         return null;
       }
     } else {
-      $this->sql->setLastError("ALTER TABLE requires at least a column or a constraint.");
+      $this->sql->setLastError("'ALTER TABLE' requires at least a column or a constraint.");
       return null;
     }
 

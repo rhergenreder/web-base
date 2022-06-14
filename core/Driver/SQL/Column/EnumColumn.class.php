@@ -11,7 +11,7 @@ class EnumColumn extends Column {
     $this->values = $values;
   }
 
-  public function addValues(string $value) {
+  public function addValue(string $value) {
     $this->values[] = $value;
   }
 

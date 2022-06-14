@@ -6,7 +6,7 @@ use DateTime;
 use \Driver\SQL\Condition\Compare;
 use Driver\SQL\Expression\CurrentTimeStamp;
 use Exception;
-use External\JWT;
+use Firebase\JWT\JWT;
 
 class Session extends ApiObject {
 
@@ -66,7 +66,8 @@ class Session extends ApiObject {
     $this->updateMetaData();
     $settings = $this->user->getConfiguration()->getSettings();
     $token = ['userId' => $this->user->getId(), 'sessionId' => $this->sessionId];
-    return JWT::encode($token, $settings->getJwtSecret());
+    $jwtKey = $settings->getJwtKey();
+    return JWT::encode($token, $jwtKey->getKeyMaterial(), $jwtKey->getAlgorithm());
   }
 
   public function sendCookie(?string $domain = null) {

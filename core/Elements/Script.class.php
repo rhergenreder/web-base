@@ -35,8 +35,8 @@ class Script extends StaticView {
       $attributes["nonce"] = $this->nonce;
     }
 
-    $attributes = html_attributes($attributes);
-    return "<script $attributes>$this->content</script>";
+    // TODO: do we need to escape the content here?
+    return html_tag("script", $attributes, $this->content, false);
   }
 
   public function setNonce(string $nonce) {

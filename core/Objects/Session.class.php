@@ -101,19 +101,20 @@ class Session extends ApiObject {
     $sql = $this->user->getSQL();
 
     $minutes = Session::DURATION;
-    $columns = array("expires", "user_id", "ipAddress", "os", "browser", "data", "stay_logged_in", "csrf_token");
+    $data = [
+      "expires" => (new DateTime())->modify("+$minutes minute"),
+      "user_id" => $this->user->getId(),
+      "ipAddress" => $this->ipAddress,
+      "os" => $this->os,
+      "browser" => $this->browser,
+      "data" => json_encode($_SESSION ?? []),
+      "stay_logged_in" => $stayLoggedIn,
+      "csrf_token" => $this->csrfToken
+    ];
 
     $success = $sql
-      ->insert("Session", $columns)
-      ->addRow(
-        (new DateTime())->modify("+$minutes minute"),
-        $this->user->getId(),
-        $this->ipAddress,
-        $this->os,
-        $this->browser,
-        json_encode($_SESSION ?? []),
-        $stayLoggedIn,
-        $this->csrfToken)
+      ->insert("Session", array_keys($data))
+      ->addRow(...array_values($data))
       ->returning("uid")
       ->execute();
 
@@ -149,7 +150,7 @@ class Session extends ApiObject {
         ->set("Session.ipAddress", $this->ipAddress)
         ->set("Session.os", $this->os)
         ->set("Session.browser", $this->browser)
-        ->set("Session.data", json_encode($_SESSION))
+        ->set("Session.data", json_encode($_SESSION ?? []))
         ->set("Session.csrf_token", $this->csrfToken)
         ->where(new Compare("Session.uid", $this->sessionId))
         ->where(new Compare("Session.user_id", $this->user->getId()))

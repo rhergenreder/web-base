@@ -25,6 +25,7 @@ class Settings {
   private string $recaptchaPrivateKey;
   private string $mailSender;
   private string $mailFooter;
+  private array $allowedExtensions;
 
   public function getJwtSecret(): string {
     return $this->jwtSecret;
@@ -51,6 +52,7 @@ class Settings {
     $settings->mailEnabled = false;
     $settings->mailSender = "webmaster@localhost";
     $settings->mailFooter = "";
+    $settings->allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'htm', 'html'];
 
     return $settings;
   }
@@ -72,6 +74,7 @@ class Settings {
       $this->mailEnabled = $result["mail_enabled"] ?? $this->mailEnabled;
       $this->mailSender = $result["mail_from"] ?? $this->mailSender;
       $this->mailFooter = $result["mail_footer"] ?? $this->mailFooter;
+      $this->allowedExtensions = explode(",", $result["allowed_extensions"] ?? strtolower(implode(",", $this->allowedExtensions)));
 
       if (!isset($result["jwt_secret"])) {
         $req = new \Api\Settings\Set($user);
@@ -92,7 +95,8 @@ class Settings {
       ->addRow("jwt_secret", $this->jwtSecret, true, true)
       ->addRow("recaptcha_enabled", $this->recaptchaEnabled ? "1" : "0", false, false)
       ->addRow("recaptcha_public_key", $this->recaptchaPublicKey, false, false)
-      ->addRow("recaptcha_private_key", $this->recaptchaPrivateKey, true, false);
+      ->addRow("recaptcha_private_key", $this->recaptchaPrivateKey, true, false)
+      ->addRow("allowed_extensions", implode(",", $this->allowedExtensions), true, false);
   }
 
   public function getSiteName(): string {
@@ -125,5 +129,9 @@ class Settings {
 
   public function getMailSender(): string {
     return $this->mailSender;
+  }
+
+  public function isExtensionAllowed(string $ext): bool {
+    return empty($this->allowedExtensions) || in_array(strtolower(trim($ext)), $this->allowedExtensions);
   }
 }

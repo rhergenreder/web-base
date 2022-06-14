@@ -109,6 +109,9 @@ class Select extends Query {
     return $this;
   }
 
+  /**
+   * @return mixed
+   */
   public function execute() {
     return $this->sql->executeQuery($this, $this->fetchType);
   }

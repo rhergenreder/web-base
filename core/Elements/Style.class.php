@@ -11,6 +11,7 @@ class Style extends StaticView {
   }
 
   function getCode(): string {
-    return "<style>$this->style</style>";
+    // TODO: do we need to escape the content here?
+    return html_tag("style", [], $this->style, false);
   }
 }

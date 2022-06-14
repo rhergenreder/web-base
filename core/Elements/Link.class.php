@@ -34,8 +34,7 @@ class Link extends StaticView {
       $attributes["nonce"] = $this->nonce;
     }
 
-    $attributes = html_attributes($attributes);
-    return "<link $attributes/>";
+    return html_tag_short("link", $attributes);
   }
 
   public function setNonce(string $nonce) {

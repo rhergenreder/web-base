@@ -183,7 +183,7 @@ abstract class Request {
           $authHeader = $_SERVER["HTTP_AUTHORIZATION"];
           if (startsWith($authHeader, "Bearer ")) {
             $apiKey = substr($authHeader, strlen("Bearer "));
-            $apiKeyAuthorized = $this->user->authorize($apiKey);
+            $apiKeyAuthorized = $this->user->loadApiKey($apiKey);
           }
         }
       }

@@ -69,40 +69,42 @@ abstract class Head extends View {
   }
 
   public function getCode(): string {
-    $header = "<head>";
+    $content = [];
 
-    foreach($this->metas as $aMeta) {
-      $header .= '<meta';
-      foreach($aMeta as $key => $val) {
-        $header .= " $key=\"$val\"";
-      }
-      $header .= ' />';
+    // meta tags
+    foreach($this->metas as $meta) {
+      $content[] = html_tag_short("meta", $meta);
     }
 
+    // description
     if(!empty($this->description)) {
-      $header .= "<meta name=\"description\" content=\"$this->description\" />";
+      $content[] = html_tag_short("meta", ["name" => "description", "content" => $this->description]);
     }
 
+    // keywords
     if(!empty($this->keywords)) {
       $keywords = implode(", ", $this->keywords);
-      $header .= "<meta name=\"keywords\" content=\"$keywords\" />";
+      $content[] = html_tag_short("meta", ["name" => "keywords", "content" => $keywords]);
     }
 
+    // base tag
     if(!empty($this->baseUrl)) {
-      $header .= "<base href=\"$this->baseUrl\">";
+      $content[] = html_tag_short("base", ["href" => $this->baseUrl]);
     }
 
-    $header .= "<title>$this->title</title>";
+    // title
+    $content[] = html_tag("title", [], $this->title);
 
+    // src tags
     foreach($this->sources as $src) {
-      $header .= $src->getCode();
+      $content[] = $src->getCode();
     }
 
-    foreach($this->rawFields as $raw) {
-      $header .= $raw;
+    //
+    foreach ($this->rawFields as $raw) {
+      $content[] = $raw;
     }
 
-    $header .= "</head>";
-    return $header;
+    return html_tag("head", [], $content, false);
   }
 }

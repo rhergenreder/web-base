@@ -3,14 +3,13 @@
 namespace Objects;
 
 use Configuration\Configuration;
+use Driver\SQL\Condition\CondAnd;
 use Exception;
 use External\JWT;
 use Driver\SQL\SQL;
 use Driver\SQL\Condition\Compare;
-use Driver\SQL\Condition\CondBool;
 use Objects\TwoFactor\TwoFactorToken;
 
-// TODO: User::authorize and User::readData have similar function body
 class User extends ApiObject {
 
   private ?SQL $sql;
@@ -40,7 +39,7 @@ class User extends ApiObject {
   }
 
   public function __destruct() {
-    if($this->sql && $this->sql->isConnected()) {
+    if ($this->sql && $this->sql->isConnected()) {
       $this->sql->close();
     }
   }
@@ -61,21 +60,66 @@ class User extends ApiObject {
     return false;
   }
 
-  public function getId(): int { return $this->uid; }
-  public function isLoggedIn(): bool { return $this->loggedIn; }
-  public function getUsername(): string { return $this->username; }
-  public function getFullName(): string { return $this->fullName; }
-  public function getEmail(): ?string { return $this->email; }
-  public function getSQL(): ?SQL { return $this->sql; }
-  public function getLanguage(): Language { return $this->language; }
-  public function setLanguage(Language $language) { $this->language = $language; $language->load(); }
-  public function getSession(): ?Session { return $this->session; }
-  public function getConfiguration(): Configuration { return $this->configuration; }
-  public function getGroups(): array { return $this->groups; }
-  public function hasGroup(int $group): bool { return isset($this->groups[$group]); }
-  public function getGPG(): ?GpgKey { return $this->gpgKey; }
-  public function getTwoFactorToken(): ?TwoFactorToken { return $this->twoFactorToken; }
-  public function getProfilePicture() : ?string { return $this->profilePicture; }
+  public function getId(): int {
+    return $this->uid;
+  }
+
+  public function isLoggedIn(): bool {
+    return $this->loggedIn;
+  }
+
+  public function getUsername(): string {
+    return $this->username;
+  }
+
+  public function getFullName(): string {
+    return $this->fullName;
+  }
+
+  public function getEmail(): ?string {
+    return $this->email;
+  }
+
+  public function getSQL(): ?SQL {
+    return $this->sql;
+  }
+
+  public function getLanguage(): Language {
+    return $this->language;
+  }
+
+  public function setLanguage(Language $language) {
+    $this->language = $language;
+    $language->load();
+  }
+
+  public function getSession(): ?Session {
+    return $this->session;
+  }
+
+  public function getConfiguration(): Configuration {
+    return $this->configuration;
+  }
+
+  public function getGroups(): array {
+    return $this->groups;
+  }
+
+  public function hasGroup(int $group): bool {
+    return isset($this->groups[$group]);
+  }
+
+  public function getGPG(): ?GpgKey {
+    return $this->gpgKey;
+  }
+
+  public function getTwoFactorToken(): ?TwoFactorToken {
+    return $this->twoFactorToken;
+  }
+
+  public function getProfilePicture(): ?string {
+    return $this->profilePicture;
+  }
 
   public function __debugInfo(): array {
     $debugInfo = array(
@@ -83,7 +127,7 @@ class User extends ApiObject {
       'language' => $this->language->getName(),
     );
 
-    if($this->loggedIn) {
+    if ($this->loggedIn) {
       $debugInfo['uid'] = $this->uid;
       $debugInfo['username'] = $this->username;
     }
@@ -107,7 +151,7 @@ class User extends ApiObject {
       );
     } else {
       return array(
-         'language' => $this->language->jsonSerialize(),
+        'language' => $this->language->jsonSerialize(),
       );
     }
   }
@@ -135,11 +179,11 @@ class User extends ApiObject {
   }
 
   public function updateLanguage($lang): bool {
-    if($this->sql) {
+    if ($this->sql) {
       $request = new \Api\Language\Set($this);
       return $request->execute(array("langCode" => $lang));
     } else {
-        return false;
+      return false;
     }
   }
 
@@ -162,68 +206,25 @@ class User extends ApiObject {
    * @param bool $sessionUpdate update session information, including session's lifetime and browser information
    * @return bool true, if the data could be loaded
    */
-  public function readData($userId, $sessionId, bool $sessionUpdate = true): bool {
+  public function loadSession($userId, $sessionId, bool $sessionUpdate = true): bool {
 
-    $res = $this->sql->select("User.name", "User.email", "User.fullName",
-        "User.profilePicture",
-        "User.gpg_id", "GpgKey.confirmed as gpg_confirmed", "GpgKey.fingerprint as gpg_fingerprint",
-          "GpgKey.expires as gpg_expires", "GpgKey.algorithm as gpg_algorithm",
-        "User.2fa_id", "2FA.confirmed as 2fa_confirmed", "2FA.data as 2fa_data", "2FA.type as 2fa_type",
-        "Language.uid as langId", "Language.code as langCode", "Language.name as langName",
-        "Session.data", "Session.stay_logged_in", "Session.csrf_token", "Group.uid as groupId", "Group.name as groupName")
-        ->from("User")
-        ->innerJoin("Session", "Session.user_id", "User.uid")
-        ->leftJoin("Language", "User.language_id", "Language.uid")
-        ->leftJoin("UserGroup", "UserGroup.user_id", "User.uid")
-        ->leftJoin("Group", "UserGroup.group_id", "Group.uid")
-        ->leftJoin("GpgKey", "User.gpg_id", "GpgKey.uid")
-        ->leftJoin("2FA", "User.2fa_id", "2FA.uid")
-        ->where(new Compare("User.uid", $userId))
-        ->where(new Compare("Session.uid", $sessionId))
-        ->where(new Compare("Session.active", true))
-        ->where(new CondBool("Session.stay_logged_in"), new Compare("Session.expires", $this->sql->currentTimestamp(), '>'))
-        ->execute();
+    $userRow = $this->loadUser("Session", ["Session.data", "Session.stay_logged_in", "Session.csrf_token"], [
+      new Compare("User.uid", $userId),
+      new Compare("Session.uid", $sessionId),
+      new Compare("Session.active", true),
+    ]);
 
-    $success = ($res !== FALSE);
-    if($success) {
-      if(empty($res)) {
-        $success = false;
-      } else {
-        $row = $res[0];
-        $csrfToken = $row["csrf_token"];
-        $this->username = $row['name'];
-        $this->email = $row["email"];
-        $this->fullName = $row["fullName"];
-        $this->uid = $userId;
-        $this->profilePicture = $row["profilePicture"];
-
-        $this->session = new Session($this, $sessionId, $csrfToken);
-        $this->session->setData(json_decode($row["data"] ?? '{}', true));
-        $this->session->stayLoggedIn($this->sql->parseBool($row["stay_logged_in"]));
-        if ($sessionUpdate) $this->session->update();
-        $this->loggedIn = true;
-
-        if (!empty($row["gpg_id"])) {
-          $this->gpgKey = new GpgKey($row["gpg_id"], $this->sql->parseBool($row["gpg_confirmed"]),
-            $row["gpg_fingerprint"], $row["gpg_algorithm"], $row["gpg_expires"]);
-        }
-
-        if (!empty($row["2fa_id"])) {
-          $this->twoFactorToken = TwoFactorToken::newInstance($row["2fa_type"], $row["2fa_data"],
-            $row["2fa_id"], $this->sql->parseBool($row["2fa_confirmed"]));
-        }
-
-        if(!is_null($row['langId'])) {
-          $this->setLanguage(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
-        }
-
-        foreach($res as $row) {
-          $this->groups[$row["groupId"]] = $row["groupName"];
-        }
+    if ($userRow !== false) {
+      $this->session = new Session($this, $sessionId, $userRow["csrf_token"]);
+      $this->session->setData(json_decode($userRow["data"] ?? '{}', true));
+      $this->session->stayLoggedIn($this->sql->parseBool($userRow["stay_logged_in"]));
+      if ($sessionUpdate) {
+        $this->session->update();
       }
+      $this->loggedIn = true;
     }
 
-    return $success;
+    return $userRow !== false;
   }
 
   private function parseCookies() {
@@ -232,21 +233,21 @@ class User extends ApiObject {
         $token = $_COOKIE['session'];
         $settings = $this->configuration->getSettings();
         $decoded = (array)JWT::decode($token, $settings->getJwtSecret());
-        if(!is_null($decoded)) {
+        if (!is_null($decoded)) {
           $userId = ($decoded['userId'] ?? NULL);
           $sessionId = ($decoded['sessionId'] ?? NULL);
-          if(!is_null($userId) && !is_null($sessionId)) {
-            $this->readData($userId, $sessionId);
+          if (!is_null($userId) && !is_null($sessionId)) {
+            $this->loadSession($userId, $sessionId);
           }
         }
-      } catch(Exception $e) {
+      } catch (Exception $e) {
         // ignored
       }
     }
 
-    if(isset($_GET['lang']) && is_string($_GET["lang"]) && !empty($_GET["lang"])) {
+    if (isset($_GET['lang']) && is_string($_GET["lang"]) && !empty($_GET["lang"])) {
       $this->updateLanguage($_GET['lang']);
-    } else if(isset($_COOKIE['lang']) && is_string($_COOKIE["lang"]) && !empty($_COOKIE["lang"])) {
+    } else if (isset($_COOKIE['lang']) && is_string($_COOKIE["lang"]) && !empty($_COOKIE["lang"])) {
       $this->updateLanguage($_COOKIE['lang']);
     }
   }
@@ -262,69 +263,95 @@ class User extends ApiObject {
     return false;
   }
 
-  public function authorize($apiKey): bool {
+  private function loadUser(string $table, array $columns, array $conditions) {
+    $userRow = $this->sql->select(
+      // User meta
+      "User.uid as userId", "User.name", "User.email", "User.fullName", "User.profilePicture", "User.confirmed",
+
+      // GPG
+      "User.gpg_id", "GpgKey.confirmed as gpg_confirmed", "GpgKey.fingerprint as gpg_fingerprint",
+      "GpgKey.expires as gpg_expires", "GpgKey.algorithm as gpg_algorithm",
+
+      // 2FA
+      "User.2fa_id", "2FA.confirmed as 2fa_confirmed", "2FA.data as 2fa_data", "2FA.type as 2fa_type",
+
+      // Language
+      "Language.uid as langId", "Language.code as langCode", "Language.name as langName",
+
+      // additional data
+      ...$columns)
+      ->from("User")
+      ->innerJoin("$table", "$table.user_id", "User.uid")
+      ->leftJoin("Language", "User.language_id", "Language.uid")
+      ->leftJoin("GpgKey", "User.gpg_id", "GpgKey.uid")
+      ->leftJoin("2FA", "User.2fa_id", "2FA.uid")
+      ->where(new CondAnd(...$conditions))
+      ->first()
+      ->execute();
+
+    if ($userRow === null || $userRow === false) {
+      return false;
+    }
+
+    // Meta data
+    $userId = $userRow["userId"];
+    $this->uid = $userId;
+    $this->username = $userRow['name'];
+    $this->fullName = $userRow["fullName"];
+    $this->email = $userRow['email'];
+    $this->profilePicture = $userRow["profilePicture"];
+
+    // GPG
+    if (!empty($userRow["gpg_id"])) {
+      $this->gpgKey = new GpgKey($userRow["gpg_id"], $this->sql->parseBool($userRow["gpg_confirmed"]),
+        $userRow["gpg_fingerprint"], $userRow["gpg_algorithm"], $userRow["gpg_expires"]
+      );
+    }
+
+    // 2FA
+    if (!empty($userRow["2fa_id"])) {
+      $this->twoFactorToken = TwoFactorToken::newInstance($userRow["2fa_type"], $userRow["2fa_data"],
+        $userRow["2fa_id"], $this->sql->parseBool($userRow["2fa_confirmed"]));
+    }
+
+    // Language
+    if (!is_null($userRow['langId'])) {
+      $this->setLanguage(Language::newInstance($userRow['langId'], $userRow['langCode'], $userRow['langName']));
+    }
+
+    // select groups
+    $groupRows = $this->sql->select("Group.uid as groupId", "Group.name as groupName")
+      ->from("UserGroup")
+      ->where(new Compare("UserGroup.user_id", $userId))
+      ->innerJoin("Group", "UserGroup.group_id", "Group.uid")
+      ->execute();
+    if (is_array($groupRows)) {
+      foreach ($groupRows as $row) {
+        $this->groups[$row["groupId"]] = $row["groupName"];
+      }
+    }
+
+    return $userRow;
+  }
+
+  public function loadApiKey($apiKey): bool {
 
     if ($this->loggedIn) {
       return true;
     }
 
-    $res = $this->sql->select("ApiKey.user_id as uid", "User.name", "User.fullName", "User.email",
-      "User.confirmed", "User.profilePicture",
-      "User.gpg_id", "GpgKey.fingerprint as gpg_fingerprint", "GpgKey.expires as gpg_expires",
-        "GpgKey.confirmed as gpg_confirmed", "GpgKey.algorithm as gpg_algorithm",
-      "User.2fa_id", "2FA.confirmed as 2fa_confirmed", "2FA.data as 2fa_data", "2FA.type as 2fa_type",
-      "Language.uid as langId", "Language.code as langCode", "Language.name as langName",
-      "Group.uid as groupId", "Group.name as groupName")
-      ->from("ApiKey")
-      ->innerJoin("User", "ApiKey.user_id", "User.uid")
-      ->leftJoin("UserGroup", "UserGroup.user_id", "User.uid")
-      ->leftJoin("Group", "UserGroup.group_id", "Group.uid")
-      ->leftJoin("Language", "User.language_id", "Language.uid")
-      ->leftJoin("GpgKey", "User.gpg_id", "GpgKey.uid")
-      ->leftJoin("2FA", "User.2fa_id", "2FA.uid")
-      ->where(new Compare("ApiKey.api_key", $apiKey))
-      ->where(new Compare("valid_until", $this->sql->currentTimestamp(), ">"))
-      ->where(new Compare("ApiKey.active", 1))
-      ->execute();
+    $userRow = $this->loadUser("ApiKey", [], [
+      new Compare("ApiKey.api_key", $apiKey),
+      new Compare("valid_until", $this->sql->currentTimestamp(), ">"),
+      new Compare("ApiKey.active", 1),
+    ]);
 
-    $success = ($res !== FALSE);
-    if ($success) {
-      if (empty($res) || !is_array($res)) {
-        $success = false;
-      } else {
-        $row = $res[0];
-        if (!$this->sql->parseBool($row["confirmed"])) {
-          return false;
-        }
-
-        $this->uid = $row['uid'];
-        $this->username = $row['name'];
-        $this->fullName = $row["fullName"];
-        $this->email = $row['email'];
-        $this->profilePicture = $row["profilePicture"];
-
-        if (!empty($row["gpg_id"])) {
-          $this->gpgKey = new GpgKey($row["gpg_id"], $this->sql->parseBool($row["gpg_confirmed"]),
-            $row["gpg_fingerprint"], $row["gpg_algorithm"], $row["gpg_expires"]
-          );
-        }
-
-        if (!empty($row["2fa_id"])) {
-          $this->twoFactorToken = TwoFactorToken::newInstance($row["2fa_type"], $row["2fa_data"],
-            $row["2fa_id"], $this->sql->parseBool($row["2fa_confirmed"]));
-        }
-
-        if(!is_null($row['langId'])) {
-          $this->setLanguage(Language::newInstance($row['langId'], $row['langCode'], $row['langName']));
-        }
-
-        foreach($res as $row) {
-          $this->groups[$row["groupId"]] = $row["groupName"];
-        }
-      }
+    // User must be confirmed to use API-Keys
+    if ($userRow === false || !$this->sql->parseBool($userRow["confirmed"])) {
+      return false;
     }
 
-    return $success;
+    return true;
   }
 
   public function processVisit() {
@@ -340,7 +367,7 @@ class User extends ApiObject {
   }
 
   private function isBot(): bool {
-    if (!isset($_SERVER["HTTP_USER_AGENT"]) || empty($_SERVER["HTTP_USER_AGENT"])) {
+    if (empty($_SERVER["HTTP_USER_AGENT"])) {
       return false;
     }
 

@@ -121,6 +121,11 @@ abstract class SQL {
   public abstract function connect();
   public abstract function disconnect();
 
+  /**
+   * @param Query $query
+   * @param int $fetchType
+   * @return mixed
+   */
   public function executeQuery(Query $query, int $fetchType = self::FETCH_NONE) {
 
     $parameters = [];
@@ -242,6 +247,9 @@ abstract class SQL {
   }
 
   // Statements
+  /**
+   * @return mixed
+   */
   protected abstract function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE);
 
   public function buildCondition($condition, &$params) {

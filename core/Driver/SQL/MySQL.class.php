@@ -32,7 +32,7 @@ use Driver\SQL\Type\Trigger;
 class MySQL extends SQL {
 
   public function __construct($connectionData) {
-     parent::__construct($connectionData);
+    parent::__construct($connectionData);
   }
 
   public function checkRequirements() {
@@ -46,7 +46,7 @@ class MySQL extends SQL {
   // Connection Management
   public function connect() {
 
-    if(!is_null($this->connection)) {
+    if (!is_null($this->connection)) {
       return true;
     }
 
@@ -69,7 +69,7 @@ class MySQL extends SQL {
   }
 
   public function disconnect() {
-    if(is_null($this->connection)) {
+    if (is_null($this->connection)) {
       return true;
     }
 
@@ -88,9 +88,9 @@ class MySQL extends SQL {
 
   private function getPreparedParams($values): array {
     $sqlParams = array('');
-    foreach($values as $value) {
+    foreach ($values as $value) {
       $paramType = Parameter::parseType($value);
-      switch($paramType) {
+      switch ($paramType) {
         case Parameter::TYPE_BOOLEAN:
           $value = $value ? 1 : 0;
           $sqlParams[0] .= 'i';
@@ -134,6 +134,9 @@ class MySQL extends SQL {
     return $sqlParams;
   }
 
+  /**
+   * @return mixed
+   */
   protected function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE) {
 
     $result = null;
@@ -218,7 +221,7 @@ class MySQL extends SQL {
       return "";
     } else if ($strategy instanceof UpdateStrategy) {
       $updateValues = array();
-      foreach($strategy->getValues() as $key => $value) {
+      foreach ($strategy->getValues() as $key => $value) {
         $leftColumn = $this->columnName($key);
         if ($value instanceof Column) {
           $columnName = $this->columnName($value->getName());
@@ -253,16 +256,16 @@ class MySQL extends SQL {
       } else {
         return "TEXT";
       }
-    } else if($column instanceof SerialColumn) {
+    } else if ($column instanceof SerialColumn) {
       return "INTEGER AUTO_INCREMENT";
-    } else if($column instanceof IntColumn) {
+    } else if ($column instanceof IntColumn) {
       $unsigned = $column->isUnsigned() ? " UNSIGNED" : "";
       return $column->getType() . $unsigned;
-    } else if($column instanceof DateTimeColumn) {
+    } else if ($column instanceof DateTimeColumn) {
       return "DATETIME";
-    } else if($column instanceof BoolColumn) {
+    } else if ($column instanceof BoolColumn) {
       return "BOOLEAN";
-    } else if($column instanceof JsonColumn) {
+    } else if ($column instanceof JsonColumn) {
       return "LONGTEXT"; # some maria db setups don't allow JSON here…
     } else {
       $this->lastError = $this->logger->error("Unsupported Column Type: " . get_class($column));
@@ -275,7 +278,7 @@ class MySQL extends SQL {
     $defaultValue = $column->getDefaultValue();
     if ($column instanceof EnumColumn) { // check this, shouldn't it be in getColumnType?
       $values = array();
-      foreach($column->getValues() as $value) {
+      foreach ($column->getValues() as $value) {
         $values[] = $this->getValueDefinition($value);
       }
 
@@ -305,11 +308,11 @@ class MySQL extends SQL {
   public function getValueDefinition($value) {
     if (is_numeric($value)) {
       return $value;
-    } else if(is_bool($value)) {
+    } else if (is_bool($value)) {
       return $value ? "TRUE" : "FALSE";
-    } else if(is_null($value)) {
+    } else if (is_null($value)) {
       return "NULL";
-    } else if($value instanceof Keyword) {
+    } else if ($value instanceof Keyword) {
       return $value->getValue();
     } else if ($value instanceof CurrentTimeStamp) {
       return "CURRENT_TIMESTAMP";
@@ -341,7 +344,7 @@ class MySQL extends SQL {
   public function tableName($table): string {
     if (is_array($table)) {
       $tables = array();
-      foreach($table as $t) $tables[] = $this->tableName($t);
+      foreach ($table as $t) $tables[] = $this->tableName($t);
       return implode(",", $tables);
     } else {
       $parts = explode(" ", $table);
@@ -357,16 +360,16 @@ class MySQL extends SQL {
   public function columnName($col): string {
     if ($col instanceof Keyword) {
       return $col->getValue();
-    } elseif(is_array($col)) {
+    } elseif (is_array($col)) {
       $columns = array();
-      foreach($col as $c) $columns[] = $this->columnName($c);
+      foreach ($col as $c) $columns[] = $this->columnName($c);
       return implode(",", $columns);
     } else {
       if (($index = strrpos($col, ".")) !== FALSE) {
         $tableName = $this->tableName(substr($col, 0, $index));
         $columnName = $this->columnName(substr($col, $index + 1));
         return "$tableName.$columnName";
-      } else if(($index = stripos($col, " as ")) !== FALSE) {
+      } else if (($index = stripos($col, " as ")) !== FALSE) {
         $columnName = $this->columnName(trim(substr($col, 0, $index)));
         $alias = trim(substr($col, $index + 4));
         return "$columnName as $alias";

@@ -92,6 +92,9 @@ class PostgreSQL extends SQL {
     return $lastError;
   }
 
+  /**
+   * @return mixed
+   */
   protected function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE) {
 
     $this->lastError = "";

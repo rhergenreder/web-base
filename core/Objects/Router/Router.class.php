@@ -7,18 +7,22 @@ use Objects\User;
 
 class Router {
 
-  private User $user;
+  private ?User $user;
   private Logger $logger;
   protected array $routes;
   protected array $statusCodeRoutes;
 
-  public function __construct(User $user) {
+  public function __construct(?User $user = null) {
     $this->user = $user;
-    $this->logger = new Logger("Router", $user->getSQL());
     $this->routes = [];
     $this->statusCodeRoutes = [];
 
-    $this->addRoute(new ApiRoute());
+    if ($user) {
+      $this->addRoute(new ApiRoute());
+      $this->logger = new Logger("Router", $user->getSQL());
+    } else {
+      $this->logger = new Logger("Router");
+    }
   }
 
   public function run(string $url): string {

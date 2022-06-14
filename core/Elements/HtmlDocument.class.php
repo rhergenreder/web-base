@@ -28,7 +28,7 @@ class HtmlDocument extends Document {
 
     $view = parseClass($this->activeView);
     $file = getClassPath($view);
-    if(!file_exists($file) || !is_subclass_of($view, View::class)) {
+    if (!file_exists($file) || !is_subclass_of($view, View::class)) {
       return null;
     }
 
@@ -67,12 +67,10 @@ class HtmlDocument extends Document {
     $head = $this->head->getCode();
     $lang = $this->getUser()->getLanguage()->getShortCode();
 
-    $html = "<!DOCTYPE html>";
-    $html .= "<html lang=\"$lang\">";
-    $html .= $head;
-    $html .= $body;
-    $html .= "</html>";
-    return $html;
+    $code = "<!DOCTYPE html>";
+    $code .= html_tag("html", ["lang" => $lang], $head . $body, false);
+
+    return $code;
   }
 
 

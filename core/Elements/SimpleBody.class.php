@@ -10,7 +10,7 @@ abstract class SimpleBody extends Body {
 
   public function getCode(): string {
     $content = $this->getContent();
-    return parent::getCode() . "<body>$content</body>";
+    return html_tag("body", [], $content, false);
   }
 
   protected abstract function getContent(): string;

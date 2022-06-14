@@ -3,6 +3,7 @@
 namespace Elements;
 
 use Configuration\Settings;
+use Driver\Logger\Logger;
 use Driver\SQL\SQL;
 use Objects\Router\Router;
 use Objects\User;
@@ -10,6 +11,7 @@ use Objects\User;
 abstract class Document {
 
   protected Router $router;
+  private Logger $logger;
   protected bool $databaseRequired;
   private bool $cspEnabled;
   private ?string $cspNonce;
@@ -23,6 +25,11 @@ abstract class Document {
     $this->databaseRequired = true;
     $this->cspWhitelist = [];
     $this->domain = $this->getSettings()->getBaseUrl();
+    $this->logger = new Logger("Document", $this->getSQL());
+  }
+
+  public function getLogger(): Logger {
+    return $this->logger;
   }
 
   public function getUser(): User {

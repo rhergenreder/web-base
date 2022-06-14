@@ -5,10 +5,10 @@ if (is_file($autoLoad)) {
   require_once $autoLoad;
 }
 
-define("WEBBASE_VERSION", "1.5.1");
+define("WEBBASE_VERSION", "1.5.2");
 
 spl_autoload_extensions(".php");
-spl_autoload_register(function($class) {
+spl_autoload_register(function ($class) {
   if (!class_exists($class)) {
     $suffixes = ["", ".class", ".trait"];
     foreach ($suffixes as $suffix) {
@@ -29,8 +29,8 @@ function is_cli(): bool {
 
 function getProtocol(): string {
   $isSecure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') ||
-              (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') ||
-              (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] == 'on');
+    (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') ||
+    (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] == 'on');
 
   return $isSecure ? 'https' : 'http';
 }
@@ -47,9 +47,9 @@ function generateRandomString($length, $type = "ascii"): string {
 
   $lowercase = "abcdefghijklmnopqrstuvwxyz";
   $uppercase = strtoupper($lowercase);
-  $digits    = "0123456789";
-  $hex       = $digits . substr($lowercase, 0, 6);
-  $ascii     = $uppercase . $lowercase . $digits;
+  $digits = "0123456789";
+  $hex = $digits . substr($lowercase, 0, 6);
+  $ascii = $uppercase . $lowercase . $digits;
 
   if ($length > 0) {
     $type = strtolower($type);
@@ -135,7 +135,6 @@ function endsWith($haystack, $needle, bool $ignoreCase = false): bool {
 }
 
 
-
 function contains($haystack, $needle, bool $ignoreCase = false): bool {
 
   if (is_array($haystack)) {
@@ -191,15 +190,36 @@ function replaceCssSelector($sel) {
   return preg_replace("~[.#<>]~", "_", preg_replace("~[:\-]~", "", $sel));
 }
 
-function urlId($str) {
-  return urlencode(htmlspecialchars(preg_replace("[: ]","-", $str)));
-}
-
 function html_attributes(array $attributes): string {
   return implode(" ", array_map(function ($key) use ($attributes) {
     $value = htmlspecialchars($attributes[$key]);
     return "$key=\"$value\"";
   }, array_keys($attributes)));
+}
+
+function html_tag_short(string $tag, array $attributes = []): string {
+  return html_tag_ex($tag, $attributes, "", true, true);
+}
+
+function html_tag(string $tag, array $attributes = [], $content = "", bool $escapeContent = true): string {
+  return html_tag_ex($tag, $attributes, $content, $escapeContent, false);
+}
+
+function html_tag_ex(string $tag, array $attributes, $content = "", bool $escapeContent = true, bool $short = false): string {
+  $attrs = html_attributes($attributes);
+  if (!empty($attrs)) {
+    $attrs = " " . $attrs;
+  }
+
+  if (is_array($content)) {
+    $content = implode("", $content);
+  }
+
+  if ($escapeContent) {
+    $content = htmlspecialchars($content);
+  }
+
+  return ($short && !empty($content)) ? "<$tag$attrs/>" : "<$tag$attrs>$content</$tag>";
 }
 
 function getClassPath($class, string $suffix = ".class"): string {
@@ -229,7 +249,7 @@ function createError($msg) {
 }
 
 function downloadFile($handle, $offset = 0, $length = null): bool {
-  if($handle === false) {
+  if ($handle === false) {
     return false;
   }
 
@@ -238,7 +258,7 @@ function downloadFile($handle, $offset = 0, $length = null): bool {
   }
 
   $bytesRead = 0;
-  $bufferSize = 1024*16;
+  $bufferSize = 1024 * 16;
   while (!feof($handle) && ($length === null || $bytesRead < $length)) {
     $chunkSize = ($length === null ? $bufferSize : min($length - $bytesRead, $bufferSize));
     echo fread($handle, $chunkSize);
@@ -246,59 +266,6 @@ function downloadFile($handle, $offset = 0, $length = null): bool {
 
   fclose($handle);
   return true;
-}
-
-function serveStatic(string $webRoot, string $file): string {
-
-  $path = realpath($webRoot . "/" . $file);
-  if (!startsWith($path, $webRoot . "/")) {
-    http_response_code(406);
-    return "<b>Access restricted, requested file outside web root:</b> " . htmlspecialchars($path);
-  }
-
-  if (!file_exists($path) || !is_file($path) || !is_readable($path)) {
-    http_response_code(500);
-    return "<b>Unable to read file:</b> " . htmlspecialchars($path);
-  }
-
-  $pathInfo = pathinfo($path);
-
-  // TODO: add more file extensions here, probably add them to settings?
-  $allowedExtension = array("html", "htm", "pdf");
-  $ext = $pathInfo["extension"] ?? "";
-  if (!in_array($ext, $allowedExtension)) {
-    http_response_code(406);
-    return "<b>Access restricted:</b> Extension '" . htmlspecialchars($ext) . "' not allowed.";
-  }
-
-  $size = filesize($path);
-  $mimeType = mime_content_type($path);
-  header("Content-Type: $mimeType"); // TODO: do we need to check mime type?
-  header("Content-Length: $size");
-  header('Accept-Ranges: bytes');
-
-  if (strcasecmp($_SERVER["REQUEST_METHOD"], "HEAD") !== 0) {
-    $handle = fopen($path, "rb");
-    if($handle === false) {
-      http_response_code(500);
-      return "<b>Unable to read file:</b> " . htmlspecialchars($path);
-    }
-
-    $offset = 0;
-    $length = $size;
-
-    if (isset($_SERVER['HTTP_RANGE'])) {
-      preg_match('/bytes=(\d+)-(\d+)?/', $_SERVER['HTTP_RANGE'], $matches);
-      $offset = intval($matches[1]);
-      $length = intval($matches[2]) - $offset;
-      http_response_code(206);
-      header('Content-Range: bytes ' . $offset . '-' . ($offset + $length) . '/' . $size);
-    }
-
-    downloadFile($handle, $offset, $length);
-  }
-
-  return "";
 }
 
 function parseClass($class): string {

@@ -265,6 +265,7 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("Contact/get", array(USER_GROUP_ADMIN, USER_GROUP_SUPPORT), "Allows users to see messages within a contact request");
 
     self::loadPatches($queries, $sql);
+    self::loadEntities($queries, $sql);
 
     return $queries;
   }
@@ -282,6 +283,26 @@ class CreateDatabase extends DatabaseScript {
           $method = "$className::createQueries";
           $patchQueries = call_user_func($method, $sql);
           foreach ($patchQueries as $query) $queries[] = $query;
+        }
+      }
+    }
+  }
+
+  private static function loadEntities(&$queries, $sql) {
+    $entityDirectory = './core/Objects/DatabaseEntity/';
+    if (file_exists($entityDirectory) && is_dir($entityDirectory)) {
+      $scan_arr = scandir($entityDirectory);
+      $files_arr = array_diff($scan_arr, array('.', '..'));
+      foreach ($files_arr as $file) {
+        $suffix = ".class.php";
+        if (endsWith($file, $suffix)) {
+          $className = substr($file, 0, strlen($file) - strlen($suffix));
+          if (!in_array($className, ["DatabaseEntity", "DatabaseEntityHandler"])) {
+            $className = "\\Objects\\DatabaseEntity\\$className";
+            $method = "$className::getHandler";
+            $handler = call_user_func($method, $sql);
+            $queries[] = $handler->getTableQuery();
+          }
         }
       }
     }

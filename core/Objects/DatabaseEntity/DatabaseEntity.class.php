@@ -2,7 +2,6 @@
 
 namespace Objects\DatabaseEntity;
 
-use Driver\Logger\Logger;
 use Driver\SQL\Condition\Condition;
 use Driver\SQL\SQL;
 
@@ -16,18 +15,18 @@ abstract class DatabaseEntity {
   }
 
   public static function find(SQL $sql, int $id): ?DatabaseEntity {
-    $handler = self::getHandler();
-    return $handler->fetchOne($sql, $id);
+    $handler = self::getHandler($sql);
+    return $handler->fetchOne($id);
   }
 
   public static function findAll(SQL $sql, ?Condition $condition): ?array {
-    $handler = self::getHandler();
-    return $handler->fetchMultiple($sql, $condition);
+    $handler = self::getHandler($sql);
+    return $handler->fetchMultiple($condition);
   }
 
   public function save(SQL $sql): bool {
-    $handler = self::getHandler();
-    $res = $handler->insertOrUpdate($sql, $this);
+    $handler = self::getHandler($sql);
+    $res = $handler->insertOrUpdate($this);
     if ($res === false) {
       return false;
     } else if ($this->id === null) {
@@ -38,17 +37,16 @@ abstract class DatabaseEntity {
   }
 
   public function delete(SQL $sql): bool {
-    $handler = self::getHandler();
+    $handler = self::getHandler($sql);
     if ($this->id === null) {
-      $className = $handler->getReflection()->getName();
-      (new Logger("DatabaseEntity", $sql))->error("Cannot delete entity of class '$className' without id");
+      $handler->getLogger()->error("Cannot delete entity without id");
       return false;
     }
 
-    return $handler->delete($sql, $this->id);
+    return $handler->delete($this->id);
   }
 
-  public static function getHandler($obj_or_class = null): DatabaseEntityHandler {
+  public static function getHandler(SQL $sql, $obj_or_class = null): DatabaseEntityHandler {
 
     if (!$obj_or_class) {
       $obj_or_class = get_called_class();
@@ -62,7 +60,7 @@ abstract class DatabaseEntity {
 
     $handler = self::$handlers[$class->getShortName()] ?? null;
     if (!$handler) {
-      $handler = new DatabaseEntityHandler($class);
+      $handler = new DatabaseEntityHandler($sql, $class);
       self::$handlers[$class->getShortName()] = $handler;
     }
 

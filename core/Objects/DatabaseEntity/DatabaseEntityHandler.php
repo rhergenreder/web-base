@@ -2,6 +2,7 @@
 
 namespace Objects\DatabaseEntity;
 
+use Driver\Logger\Logger;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\DateTimeColumn;
 use Driver\SQL\Column\IntColumn;
@@ -11,6 +12,7 @@ use Driver\SQL\Condition\Condition;
 use Driver\SQL\Column\DoubleColumn;
 use Driver\SQL\Column\FloatColumn;
 use Driver\SQL\Constraint\ForeignKey;
+use Driver\SQL\Query\CreateTable;
 use Driver\SQL\SQL;
 use Driver\SQL\Strategy\CascadeStrategy;
 use Driver\SQL\Strategy\SetNullStrategy;
@@ -22,13 +24,17 @@ class DatabaseEntityHandler {
   private string $tableName;
   private array $columns;
   private array $properties;
+  private SQL $sql;
+  private Logger $logger;
 
-  public function __construct(\ReflectionClass $entityClass) {
+  public function __construct(SQL $sql, \ReflectionClass $entityClass) {
+    $this->sql = $sql;
     $className = $entityClass->getName();
+    $this->logger = new Logger($entityClass->getShortName(), $sql);
     $this->entityClass = $entityClass;
     if (!$this->entityClass->isSubclassOf(DatabaseEntity::class) ||
       !$this->entityClass->isInstantiable()) {
-      throw new Exception("Cannot persist class '$className': Not an instance of DatabaseEntity or not instantiable.");
+      $this->raiseError("Cannot persist class '$className': Not an instance of DatabaseEntity or not instantiable.");
     }
 
     $this->tableName = $this->entityClass->getShortName();
@@ -41,7 +47,7 @@ class DatabaseEntityHandler {
       $propertyType = $property->getType();
       $columnName = self::getColumnName($propertyName);
       if (!($propertyType instanceof \ReflectionNamedType)) {
-        throw new Exception("Cannot persist class '$className': Property '$propertyName' has no valid type");
+        $this->raiseError("Cannot persist class '$className': Property '$propertyName' has no valid type");
       }
 
       $nullable = $propertyType->allowsNull();
@@ -63,13 +69,13 @@ class DatabaseEntityHandler {
           $requestedClass = new \ReflectionClass($propertyTypeName);
           if ($requestedClass->isSubclassOf(DatabaseEntity::class)) {
             $requestedHandler = ($requestedClass->getName() === $this->entityClass->getName()) ?
-              $this : DatabaseEntity::getHandler($requestedClass);
+              $this : DatabaseEntity::getHandler($this->sql, $requestedClass);
             $strategy = $nullable ? new SetNullStrategy() : new CascadeStrategy();
             $this->columns[$propertyName] = new IntColumn($columnName, $nullable);
             $this->relations[$propertyName] = new ForeignKey($columnName, $requestedHandler->tableName, "id", $strategy);
           }
         } catch (\Exception $ex) {
-          throw new Exception("Cannot persist class '$className': Property '$propertyName' has non persist-able type: $propertyTypeName");
+          $this->raiseError("Cannot persist class '$className': Property '$propertyName' has non persist-able type: $propertyTypeName");
         }
       }
 
@@ -88,16 +94,25 @@ class DatabaseEntityHandler {
     return $this->entityClass;
   }
 
-  private function entityFromRow(array $row): DatabaseEntity {
-    $entity = $this->entityClass->newInstanceWithoutConstructor();
-    foreach ($this->columns as $propertyName => $column) {
-      $this->properties[$propertyName]->setValue($entity, $row[$column]);
-    }
-    return $entity;
+  public function getLogger(): Logger {
+    return $this->logger;
   }
 
-  public function fetchOne(SQL $sql, int $id): ?DatabaseEntity {
-    $res = $sql->select(...array_keys($this->columns))
+  private function entityFromRow(array $row): DatabaseEntity {
+    try {
+      $entity = $this->entityClass->newInstanceWithoutConstructor();
+      foreach ($this->columns as $propertyName => $column) {
+        $this->properties[$propertyName]->setValue($entity, $row[$column]);
+      }
+      return $entity;
+    } catch (\Exception $exception) {
+      $this->logger->error("Error creating entity from database row: " . $exception->getMessage());
+      throw $exception;
+    }
+  }
+
+  public function fetchOne(int $id): ?DatabaseEntity {
+    $res = $this->sql->select(...array_keys($this->columns))
       ->from($this->tableName)
       ->where(new Compare("id", $id))
       ->first()
@@ -110,8 +125,8 @@ class DatabaseEntityHandler {
     }
   }
 
-  public function fetchMultiple(SQL $sql, ?Condition $condition = null): ?array {
-    $query = $sql->select(...array_keys($this->columns))
+  public function fetchMultiple(?Condition $condition = null): ?array {
+    $query = $this->sql->select(...array_keys($this->columns))
       ->from($this->tableName);
 
     if ($condition) {
@@ -130,8 +145,8 @@ class DatabaseEntityHandler {
     }
   }
 
-  public function createTable(SQL $sql): bool {
-    $query = $sql->createTable($this->tableName)
+  public function getTableQuery(): CreateTable {
+    $query = $this->sql->createTable($this->tableName)
       ->onlyIfNotExists()
       ->addSerial("id")
       ->primaryKey("id");
@@ -144,10 +159,15 @@ class DatabaseEntityHandler {
       $query->addConstraint($constraint);
     }
 
+    return $query;
+  }
+
+  public function createTable(): bool {
+    $query = $this->getTableQuery();
     return $query->execute();
   }
 
-  public function insertOrUpdate(SQL $sql, DatabaseEntity $entity) {
+  public function insertOrUpdate(DatabaseEntity $entity) {
     $id = $entity->getId();
     if ($id === null) {
       $columns = [];
@@ -158,18 +178,18 @@ class DatabaseEntityHandler {
         $row[] = $this->properties[$propertyName]->getValue($entity);
       }
 
-      $res = $sql->insert($this->tableName, $columns)
+      $res = $this->sql->insert($this->tableName, $columns)
         ->addRow(...$row)
         ->returning("id")
         ->execute();
 
       if ($res !== false) {
-        return $sql->getLastInsertId();
+        return $this->sql->getLastInsertId();
       } else {
         return false;
       }
     } else {
-      $query = $sql->update($this->tableName)
+      $query = $this->sql->update($this->tableName)
         ->where(new Compare("id", $id));
 
       foreach ($this->columns as $propertyName => $column) {
@@ -182,7 +202,12 @@ class DatabaseEntityHandler {
     }
   }
 
-  public function delete(SQL $sql, int $id) {
-    return $sql->delete($this->tableName)->where(new Compare("id", $id))->execute();
+  public function delete(int $id) {
+    return $this->sql->delete($this->tableName)->where(new Compare("id", $id))->execute();
+  }
+
+  private function raiseError(string $message) {
+    $this->logger->error($message);
+    throw new Exception($message);
   }
 }

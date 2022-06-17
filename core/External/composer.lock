@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "edfe59e1489b0594cfe6ff0276be3419",
+    "content-hash": "af894b476b8bab945acf32399608ac5f",
     "packages": [
         {
             "name": "beberlei/assert",
@@ -533,16 +533,16 @@
         },
         {
             "name": "php-mqtt/client",
-            "version": "v1.3.0",
+            "version": "v1.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-mqtt/client.git",
-                "reference": "5813fd257f27e1e9537cd29c0152102e129437d0"
+                "reference": "d54381306e68baf7c2c089392c0c6d1d06e278c6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-mqtt/client/zipball/5813fd257f27e1e9537cd29c0152102e129437d0",
-                "reference": "5813fd257f27e1e9537cd29c0152102e129437d0",
+                "url": "https://api.github.com/repos/php-mqtt/client/zipball/d54381306e68baf7c2c089392c0c6d1d06e278c6",
+                "reference": "d54381306e68baf7c2c089392c0c6d1d06e278c6",
                 "shasum": ""
             },
             "require": {
@@ -584,36 +584,36 @@
             ],
             "support": {
                 "issues": "https://github.com/php-mqtt/client/issues",
-                "source": "https://github.com/php-mqtt/client/tree/v1.3.0"
+                "source": "https://github.com/php-mqtt/client/tree/v1.4.0"
             },
-            "time": "2022-05-26T17:31:01+00:00"
+            "time": "2022-06-15T19:19:03+00:00"
         },
         {
             "name": "psr/log",
-            "version": "3.0.0",
+            "version": "1.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-fig/log.git",
-                "reference": "fe5ea303b0887d5caefd3d431c3e61ad47037001"
+                "reference": "d49695b909c3b7628b6289db5479a1c204601f11"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-fig/log/zipball/fe5ea303b0887d5caefd3d431c3e61ad47037001",
-                "reference": "fe5ea303b0887d5caefd3d431c3e61ad47037001",
+                "url": "https://api.github.com/repos/php-fig/log/zipball/d49695b909c3b7628b6289db5479a1c204601f11",
+                "reference": "d49695b909c3b7628b6289db5479a1c204601f11",
                 "shasum": ""
             },
             "require": {
-                "php": ">=8.0.0"
+                "php": ">=5.3.0"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "3.x-dev"
+                    "dev-master": "1.1.x-dev"
                 }
             },
             "autoload": {
                 "psr-4": {
-                    "Psr\\Log\\": "src"
+                    "Psr\\Log\\": "Psr/Log/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -634,34 +634,43 @@
                 "psr-3"
             ],
             "support": {
-                "source": "https://github.com/php-fig/log/tree/3.0.0"
+                "source": "https://github.com/php-fig/log/tree/1.1.4"
             },
-            "time": "2021-07-14T16:46:02+00:00"
+            "time": "2021-05-03T11:20:27+00:00"
         },
         {
             "name": "spomky-labs/cbor-php",
-            "version": "v2.0.1",
+            "version": "v2.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Spomky-Labs/cbor-php.git",
-                "reference": "9776578000be884cd7864eeb7c37a4ac92d8c995"
+                "reference": "28e2712cfc0b48fae661a48ffc6896d7abe83684"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Spomky-Labs/cbor-php/zipball/9776578000be884cd7864eeb7c37a4ac92d8c995",
-                "reference": "9776578000be884cd7864eeb7c37a4ac92d8c995",
+                "url": "https://api.github.com/repos/Spomky-Labs/cbor-php/zipball/28e2712cfc0b48fae661a48ffc6896d7abe83684",
+                "reference": "28e2712cfc0b48fae661a48ffc6896d7abe83684",
                 "shasum": ""
             },
             "require": {
                 "brick/math": "^0.8.15|^0.9.0",
+                "ext-mbstring": "*",
                 "php": ">=7.3"
             },
             "require-dev": {
-                "phpstan/phpstan": "^0.12",
-                "phpstan/phpstan-beberlei-assert": "^0.12",
-                "phpstan/phpstan-deprecation-rules": "^0.12",
-                "phpstan/phpstan-phpunit": "^0.12",
-                "phpstan/phpstan-strict-rules": "^0.12"
+                "ekino/phpstan-banned-code": "^1.0",
+                "ext-json": "*",
+                "infection/infection": "^0.18|^0.25",
+                "phpstan/extension-installer": "^1.1",
+                "phpstan/phpstan": "^1.0",
+                "phpstan/phpstan-beberlei-assert": "^1.0",
+                "phpstan/phpstan-deprecation-rules": "^1.0",
+                "phpstan/phpstan-phpunit": "^1.0",
+                "phpstan/phpstan-strict-rules": "^1.0",
+                "phpunit/phpunit": "^9.5",
+                "rector/rector": "^0.12",
+                "roave/security-advisories": "dev-latest",
+                "symplify/easy-coding-standard": "^10.0"
             },
             "suggest": {
                 "ext-bcmath": "GMP or BCMath extensions will drastically improve the library performance. BCMath extension needed to handle the Big Float and Decimal Fraction Tags",
@@ -695,15 +704,19 @@
             ],
             "support": {
                 "issues": "https://github.com/Spomky-Labs/cbor-php/issues",
-                "source": "https://github.com/Spomky-Labs/cbor-php/tree/v2.0.1"
+                "source": "https://github.com/Spomky-Labs/cbor-php/tree/v2.1.0"
             },
             "funding": [
+                {
+                    "url": "https://github.com/Spomky",
+                    "type": "github"
+                },
                 {
                     "url": "https://www.patreon.com/FlorentMorselli",
                     "type": "patreon"
                 }
             ],
-            "time": "2020-08-31T20:08:03+00:00"
+            "time": "2021-12-13T12:46:26+00:00"
         },
         {
             "name": "symfony/polyfill-ctype",
@@ -3035,5 +3048,5 @@
     "prefer-lowest": false,
     "platform": [],
     "platform-dev": [],
-    "plugin-api-version": "2.3.0"
+    "plugin-api-version": "2.2.0"
 }

@@ -4,8 +4,8 @@
         "twig/twig": "^3.0",
         "chillerlan/php-qrcode": "^4.3",
         "christian-riesen/base32": "^1.6",
-        "spomky-labs/cbor-php": "2.0.1",
-        "web-auth/cose-lib": "^3.3",
+        "spomky-labs/cbor-php": "2.1.0",
+        "web-auth/cose-lib": "3.3.12",
         "firebase/php-jwt": "^6.2"
     },
     "require-dev": {

@@ -2,6 +2,11 @@
 
 namespace Driver\SQL\Query;
 
+use Driver\SQL\Column\BigIntColumn;
+use Driver\SQL\Column\Column;
+use Driver\SQL\Column\DoubleColumn;
+use Driver\SQL\Column\FloatColumn;
+use Driver\SQL\Column\NumericColumn;
 use Driver\SQL\Column\SerialColumn;
 use Driver\SQL\Column\StringColumn;
 use Driver\SQL\Column\IntColumn;
@@ -10,6 +15,7 @@ use Driver\SQL\Column\EnumColumn;
 use Driver\SQL\Column\BoolColumn;
 use Driver\SQL\Column\JsonColumn;
 
+use Driver\SQL\Constraint\Constraint;
 use Driver\SQL\Constraint\PrimaryKey;
 use Driver\SQL\Constraint\Unique;
 use Driver\SQL\Constraint\ForeignKey;
@@ -29,6 +35,16 @@ class CreateTable extends Query {
     $this->columns = array();
     $this->constraints = array();
     $this->ifNotExists = false;
+  }
+
+  public function addColumn(Column $column): CreateTable {
+    $this->columns[$column->getName()] = $column;
+    return $this;
+  }
+
+  public function addConstraint(Constraint $constraint): CreateTable {
+    $this->constraints[] = $constraint;
+    return $this;
   }
 
   public function addSerial(string $name): CreateTable {
@@ -68,6 +84,21 @@ class CreateTable extends Query {
 
   public function addEnum(string $name, array $values, bool $nullable = false, $defaultValue = NULL): CreateTable {
     $this->columns[$name] = new EnumColumn($name, $values, $nullable, $defaultValue);
+    return $this;
+  }
+
+  public function addNumeric(string $name, bool $nullable = false, $defaultValue = NULL, ?int $digitsTotal = 10, ?int $digitsDecimal = 0): CreateTable {
+    $this->columns[$name] = new NumericColumn($name, $nullable, $defaultValue, $digitsTotal, $digitsDecimal);
+    return $this;
+  }
+
+  public function addFloat(string $name, bool $nullable = false, $defaultValue = NULL, ?int $digitsTotal = null, ?int $digitsDecimal = null): CreateTable {
+    $this->columns[$name] = new FloatColumn($name, $nullable, $defaultValue, $digitsTotal, $digitsDecimal);
+    return $this;
+  }
+
+  public function addDouble(string $name, bool $nullable = false, $defaultValue = NULL, ?int $digitsTotal = null, ?int $digitsDecimal = null): CreateTable {
+    $this->columns[$name] = new DoubleColumn($name, $nullable, $defaultValue, $digitsTotal, $digitsDecimal);
     return $this;
   }
 

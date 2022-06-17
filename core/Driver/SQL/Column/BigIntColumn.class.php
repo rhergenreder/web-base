@@ -1,8 +1,6 @@
 <?php
 
-namespace Driver\SQL\Query;
-
-use Driver\SQL\Column\IntColumn;
+namespace Driver\SQL\Column;
 
 class BigIntColumn extends IntColumn {
 

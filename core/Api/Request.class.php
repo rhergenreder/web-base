@@ -6,6 +6,12 @@ use Driver\Logger\Logger;
 use Objects\User;
 use PhpMqtt\Client\MqttClient;
 
+/**
+ * TODO: we need following features, probably as abstract/generic class/method:
+ * - easy way for pagination (select with limit/offset)
+ * - CRUD Endpoints/Objects (Create, Update, Delete)
+ */
+
 abstract class Request {
 
   protected User $user;

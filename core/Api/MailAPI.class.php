@@ -182,13 +182,14 @@ namespace Api\Mail {
         $this->success = @$mail->Send();
         if (!$this->success) {
           $this->lastError = "Error sending Mail: $mail->ErrorInfo";
-          error_log("sendMail() failed: $mail->ErrorInfo");
+          $this->logger->error("sendMail() failed: $mail->ErrorInfo");
         } else {
           $this->result["messageId"] = $mail->getLastMessageID();
         }
       } catch (Exception $e) {
         $this->success = false;
         $this->lastError = "Error sending Mail: $e";
+        $this->logger->error($this->lastError);
       }
 
       return $this->success;

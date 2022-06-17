@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * This file contains functions used globally without a namespace and should not require
+ * any other files. It also loads the composer vendor libraries.
+ */
+
 $autoLoad = implode(DIRECTORY_SEPARATOR, [__DIR__, "External", "vendor", "autoload.php"]);
 if (is_file($autoLoad)) {
   require_once $autoLoad;
@@ -184,10 +189,6 @@ function intendCode($code, $escape = true): string {
   }
 
   return $newCode;
-}
-
-function replaceCssSelector($sel) {
-  return preg_replace("~[.#<>]~", "_", preg_replace("~[:\-]~", "", $sel));
 }
 
 function html_attributes(array $attributes): string {

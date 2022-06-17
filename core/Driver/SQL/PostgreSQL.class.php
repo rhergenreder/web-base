@@ -6,6 +6,7 @@ use \Api\Parameter\Parameter;
 
 use Driver\SQL\Column\Column;
 use \Driver\SQL\Column\IntColumn;
+use Driver\SQL\Column\NumericColumn;
 use \Driver\SQL\Column\SerialColumn;
 use \Driver\SQL\Column\StringColumn;
 use \Driver\SQL\Column\EnumColumn;
@@ -33,7 +34,7 @@ use Driver\SQL\Type\Trigger;
 class PostgreSQL extends SQL {
 
   public function __construct($connectionData) {
-     parent::__construct($connectionData);
+    parent::__construct($connectionData);
   }
 
   public function checkRequirements() {
@@ -46,7 +47,7 @@ class PostgreSQL extends SQL {
 
   // Connection Management
   public function connect() {
-    if(!is_null($this->connection)) {
+    if (!is_null($this->connection)) {
       return true;
     }
 
@@ -59,7 +60,7 @@ class PostgreSQL extends SQL {
     );
 
     $connectionString = array();
-    foreach($config as $key => $val) {
+    foreach ($config as $key => $val) {
       if (!empty($val)) {
         $connectionString[] = "$key=$val";
       }
@@ -77,7 +78,7 @@ class PostgreSQL extends SQL {
   }
 
   public function disconnect() {
-    if(is_null($this->connection))
+    if (is_null($this->connection))
       return;
 
     @pg_close($this->connection);
@@ -102,9 +103,9 @@ class PostgreSQL extends SQL {
     $pgParams = array();
 
     if (!is_null($values)) {
-      foreach($values as $value) {
+      foreach ($values as $value) {
         $paramType = Parameter::parseType($value);
-        switch($paramType) {
+        switch ($paramType) {
           case Parameter::TYPE_DATE:
             $value = $value->format("Y-m-d");
             break;
@@ -154,35 +155,35 @@ class PostgreSQL extends SQL {
   }
 
   public function getOnDuplicateStrategy(?Strategy $strategy, &$params): ?string {
-      if (!is_null($strategy)) {
-        if ($strategy instanceof UpdateStrategy) {
-          $updateValues = array();
-          foreach($strategy->getValues() as $key => $value) {
-            $leftColumn = $this->columnName($key);
-            if ($value instanceof Column) {
-              $columnName = $this->columnName($value->getName());
-              $updateValues[] = "$leftColumn=EXCLUDED.$columnName";
-            } else if ($value instanceof Add) {
-              $columnName = $this->columnName($value->getColumn());
-              $operator = $value->getOperator();
-              $value = $value->getValue();
-              $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
-            } else {
-              $updateValues[] = "$leftColumn=" . $this->addValue($value, $parameters);
-            }
+    if (!is_null($strategy)) {
+      if ($strategy instanceof UpdateStrategy) {
+        $updateValues = array();
+        foreach ($strategy->getValues() as $key => $value) {
+          $leftColumn = $this->columnName($key);
+          if ($value instanceof Column) {
+            $columnName = $this->columnName($value->getName());
+            $updateValues[] = "$leftColumn=EXCLUDED.$columnName";
+          } else if ($value instanceof Add) {
+            $columnName = $this->columnName($value->getColumn());
+            $operator = $value->getOperator();
+            $value = $value->getValue();
+            $updateValues[] = "$leftColumn=$columnName$operator" . $this->addValue($value, $params);
+          } else {
+            $updateValues[] = "$leftColumn=" . $this->addValue($value, $parameters);
           }
-
-          $conflictingColumns = $this->columnName($strategy->getConflictingColumns());
-          $updateValues = implode(",", $updateValues);
-          return " ON CONFLICT ($conflictingColumns) DO UPDATE SET $updateValues";
-        } else {
-          $strategyClass = get_class($strategy);
-          $this->lastError = $this->logger->error("ON DUPLICATE Strategy $strategyClass is not supported yet.");
-          return null;
         }
+
+        $conflictingColumns = $this->columnName($strategy->getConflictingColumns());
+        $updateValues = implode(",", $updateValues);
+        return " ON CONFLICT ($conflictingColumns) DO UPDATE SET $updateValues";
       } else {
-        return "";
+        $strategyClass = get_class($strategy);
+        $this->lastError = $this->logger->error("ON DUPLICATE Strategy $strategyClass is not supported yet.");
+        return null;
       }
+    } else {
+      return "";
+    }
   }
 
   public function getReturning(?string $columns): string {
@@ -205,7 +206,7 @@ class PostgreSQL extends SQL {
   // UGLY but.. what should i do?
   private function createEnum(EnumColumn $enumColumn, string $typeName): string {
     $values = array();
-    foreach($enumColumn->getValues() as $value) {
+    foreach ($enumColumn->getValues() as $value) {
       $values[] = $this->getValueDefinition($value);
     }
 
@@ -228,22 +229,33 @@ class PostgreSQL extends SQL {
       } else {
         return "TEXT";
       }
-    } else if($column instanceof SerialColumn) {
+    } else if ($column instanceof SerialColumn) {
       return "SERIAL";
-    } else if($column instanceof IntColumn) {
+    } else if ($column instanceof IntColumn) {
       return $column->getType();
-    } else if($column instanceof DateTimeColumn) {
+    } else if ($column instanceof DateTimeColumn) {
       return "TIMESTAMP";
-    } else if($column instanceof EnumColumn) {
+    } else if ($column instanceof EnumColumn) {
       $typeName = $column->getName();
-      if(!endsWith($typeName, "_type")) {
+      if (!endsWith($typeName, "_type")) {
         $typeName = "${typeName}_type";
       }
       return $typeName;
-    } else if($column instanceof BoolColumn) {
+    } else if ($column instanceof BoolColumn) {
       return "BOOLEAN";
-    } else if($column instanceof JsonColumn) {
+    } else if ($column instanceof JsonColumn) {
       return "JSON";
+    } else if ($column instanceof NumericColumn) {
+      $digitsDecimal = $column->getDecimalDigits();
+      $type = $column->getTypeName();
+      if ($digitsDecimal !== null) {
+        if ($type === "double") {
+          $type = "float"; // postgres doesn't know about double :/
+        }
+        return "$type($digitsDecimal)";
+      } else {
+        return $type;
+      }
     } else {
       $this->lastError = $this->logger->error("Unsupported Column Type: " . get_class($column));
       return NULL;
@@ -274,9 +286,9 @@ class PostgreSQL extends SQL {
   protected function getValueDefinition($value) {
     if (is_numeric($value)) {
       return $value;
-    } else if(is_bool($value)) {
+    } else if (is_bool($value)) {
       return $value ? "TRUE" : "FALSE";
-    } else if(is_null($value)) {
+    } else if (is_null($value)) {
       return "NULL";
     } else if ($value instanceof Keyword) {
       return $value->getValue();
@@ -312,7 +324,7 @@ class PostgreSQL extends SQL {
   public function tableName($table): string {
     if (is_array($table)) {
       $tables = array();
-      foreach($table as $t) $tables[] = $this->tableName($t);
+      foreach ($table as $t) $tables[] = $this->tableName($t);
       return implode(",", $tables);
     } else {
       $parts = explode(" ", $table);
@@ -328,15 +340,17 @@ class PostgreSQL extends SQL {
   public function columnName($col): string {
     if ($col instanceof KeyWord) {
       return $col->getValue();
-    } elseif(is_array($col)) {
-      $columns = array_map(function ($c) { return $this->columnName($c); }, $col);
+    } elseif (is_array($col)) {
+      $columns = array_map(function ($c) {
+        return $this->columnName($c);
+      }, $col);
       return implode(",", $columns);
     } else {
       if (($index = strrpos($col, ".")) !== FALSE) {
         $tableName = $this->tableName(substr($col, 0, $index));
         $columnName = $this->columnName(substr($col, $index + 1));
         return "$tableName.$columnName";
-      } else if(($index = stripos($col, " as ")) !== FALSE) {
+      } else if (($index = stripos($col, " as ")) !== FALSE) {
         $columnName = $this->columnName(trim(substr($col, 0, $index)));
         $alias = $this->columnName(trim(substr($col, $index + 4)));
         return "$columnName as $alias";
@@ -358,7 +372,7 @@ class PostgreSQL extends SQL {
   }
 
   public function buildCondition($condition, &$params) {
-    if($condition instanceof CondRegex) {
+    if ($condition instanceof CondRegex) {
       $left = $condition->getLeftExp();
       $right = $condition->getRightExp();
       $left = ($left instanceof Column) ? $this->columnName($left->getName()) : $this->addValue($left, $params);
@@ -372,7 +386,7 @@ class PostgreSQL extends SQL {
   private function createTriggerProcedure(string $name, array $statements) {
     $params = [];
     $query = "CREATE OR REPLACE FUNCTION $name() RETURNS TRIGGER AS \$table\$ BEGIN ";
-    foreach($statements as $stmt) {
+    foreach ($statements as $stmt) {
       if ($stmt instanceof Keyword) {
         $query .= $stmt->getValue() . ";";
       } else {

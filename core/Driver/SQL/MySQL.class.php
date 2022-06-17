@@ -7,6 +7,7 @@ use \Api\Parameter\Parameter;
 use DateTime;
 use \Driver\SQL\Column\Column;
 use \Driver\SQL\Column\IntColumn;
+use Driver\SQL\Column\NumericColumn;
 use \Driver\SQL\Column\SerialColumn;
 use \Driver\SQL\Column\StringColumn;
 use \Driver\SQL\Column\EnumColumn;
@@ -267,6 +268,19 @@ class MySQL extends SQL {
       return "BOOLEAN";
     } else if ($column instanceof JsonColumn) {
       return "LONGTEXT"; # some maria db setups don't allow JSON here…
+    } else if ($column instanceof NumericColumn) {
+      $digitsTotal = $column->getTotalDigits();
+      $digitsDecimal = $column->getDecimalDigits();
+      $type = $column->getTypeName();
+      if ($digitsTotal !== null) {
+        if ($digitsDecimal !== null) {
+          return "$type($digitsTotal,$digitsDecimal)";
+        } else {
+          return "$type($digitsTotal)";
+        }
+      } else {
+        return $type;
+      }
     } else {
       $this->lastError = $this->logger->error("Unsupported Column Type: " . get_class($column));
       return NULL;

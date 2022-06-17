@@ -35,7 +35,7 @@ class Stats extends Request {
     return ($this->success ? $res[0]["count"] : 0);
   }
 
-  private function checkSettings() {
+  private function checkSettings(): bool {
     $req = new \Api\Settings\Get($this->user);
     $this->success = $req->execute(array("key" => "^(mail_enabled|recaptcha_enabled)$"));
     $this->lastError = $req->getLastError();

@@ -8,9 +8,6 @@ use \Driver\SQL\Strategy\CascadeStrategy;
 
 class CreateDatabase extends DatabaseScript {
 
-  // NOTE:
-  // explicit serial ids removed due to postgres' serial implementation
-
   public static function createQueries(SQL $sql): array {
     $queries = array();
 

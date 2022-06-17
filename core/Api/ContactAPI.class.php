@@ -95,8 +95,6 @@ namespace Api\Contact {
         if (!$insertDB) {
           $message .= " Mail: $dbError";
         }
-
-        error_log($message);
       }
 
       if (!$sendMail && !$insertDB) {

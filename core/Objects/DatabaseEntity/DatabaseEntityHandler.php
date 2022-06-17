@@ -21,9 +21,11 @@ use PHPUnit\Util\Exception;
 class DatabaseEntityHandler {
 
   private \ReflectionClass $entityClass;
+  private static \ReflectionProperty $ID_FIELD;
   private string $tableName;
   private array $columns;
   private array $properties;
+  private array $relations;
   private SQL $sql;
   private Logger $logger;
 
@@ -41,6 +43,10 @@ class DatabaseEntityHandler {
     $this->columns = [];
     $this->properties = [];
     $this->relations = [];
+
+    if (!isset(self::$ID_FIELD)) {
+      self::$ID_FIELD = (new \ReflectionClass(DatabaseEntity::class))->getProperty("id");
+    }
 
     foreach ($this->entityClass->getProperties() as $property) {
       $propertyName = $property->getName();
@@ -98,12 +104,26 @@ class DatabaseEntityHandler {
     return $this->logger;
   }
 
+  public function getTableName(): string {
+    return $this->tableName;
+  }
+
   private function entityFromRow(array $row): DatabaseEntity {
     try {
       $entity = $this->entityClass->newInstanceWithoutConstructor();
       foreach ($this->columns as $propertyName => $column) {
-        $this->properties[$propertyName]->setValue($entity, $row[$column]);
+        $value = $row[$column->getName()];
+        $property = $this->properties[$propertyName];
+
+        if ($property->getType()->getName() === "DateTime") {
+          $value = new \DateTime($value);
+        }
+
+        $property->setValue($entity, $value);
       }
+
+      self::$ID_FIELD->setAccessible(true);
+      self::$ID_FIELD->setValue($entity, $row["id"]);
       return $entity;
     } catch (\Exception $exception) {
       $this->logger->error("Error creating entity from database row: " . $exception->getMessage());
@@ -112,7 +132,7 @@ class DatabaseEntityHandler {
   }
 
   public function fetchOne(int $id): ?DatabaseEntity {
-    $res = $this->sql->select(...array_keys($this->columns))
+    $res = $this->sql->select("id", ...array_keys($this->columns))
       ->from($this->tableName)
       ->where(new Compare("id", $id))
       ->first()
@@ -126,7 +146,7 @@ class DatabaseEntityHandler {
   }
 
   public function fetchMultiple(?Condition $condition = null): ?array {
-    $query = $this->sql->select(...array_keys($this->columns))
+    $query = $this->sql->select("id", ...array_keys($this->columns))
       ->from($this->tableName);
 
     if ($condition) {
@@ -175,7 +195,17 @@ class DatabaseEntityHandler {
 
       foreach ($this->columns as $propertyName => $column) {
         $columns[] = $column->getName();
-        $row[] = $this->properties[$propertyName]->getValue($entity);
+        $property = $this->properties[$propertyName];
+        if ($property->isInitialized($entity)) {
+          $value = $property->getValue($entity);
+        } else if (!$this->columns[$propertyName]->notNull()) {
+          $value = null;
+        } else {
+          $this->logger->error("Cannot insert entity: property '$propertyName' was not initialized yet.");
+          return false;
+        }
+
+        $row[] = $value;
       }
 
       $res = $this->sql->insert($this->tableName, $columns)
@@ -194,7 +224,16 @@ class DatabaseEntityHandler {
 
       foreach ($this->columns as $propertyName => $column) {
         $columnName = $column->getName();
-        $value = $this->properties[$propertyName]->getValue($entity);
+        $property = $this->properties[$propertyName];
+        if ($property->isInitialized($entity)) {
+          $value = $property->getValue($entity);
+        } else if (!$this->columns[$propertyName]->notNull()) {
+          $value = null;
+        } else {
+          $this->logger->error("Cannot update entity: property '$propertyName' was not initialized yet.");
+          return false;
+        }
+
         $query->set($columnName, $value);
       }
 
@@ -209,5 +248,9 @@ class DatabaseEntityHandler {
   private function raiseError(string $message) {
     $this->logger->error($message);
     throw new Exception($message);
+  }
+
+  private function getPropertyValue() {
+
   }
 }

@@ -8,10 +8,9 @@ use Driver\SQL\SQL;
 abstract class DatabaseEntity {
 
   private static array $handlers = [];
-  private ?int $id;
+  private ?int $id = null;
 
   public function __construct() {
-    $this->id = null;
   }
 
   public static function find(SQL $sql, int $id): ?DatabaseEntity {
@@ -19,7 +18,7 @@ abstract class DatabaseEntity {
     return $handler->fetchOne($id);
   }
 
-  public static function findAll(SQL $sql, ?Condition $condition): ?array {
+  public static function findAll(SQL $sql, ?Condition $condition = null): ?array {
     $handler = self::getHandler($sql);
     return $handler->fetchMultiple($condition);
   }
@@ -43,7 +42,12 @@ abstract class DatabaseEntity {
       return false;
     }
 
-    return $handler->delete($this->id);
+    if ($handler->delete($this->id)) {
+      $this->id = null;
+      return true;
+    }
+
+    return false;
   }
 
   public static function getHandler(SQL $sql, $obj_or_class = null): DatabaseEntityHandler {

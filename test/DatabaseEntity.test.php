@@ -1,6 +1,5 @@
 <?php
 
-// TODO: disable logging for tests
 class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
 
   static \Objects\User $USER;
@@ -12,6 +11,7 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
     self::$USER = new Objects\User(new \Configuration\Configuration());
     self::$SQL = self::$USER->getSQL();
     self::$HANDLER = TestEntity::getHandler(self::$SQL);
+    self::$HANDLER->getLogger()->unitTestMode();
   }
 
   public function testCreateTable() {
@@ -75,6 +75,11 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
   public function testInsertFail() {
     $entity = new TestEntity();
     $this->assertFalse($entity->save(self::$SQL));
+    $this->assertTrue(startsWith(
+      self::$HANDLER->getLogger()->getLastMessage(),
+      "Cannot insert entity: property 'a' was not initialized yet."
+    ));
+    $this->assertEquals("error", self::$HANDLER->getLogger()->getLastLevel());
   }
 
   public function testDropTable() {

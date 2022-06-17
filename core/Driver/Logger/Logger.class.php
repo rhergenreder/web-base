@@ -20,9 +20,17 @@ class Logger {
   private ?SQL $sql;
   private string $module;
 
+  // unit tests
+  private bool $unitTestMode;
+  private ?string $lastMessage;
+  private ?string $lastLevel;
+
   public function __construct(string $module = "Unknown", ?SQL $sql = null) {
     $this->module = $module;
     $this->sql = $sql;
+    $this->unitTestMode = false;
+    $this->lastMessage = null;
+    $this->lastLevel = null;
   }
 
   protected function getStackTrace(int $pop = 2): string {
@@ -40,6 +48,12 @@ class Logger {
 
     if ($appendStackTrace) {
       $message .= "\n" . $this->getStackTrace();
+    }
+
+    if ($this->unitTestMode) {
+      $this->lastMessage = $message;
+      $this->lastLevel = $severity;
+      return;
     }
 
     if ($this->sql !== null && $this->sql->isConnected()) {
@@ -90,5 +104,21 @@ class Logger {
     }
 
     return self::$INSTANCE;
+  }
+
+  /**
+   * Calling this method will prevent the logger from persisting log messages (writing to database/file),
+   * and allow to access the last logged message via #getLastMessage() and #getLastLevel()
+   */
+  public function unitTestMode() {
+    $this->unitTestMode = true;
+  }
+
+  public function getLastMessage(): ?string {
+    return $this->lastMessage;
+  }
+
+  public function getLastLevel(): ?string {
+    return $this->lastLevel;
   }
 }

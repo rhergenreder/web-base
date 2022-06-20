@@ -2,20 +2,57 @@
 
 namespace Objects\DatabaseEntity;
 
+use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\Condition;
 use Driver\SQL\SQL;
 
 abstract class DatabaseEntity {
 
   private static array $handlers = [];
-  private ?int $id = null;
+  protected ?int $id;
 
-  public function __construct() {
+  public function __construct(?int $id = null) {
+    $this->id = $id;
   }
 
-  public static function find(SQL $sql, int $id): ?DatabaseEntity {
+  public abstract function jsonSerialize(): array;
+
+  public function preInsert(array &$row) { }
+  public function postFetch(SQL $sql, array $row) { }
+
+  public static function fromRow(SQL $sql, array $row): static {
     $handler = self::getHandler($sql);
-    return $handler->fetchOne($id);
+    return $handler->entityFromRow($row);
+  }
+
+  public static function newInstance(\ReflectionClass $reflectionClass, array $row) {
+    return $reflectionClass->newInstanceWithoutConstructor();
+  }
+
+  public static function find(SQL $sql, int $id, bool $fetchEntities = false, bool $fetchRecursive = false): static|bool|null {
+    $handler = self::getHandler($sql);
+    if ($fetchEntities) {
+      return DatabaseEntityQuery::fetchOne(self::getHandler($sql))
+        ->where(new Compare($handler->getTableName() . ".id", $id))
+        ->fetchEntities($fetchRecursive)
+        ->execute();
+    } else {
+      return $handler->fetchOne($id);
+    }
+  }
+
+  public static function exists(SQL $sql, int $id): bool {
+    $handler = self::getHandler($sql);
+    $res = $sql->select($sql->count())
+      ->from($handler->getTableName())
+      ->where(new Compare($handler->getTableName() . ".id", $id))
+      ->execute();
+
+    return $res !== false && $res[0]["count"] !== 0;
+  }
+
+  public static function findBuilder(SQL $sql): DatabaseEntityQuery {
+    return DatabaseEntityQuery::fetchOne(self::getHandler($sql));
   }
 
   public static function findAll(SQL $sql, ?Condition $condition = null): ?array {
@@ -23,9 +60,13 @@ abstract class DatabaseEntity {
     return $handler->fetchMultiple($condition);
   }
 
-  public function save(SQL $sql): bool {
+  public static function findAllBuilder(SQL $sql): DatabaseEntityQuery {
+    return DatabaseEntityQuery::fetchAll(self::getHandler($sql));
+  }
+
+  public function save(SQL $sql, ?array $columns = null): bool {
     $handler = self::getHandler($sql);
-    $res = $handler->insertOrUpdate($this);
+    $res = $handler->insertOrUpdate($this, $columns);
     if ($res === false) {
       return false;
     } else if ($this->id === null) {

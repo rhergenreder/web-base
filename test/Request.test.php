@@ -2,7 +2,8 @@
 
 use Api\Request;
 use Configuration\Configuration;
-use Objects\User;
+use Objects\Context;
+use Objects\DatabaseEntity\User;
 
 function __new_header_impl(string $line) {
   if (preg_match("/^HTTP\/([0-9.]+) (\d+) (.*)$/", $line, $m)) {
@@ -34,6 +35,7 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
   const FUNCTION_OVERRIDES = ["header", "http_response_code"];
   static User $USER;
   static User $USER_LOGGED_IN;
+  static Context $CONTEXT;
 
   static ?string $SENT_CONTENT;
   static array $SENT_HEADERS;
@@ -41,13 +43,9 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
 
   public static function setUpBeforeClass(): void {
 
-    $config = new Configuration();
-    RequestTest::$USER = new User($config);
-    RequestTest::$USER_LOGGED_IN = new User($config);
-    if (!RequestTest::$USER->getSQL() || !RequestTest::$USER->getSQL()->isConnected()) {
+    RequestTest::$CONTEXT = new Context();
+    if (!RequestTest::$CONTEXT->initSQL()) {
       throw new Exception("Could not establish database connection");
-    } else {
-      RequestTest::$USER->setLanguage(\Objects\Language::DEFAULT_LANGUAGE());
     }
 
     if (!function_exists("runkit7_function_rename") || !function_exists("runkit7_function_remove")) {
@@ -65,7 +63,7 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
   }
 
   public static function tearDownAfterClass(): void {
-    RequestTest::$USER->getSQL()->close();
+    RequestTest::$CONTEXT->getSQL()?->close();
     foreach (self::FUNCTION_OVERRIDES as $functionName) {
       runkit7_function_remove($functionName);
       runkit7_function_rename("__orig_${functionName}_impl", $functionName);
@@ -74,7 +72,7 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
 
   private function simulateRequest(Request $request, string $method, array $get = [], array $post = [], array $headers = []): bool {
 
-    if (!is_cli()) {
+    if (!self::$CONTEXT->isCLI()) {
       self::throwException(new \Exception("Cannot simulate request outside cli"));
     }
 
@@ -97,7 +95,7 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
 
   public function testAllMethods() {
     // all methods allowed
-    $allMethodsAllowed = new RequestAllMethods(RequestTest::$USER, true);
+    $allMethodsAllowed = new RequestAllMethods(RequestTest::$CONTEXT, true);
     $this->assertTrue($this->simulateRequest($allMethodsAllowed, "GET"), $allMethodsAllowed->getLastError());
     $this->assertTrue($this->simulateRequest($allMethodsAllowed, "POST"), $allMethodsAllowed->getLastError());
     $this->assertFalse($this->simulateRequest($allMethodsAllowed, "PUT"), $allMethodsAllowed->getLastError());
@@ -109,7 +107,7 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
 
   public function testOnlyPost() {
     // only post allowed
-    $onlyPostAllowed = new RequestOnlyPost(RequestTest::$USER, true);
+    $onlyPostAllowed = new RequestOnlyPost(RequestTest::$CONTEXT, true);
     $this->assertFalse($this->simulateRequest($onlyPostAllowed, "GET"));
     $this->assertEquals("This method is not allowed", $onlyPostAllowed->getLastError(), $onlyPostAllowed->getLastError());
     $this->assertEquals(405, self::$SENT_STATUS_CODE);
@@ -121,25 +119,25 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
 
   public function testPrivate() {
     // private method
-    $privateExternal = new RequestPrivate(RequestTest::$USER, true);
+    $privateExternal = new RequestPrivate(RequestTest::$CONTEXT, true);
     $this->assertFalse($this->simulateRequest($privateExternal, "GET"));
     $this->assertEquals("This function is private.", $privateExternal->getLastError());
     $this->assertEquals(403, self::$SENT_STATUS_CODE);
 
-    $privateInternal = new RequestPrivate(RequestTest::$USER, false);
+    $privateInternal = new RequestPrivate(RequestTest::$CONTEXT, false);
     $this->assertTrue($privateInternal->execute());
   }
 
   public function testDisabled() {
     // disabled method
-    $disabledMethod = new RequestDisabled(RequestTest::$USER, true);
+    $disabledMethod = new RequestDisabled(RequestTest::$CONTEXT, true);
     $this->assertFalse($this->simulateRequest($disabledMethod, "GET"));
     $this->assertEquals("This function is currently disabled.", $disabledMethod->getLastError(), $disabledMethod->getLastError());
     $this->assertEquals(503, self::$SENT_STATUS_CODE);
   }
 
   public function testLoginRequired() {
-    $loginRequired = new RequestLoginRequired(RequestTest::$USER, true);
+    $loginRequired = new RequestLoginRequired(RequestTest::$CONTEXT, true);
     $this->assertFalse($this->simulateRequest($loginRequired, "GET"));
     $this->assertEquals("You are not logged in.", $loginRequired->getLastError(), $loginRequired->getLastError());
     $this->assertEquals(401, self::$SENT_STATUS_CODE);
@@ -147,8 +145,8 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
 }
 
 abstract class TestRequest extends Request {
-  public function __construct(User $user, bool $externalCall = false, $params = []) {
-    parent::__construct($user, $externalCall, $params);
+  public function __construct(Context $context, bool $externalCall = false, $params = []) {
+    parent::__construct($context, $externalCall, $params);
   }
 
   protected function _die(string $data = ""): bool {
@@ -162,35 +160,35 @@ abstract class TestRequest extends Request {
 }
 
 class RequestAllMethods extends TestRequest {
-  public function __construct(User $user, bool $externalCall = false) {
-    parent::__construct($user, $externalCall, []);
+  public function __construct(Context $context, bool $externalCall = false) {
+    parent::__construct($context, $externalCall, []);
   }
 }
 
 class RequestOnlyPost extends TestRequest {
-  public function __construct(User $user, bool $externalCall = false) {
-    parent::__construct($user, $externalCall, []);
+  public function __construct(Context $context, bool $externalCall = false) {
+    parent::__construct($context, $externalCall, []);
     $this->forbidMethod("GET");
   }
 }
 
 class RequestPrivate extends TestRequest {
-  public function __construct(User $user, bool $externalCall = false) {
-    parent::__construct($user, $externalCall, []);
+  public function __construct(Context $context, bool $externalCall = false) {
+    parent::__construct($context, $externalCall, []);
     $this->isPublic = false;
   }
 }
 
 class RequestDisabled extends TestRequest {
-  public function __construct(User $user, bool $externalCall = false) {
-    parent::__construct($user, $externalCall, []);
+  public function __construct(Context $context, bool $externalCall = false) {
+    parent::__construct($context, $externalCall, []);
     $this->isDisabled = true;
   }
 }
 
 class RequestLoginRequired extends TestRequest {
-  public function __construct(User $user, bool $externalCall = false) {
-    parent::__construct($user, $externalCall, []);
+  public function __construct(Context $context, bool $externalCall = false) {
+    parent::__construct($context, $externalCall, []);
     $this->loginRequired = true;
   }
 }

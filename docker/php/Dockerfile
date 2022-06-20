@@ -1,5 +1,5 @@
 FROM composer:latest AS composer
-FROM php:7.4-fpm
+FROM php:8.0-fpm
 WORKDIR "/application"
 RUN mkdir -p /application/core/Configuration
 RUN chown -R www-data:www-data /application

@@ -3,23 +3,24 @@
 namespace Objects\Router;
 
 use Driver\Logger\Logger;
-use Objects\User;
+use Objects\Context;
 
 class Router {
 
-  private ?User $user;
+  private Context $context;
   private Logger $logger;
   protected array $routes;
   protected array $statusCodeRoutes;
 
-  public function __construct(?User $user = null) {
-    $this->user = $user;
+  public function __construct(Context $context) {
+    $this->context = $context;
     $this->routes = [];
     $this->statusCodeRoutes = [];
 
-    if ($user) {
+    $sql = $context->getSQL();
+    if ($sql) {
       $this->addRoute(new ApiRoute());
-      $this->logger = new Logger("Router", $user->getSQL());
+      $this->logger = new Logger("Router", $sql);
     } else {
       $this->logger = new Logger("Router");
     }
@@ -48,7 +49,7 @@ class Router {
     if ($route) {
       return $route->call($this, $params);
     } else {
-      $req = new \Api\Template\Render($this->user);
+      $req = new \Api\Template\Render($this->context);
       $res = $req->execute(["file" => "error_document.twig", "parameters" => $params]);
       if ($res) {
         return $req->getResult()["html"];
@@ -90,13 +91,13 @@ class Router {
  */
 
 namespace Cache;
-use Objects\User;
+use Objects\Context;
 use Objects\Router\Router;
 
 class RouterCache extends Router {
 
-  public function __construct(User \$user) {
-    parent::__construct(\$user);$routes
+  public function __construct(Context \$context) {
+    parent::__construct(\$context);$routes
   }
 }
 ";
@@ -109,8 +110,8 @@ class RouterCache extends Router {
     return true;
   }
 
-  public function getUser(): User {
-    return $this->user;
+  public function getContext(): Context {
+    return $this->context;
   }
 
   public function getLogger(): Logger {

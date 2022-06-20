@@ -25,10 +25,10 @@ export default function Header(props) {
     let notificationItems = [];
     for (let i = 0; i < parent.notifications.length; i++) {
         const notification = parent.notifications[i];
-        const uid = notification.uid;
+        const id = notification.id;
         const createdAt = getPeriodString(notification["created_at"]);
         notificationItems.push(
-            <Link to={"/admin/logs?notification=" + uid} className={"dropdown-item"} key={"notification-" + uid}>
+            <Link to={"/admin/logs?notification=" + id} className={"dropdown-item"} key={"notification-" + id}>
                 {mailIcon}
                 <span className={"ml-2"}>{notification.title}</span>
                 <span className={"float-right text-muted text-sm"}>{createdAt}</span>

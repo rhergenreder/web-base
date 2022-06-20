@@ -37,9 +37,9 @@ class StaticFileRoute extends AbstractRoute {
     }
 
     $pathInfo = pathinfo($path);
-    if ($router !== null && ($user = $router->getUser()) !== null) {
+    if ($router !== null) {
       $ext = $pathInfo["extension"] ?? "";
-      if (!$user->getConfiguration()->getSettings()->isExtensionAllowed($ext)) {
+      if (!$router->getContext()->getSettings()->isExtensionAllowed($ext)) {
         http_response_code(406);
         echo "<b>Access restricted:</b> Extension '" . htmlspecialchars($ext) . "' not allowed to serve.";
       }

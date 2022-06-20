@@ -5,22 +5,29 @@ namespace Objects\TwoFactor;
 use Base32\Base32;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
-use Objects\User;
+use Objects\Context;
+use Objects\DatabaseEntity\Attribute\Transient;
+use Objects\DatabaseEntity\TwoFactorToken;
+use Objects\DatabaseEntity\User;
 
 class TimeBasedTwoFactorToken extends TwoFactorToken {
 
   const TYPE = "totp";
-  private string $secret;
+  #[Transient] private string $secret;
 
-  public function __construct(string $secret, ?int $id = null, bool $confirmed = false) {
-    parent::__construct(self::TYPE, $id, $confirmed);
+  public function __construct(string $secret) {
+    parent::__construct(self::TYPE);
     $this->secret = $secret;
   }
 
-  public function getUrl(User $user): string {
+  protected function readData(string $data) {
+    $this->secret = $data;
+  }
+
+  public function getUrl(Context $context): string {
     $otpType = self::TYPE;
-    $name = rawurlencode($user->getUsername());
-    $settings = $user->getConfiguration()->getSettings();
+    $name = rawurlencode($context->getUser()->getUsername());
+    $settings = $context->getSettings();
     $urlArgs = [
       "secret" => $this->secret,
       "issuer" => $settings->getSiteName(),
@@ -30,10 +37,10 @@ class TimeBasedTwoFactorToken extends TwoFactorToken {
     return "otpauth://$otpType/$name?$urlArgs";
   }
 
-  public function generateQRCode(User $user) {
+  public function generateQRCode(Context $context) {
     $options = new QROptions(['outputType' => QRCode::OUTPUT_IMAGE_PNG, "imageBase64" => false]);
     $qrcode = new QRCode($options);
-    return $qrcode->render($this->getUrl($user));
+    return $qrcode->render($this->getUrl($context));
   }
 
   public function generate(?int $at = null, int $length = 6, int $period = 30): string {

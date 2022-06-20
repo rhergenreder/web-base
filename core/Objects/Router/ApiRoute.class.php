@@ -13,7 +13,6 @@ class ApiRoute extends AbstractRoute {
   }
 
   public function call(Router $router, array $params): string {
-    $user = $router->getUser();
     if (empty($params["endpoint"])) {
       header("Content-Type: text/html");
       $document = new \Elements\TemplateDocument($router, "swagger.twig");
@@ -43,9 +42,11 @@ class ApiRoute extends AbstractRoute {
             http_response_code(400);
             $response = createError("Invalid Method");
           } else {
-            $request = $apiClass->newInstanceArgs(array($user, true));
-            $request->execute();
-            $response = $request->getJsonResult();
+            $request = $apiClass->newInstanceArgs(array($router->getContext(), true));
+            $success = $request->execute();
+            $response = $request->getResult();
+            $response["success"] = $success;
+            $response["msg"] = $request->getLastError();
           }
         }
       } catch (ReflectionException $e) {
@@ -55,6 +56,6 @@ class ApiRoute extends AbstractRoute {
     }
 
     header("Content-Type: application/json");
-    return $response;
+    return json_encode($response);
   }
 }

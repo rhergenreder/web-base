@@ -16,7 +16,7 @@ class Info extends HtmlDocument {
 class InfoBody extends SimpleBody {
   protected function getContent(): string {
     $user = $this->getDocument()->getUser();
-    if ($user->isLoggedIn() && $user->hasGroup(USER_GROUP_ADMIN)) {
+    if ($user && $user->hasGroup(USER_GROUP_ADMIN)) {
       phpinfo();
       return "";
     } else {

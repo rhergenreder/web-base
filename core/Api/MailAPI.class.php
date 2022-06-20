@@ -3,10 +3,16 @@
 namespace Api {
 
   use Objects\ConnectionData;
+  use Objects\Context;
 
   abstract class MailAPI extends Request {
+
+    public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
+    }
+
     protected function getMailConfig(): ?ConnectionData {
-      $req = new \Api\Settings\Get($this->user);
+      $req = new \Api\Settings\Get($this->context);
       $this->success = $req->execute(array("key" => "^mail_"));
       $this->lastError = $req->getLastError();
 
@@ -47,13 +53,13 @@ namespace Api\Mail {
   use External\PHPMailer\Exception;
   use External\PHPMailer\PHPMailer;
   use Objects\ConnectionData;
-  use Objects\GpgKey;
-  use Objects\User;
+  use Objects\Context;
+  use Objects\DatabaseEntity\GpgKey;
 
   class Test extends MailAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         "receiver" => new Parameter("receiver", Parameter::TYPE_EMAIL),
         "gpgFingerprint" => new StringType("gpgFingerprint", 64, true, null)
       ));
@@ -62,7 +68,7 @@ namespace Api\Mail {
     public function _execute(): bool {
 
       $receiver = $this->getParam("receiver");
-      $req = new \Api\Mail\Send($this->user);
+      $req = new \Api\Mail\Send($this->context);
       $this->success = $req->execute(array(
         "to" => $receiver,
         "subject" => "Test E-Mail",
@@ -76,16 +82,15 @@ namespace Api\Mail {
     }
   }
 
-  // TODO: expired gpg keys?
   class Send extends MailAPI {
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'to' => new Parameter('to', Parameter::TYPE_EMAIL, true, null),
         'subject' => new StringType('subject', -1),
         'body' => new StringType('body', -1),
         'replyTo' => new Parameter('replyTo', Parameter::TYPE_EMAIL, true, null),
         'replyName' => new StringType('replyName', 32, true, ""),
-        "gpgFingerprint" => new StringType("gpgFingerprint", 64, true, null),
+        'gpgFingerprint' => new StringType("gpgFingerprint", 64, true, null),
         'async' => new Parameter("async", Parameter::TYPE_BOOLEAN, true, true)
       ));
       $this->isPublic = false;
@@ -108,7 +113,7 @@ namespace Api\Mail {
       $gpgFingerprint = $this->getParam("gpgFingerprint");
 
       if ($this->getParam("async")) {
-        $sql = $this->user->getSQL();
+        $sql = $this->context->getSQL();
         $this->success = $sql->insert("MailQueue", ["from", "to", "subject", "body",
           "replyTo", "replyName", "gpgFingerprint"])
           ->addRow($fromMail, $toMail, $subject, $body, $replyTo, $replyName, $gpgFingerprint)
@@ -200,14 +205,14 @@ namespace Api\Mail {
   // TODO: attachments
   class Sync extends MailAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array());
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array());
       $this->loginRequired = true;
     }
 
     private function fetchMessageIds() {
-      $sql = $this->user->getSQL();
-      $res = $sql->select("uid", "messageId")
+      $sql = $this->context->getSQL();
+      $res = $sql->select("id", "messageId")
         ->from("ContactRequest")
         ->where(new Compare("messageId", NULL, "!="))
         ->execute();
@@ -220,7 +225,7 @@ namespace Api\Mail {
 
       $messageIds = [];
       foreach ($res as $row) {
-        $messageIds[$row["messageId"]] = $row["uid"];
+        $messageIds[$row["messageId"]] = $row["id"];
       }
       return $messageIds;
     }
@@ -241,7 +246,7 @@ namespace Api\Mail {
     }
 
     private function insertMessages($messages): bool {
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
 
       $query = $sql->insert("ContactMessage", ["request_id", "user_id", "message", "messageId", "created_at"])
         ->onDuplicateKeyStrategy(new UpdateStrategy(["messageId"], ["message" => new Column("message")]));
@@ -251,7 +256,7 @@ namespace Api\Mail {
         $requestId = $message["requestId"];
         $query->addRow(
           $requestId,
-          $sql->select("uid")->from("User")->where(new Compare("email", $message["from"]))->limit(1),
+          $sql->select("id")->from("User")->where(new Compare("email", $message["from"]))->limit(1),
           $message["body"],
           $message["messageId"],
           (new \DateTime())->setTimeStamp($message["timestamp"]),
@@ -450,7 +455,7 @@ namespace Api\Mail {
         return false;
       }
 
-      $req = new \Api\Settings\Set($this->user);
+      $req = new \Api\Settings\Set($this->context);
       $this->success = $req->execute(array("settings" => array("mail_last_sync" => "$now")));
       $this->lastError = $req->getLastError();
       return $this->success;
@@ -458,8 +463,8 @@ namespace Api\Mail {
   }
 
   class SendQueue extends MailAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, [
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
         "debug" => new Parameter("debug", Parameter::TYPE_BOOLEAN, true, false)
       ]);
       $this->isPublic = false;
@@ -473,8 +478,8 @@ namespace Api\Mail {
         echo "Start of processing mail queue at $startTime" . PHP_EOL;
       }
 
-      $sql = $this->user->getSQL();
-      $res = $sql->select("uid", "from", "to", "subject", "body",
+      $sql = $this->context->getSQL();
+      $res = $sql->select("id", "from", "to", "subject", "body",
         "replyTo", "replyName", "gpgFingerprint", "retryCount")
         ->from("MailQueue")
         ->where(new Compare("retryCount", 0, ">"))
@@ -505,9 +510,9 @@ namespace Api\Mail {
             echo "Sending subject=$subject to=$to" . PHP_EOL;
           }
 
-          $mailId = intval($row["uid"]);
+          $mailId = intval($row["id"]);
           $retryCount = intval($row["retryCount"]);
-          $req = new Send($this->user);
+          $req = new Send($this->context);
           $args = [
             "to" => $to,
             "subject" => $subject,
@@ -529,7 +534,7 @@ namespace Api\Mail {
               ->set("status", "error")
               ->set("errorMessage", $error)
               ->set("nextTry", $nextTry)
-              ->where(new Compare("uid", $mailId))
+              ->where(new Compare("id", $mailId))
               ->execute();
           } else {
             $successfulMails[] = $mailId;
@@ -540,7 +545,7 @@ namespace Api\Mail {
         if (!empty($successfulMails)) {
           $res = $sql->update("MailQueue")
             ->set("status", "success")
-            ->where(new CondIn(new Column("uid"), $successfulMails))
+            ->where(new CondIn(new Column("id"), $successfulMails))
             ->execute();
           $this->success = $res !== false;
           $this->lastError = $sql->getLastError();

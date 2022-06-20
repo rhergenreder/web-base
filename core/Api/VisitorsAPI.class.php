@@ -2,11 +2,11 @@
 
 namespace Api {
 
-  use Objects\User;
+  use Objects\Context;
 
   abstract class VisitorsAPI extends Request {
-    public function __construct(User $user, bool $externalCall = false, array $params = []) {
-      parent::__construct($user, $externalCall, $params);
+    public function __construct(Context $context, bool $externalCall = false, array $params = []) {
+      parent::__construct($context, $externalCall, $params);
     }
   }
 }
@@ -21,18 +21,18 @@ namespace Api\Visitors {
   use Driver\SQL\Expression\Add;
   use Driver\SQL\Query\Select;
   use Driver\SQL\Strategy\UpdateStrategy;
-  use Objects\User;
+  use Objects\Context;
 
   class ProcessVisit extends VisitorsAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         "cookie" => new StringType("cookie")
       ));
       $this->isPublic = false;
     }
 
     public function _execute(): bool {
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $cookie = $this->getParam("cookie");
       $day = (new DateTime())->format("Ymd");
       $sql->insert("Visitor", array("cookie", "day"))
@@ -47,8 +47,8 @@ namespace Api\Visitors {
   }
 
   class Stats extends VisitorsAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'type' => new StringType('type', 32),
         'date' => new Parameter('date', Parameter::TYPE_DATE, true, new DateTime())
       ));
@@ -81,7 +81,7 @@ namespace Api\Visitors {
       $date = $this->getParam("date");
       $type = $this->getParam("type");
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $query = $sql->select($sql->count(), "day")
         ->from("Visitor")
         ->where(new Compare("count", 1, ">"))

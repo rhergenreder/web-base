@@ -52,16 +52,19 @@ abstract class SQL {
   protected ConnectionData $connectionData;
   protected int $lastInsertId;
 
+  protected bool $logQueries;
+
   public function __construct($connectionData) {
     $this->connection = NULL;
     $this->lastError = 'Unknown Error';
     $this->connectionData = $connectionData;
     $this->lastInsertId = 0;
     $this->logger = new Logger(getClassName($this), $this);
+    $this->logQueries = false;
   }
 
   public function isConnected(): bool {
-    return !is_null($this->connection);
+    return !is_null($this->connection) && !is_bool($this->connection);
   }
 
   public function getLastError(): string {
@@ -131,7 +134,7 @@ abstract class SQL {
     $parameters = [];
     $queryStr = $query->build($parameters);
 
-    if($query->dump) {
+    if ($query->dump) {
       var_dump($queryStr);
       var_dump($parameters);
     }
@@ -147,6 +150,31 @@ abstract class SQL {
     $generatedColumn = ($query instanceof Insert ? $query->getReturning() : null);
     if ($success && $generatedColumn) {
       $this->fetchReturning($res, $generatedColumn);
+    }
+
+    if ($this->logQueries && (!($query instanceof Insert) || $query->getTableName() !== "SystemLog")) {
+
+      if ($success === false || $fetchType == self::FETCH_NONE) {
+        $result = var_export($success, true);
+      } else if ($fetchType === self::FETCH_ALL) {
+        $result = count($res) . " rows";
+      } else if ($fetchType === self::FETCH_ONE) {
+        $result = ($res === null ? "(empty)" : "1 row");
+      } else if ($fetchType === self::FETCH_ITERATIVE) {
+        $result = $res->getNumRows() .  " rows (iterative)";
+      } else {
+        $result = "Unknown";
+      }
+
+      $message = sprintf("Query: %s, Parameters: %s, Result: %s",
+        var_export($queryStr, true), var_export($parameters, true), $result
+      );
+
+      if ($success === false) {
+        $message .= "Error: " . var_export($this->lastError, true);
+      }
+
+      $this->logger->debug($message);
     }
 
     return $fetchType === self::FETCH_NONE ? $success : $res;

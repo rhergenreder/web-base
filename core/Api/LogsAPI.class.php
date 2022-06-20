@@ -2,11 +2,11 @@
 
 namespace Api {
 
-  use Objects\User;
+  use Objects\Context;
 
   abstract class LogsAPI extends Request {
-    public function __construct(User $user, bool $externalCall = false, array $params = array()) {
-      parent::__construct($user, $externalCall, $params);
+    public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
     }
   }
 
@@ -21,20 +21,22 @@ namespace Api\Logs {
   use Driver\SQL\Column\Column;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondIn;
-  use Objects\User;
+  use Objects\Context;
+  use Objects\DatabaseEntity\SystemLog;
 
   class Get extends LogsAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, [
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
         "since" => new Parameter("since", Parameter::TYPE_DATE_TIME, true),
         "severity" => new StringType("severity", 32, true, "debug")
       ]);
+      $this->csrfTokenRequired = false;
     }
 
     protected function _execute(): bool {
       $since = $this->getParam("since");
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $severity = strtolower(trim($this->getParam("severity")));
       $shownLogLevels = Logger::LOG_LEVELS;
 
@@ -45,8 +47,7 @@ namespace Api\Logs {
         $shownLogLevels = array_slice(Logger::LOG_LEVELS, $logLevel);
       }
 
-      $query = $sql->select("id", "module", "message", "severity", "timestamp")
-        ->from("SystemLog")
+      $query = SystemLog::findAllBuilder($sql)
         ->orderBy("timestamp")
         ->descending();
 
@@ -58,12 +59,15 @@ namespace Api\Logs {
         $query->where(new CondIn(new Column("severity"), $shownLogLevels));
       }
 
-      $res = $query->execute();
-      $this->success = $res !== false;
+      $logEntries = $query->execute();
+      $this->success = $logEntries !== false;
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $this->result["logs"] = $res;
+        $this->result["logs"] = [];
+        foreach ($logEntries as $logEntry) {
+          $this->result["logs"][] = $logEntry->jsonSerialize();
+        }
       } else {
         // we couldn't fetch logs from database, return a message and proceed to log files
         $this->result["logs"] = [

@@ -6,14 +6,13 @@ include_once 'core/core.php';
 require_once 'core/datetime.php';
 include_once 'core/constants.php';
 
-use Configuration\Configuration;
 use Configuration\DatabaseScript;
 use Driver\SQL\Column\Column;
 use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondIn;
 use Driver\SQL\Expression\DateSub;
+use Driver\SQL\SQL;
 use Objects\ConnectionData;
-use Objects\User;
 
 function printLine(string $line = "") {
   echo $line . PHP_EOL;
@@ -22,10 +21,6 @@ function printLine(string $line = "") {
 function _exit(string $line = "") {
   printLine($line);
   die();
-}
-
-if (!is_cli()) {
-  _exit("Can only be executed via CLI");
 }
 
 function getDatabaseConfig(): ConnectionData {
@@ -39,8 +34,12 @@ function getDatabaseConfig(): ConnectionData {
   return new $configClass();
 }
 
-$config = new Configuration();
-$database = $config->getDatabase();
+$context = new \Objects\Context();
+if (!$context->isCLI()) {
+  _exit("Can only be executed via CLI");
+}
+
+$database = $context->getConfig()->getDatabase();
 if ($database !== null && $database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
   if (count($argv) < 3 || $argv[1] !== "db" || !in_array($argv[2], ["shell", "import", "export"])) {
     $command = array_merge(["docker", "exec", "-it", "php", "php"], $argv);
@@ -49,7 +48,7 @@ if ($database !== null && $database->getProperty("isDocker", false) && !is_file(
   }
 }
 
-function getUser(): ?User {
+/*function getUser(): ?User {
   global $config;
   $user = new User($config);
   if (!$user->getSQL() || !$user->getSQL()->isConnected()) {
@@ -58,6 +57,17 @@ function getUser(): ?User {
   }
 
   return $user;
+}*/
+
+function connectSQL(): ?SQL {
+  global $context;
+  $sql = $context->initSQL();
+  if (!$sql || !$sql->isConnected()) {
+    printLine("Could not establish database connection");
+    return null;
+  }
+
+  return $sql;
 }
 
 function printHelp() {
@@ -100,8 +110,7 @@ function handleDatabase(array $argv) {
       _exit("Usage: cli.php db migrate <class name>");
     }
 
-    $user = getUser() or die();
-    $sql = $user->getSQL();
+    $sql = connectSQL() or die();
     applyPatch($sql, $class);
   } else if (in_array($action, ["export", "import", "shell"])) {
 
@@ -193,9 +202,7 @@ function handleDatabase(array $argv) {
       proc_close($process);
     }
   } else if ($action === "clean") {
-    $user = getUser() or die();
-    $sql = $user->getSQL();
-
+    $sql = connectSQL() or die();
     printLine("Deleting user related data older than 90 days...");
 
     // 1st: Select all related tables and entities
@@ -221,9 +228,9 @@ function handleDatabase(array $argv) {
     }
 
     // 2nd: delete!
-    foreach ($tables as $table => $uids) {
+    foreach ($tables as $table => $ids) {
       $success = $sql->delete($table)
-        ->where(new CondIn(new Column("uid"), $uids))
+        ->where(new CondIn(new Column("id"), $ids))
         ->execute();
 
       if (!$success) {
@@ -336,9 +343,8 @@ function onMaintenance(array $argv) {
     $newPatchFiles = array_diff($newPatchFiles, $oldPatchFiles);
     if (count($newPatchFiles) > 0) {
       printLine("Applying new database patches");
-      $user = getUser();
-      if ($user) {
-        $sql = $user->getSQL();
+      $sql = connectSQL();
+      if ($sql) {
         foreach ($newPatchFiles as $patchFile) {
           if (preg_match("/core\/Configuration\/(Patch\/.*)\.class\.php/", $patchFile, $match)) {
             $patchName = $match[1];
@@ -408,12 +414,13 @@ function printTable(array $head, array $body) {
 }
 
 function onSettings(array $argv) {
-  $user = getUser() or die();
+  global $context;
+  $sql = connectSQL() or die();
   $action = $argv[2] ?? "list";
 
   if ($action === "list" || $action === "get") {
     $key = (($action === "list" || count($argv) < 4) ? null : $argv[3]);
-    $req = new Api\Settings\Get($user);
+    $req = new Api\Settings\Get($context);
     $success = $req->execute(["key" => $key]);
     if (!$success) {
       _exit("Error listings settings: " . $req->getLastError());
@@ -430,7 +437,7 @@ function onSettings(array $argv) {
     } else {
       $key = $argv[3];
       $value = $argv[4];
-      $req = new Api\Settings\Set($user);
+      $req = new Api\Settings\Set($context);
       $success = $req->execute(["settings" => [$key => $value]]);
       if (!$success) {
         _exit("Error updating settings: " . $req->getLastError());
@@ -441,7 +448,7 @@ function onSettings(array $argv) {
       _exit("Usage: $argv[0] settings $argv[2] <key>");
     } else {
       $key = $argv[3];
-      $req = new Api\Settings\Set($user);
+      $req = new Api\Settings\Set($context);
       $success = $req->execute(["settings" => [$key => null]]);
       if (!$success) {
         _exit("Error updating settings: " . $req->getLastError());
@@ -453,18 +460,18 @@ function onSettings(array $argv) {
 }
 
 function onRoutes(array $argv) {
-
-  $user = getUser() or die();
+  global $context;
+  $sql = connectSQL() or die();
   $action = $argv[2] ?? "list";
 
   if ($action === "list") {
-    $req = new Api\Routes\Fetch($user);
+    $req = new Api\Routes\Fetch($context);
     $success = $req->execute();
     if (!$success) {
       _exit("Error fetching routes: " . $req->getLastError());
     } else {
       $routes = $req->getResult()["routes"];
-      $head = ["uid", "request", "action", "target", "extra", "active", "exact"];
+      $head = ["id", "request", "action", "target", "extra", "active", "exact"];
 
       // strict boolean
       foreach ($routes as &$route) {
@@ -486,7 +493,7 @@ function onRoutes(array $argv) {
       "extra" => $argv[7] ?? "",
     );
 
-    $req  = new Api\Routes\Add($user);
+    $req  = new Api\Routes\Add($context);
     $success = $req->execute($params);
     if (!$success) {
       _exit($req->getLastError());
@@ -497,13 +504,13 @@ function onRoutes(array $argv) {
     $uid = $argv[3] ?? null;
     if ($uid === null || ($action === "modify" && count($argv) < 7)) {
       if ($action === "modify") {
-        _exit("Usage: cli.php routes $action <uid> <request> <action> <target> [extra]");
+        _exit("Usage: cli.php routes $action <id> <request> <action> <target> [extra]");
       } else {
-        _exit("Usage: cli.php routes $action <uid>");
+        _exit("Usage: cli.php routes $action <id>");
       }
     }
 
-    $params = ["uid" => $uid];
+    $params = ["id" => $uid];
     if ($action === "remove") {
       $input = null;
       do {
@@ -513,13 +520,13 @@ function onRoutes(array $argv) {
         echo "Remove route #$uid? (y|n): ";
       } while(($input = trim(fgets(STDIN))) !== "y");
 
-      $req = new Api\Routes\Remove($user);
+      $req = new Api\Routes\Remove($context);
     } else if ($action === "enable") {
-      $req = new Api\Routes\Enable($user);
+      $req = new Api\Routes\Enable($context);
     } else if ($action === "disable") {
-      $req = new Api\Routes\Disable($user);
+      $req = new Api\Routes\Disable($context);
     } else if ($action === "modify") {
-      $req = new Api\Routes\Update($user);
+      $req = new Api\Routes\Update($context);
       $params["request"] = $argv[4];
       $params["action"] = $argv[5];
       $params["target"] = $argv[6];
@@ -597,14 +604,15 @@ function onTest($argv) {
 }
 
 function onMail($argv) {
+  global $context;
   $action = $argv[2] ?? null;
   if ($action === "sync") {
-    $user = getUser() or die();
-    if (!$user->getConfiguration()->getSettings()->isMailEnabled()) {
+    $sql = connectSQL() or die();
+    if (!$context->getSettings()->isMailEnabled()) {
       _exit("Mails are not configured yet.");
     }
 
-    $req = new Api\Mail\Sync($user);
+    $req = new Api\Mail\Sync($context);
     printLine("Syncing emails…");
     if (!$req->execute()) {
       _exit("Error syncing mails: " . $req->getLastError());
@@ -612,8 +620,8 @@ function onMail($argv) {
 
     _exit("Done.");
   } else if ($action === "send_queue") {
-    $user = getUser() or die();
-    $req = new \Api\Mail\SendQueue($user);
+    $sql = connectSQL() or die();
+    $req = new \Api\Mail\SendQueue($context);
     $debug = in_array("debug", $argv);
     if (!$req->execute(["debug" => $debug])) {
       _exit("Error processing mail queue: " . $req->getLastError());
@@ -624,30 +632,31 @@ function onMail($argv) {
 }
 
 function onImpersonate($argv) {
+  global $context;
+
   if (count($argv) < 3) {
     _exit("Usage: cli.php impersonate <user_id|user_name>");
   }
 
-  $user = getUser() or exit;
+  $sql = connectSQL() or die();
 
   $userId = $argv[2];
   if (!is_numeric($userId)) {
-    $sql = $user->getSQL();
-    $res = $sql->select("uid")
+    $res = $sql->select("id")
       ->from("User")
       ->where(new Compare("name", $userId))
       ->execute();
     if ($res === false) {
       _exit("SQL error: " . $sql->getLastError());
     } else {
-      $userId = $res[0]["uid"];
+      $userId = $res[0]["id"];
     }
   }
 
-  $user->createSession(intval($userId));
-  $session = $user->getSession();
+  $user = new \Objects\DatabaseEntity\User($userId);
+  $session = new \Objects\DatabaseEntity\Session($context, $user);
   $session->setData(["2faAuthenticated" => true]);
-  $session->update(false);
+  $session->update();
   echo "session=" . $session->getCookie() . PHP_EOL;
 }
 

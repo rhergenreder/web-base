@@ -1,20 +1,17 @@
 <?php
 
-use Configuration\Configuration;
+use Objects\Context;
 use Objects\Router\EmptyRoute;
 use Objects\Router\Router;
-use Objects\User;
 
 class RouterTest extends \PHPUnit\Framework\TestCase {
 
-  private static User $USER;
   private static Router $ROUTER;
+  private static Context $CONTEXT;
 
   public static function setUpBeforeClass(): void {
-
-    $config = new Configuration();
-    RouterTest::$USER = new User($config);
-    RouterTest::$ROUTER = new Router(RouterTest::$USER);
+    RouterTest::$CONTEXT = new Context();
+    RouterTest::$ROUTER = new Router(RouterTest::$CONTEXT);
   }
 
   public function testSimpleRoutes() {

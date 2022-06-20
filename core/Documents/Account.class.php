@@ -23,7 +23,7 @@ class Account extends TemplateDocument {
     if ($this->getTemplateName() === "account/reset_password.twig") {
       if (isset($_GET["token"]) && is_string($_GET["token"]) && !empty($_GET["token"])) {
         $this->parameters["view"]["token"] = $_GET["token"];
-        $req = new \Api\User\CheckToken($this->getUser());
+        $req = new \Api\User\CheckToken($this->getContext());
         $this->parameters["view"]["success"] = $req->execute(array("token" => $_GET["token"]));
         if ($this->parameters["view"]["success"]) {
           if (strcmp($req->getResult()["token"]["type"], "password_reset") !== 0) {
@@ -35,18 +35,18 @@ class Account extends TemplateDocument {
       }
     } else if ($this->getTemplateName() === "account/register.twig") {
       $settings = $this->getSettings();
-      if ($this->getUser()->isLoggedIn()) {
+      if ($this->getUser()) {
         $this->createError("You are already logged in.");
       } else if (!$settings->isRegistrationAllowed()) {
         $this->createError("Registration is not enabled on this website.");
       }
-    } else if ($this->getTemplateName() === "account/login.twig" && $this->getUser()->isLoggedIn()) {
+    } else if ($this->getTemplateName() === "account/login.twig" && $this->getUser()) {
       header("Location: /admin");
       exit();
     } else if ($this->getTemplateName() === "account/accept_invite.twig") {
       if (isset($_GET["token"]) && is_string($_GET["token"]) && !empty($_GET["token"])) {
         $this->parameters["view"]["token"] = $_GET["token"];
-        $req = new \Api\User\CheckToken($this->getUser());
+        $req = new \Api\User\CheckToken($this->getContext());
         $this->parameters["view"]["success"] = $req->execute(array("token" => $_GET["token"]));
         if ($this->parameters["view"]["success"]) {
           if (strcmp($req->getResult()["token"]["type"], "invite") !== 0) {

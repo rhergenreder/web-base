@@ -1,21 +1,33 @@
 <?php
 
+use Configuration\Configuration;
+use Driver\SQL\Query\CreateTable;
+use Driver\SQL\SQL;
+use Objects\Context;
+use Objects\DatabaseEntity\DatabaseEntityHandler;
+use Objects\DatabaseEntity\User;
+
 class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
 
-  static \Objects\User $USER;
-  static \Driver\SQL\SQL $SQL;
-  static \Objects\DatabaseEntity\DatabaseEntityHandler $HANDLER;
+  static User $USER;
+  static SQL $SQL;
+  static Context $CONTEXT;
+  static DatabaseEntityHandler $HANDLER;
 
   public static function setUpBeforeClass(): void {
     parent::setUpBeforeClass();
-    self::$USER = new Objects\User(new \Configuration\Configuration());
-    self::$SQL = self::$USER->getSQL();
+    self::$CONTEXT = new Context();
+    if (!self::$CONTEXT->initSQL()) {
+      throw new Exception("Could not establish database connection");
+    }
+
+    self::$SQL = self::$CONTEXT->getSQL();
     self::$HANDLER = TestEntity::getHandler(self::$SQL);
     self::$HANDLER->getLogger()->unitTestMode();
   }
 
   public function testCreateTable() {
-    $this->assertInstanceOf(\Driver\SQL\Query\CreateTable::class, self::$HANDLER->getTableQuery());
+    $this->assertInstanceOf(CreateTable::class, self::$HANDLER->getTableQuery());
     $this->assertTrue(self::$HANDLER->createTable());
   }
 
@@ -60,7 +72,8 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
     $allEntities = TestEntity::findAll(self::$SQL);
     $this->assertIsArray($allEntities);
     $this->assertCount(1, $allEntities);
-    $this->assertEquals($entityId, $allEntities[0]->getId());
+    $this->assertTrue(array_key_exists($entityId, $allEntities));
+    $this->assertEquals($entityId, $allEntities[$entityId]->getId());
 
     // delete
     $this->assertTrue($entity->delete(self::$SQL));
@@ -94,4 +107,16 @@ class TestEntity extends \Objects\DatabaseEntity\DatabaseEntity {
   public float $d;
   public \DateTime $e;
   public ?int $f;
+
+  public function jsonSerialize(): array {
+    return [
+      "id" => $this->getId(),
+      "a" => $this->a,
+      "b" => $this->b,
+      "c" => $this->c,
+      "d" => $this->d,
+      "e" => $this->e,
+      "f" => $this->f,
+    ];
+  }
 }

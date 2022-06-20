@@ -65,10 +65,10 @@ class HtmlDocument extends Document {
     }
 
     $head = $this->head->getCode();
-    $lang = $this->getUser()->getLanguage()->getShortCode();
+    $lang = $this->getContext()->getLanguage();
 
     $code = "<!DOCTYPE html>";
-    $code .= html_tag("html", ["lang" => $lang], $head . $body, false);
+    $code .= html_tag("html", ["lang" => $lang->getShortCode()], $head . $body, false);
 
     return $code;
   }

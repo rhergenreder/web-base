@@ -83,7 +83,7 @@ export default class Logs extends React.Component {
             for (let event of dates[date]) {
                 let timeString = moment(event.timestamp).fromNow();
                 elements.push(
-                    <div key={"time-entry-" + event.uid}>
+                    <div key={"time-entry-" + event.id}>
                         <Icon icon={event.icon} className={"bg-" + color}/>
                         <div className="timeline-item">
                             <span className="time"><Icon icon={"clock"}/> {timeString}</span>

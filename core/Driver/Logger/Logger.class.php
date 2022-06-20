@@ -34,13 +34,16 @@ class Logger {
   }
 
   protected function getStackTrace(int $pop = 2): string {
-    $debugTrace = debug_backtrace();
+    $debugTrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
     if ($pop > 0) {
       array_splice($debugTrace, 0, $pop);
     }
-
     return implode("\n", array_map(function ($trace) {
-      return $trace["file"] . "#" . $trace["line"] . ": " . $trace["function"] . "()";
+      if (isset($trace["file"])) {
+        return $trace["file"] . "#" . $trace["line"] . ": " . $trace["function"] . "()";
+      } else {
+        return $trace["function"] . "()";
+      }
     }, $debugTrace));
   }
 
@@ -93,8 +96,8 @@ class Logger {
     return $message;
   }
 
-  public function debug(string $message): string {
-    $this->log($message, "debug");
+  public function debug(string $message, bool $appendStackTrace = false): string {
+    $this->log($message, "debug", $appendStackTrace);
     return $message;
   }
 

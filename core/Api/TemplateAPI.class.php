@@ -2,11 +2,11 @@
 
 namespace Api {
 
-  use Objects\User;
+  use Objects\Context;
 
   abstract class TemplateAPI extends Request {
-    function __construct(User $user, bool $externalCall = false, array $params = array()) {
-      parent::__construct($user, $externalCall, $params);
+    function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
       $this->isPublic = false; // internal API
     }
   }
@@ -19,7 +19,7 @@ namespace Api\Template {
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
   use Api\TemplateAPI;
-  use Objects\User;
+  use Objects\Context;
   use Twig\Environment;
   use Twig\Error\LoaderError;
   use Twig\Error\RuntimeError;
@@ -28,8 +28,8 @@ namespace Api\Template {
 
   class Render extends TemplateAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, [
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
         "file" => new StringType("file"),
         "parameters" => new ArrayType("parameters", Parameter::TYPE_MIXED, false, true, [])
       ]);

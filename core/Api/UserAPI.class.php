@@ -2,9 +2,16 @@
 
 namespace Api {
 
+  use Cassandra\Date;
   use Driver\SQL\Condition\Compare;
+  use Objects\Context;
+  use Objects\DatabaseEntity\Language;
 
   abstract class UserAPI extends Request {
+
+    public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
+    }
 
     protected function checkUserExists(?string $username, ?string $email = null): bool {
 
@@ -21,7 +28,7 @@ namespace Api {
         return true;
       }
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->select("User.name", "User.email")
         ->from("User")
         ->where(...$conditions)
@@ -45,7 +52,7 @@ namespace Api {
     protected function checkPasswordRequirements($password, $confirmPassword): bool {
       if ((($password === null) !== ($confirmPassword === null)) || strcmp($password, $confirmPassword) !== 0) {
         return $this->createError("The given passwords do not match");
-      } else if(strlen($password) < 6) {
+      } else if (strlen($password) < 6) {
         return $this->createError("The password should be at least 6 characters long");
       }
 
@@ -68,39 +75,43 @@ namespace Api {
     }
 
     protected function insertUser($username, $email, $password, $confirmed, $fullName = "") {
-      $sql = $this->user->getSQL();
-      $hash = $this->hashPassword($password);
-      $res = $sql->insert("User", array("name", "password", "email", "confirmed", "fullName"))
-        ->addRow($username, $hash, $email, $confirmed, $fullName ?? "")
-        ->returning("uid")
-        ->execute();
+      $sql = $this->context->getSQL();
 
+      $user = new \Objects\DatabaseEntity\User();
+      $user->language = Language::DEFAULT_LANGUAGE(false);
+      $user->registeredAt = new \DateTime();
+      $user->password = $this->hashPassword($password);
+      $user->name = $username;
+      $user->email = $email;
+      $user->confirmed = $confirmed;
+      $user->fullName = $fullName ?? "";
+
+      $this->success = ($user->save($sql) !== FALSE);
       $this->lastError = $sql->getLastError();
-      $this->success = ($res !== FALSE);
 
       if ($this->success) {
-        return $sql->getLastInsertId();
+        return $user->getId();
       }
 
       return $this->success;
     }
 
-    protected function hashPassword($password) {
+    protected function hashPassword($password): string {
       return password_hash($password, PASSWORD_BCRYPT);
     }
 
-    protected function getUser($id) {
-      $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid as userId", "User.name", "User.fullName", "User.email",
-        "User.registered_at", "User.confirmed", "User.last_online", "User.profilePicture",
+    protected function getUser(int $id) {
+      $sql = $this->context->getSQL();
+      $res = $sql->select("User.id as userId", "User.name", "User.full_name", "User.email",
+        "User.registered_at", "User.confirmed", "User.last_online", "User.profile_picture",
         "User.gpg_id", "GpgKey.confirmed as gpg_confirmed", "GpgKey.fingerprint as gpg_fingerprint",
-          "GpgKey.expires as gpg_expires", "GpgKey.algorithm as gpg_algorithm",
-        "Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor")
+        "GpgKey.expires as gpg_expires", "GpgKey.algorithm as gpg_algorithm",
+        "Group.id as groupId", "Group.name as groupName", "Group.color as groupColor")
         ->from("User")
-        ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
-        ->leftJoin("Group", "Group.uid", "UserGroup.group_id")
-        ->leftJoin("GpgKey", "GpgKey.uid", "User.gpg_id")
-        ->where(new Compare("User.uid", $id))
+        ->leftJoin("UserGroup", "User.id", "UserGroup.user_id")
+        ->leftJoin("Group", "Group.id", "UserGroup.group_id")
+        ->leftJoin("GpgKey", "GpgKey.id", "User.gpg_id")
+        ->where(new Compare("User.id", $id))
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -110,7 +121,7 @@ namespace Api {
     }
 
     protected function invalidateToken($token) {
-      $this->user->getSQL()
+      $this->context->getSQL()
         ->update("UserToken")
         ->set("used", true)
         ->where(new Compare("token", $token))
@@ -119,7 +130,7 @@ namespace Api {
 
     protected function insertToken(int $userId, string $token, string $tokenType, int $duration): bool {
       $validUntil = (new \DateTime())->modify("+$duration hour");
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->insert("UserToken", array("user_id", "token", "token_type", "valid_until"))
         ->addRow($userId, $token, $tokenType, $validUntil)
         ->execute();
@@ -155,15 +166,17 @@ namespace Api\User {
   use Driver\SQL\Condition\CondNot;
   use Driver\SQL\Expression\JsonArrayAgg;
   use ImagickException;
-  use Objects\GpgKey;
+  use Objects\Context;
+  use Objects\DatabaseEntity\DatabaseEntityHandler;
+  use Objects\DatabaseEntity\GpgKey;
+  use Objects\DatabaseEntity\TwoFactorToken;
   use Objects\TwoFactor\KeyBasedTwoFactorToken;
-  use Objects\TwoFactor\TwoFactorToken;
-  use Objects\User;
+  use Objects\DatabaseEntity\User;
 
   class Create extends UserAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'username' => new StringType('username', 32),
         'email' => new Parameter('email', Parameter::TYPE_EMAIL, true, NULL),
         'password' => new StringType('password'),
@@ -192,7 +205,7 @@ namespace Api\User {
       $email = (!is_null($email) && empty($email)) ? null : $email;
 
       $id = $this->insertUser($username, $email, $password, true);
-      if ($this->success) {
+      if ($id !== false) {
         $this->result["userId"] = $id;
       }
 
@@ -204,8 +217,8 @@ namespace Api\User {
 
     private int $userCount;
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
         'count' => new Parameter('count', Parameter::TYPE_INT, true, 20)
       ));
@@ -213,7 +226,7 @@ namespace Api\User {
 
     private function getUserCount(): bool {
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->select($sql->count())->from("User")->execute();
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
@@ -226,12 +239,12 @@ namespace Api\User {
     }
 
     private function selectIds($page, $count) {
-      $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid")
+      $sql = $this->context->getSQL();
+      $res = $sql->select("User.id")
         ->from("User")
         ->limit($count)
         ->offset(($page - 1) * $count)
-        ->orderBy("User.uid")
+        ->orderBy("User.id")
         ->ascending()
         ->execute();
 
@@ -240,8 +253,8 @@ namespace Api\User {
 
       if ($this->success && is_array($res)) {
         return array_map(function ($row) {
-            return intval($row["uid"]);
-          }, $res);
+          return intval($row["id"]);
+        }, $res);
       }
 
       return false;
@@ -268,36 +281,38 @@ namespace Api\User {
         return false;
       }
 
-      $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid as userId", "User.name", "User.email", "User.registered_at", "User.confirmed",
-        "User.profilePicture", "User.fullName", "Group.uid as groupId", "User.last_online",
+      $sql = $this->context->getSQL();
+      $res = $sql->select("User.id as userId", "User.name", "User.email", "User.registered_at", "User.confirmed",
+        "User.profile_picture", "User.full_name", "Group.id as groupId", "User.last_online",
         "Group.name as groupName", "Group.color as groupColor")
         ->from("User")
-        ->leftJoin("UserGroup", "User.uid", "UserGroup.user_id")
-        ->leftJoin("Group", "Group.uid", "UserGroup.group_id")
-        ->where(new CondIn(new Column("User.uid"), $userIds))
+        ->leftJoin("UserGroup", "User.id", "UserGroup.user_id")
+        ->leftJoin("Group", "Group.id", "UserGroup.group_id")
+        ->where(new CondIn(new Column("User.id"), $userIds))
         ->execute();
 
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
+      $currentUser = $this->context->getUser();
 
       if ($this->success) {
         $this->result["users"] = array();
         foreach ($res as $row) {
           $userId = intval($row["userId"]);
-          $groupId = intval($row["groupId"]);
+          $groupId = $row["groupId"];
           $groupName = $row["groupName"];
           $groupColor = $row["groupColor"];
 
-          $fullInfo = ($userId === $this->user->getId()) ||
-            ($this->user->hasGroup(USER_GROUP_ADMIN) || $this->user->hasGroup(USER_GROUP_SUPPORT));
+          $fullInfo = ($userId === $currentUser->getId() ||
+            $currentUser->hasGroup(USER_GROUP_ADMIN) ||
+            $currentUser->hasGroup(USER_GROUP_SUPPORT));
 
           if (!isset($this->result["users"][$userId])) {
             $user = array(
-              "uid" => $userId,
+              "id" => $userId,
               "name" => $row["name"],
-              "fullName" => $row["fullName"],
-              "profilePicture" => $row["profilePicture"],
+              "fullName" => $row["full_name"],
+              "profilePicture" => $row["profile_picture"],
               "email" => $row["email"],
               "confirmed" => $sql->parseBool($row["confirmed"]),
               "groups" => array(),
@@ -314,7 +329,8 @@ namespace Api\User {
           }
 
           if (!is_null($groupId)) {
-            $this->result["users"][$userId]["groups"][$groupId] = array(
+            $this->result["users"][$userId]["groups"][intval($groupId)] = array(
+              "id" => intval($groupId),
               "name" => $groupName,
               "color" => $groupColor
             );
@@ -330,8 +346,8 @@ namespace Api\User {
 
   class Get extends UserAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'id' => new Parameter('id', Parameter::TYPE_INT)
       ));
       $this->loginRequired = true;
@@ -339,7 +355,7 @@ namespace Api\User {
 
     public function _execute(): bool {
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $userId = $this->getParam("id");
       $user = $this->getUser($userId);
       if ($this->success) {
@@ -353,19 +369,19 @@ namespace Api\User {
           }
 
           $queriedUser = array(
-            "uid" => $userId,
+            "id" => $userId,
             "name" => $user[0]["name"],
-            "fullName" => $user[0]["fullName"],
+            "fullName" => $user[0]["full_name"],
             "email" => $user[0]["email"],
             "registered_at" => $user[0]["registered_at"],
             "last_online" => $user[0]["last_online"],
-            "profilePicture" => $user[0]["profilePicture"],
+            "profilePicture" => $user[0]["profile_picture"],
             "confirmed" => $sql->parseBool($user["0"]["confirmed"]),
             "groups" => array(),
             "gpgFingerprint" => $gpgFingerprint,
           );
 
-          foreach($user as $row) {
+          foreach ($user as $row) {
             if (!is_null($row["groupId"])) {
               $queriedUser["groups"][$row["groupId"]] = array(
                 "name" => $row["groupName"],
@@ -375,13 +391,15 @@ namespace Api\User {
           }
 
           // either we are querying own info or we are support / admin
-          $canView = ($userId === $this->user->getId()) ||
-                ($this->user->hasGroup(USER_GROUP_ADMIN) ||
-                $this->user->hasGroup(USER_GROUP_SUPPORT));
+          $currentUser = $this->context->getUser();
+          $canView = ($userId === $currentUser->getId() ||
+            $currentUser->hasGroup(USER_GROUP_ADMIN) ||
+            $currentUser->hasGroup(USER_GROUP_SUPPORT));
 
           // full info only when we have administrative privileges, or we are querying ourselves
-          $fullInfo = ($userId === $this->user->getId()) ||
-            ($this->user->hasGroup(USER_GROUP_ADMIN) || $this->user->hasGroup(USER_GROUP_SUPPORT));
+          $fullInfo = ($userId === $currentUser->getId() ||
+            $currentUser->hasGroup(USER_GROUP_ADMIN) ||
+            $currentUser->hasGroup(USER_GROUP_SUPPORT));
 
           if (!$canView) {
 
@@ -391,7 +409,7 @@ namespace Api\User {
               ->execute();
             $this->success = ($res !== false);
             $this->lastError = $sql->getLastError();
-            if (!$this->success ) {
+            if (!$this->success) {
               return false;
             } else {
               $canView = in_array($userId, json_decode($res[0]["publisherIds"], true));
@@ -421,19 +439,20 @@ namespace Api\User {
 
   class Info extends UserAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array());
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array());
       $this->csrfTokenRequired = false;
     }
 
     public function _execute(): bool {
 
-      if (!$this->user->isLoggedIn()) {
+      $currentUser = $this->context->getUser();
+      if (!$currentUser) {
         $this->result["loggedIn"] = false;
       } else {
         $this->result["loggedIn"] = true;
-        $userGroups = array_keys($this->user->getGroups());
-        $sql = $this->user->getSQL();
+        $userGroups = array_keys($currentUser->getGroups());
+        $sql = $this->context->getSQL();
         $res = $sql->select("method", "groups")
           ->from("ApiPermission")
           ->execute();
@@ -449,17 +468,18 @@ namespace Api\User {
         }
 
         $this->result["permissions"] = $permissions;
+        $this->result["user"] = $currentUser->jsonSerialize();
+        $this->result["user"]["session"] = $this->context->getSession()?->jsonSerialize();
       }
 
-      $this->result["user"] = $this->user->jsonSerialize();
       return $this->success;
     }
   }
 
   class Invite extends UserAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'username' => new StringType('username', 32),
         'email' => new StringType('email', 64),
       ));
@@ -485,7 +505,7 @@ namespace Api\User {
       $token = generateRandomString(36);
       $validDays = 7;
       $valid_until = (new DateTime())->modify("+$validDays day");
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->insert("UserToken", array("user_id", "token", "token_type", "valid_until"))
         ->addRow($id, $token, "invite", $valid_until)
         ->execute();
@@ -495,11 +515,11 @@ namespace Api\User {
       //send validation mail
       if ($this->success) {
 
-        $settings = $this->user->getConfiguration()->getSettings();
+        $settings = $this->context->getSettings();
         $baseUrl = $settings->getBaseUrl();
         $siteName = $settings->getSiteName();
 
-        $req = new Render($this->user);
+        $req = new Render($this->context);
         $this->success = $req->execute([
           "file" => "mail/accept_invite.twig",
           "parameters" => [
@@ -514,7 +534,7 @@ namespace Api\User {
 
         if ($this->success) {
           $messageBody = $req->getResult()["html"];
-          $request = new \Api\Mail\Send($this->user);
+          $request = new \Api\Mail\Send($this->context);
           $this->success = $request->execute(array(
             "to" => $email,
             "subject" => "[$siteName] Account Invitation",
@@ -531,14 +551,14 @@ namespace Api\User {
         }
       }
 
-      $this->logger->info("Created new user with uid=$id");
+      $this->logger->info("Created new user with id=$id");
       return $this->success;
     }
   }
 
   class AcceptInvite extends UserAPI {
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'token' => new StringType('token', 36),
         'password' => new StringType('password'),
         'confirmPassword' => new StringType('confirmPassword'),
@@ -547,11 +567,11 @@ namespace Api\User {
     }
 
     private function updateUser($uid, $password): bool {
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->update("User")
         ->set("password", $this->hashPassword($password))
         ->set("confirmed", true)
-        ->where(new Compare("uid", $uid))
+        ->where(new Compare("id", $uid))
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -561,7 +581,7 @@ namespace Api\User {
 
     public function _execute(): bool {
 
-      if ($this->user->isLoggedIn()) {
+      if ($this->context->getUser()) {
         return $this->createError("You are already logged in.");
       }
 
@@ -569,7 +589,7 @@ namespace Api\User {
       $password = $this->getParam("password");
       $confirmPassword = $this->getParam("confirmPassword");
 
-      $req = new CheckToken($this->user);
+      $req = new CheckToken($this->context);
       $this->success = $req->execute(array("token" => $token));
       $this->lastError = $req->getLastError();
 
@@ -580,16 +600,16 @@ namespace Api\User {
       $result = $req->getResult();
       if (strcasecmp($result["token"]["type"], "invite") !== 0) {
         return $this->createError("Invalid token type");
-      } else if($result["user"]["confirmed"]) {
+      } else if ($result["user"]["confirmed"]) {
         return $this->createError("Your email address is already confirmed.");
       } else if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
         return false;
-      } else if (!$this->updateUser($result["user"]["uid"], $password)) {
+      } else if (!$this->updateUser($result["user"]["id"], $password)) {
         return false;
       } else {
 
         // Invalidate token
-        $this->user->getSQL()
+        $this->context->getSQL()
           ->update("UserToken")
           ->set("used", true)
           ->where(new Compare("token", $token))
@@ -602,18 +622,18 @@ namespace Api\User {
 
   class ConfirmEmail extends UserAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'token' => new StringType('token', 36)
       ));
       $this->csrfTokenRequired = false;
     }
 
     private function updateUser($uid): bool {
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->update("User")
         ->set("confirmed", true)
-        ->where(new Compare("uid", $uid))
+        ->where(new Compare("id", $uid))
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -623,12 +643,12 @@ namespace Api\User {
 
     public function _execute(): bool {
 
-      if ($this->user->isLoggedIn()) {
+      if ($this->context->getUser()) {
         return $this->createError("You are already logged in.");
       }
 
       $token = $this->getParam("token");
-      $req = new CheckToken($this->user);
+      $req = new CheckToken($this->context);
       $this->success = $req->execute(array("token" => $token));
       $this->lastError = $req->getLastError();
 
@@ -636,9 +656,9 @@ namespace Api\User {
         $result = $req->getResult();
         if (strcasecmp($result["token"]["type"], "email_confirm") !== 0) {
           return $this->createError("Invalid token type");
-        } else if($result["user"]["confirmed"]) {
+        } else if ($result["user"]["confirmed"]) {
           return $this->createError("Your email address is already confirmed.");
-        } else if (!$this->updateUser($result["user"]["uid"])) {
+        } else if (!$this->updateUser($result["user"]["id"])) {
           return false;
         } else {
           $this->invalidateToken($token);
@@ -654,8 +674,8 @@ namespace Api\User {
 
     private int $startedAt;
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'username' => new StringType('username'),
         'password' => new StringType('password'),
         'stayLoggedIn' => new Parameter('stayLoggedIn', Parameter::TYPE_BOOLEAN, true, false)
@@ -672,7 +692,7 @@ namespace Api\User {
 
     public function _execute(): bool {
 
-      if ($this->user->isLoggedIn()) {
+      if ($this->context->getUser()) {
         $this->lastError = L('You are already logged in');
         $this->success = true;
         return true;
@@ -684,15 +704,17 @@ namespace Api\User {
       $password = $this->getParam('password');
       $stayLoggedIn = $this->getParam('stayLoggedIn');
 
-      $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid", "User.password", "User.confirmed",
-          "User.2fa_id", "2FA.type as 2fa_type", "2FA.confirmed as 2fa_confirmed", "2FA.data as 2fa_data")
+      $sql = $this->context->getSQL();
+      $res = $sql->select("User.id", "User.password", "User.confirmed",
+        "TwoFactorToken.id as 2fa_id", "TwoFactorToken.type as 2fa_type",
+        "TwoFactorToken.confirmed as 2fa_confirmed", "TwoFactorToken.data as 2fa_data")
         ->from("User")
         ->where(new Compare("User.name", $username), new Compare("User.email", $username))
-        ->leftJoin("2FA", "2FA.uid", "User.2fa_id")
+        ->leftJoin("TwoFactorToken", "TwoFactorToken.id", "User.two_factor_token_id")
         ->first()
         ->execute();
 
+      $session = null;
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
 
@@ -700,19 +722,19 @@ namespace Api\User {
         if ($res === null) {
           return $this->wrongCredentials();
         } else {
-          $uid = $res['uid'];
+          $userId = $res['id'];
           $confirmed = $sql->parseBool($res["confirmed"]);
-          $token = $res["2fa_id"] ? TwoFactorToken::newInstance($res["2fa_type"], $res["2fa_data"], $res["2fa_id"], $sql->parseBool($res["2fa_confirmed"])) : null;
+          $token = $res["2fa_id"] ? TwoFactorToken::fromRow($sql, DatabaseEntityHandler::getPrefixedRow($res, "2fa_")) : null;
           if (password_verify($password, $res['password'])) {
             if (!$confirmed) {
               $this->result["emailConfirmed"] = false;
               return $this->createError("Your email address has not been confirmed yet.");
-            } else if (!($this->success = $this->user->createSession($uid, $stayLoggedIn))) {
+            } else if (!($session = $this->context->createSession($userId, $stayLoggedIn))) {
               return $this->createError("Error creating Session: " . $sql->getLastError());
             } else {
               $this->result["loggedIn"] = true;
-              $this->result["logoutIn"] = $this->user->getSession()->getExpiresSeconds();
-              $this->result["csrf_token"] = $this->user->getSession()->getCsrfToken();
+              $this->result["logoutIn"] = $session->getExpiresSeconds();
+              $this->result["csrf_token"] = $session->getCsrfToken();
               if ($token && $token->isConfirmed()) {
                 $this->result["2fa"] = ["type" => $token->getType()];
                 if ($token instanceof KeyBasedTwoFactorToken) {
@@ -735,8 +757,8 @@ namespace Api\User {
 
   class Logout extends UserAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall);
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall);
       $this->loginRequired = false;
       $this->apiKeyAllowed = false;
       $this->forbidMethod("GET");
@@ -744,12 +766,13 @@ namespace Api\User {
 
     public function _execute(): bool {
 
-      if (!$this->user->isLoggedIn()) {
+      $session = $this->context->getSession();
+      if (!$session) {
         return $this->createError("You are not logged in.");
       }
 
-      $this->success = $this->user->logout();
-      $this->lastError = $this->user->getSQL()->getLastError();
+      $this->success = $session->destroy();
+      $this->lastError = $this->context->getSQL()->getLastError();
       return $this->success;
     }
   }
@@ -759,7 +782,7 @@ namespace Api\User {
     private ?int $userId;
     private string $token;
 
-    public function __construct(User $user, bool $externalCall = false) {
+    public function __construct(Context $context, bool $externalCall = false) {
       $parameters = array(
         "username" => new StringType("username", 32),
         'email' => new Parameter('email', Parameter::TYPE_EMAIL),
@@ -767,30 +790,30 @@ namespace Api\User {
         "confirmPassword" => new StringType("confirmPassword"),
       );
 
-      $settings = $user->getConfiguration()->getSettings();
+      $settings = $context->getSettings();
       if ($settings->isRecaptchaEnabled()) {
         $parameters["captcha"] = new StringType("captcha");
       }
 
-      parent::__construct($user, $externalCall, $parameters);
+      parent::__construct($context, $externalCall, $parameters);
       $this->csrfTokenRequired = false;
     }
 
     public function _execute(): bool {
 
-      if ($this->user->isLoggedIn()) {
+      if ($this->context->getUser()) {
         return $this->createError(L('You are already logged in'));
       }
 
-      $registrationAllowed = $this->user->getConfiguration()->getSettings()->isRegistrationAllowed();
-      if(!$registrationAllowed) {
+      $settings = $this->context->getSettings();
+      $registrationAllowed = $settings->isRegistrationAllowed();
+      if (!$registrationAllowed) {
         return $this->createError("User Registration is not enabled.");
       }
 
-      $settings = $this->user->getConfiguration()->getSettings();
       if ($settings->isRecaptchaEnabled()) {
         $captcha = $this->getParam("captcha");
-        $req = new VerifyCaptcha($this->user);
+        $req = new VerifyCaptcha($this->context);
         if (!$req->execute(array("captcha" => $captcha, "action" => "register"))) {
           return $this->createError($req->getLastError());
         }
@@ -804,13 +827,13 @@ namespace Api\User {
         return false;
       }
 
-      if(!$this->checkRequirements($username, $password, $confirmPassword)) {
+      if (!$this->checkRequirements($username, $password, $confirmPassword)) {
         return false;
       }
 
       $fullName = substr($email, 0, strrpos($email, "@"));
       $fullName = implode(" ", array_map(function ($part) {
-        return ucfirst(strtolower($part));
+          return ucfirst(strtolower($part));
         }, explode(".", $fullName))
       );
 
@@ -823,10 +846,9 @@ namespace Api\User {
       $this->token = generateRandomString(36);
       if ($this->insertToken($this->userId, $this->token, "email_confirm", $validHours)) {
 
-        $settings = $this->user->getConfiguration()->getSettings();
         $baseUrl = $settings->getBaseUrl();
         $siteName = $settings->getSiteName();
-        $req = new Render($this->user);
+        $req = new Render($this->context);
         $this->success = $req->execute([
           "file" => "mail/confirm_email.twig",
           "parameters" => [
@@ -841,7 +863,7 @@ namespace Api\User {
 
         if ($this->success) {
           $messageBody = $req->getResult()["html"];
-          $request = new \Api\Mail\Send($this->user);
+          $request = new \Api\Mail\Send($this->context);
           $this->success = $request->execute(array(
             "to" => $email,
             "subject" => "[$siteName] E-Mail Confirmation",
@@ -858,24 +880,24 @@ namespace Api\User {
           "Please contact the server administration. This issue has been automatically logged. Reason: " . $this->lastError;
       }
 
-      $this->logger->info("Registered new user with uid=" . $this->userId);
+      $this->logger->info("Registered new user with id=" . $this->userId);
       return $this->success;
     }
   }
 
   class CheckToken extends UserAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'token' => new StringType('token', 36),
       ));
     }
 
     private function checkToken($token) {
-      $sql = $this->user->getSQL();
-      $res = $sql->select("UserToken.token_type", "User.uid", "User.name", "User.email", "User.confirmed")
+      $sql = $this->context->getSQL();
+      $res = $sql->select("UserToken.token_type", "User.id", "User.name", "User.email", "User.confirmed")
         ->from("UserToken")
-        ->innerJoin("User", "UserToken.user_id", "User.uid")
+        ->innerJoin("User", "UserToken.user_id", "User.id")
         ->where(new Compare("UserToken.token", $token))
         ->where(new Compare("UserToken.valid_until", $sql->now(), ">"))
         ->where(new Compare("UserToken.used", 0))
@@ -904,7 +926,7 @@ namespace Api\User {
           $this->result["user"] = array(
             "name" => $tokenEntry["name"],
             "email" => $tokenEntry["email"],
-            "uid" => $tokenEntry["uid"],
+            "id" => $tokenEntry["id"],
             "confirmed" => $tokenEntry["confirmed"]
           );
         } else {
@@ -917,8 +939,8 @@ namespace Api\User {
 
   class Edit extends UserAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'id' => new Parameter('id', Parameter::TYPE_INT),
         'username' => new StringType('username', 32, true, NULL),
         'fullName' => new StringType('fullName', 64, true, NULL),
@@ -955,7 +977,7 @@ namespace Api\User {
         if (!is_null($groups)) {
           $param = new Parameter('groupId', Parameter::TYPE_INT);
 
-          foreach($groups as $groupId) {
+          foreach ($groups as $groupId) {
             if (!$param->parseParam($groupId)) {
               $value = print_r($groupId, true);
               return $this->createError("Invalid Type for groupId in parameter groups: '$value' (Required: " . $param->getTypeName() . ")");
@@ -964,31 +986,31 @@ namespace Api\User {
             $groupIds[] = $param->value;
           }
 
-          if ($id === $this->user->getId() && !in_array(USER_GROUP_ADMIN, $groupIds)) {
+          if ($id === $this->context->getUser()->getId() && !in_array(USER_GROUP_ADMIN, $groupIds)) {
             return $this->createError("Cannot remove Administrator group from own user.");
           }
         }
 
         // Check for duplicate username, email
         $usernameChanged = !is_null($username) && strcasecmp($username, $user[0]["name"]) !== 0;
-        $fullNameChanged = !is_null($fullName) && strcasecmp($fullName, $user[0]["fullName"]) !== 0;
+        $fullNameChanged = !is_null($fullName) && strcasecmp($fullName, $user[0]["full_name"]) !== 0;
         $emailChanged = !is_null($email) && strcasecmp($email, $user[0]["email"]) !== 0;
-        if($usernameChanged || $emailChanged) {
+        if ($usernameChanged || $emailChanged) {
           if (!$this->checkUserExists($usernameChanged ? $username : NULL, $emailChanged ? $email : NULL)) {
             return false;
           }
         }
 
-        $sql = $this->user->getSQL();
+        $sql = $this->context->getSQL();
         $query = $sql->update("User");
 
         if ($usernameChanged) $query->set("name", $username);
-        if ($fullNameChanged) $query->set("fullName", $fullName);
+        if ($fullNameChanged) $query->set("full_name", $fullName);
         if ($emailChanged) $query->set("email", $email);
         if (!is_null($password)) $query->set("password", $this->hashPassword($password));
 
         if (!is_null($confirmed)) {
-          if ($id === $this->user->getId() && $confirmed === false) {
+          if ($id === $this->context->getUser()->getId() && $confirmed === false) {
             return $this->createError("Cannot make own account unconfirmed.");
           } else {
             $query->set("confirmed", $confirmed);
@@ -996,7 +1018,7 @@ namespace Api\User {
         }
 
         if (!empty($query->getValues())) {
-          $query->where(new Compare("User.uid", $id));
+          $query->where(new Compare("User.id", $id));
           $res = $query->execute();
           $this->lastError = $sql->getLastError();
           $this->success = ($res !== FALSE);
@@ -1007,7 +1029,7 @@ namespace Api\User {
           $deleteQuery = $sql->delete("UserGroup")->where(new Compare("user_id", $id));
           $insertQuery = $sql->insert("UserGroup", array("user_id", "group_id"));
 
-          foreach($groupIds as $groupId) {
+          foreach ($groupIds as $groupId) {
             $insertQuery->addRow($id, $groupId);
           }
 
@@ -1022,8 +1044,8 @@ namespace Api\User {
 
   class Delete extends UserAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'id' => new Parameter('id', Parameter::TYPE_INT)
       ));
 
@@ -1033,7 +1055,7 @@ namespace Api\User {
     public function _execute(): bool {
 
       $id = $this->getParam("id");
-      if ($id === $this->user->getId()) {
+      if ($id === $this->context->getUser()->getId()) {
         return $this->createError("You cannot delete your own user.");
       }
 
@@ -1043,9 +1065,9 @@ namespace Api\User {
           return $this->createError("User not found");
         } else {
 
-          $sql = $this->user->getSQL();
-          $res = $sql->delete("User")->where(new Compare("uid", $id))->execute();
-          $this->success = ($res !== FALSE);
+          $sql = $this->context->getSQL();
+          $user = new User($id);
+          $this->success = ($user->delete($sql) !== FALSE);
           $this->lastError = $sql->getLastError();
         }
       }
@@ -1055,33 +1077,33 @@ namespace Api\User {
   }
 
   class RequestPasswordReset extends UserAPI {
-    public function __construct(User $user, $externalCall = false) {
+    public function __construct(Context $context, $externalCall = false) {
       $parameters = array(
         'email' => new Parameter('email', Parameter::TYPE_EMAIL),
       );
 
-      $settings = $user->getConfiguration()->getSettings();
+      $settings = $context->getSettings();
       if ($settings->isRecaptchaEnabled()) {
         $parameters["captcha"] = new StringType("captcha");
       }
 
-      parent::__construct($user, $externalCall, $parameters);
+      parent::__construct($context, $externalCall, $parameters);
     }
 
     public function _execute(): bool {
 
-      if ($this->user->isLoggedIn()) {
+      if ($this->context->getUser()) {
         return $this->createError("You already logged in.");
       }
 
-      $settings = $this->user->getConfiguration()->getSettings();
+      $settings = $this->context->getSettings();
       if (!$settings->isMailEnabled()) {
         return $this->createError("The mail service is not enabled, please contact the server administration.");
       }
 
       if ($settings->isRecaptchaEnabled()) {
         $captcha = $this->getParam("captcha");
-        $req = new VerifyCaptcha($this->user);
+        $req = new VerifyCaptcha($this->context);
         if (!$req->execute(array("captcha" => $captcha, "action" => "resetPassword"))) {
           return $this->createError($req->getLastError());
         }
@@ -1096,14 +1118,14 @@ namespace Api\User {
       if ($user !== null) {
         $validHours = 1;
         $token = generateRandomString(36);
-        if (!$this->insertToken($user["uid"], $token, "password_reset", $validHours)) {
+        if (!$this->insertToken($user["id"], $token, "password_reset", $validHours)) {
           return false;
         }
 
         $baseUrl = $settings->getBaseUrl();
         $siteName = $settings->getSiteName();
 
-        $req = new Render($this->user);
+        $req = new Render($this->context);
         $this->success = $req->execute([
           "file" => "mail/reset_password.twig",
           "parameters" => [
@@ -1124,7 +1146,7 @@ namespace Api\User {
             $gpgFingerprint = $user["gpg_fingerprint"];
           }
 
-          $request = new \Api\Mail\Send($this->user);
+          $request = new \Api\Mail\Send($this->context);
           $this->success = $request->execute(array(
             "to" => $email,
             "subject" => "[$siteName] Password Reset",
@@ -1132,7 +1154,7 @@ namespace Api\User {
             "gpgFingerprint" => $gpgFingerprint
           ));
           $this->lastError = $request->getLastError();
-          $this->logger->info("Requested password reset for user uid=" . $user["uid"] . " by ip_address=" . $_SERVER["REMOTE_ADDR"]);
+          $this->logger->info("Requested password reset for user id=" . $user["id"] . " by ip_address=" . $_SERVER["REMOTE_ADDR"]);
         }
       }
 
@@ -1140,11 +1162,11 @@ namespace Api\User {
     }
 
     private function findUser($email): ?array {
-      $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid", "User.name",
-          "User.gpg_id", "GpgKey.confirmed as gpg_confirmed", "GpgKey.fingerprint as gpg_fingerprint")
+      $sql = $this->context->getSQL();
+      $res = $sql->select("User.id", "User.name",
+        "User.gpg_id", "GpgKey.confirmed as gpg_confirmed", "GpgKey.fingerprint as gpg_fingerprint")
         ->from("User")
-        ->leftJoin("GpgKey", "GpgKey.uid", "User.gpg_id")
+        ->leftJoin("GpgKey", "GpgKey.id", "User.gpg_id")
         ->where(new Compare("User.email", $email))
         ->where(new CondBool("User.confirmed"))
         ->execute();
@@ -1162,39 +1184,39 @@ namespace Api\User {
   }
 
   class ResendConfirmEmail extends UserAPI {
-    public function __construct(User $user, $externalCall = false) {
+    public function __construct(Context $context, $externalCall = false) {
       $parameters = array(
         'email' => new Parameter('email', Parameter::TYPE_EMAIL),
       );
 
-      $settings = $user->getConfiguration()->getSettings();
+      $settings = $context->getSettings();
       if ($settings->isRecaptchaEnabled()) {
         $parameters["captcha"] = new StringType("captcha");
       }
 
-      parent::__construct($user, $externalCall, $parameters);
+      parent::__construct($context, $externalCall, $parameters);
     }
 
     public function _execute(): bool {
 
-      if ($this->user->isLoggedIn()) {
+      if ($this->context->getUser()) {
         return $this->createError("You already logged in.");
       }
 
-      $settings = $this->user->getConfiguration()->getSettings();
+      $settings = $this->context->getSettings();
       if ($settings->isRecaptchaEnabled()) {
         $captcha = $this->getParam("captcha");
-        $req = new VerifyCaptcha($this->user);
+        $req = new VerifyCaptcha($this->context);
         if (!$req->execute(array("captcha" => $captcha, "action" => "resendConfirmation"))) {
           return $this->createError($req->getLastError());
         }
       }
 
       $email = $this->getParam("email");
-      $sql = $this->user->getSQL();
-      $res = $sql->select("User.uid", "User.name", "UserToken.token", "UserToken.token_type", "UserToken.used")
+      $sql = $this->context->getSQL();
+      $res = $sql->select("User.id", "User.name", "UserToken.token", "UserToken.token_type", "UserToken.used")
         ->from("User")
-        ->leftJoin("UserToken", "User.uid", "UserToken.user_id")
+        ->leftJoin("UserToken", "User.id", "UserToken.user_id")
         ->where(new Compare("User.email", $email))
         ->where(new Compare("User.confirmed", false))
         ->execute();
@@ -1208,7 +1230,7 @@ namespace Api\User {
         return true;
       }
 
-      $userId = $res[0]["uid"];
+      $userId = $res[0]["id"];
       $token = current(
         array_map(function ($row) {
           return $row["token"];
@@ -1235,7 +1257,7 @@ namespace Api\User {
       $baseUrl = $settings->getBaseUrl();
       $siteName = $settings->getSiteName();
 
-      $req = new Render($this->user);
+      $req = new Render($this->context);
       $this->success = $req->execute([
         "file" => "mail/confirm_email.twig",
         "parameters" => [
@@ -1250,7 +1272,7 @@ namespace Api\User {
 
       if ($this->success) {
         $messageBody = $req->getResult()["html"];
-        $request = new \Api\Mail\Send($this->user);
+        $request = new \Api\Mail\Send($this->context);
         $this->success = $request->execute(array(
           "to" => $email,
           "subject" => "[$siteName] E-Mail Confirmation",
@@ -1266,8 +1288,8 @@ namespace Api\User {
 
   class ResetPassword extends UserAPI {
 
-    public function __construct(User $user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'token' => new StringType('token', 36),
         'password' => new StringType('password'),
         'confirmPassword' => new StringType('confirmPassword'),
@@ -1277,10 +1299,10 @@ namespace Api\User {
     }
 
     private function updateUser($uid, $password): bool {
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->update("User")
         ->set("password", $this->hashPassword($password))
-        ->where(new Compare("uid", $uid))
+        ->where(new Compare("id", $uid))
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -1290,7 +1312,7 @@ namespace Api\User {
 
     public function _execute(): bool {
 
-      if ($this->user->isLoggedIn()) {
+      if ($this->context->getUser()) {
         return $this->createError("You are already logged in.");
       }
 
@@ -1298,7 +1320,7 @@ namespace Api\User {
       $password = $this->getParam("password");
       $confirmPassword = $this->getParam("confirmPassword");
 
-      $req = new CheckToken($this->user);
+      $req = new CheckToken($this->context);
       $this->success = $req->execute(array("token" => $token));
       $this->lastError = $req->getLastError();
       if (!$this->success) {
@@ -1310,10 +1332,10 @@ namespace Api\User {
         return $this->createError("Invalid token type");
       } else if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
         return false;
-      } else if (!$this->updateUser($result["user"]["uid"], $password)) {
+      } else if (!$this->updateUser($result["user"]["id"], $password)) {
         return false;
       } else {
-        $this->logger->info("Issued password reset for user uid=" . $result["user"]["uid"]);
+        $this->logger->info("Issued password reset for user id=" . $result["user"]["id"]);
         $this->invalidateToken($token);
         return true;
       }
@@ -1322,8 +1344,8 @@ namespace Api\User {
 
   class UpdateProfile extends UserAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'username' => new StringType('username', 32, true, NULL),
         'fullName' => new StringType('fullName', 64, true, NULL),
         'password' => new StringType('password', -1, true, NULL),
@@ -1347,8 +1369,8 @@ namespace Api\User {
         return $this->createError("You must either provide an updated username, fullName or password");
       }
 
-      $sql = $this->user->getSQL();
-      $query = $sql->update("User")->where(new Compare("uid", $this->user->getId()));
+      $sql = $this->context->getSQL();
+      $query = $sql->update("User")->where(new Compare("id", $this->context->getUser()->getId()));
       if ($newUsername !== null) {
         if (!$this->checkUsernameRequirements($newUsername) || !$this->checkUserExists($newUsername)) {
           return false;
@@ -1358,7 +1380,7 @@ namespace Api\User {
       }
 
       if ($newFullName !== null) {
-        $query->set("fullName", $newFullName);
+        $query->set("full_name", $newFullName);
       }
 
       if ($newPassword !== null || $newPasswordConfirm !== null) {
@@ -1367,7 +1389,7 @@ namespace Api\User {
         } else {
           $res = $sql->select("password")
             ->from("User")
-            ->where(new Compare("uid", $this->user->getId()))
+            ->where(new Compare("id", $this->context->getUser()->getId()))
             ->execute();
 
           $this->success = ($res !== false);
@@ -1392,8 +1414,8 @@ namespace Api\User {
 
   class ImportGPG extends UserAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         "pubkey" => new StringType("pubkey")
       ));
       $this->loginRequired = true;
@@ -1424,7 +1446,8 @@ namespace Api\User {
 
     public function _execute(): bool {
 
-      $gpgKey = $this->user->getGPG();
+      $currentUser = $this->context->getUser();
+      $gpgKey = $currentUser->getGPG();
       if ($gpgKey) {
         return $this->createError("You already added a GPG key to your account.");
       }
@@ -1442,10 +1465,10 @@ namespace Api\User {
         return $this->createError($res["error"]);
       }
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->insert("GpgKey", ["fingerprint", "algorithm", "expires"])
         ->addRow($keyData["fingerprint"], $keyData["algorithm"], $keyData["expires"])
-        ->returning("uid")
+        ->returning("id")
         ->execute();
 
       $this->success = ($res !== false);
@@ -1457,7 +1480,7 @@ namespace Api\User {
       $gpgKeyId = $sql->getLastInsertId();
       $res = $sql->update("User")
         ->set("gpg_id", $gpgKeyId)
-        ->where(new Compare("uid", $this->user->getId()))
+        ->where(new Compare("id", $currentUser->getId()))
         ->execute();
 
       $this->success = ($res !== false);
@@ -1468,7 +1491,7 @@ namespace Api\User {
 
       $token = generateRandomString(36);
       $res = $sql->insert("UserToken", ["user_id", "token", "token_type", "valid_until"])
-        ->addRow($this->user->getId(), $token, "gpg_confirm", (new DateTime())->modify("+1 hour"))
+        ->addRow($currentUser->getId(), $token, "gpg_confirm", (new DateTime())->modify("+1 hour"))
         ->execute();
 
       $this->success = ($res !== false);
@@ -1477,12 +1500,12 @@ namespace Api\User {
         return false;
       }
 
-      $name = htmlspecialchars($this->user->getFullName());
+      $name = htmlspecialchars($currentUser->getFullName());
       if (!$name) {
-        $name = htmlspecialchars($this->user->getUsername());
+        $name = htmlspecialchars($currentUser->getUsername());
       }
 
-      $settings = $this->user->getConfiguration()->getSettings();
+      $settings = $this->context->getSettings();
       $baseUrl = htmlspecialchars($settings->getBaseUrl());
       $token = htmlspecialchars(urlencode($token));
       $url = "$baseUrl/settings?confirmGPG&token=$token";
@@ -1494,9 +1517,9 @@ namespace Api\User {
         Best Regards<br>
         ilum:e Security Lab";
 
-      $sendMail = new \Api\Mail\Send($this->user);
+      $sendMail = new \Api\Mail\Send($this->context);
       $this->success = $sendMail->execute(array(
-        "to" => $this->user->getEmail(),
+        "to" => $currentUser->getEmail(),
         "subject" => "Security Lab - Confirm GPG-Key",
         "body" => $mailBody,
         "gpgFingerprint" => $keyData["fingerprint"]
@@ -1518,8 +1541,8 @@ namespace Api\User {
   }
 
   class RemoveGPG extends UserAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         "password" => new StringType("password")
       ));
       $this->loginRequired = true;
@@ -1528,15 +1551,16 @@ namespace Api\User {
 
     public function _execute(): bool {
 
-      $gpgKey = $this->user->getGPG();
+      $currentUser = $this->context->getUser();
+      $gpgKey = $currentUser->getGPG();
       if (!$gpgKey) {
         return $this->createError("You have not added a GPG public key to your account yet.");
       }
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->select("password")
         ->from("User")
-        ->where(new Compare("User.uid", $this->user->getId()))
+        ->where(new Compare("User.id", $currentUser->getId()))
         ->execute();
 
       $this->success = ($res !== false);
@@ -1549,10 +1573,10 @@ namespace Api\User {
           return $this->createError("Incorrect password.");
         } else {
           $res = $sql->delete("GpgKey")
-            ->where(new Compare("uid",
+            ->where(new Compare("id",
               $sql->select("User.gpg_id")
-                  ->from("User")
-                  ->where(new Compare("User.uid", $this->user->getId()))
+                ->from("User")
+                ->where(new Compare("User.id", $currentUser->getId()))
             ))->execute();
           $this->success = ($res !== false);
           $this->lastError = $sql->getLastError();
@@ -1565,8 +1589,8 @@ namespace Api\User {
 
   class ConfirmGPG extends UserAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, [
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
         "token" => new StringType("token", 36)
       ]);
       $this->loginRequired = true;
@@ -1574,7 +1598,8 @@ namespace Api\User {
 
     public function _execute(): bool {
 
-      $gpgKey = $this->user->getGPG();
+      $currentUser = $this->context->getUser();
+      $gpgKey = $currentUser->getGPG();
       if (!$gpgKey) {
         return $this->createError("You have not added a GPG key yet.");
       } else if ($gpgKey->isConfirmed()) {
@@ -1582,12 +1607,12 @@ namespace Api\User {
       }
 
       $token = $this->getParam("token");
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->select($sql->count())
         ->from("UserToken")
         ->where(new Compare("token", $token))
         ->where(new Compare("valid_until", $sql->now(), ">="))
-        ->where(new Compare("user_id", $this->user->getId()))
+        ->where(new Compare("user_id", $currentUser->getId()))
         ->where(new Compare("token_type", "gpg_confirm"))
         ->where(new CondNot(new CondBool("used")))
         ->execute();
@@ -1601,7 +1626,7 @@ namespace Api\User {
         } else {
           $res = $sql->update("GpgKey")
             ->set("confirmed", 1)
-            ->where(new Compare("uid", $gpgKey->getId()))
+            ->where(new Compare("id", $gpgKey->getId()))
             ->execute();
 
           $this->success = ($res !== false);
@@ -1625,8 +1650,8 @@ namespace Api\User {
   }
 
   class DownloadGPG extends UserAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         "id" => new Parameter("id", Parameter::TYPE_INT, true, null),
         "format" => new StringType("format", 16, true, "ascii")
       ));
@@ -1642,17 +1667,18 @@ namespace Api\User {
         return $this->getParam("Invalid requested format. Allowed formats: " . implode(",", $allowedFormats));
       }
 
+      $currentUser = $this->context->getUser();
       $userId = $this->getParam("id");
-      if ($userId === null || $userId == $this->user->getId()) {
-        $gpgKey = $this->user->getGPG();
+      if ($userId === null || $userId == $currentUser->getId()) {
+        $gpgKey = $currentUser->getGPG();
         if (!$gpgKey) {
           return $this->createError("You did not add a gpg key yet.");
         }
 
-        $email = $this->user->getEmail();
+        $email = $currentUser->getEmail();
         $gpgFingerprint = $gpgKey->getFingerprint();
       } else {
-        $req = new Get($this->user);
+        $req = new Get($this->context);
         $this->success = $req->execute(["id" => $userId]);
         $this->lastError = $req->getLastError();
         if (!$this->success) {
@@ -1695,8 +1721,8 @@ namespace Api\User {
   }
 
   class UploadPicture extends UserAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, [
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
         "scale" => new Parameter("scale", Parameter::TYPE_FLOAT, true, NULL),
       ]);
       $this->loginRequired = true;
@@ -1774,14 +1800,15 @@ namespace Api\User {
 
     public function _execute(): bool {
 
-      $userId = $this->user->getId();
+      $currentUser = $this->context->getUser();
+      $userId = $currentUser->getId();
       $uploadDir = WEBROOT . "/img/uploads/user/$userId";
-      list ($fileName, $imageName) = $this->processImageUpload($uploadDir, ["png","jpg","jpeg"], "onTransform");
+      list ($fileName, $imageName) = $this->processImageUpload($uploadDir, ["png", "jpg", "jpeg"], "onTransform");
       if (!$this->success) {
         return false;
       }
 
-      $oldPfp = $this->user->getProfilePicture();
+      $oldPfp = $currentUser->getProfilePicture();
       if ($oldPfp) {
         $path = "$uploadDir/$oldPfp";
         if (is_file($path)) {
@@ -1789,10 +1816,10 @@ namespace Api\User {
         }
       }
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $this->success = $sql->update("User")
-        ->set("profilePicture", $fileName)
-        ->where(new Compare("uid", $userId))
+        ->set("profile_picture", $fileName)
+        ->where(new Compare("id", $userId))
         ->execute();
 
       $this->lastError = $sql->getLastError();
@@ -1805,23 +1832,24 @@ namespace Api\User {
   }
 
   class RemovePicture extends UserAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, []);
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, []);
       $this->loginRequired = true;
     }
 
     public function _execute(): bool {
 
-      $pfp = $this->user->getProfilePicture();
+      $currentUser = $this->context->getUser();
+      $pfp = $currentUser->getProfilePicture();
       if (!$pfp) {
         return $this->createError("You did not upload a profile picture yet");
       }
 
-      $userId = $this->user->getId();
-      $sql = $this->user->getSQL();
+      $userId = $currentUser->getId();
+      $sql = $this->context->getSQL();
       $this->success = $sql->update("User")
-        ->set("profilePicture", NULL)
-        ->where(new Compare("uid", $userId))
+        ->set("profile_picture", NULL)
+        ->where(new Compare("id", $userId))
         ->execute();
       $this->lastError = $sql->getLastError();
 

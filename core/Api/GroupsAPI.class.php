@@ -3,11 +3,16 @@
 namespace Api {
 
   use Driver\SQL\Condition\Compare;
+  use Objects\Context;
 
   abstract class GroupsAPI extends Request {
 
-    protected function groupExists($name) {
-      $sql = $this->user->getSQL();
+    public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
+    }
+
+    protected function groupExists($name): bool {
+      $sql = $this->context->getSQL();
       $res = $sql->select($sql->count())
         ->from("Group")
         ->where(new Compare("name", $name))
@@ -25,14 +30,15 @@ namespace Api\Groups {
   use Api\GroupsAPI;
   use Api\Parameter\Parameter;
   use Api\Parameter\StringType;
-  use Driver\SQL\Condition\Compare;
+  use Objects\Context;
+  use Objects\DatabaseEntity\Group;
 
   class Fetch extends GroupsAPI {
 
     private int $groupCount;
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
         'count' => new Parameter('count', Parameter::TYPE_INT, true, 20)
       ));
@@ -40,9 +46,9 @@ namespace Api\Groups {
       $this->groupCount = 0;
     }
 
-    private function getGroupCount() {
+    private function fetchGroupCount(): bool {
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->select($sql->count())->from("Group")->execute();
       $this->success = ($res !== FALSE);
       $this->lastError = $sql->getLastError();
@@ -65,16 +71,16 @@ namespace Api\Groups {
         return $this->createError("Invalid fetch count");
       }
 
-      if (!$this->getGroupCount()) {
+      if (!$this->fetchGroupCount()) {
         return false;
       }
 
-      $sql = $this->user->getSQL();
-      $res = $sql->select("Group.uid as groupId", "Group.name as groupName", "Group.color as groupColor", $sql->count("UserGroup.user_id"))
+      $sql = $this->context->getSQL();
+      $res = $sql->select("Group.id as groupId", "Group.name as groupName", "Group.color as groupColor", $sql->count("UserGroup.user_id"))
         ->from("Group")
-        ->leftJoin("UserGroup", "UserGroup.group_id", "Group.uid")
-        ->groupBy("Group.uid")
-        ->orderBy("Group.uid")
+        ->leftJoin("UserGroup", "UserGroup.group_id", "Group.id")
+        ->groupBy("Group.id")
+        ->orderBy("Group.id")
         ->ascending()
         ->limit($count)
         ->offset(($page - 1) * $count)
@@ -105,8 +111,8 @@ namespace Api\Groups {
   }
 
   class Create extends GroupsAPI {
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'name' => new StringType('name', 32),
         'color' => new StringType('color', 10),
       ));
@@ -130,17 +136,17 @@ namespace Api\Groups {
         return $this->createError("A group with this name already exists");
       }
 
-      $sql = $this->user->getSQL();
-      $res = $sql->insert("Group", array("name", "color"))
-        ->addRow($name, $color)
-        ->returning("uid")
-        ->execute();
+      $sql = $this->context->getSQL();
 
-      $this->success = ($res !== FALSE);
+      $group = new Group();
+      $group->name = $name;
+      $group->color = $color;
+
+      $this->success = ($group->save($sql) !== FALSE);
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $this->result["uid"] = $sql->getLastInsertId();
+        $this->result["id"] = $group->getId();
       }
 
       return $this->success;
@@ -148,33 +154,29 @@ namespace Api\Groups {
   }
 
   class Delete extends GroupsAPI {
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
-        'uid' => new Parameter('uid', Parameter::TYPE_INT)
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
+        'id' => new Parameter('id', Parameter::TYPE_INT)
       ));
     }
 
     public function _execute(): bool {
-      $id = $this->getParam("uid");
+      $id = $this->getParam("id");
       if (in_array($id, DEFAULT_GROUPS)) {
         return $this->createError("You cannot delete a default group.");
       }
 
-      $sql = $this->user->getSQL();
-      $res = $sql->select($sql->count())
-        ->from("Group")
-        ->where(new Compare("uid", $id))
-        ->execute();
+      $sql = $this->context->getSQL();
+      $group = Group::find($sql, $id);
 
-      $this->success = ($res !== FALSE);
+      $this->success = ($group !== FALSE);
       $this->lastError = $sql->getLastError();
 
-      if ($this->success && $res[0]["count"] === 0) {
+      if ($this->success && $group === null) {
         return $this->createError("This group does not exist.");
       }
 
-      $res = $sql->delete("Group")->where(new Compare("uid", $id))->execute();
-      $this->success = ($res !== FALSE);
+      $this->success = ($group->delete($sql) !== FALSE);
       $this->lastError = $sql->getLastError();
       return $this->success;
     }

@@ -23,8 +23,7 @@ abstract class View extends StaticView {
   public function isSearchable(): bool { return $this->searchable; }
 
   public function getSiteName(): string {
-    // what a chain lol
-    return $this->getDocument()->getUser()->getConfiguration()->getSettings()->getSiteName();
+    return $this->getDocument()->getSettings()->getSiteName();
   }
 
   protected function load(string $viewClass) : string {
@@ -43,7 +42,7 @@ abstract class View extends StaticView {
   }
 
   private function loadLanguageModules() {
-    $lang = $this->document->getUser()->getLanguage();
+    $lang = $this->document->getContext()->getLanguage();
     foreach ($this->langModules as $langModule) {
       $lang->loadModule($langModule);
     }

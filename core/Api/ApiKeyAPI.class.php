@@ -3,15 +3,20 @@
 namespace Api {
 
   use Driver\SQL\Condition\Compare;
+  use Objects\Context;
 
   abstract class ApiKeyAPI extends Request {
 
-    protected function apiKeyExists($id): bool {
-      $sql = $this->user->getSQL();
+    public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
+    }
+
+    protected function apiKeyExists(int $id): bool {
+      $sql = $this->context->getSQL();
       $res = $sql->select($sql->count())
         ->from("ApiKey")
-        ->where(new Compare("uid", $id))
-        ->where(new Compare("user_id", $this->user->getId()))
+        ->where(new Compare("id", $id))
+        ->where(new Compare("user_id", $this->context->getUser()->getId()))
         ->where(new Compare("valid_until", $sql->currentTimestamp(), ">"))
         ->where(new Compare("active", 1))
         ->execute();
@@ -32,37 +37,32 @@ namespace Api\ApiKey {
 
   use Api\ApiKeyAPI;
   use Api\Parameter\Parameter;
-  use Api\Request;
-  use DateTime;
   use Driver\SQL\Condition\Compare;
-  use Exception;
+  use Driver\SQL\Condition\CondAnd;
+  use Objects\Context;
+  use Objects\DatabaseEntity\ApiKey;
 
   class Create extends ApiKeyAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array());
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array());
       $this->apiKeyAllowed = false;
       $this->loginRequired = true;
     }
 
     public function _execute(): bool {
-      $apiKey = generateRandomString(64);
-      $sql = $this->user->getSQL();
-      $validUntil = (new \DateTime())->modify("+30 DAY");
+      $sql = $this->context->getSQL();
 
-      $this->success = $sql->insert("ApiKey", array("user_id", "api_key", "valid_until"))
-        ->addRow($this->user->getId(), $apiKey, $validUntil)
-        ->returning("uid")
-        ->execute();
+      $apiKey = new ApiKey();
+      $apiKey->apiKey = generateRandomString(64);
+      $apiKey->validUntil = (new \DateTime())->modify("+30 DAY");
+      $apiKey->user = $this->context->getUser();
 
+      $this->success = $apiKey->save($sql);
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $this->result["api_key"] = array(
-          "api_key" => $apiKey,
-          "valid_until" => $validUntil->format("Y-m-d H:i:s"),
-          "uid" => $sql->getLastInsertId(),
-        );
+        $this->result["api_key"] = $apiKey->jsonSerialize();
       }
 
       return $this->success;
@@ -71,39 +71,33 @@ namespace Api\ApiKey {
 
   class Fetch extends ApiKeyAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         "showActiveOnly" => new Parameter("showActiveOnly", Parameter::TYPE_BOOLEAN, true, true)
       ));
       $this->loginRequired = true;
     }
 
     public function _execute(): bool {
-      $sql = $this->user->getSQL();
-      $query = $sql->select("uid", "api_key", "valid_until", "active")
-        ->from("ApiKey")
-        ->where(new Compare("user_id", $this->user->getId()));
+      $sql = $this->context->getSQL();
 
+      $condition = new Compare("user_id", $this->context->getUser()->getId());
       if ($this->getParam("showActiveOnly")) {
-        $query->where(new Compare("valid_until", $sql->currentTimestamp(), ">"))
-              ->where(new Compare("active", true));
+        $condition = new CondAnd(
+          $condition,
+          new Compare("valid_until", $sql->currentTimestamp(), ">"),
+          new Compare("active", true)
+        );
       }
 
-      $res = $query->execute();
-
-      $this->success = ($res !== FALSE);
+      $apiKeys = ApiKey::findAll($sql, $condition);
+      $this->success = ($apiKeys !== FALSE);
       $this->lastError = $sql->getLastError();
 
-      if($this->success) {
+      if ($this->success) {
         $this->result["api_keys"] = array();
-        foreach($res as $row) {
-          $apiKeyId = intval($row["uid"]);
-          $this->result["api_keys"][$apiKeyId] = array(
-            "id" => $apiKeyId,
-            "api_key" => $row["api_key"],
-            "valid_until" => $row["valid_until"],
-            "revoked" => !$sql->parseBool($row["active"])
-          );
+        foreach($apiKeys as $apiKey) {
+          $this->result["api_keys"][$apiKey->getId()] = $apiKey->jsonSerialize();
         }
       }
 
@@ -113,8 +107,8 @@ namespace Api\ApiKey {
 
   class Refresh extends ApiKeyAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         "id" => new Parameter("id", Parameter::TYPE_INT),
       ));
       $this->loginRequired = true;
@@ -122,15 +116,16 @@ namespace Api\ApiKey {
 
     public function _execute(): bool {
       $id = $this->getParam("id");
-      if(!$this->apiKeyExists($id))
+      if (!$this->apiKeyExists($id)) {
         return false;
+      }
 
       $validUntil = (new \DateTime)->modify("+30 DAY");
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $this->success = $sql->update("ApiKey")
         ->set("valid_until", $validUntil)
-        ->where(new Compare("uid", $id))
-        ->where(new Compare("user_id", $this->user->getId()))
+        ->where(new Compare("id", $id))
+        ->where(new Compare("user_id", $this->context->getUser()->getId()))
         ->execute();
       $this->lastError = $sql->getLastError();
 
@@ -153,20 +148,19 @@ namespace Api\ApiKey {
 
     public function _execute(): bool {
       $id = $this->getParam("id");
-      if (!$this->apiKeyExists($id))
+      if (!$this->apiKeyExists($id)) {
         return false;
+      }
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $this->success = $sql->update("ApiKey")
         ->set("active", false)
-        ->where(new Compare("uid", $id))
-        ->where(new Compare("user_id", $this->user->getId()))
+        ->where(new Compare("id", $id))
+        ->where(new Compare("user_id", $this->context->getUser()->getId()))
         ->execute();
       $this->lastError = $sql->getLastError();
 
       return $this->success;
     }
   }
-
-
 }

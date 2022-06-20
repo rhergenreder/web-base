@@ -161,12 +161,12 @@ export default class UserOverview extends React.Component {
     createUserCard() {
 
         let userRows = [];
-        for (let uid in this.state.users.data) {
-            if (!this.state.users.data.hasOwnProperty(uid)) {
+        for (let id in this.state.users.data) {
+            if (!this.state.users.data.hasOwnProperty(id)) {
                 continue;
             }
 
-            let user = this.state.users.data[uid];
+            let user = this.state.users.data[id];
             let confirmedIcon = <Icon icon={user["confirmed"] ? "check" : "times"}/>;
 
             let groups = [];
@@ -184,7 +184,7 @@ export default class UserOverview extends React.Component {
             }
 
             userRows.push(
-                <tr key={"user-" + uid}>
+                <tr key={"user-" + id}>
                     <td>{user.name}</td>
                     <td>{user.email}</td>
                     <td>{groups}</td>
@@ -197,7 +197,7 @@ export default class UserOverview extends React.Component {
                     </td>
                     <td className={"text-center"}>{confirmedIcon}</td>
                     <td>
-                        <Link to={"/admin/user/edit/" + uid} className={"text-reset"}>
+                        <Link to={"/admin/user/edit/" + id} className={"text-reset"}>
                             <Icon icon={"pencil-alt"} data-effect={"solid"}
                                   data-tip={"Modify user details & group membership"}
                                   data-type={"info"} data-place={"right"}/>
@@ -291,15 +291,15 @@ export default class UserOverview extends React.Component {
 
     createGroupCard() {
         let groupRows = [];
-        for (let uid in this.state.groups.data) {
-            if (!this.state.groups.data.hasOwnProperty(uid)) {
+        for (let id in this.state.groups.data) {
+            if (!this.state.groups.data.hasOwnProperty(id)) {
                 continue;
             }
 
-            let group = this.state.groups.data[uid];
+            let group = this.state.groups.data[id];
 
             groupRows.push(
-                <tr key={"group-" + uid}>
+                <tr key={"group-" + id}>
                     <td>{group.name}</td>
                     <td className={"text-center"}>{group["memberCount"]}</td>
                     <td>
@@ -309,7 +309,7 @@ export default class UserOverview extends React.Component {
                     </td>
                     <td>
                         <Icon icon={"trash"} style={{color: "red", cursor: "pointer"}}
-                              onClick={(e) => this.onDeleteGroup(e, uid)} data-effect={"solid"}
+                              onClick={(e) => this.onDeleteGroup(e, id)} data-effect={"solid"}
                               data-tip={"Delete"} data-type={"error"}
                               data-place={"bottom"}/>
                     </td>
@@ -395,11 +395,11 @@ export default class UserOverview extends React.Component {
         </div>;
     }
 
-    onDeleteGroup(e, uid) {
+    onDeleteGroup(e, id) {
         e.stopPropagation();
         this.parent.showDialog("Are you really sure you want to delete this group?", "Delete Group?", ["Yes", "No"], (btn) => {
            if (btn === "Yes") {
-               this.parent.api.deleteGroup(uid).then((res) => {
+               this.parent.api.deleteGroup(id).then((res) => {
                     if (!res.success) {
                         let errors = this.state.errors.slice();
                         errors.push({title: "Error deleting group", message: res.msg});

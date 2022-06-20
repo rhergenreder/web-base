@@ -2,10 +2,13 @@
 
 namespace Api {
 
+  use Objects\Context;
+
   abstract class SettingsAPI extends Request {
-
+    public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
+    }
   }
-
 }
 
 namespace Api\Settings {
@@ -19,19 +22,19 @@ namespace Api\Settings {
   use Driver\SQL\Condition\CondNot;
   use Driver\SQL\Condition\CondRegex;
   use Driver\SQL\Strategy\UpdateStrategy;
-  use Objects\User;
+  use Objects\Context;
 
   class Get extends SettingsAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'key' => new StringType('key', -1, true, NULL)
       ));
     }
 
     public function _execute(): bool {
        $key = $this->getParam("key");
-       $sql = $this->user->getSQL();
+       $sql = $this->context->getSQL();
 
        $query = $sql->select("name", "value") ->from("Settings");
 
@@ -62,8 +65,8 @@ namespace Api\Settings {
   }
 
   class Set extends SettingsAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'settings' => new Parameter('settings', Parameter::TYPE_ARRAY)
       ));
     }
@@ -77,7 +80,7 @@ namespace Api\Settings {
       $paramKey = new StringType('key', 32);
       $paramValue = new StringType('value', 1024, true, NULL);
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $query = $sql->insert("Settings", array("name", "value"));
       $keys = array();
       $deleteKeys = array();
@@ -129,7 +132,7 @@ namespace Api\Settings {
     }
 
     private function checkReadonly(array $keys) {
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->select("name")
         ->from("Settings")
         ->where(new CondBool("readonly"))
@@ -148,7 +151,7 @@ namespace Api\Settings {
     }
 
     private function deleteKeys(array $keys) {
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->delete("Settings")
         ->where(new CondIn(new Column("name"), $keys))
         ->execute();

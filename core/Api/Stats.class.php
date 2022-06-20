@@ -5,18 +5,20 @@ namespace Api;
 use DateTime;
 use Driver\SQL\Condition\Compare;
 use Driver\SQL\Condition\CondBool;
+use Objects\Context;
+use Objects\DatabaseEntity\User;
 
 class Stats extends Request {
 
   private bool $mailConfigured;
   private bool $recaptchaConfigured;
 
-  public function __construct($user, $externalCall = false) {
-    parent::__construct($user, $externalCall, array());
+  public function __construct(Context $context, $externalCall = false) {
+    parent::__construct($context, $externalCall, array());
   }
 
   private function getUserCount() {
-    $sql = $this->user->getSQL();
+    $sql = $this->context->getSQL();
     $res = $sql->select($sql->count())->from("User")->execute();
     $this->success = $this->success && ($res !== FALSE);
     $this->lastError = $sql->getLastError();
@@ -25,7 +27,7 @@ class Stats extends Request {
   }
 
   private function getPageCount() {
-    $sql = $this->user->getSQL();
+    $sql = $this->context->getSQL();
     $res = $sql->select($sql->count())->from("Route")
       ->where(new CondBool("active"))
       ->execute();
@@ -36,7 +38,7 @@ class Stats extends Request {
   }
 
   private function checkSettings(): bool {
-    $req = new \Api\Settings\Get($this->user);
+    $req = new \Api\Settings\Get($this->context);
     $this->success = $req->execute(array("key" => "^(mail_enabled|recaptcha_enabled)$"));
     $this->lastError = $req->getLastError();
 
@@ -50,7 +52,7 @@ class Stats extends Request {
   }
 
   private function getVisitorCount() {
-    $sql = $this->user->getSQL();
+    $sql = $this->context->getSQL();
     $date = new DateTime();
     $monthStart = $date->format("Ym00");
     $monthEnd = $date->modify("+1 month")->format("Ym00");
@@ -69,7 +71,7 @@ class Stats extends Request {
   public function _execute(): bool {
     $userCount = $this->getUserCount();
     $pageCount = $this->getPageCount();
-    $req = new \Api\Visitors\Stats($this->user);
+    $req = new \Api\Visitors\Stats($this->context);
     $this->success = $req->execute(array("type"=>"monthly"));
     $this->lastError = $req->getLastError();
     if (!$this->success) {
@@ -100,7 +102,7 @@ class Stats extends Request {
       "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",
       "memory_usage" => memory_get_usage(),
       "load_avg" => $loadAvg,
-      "database" => $this->user->getSQL()->getStatus(),
+      "database" => $this->context->getSQL()->getStatus(),
       "mail" => $this->mailConfigured,
       "reCaptcha" => $this->recaptchaConfigured
     );

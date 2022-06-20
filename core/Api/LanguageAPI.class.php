@@ -2,10 +2,13 @@
 
 namespace Api {
 
+  use Objects\Context;
+
   abstract class LanguageAPI extends Request {
-
+    public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
+    }
   }
-
 }
 
 namespace Api\Language {
@@ -15,30 +18,28 @@ namespace Api\Language {
   use Api\Parameter\StringType;
   use Driver\SQL\Condition\Compare;
   use Driver\SQL\Condition\CondOr;
-  use Objects\Language;
+  use Objects\Context;
+  use Objects\DatabaseEntity\Language;
 
   class Get extends LanguageAPI {
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array());
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array());
     }
 
     public function _execute(): bool {
-      $sql = $this->user->getSQL();
-      $res = $sql->select("uid", "code", "name")
-        ->from("Language")
-        ->execute();
-
-      $this->success = ($res !== FALSE);
+      $sql = $this->context->getSQL();
+      $languages = Language::findAll($sql);
+      $this->success = ($languages !== null);
       $this->lastError = $sql->getLastError();
 
-      if($this->success) {
-        $this->result['languages'] = array();
-        if(empty($res) === 0) {
+      if ($this->success) {
+        $this->result['languages'] = [];
+        if (count($languages) === 0) {
           $this->lastError = L("No languages found");
         } else {
-          foreach($res as $row) {
-            $this->result['languages'][$row['uid']] = $row;
+          foreach ($languages as $language) {
+            $this->result['languages'][$language->getId()] = $language->jsonSerialize();
           }
         }
       }
@@ -51,70 +52,65 @@ namespace Api\Language {
 
     private Language $language;
 
-    public function __construct($user, $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'langId' => new Parameter('langId', Parameter::TYPE_INT, true, NULL),
         'langCode' => new StringType('langCode', 5, true, NULL),
       ));
 
     }
 
-    private function checkLanguage() {
+    private function checkLanguage(): bool {
       $langId = $this->getParam("langId");
       $langCode = $this->getParam("langCode");
 
-      if(is_null($langId) && is_null($langCode)) {
+      if (is_null($langId) && is_null($langCode)) {
         return $this->createError(L("Either langId or langCode must be given"));
       }
 
-      $res = $this->user->getSQL()
-        ->select("uid", "code", "name")
-        ->from("Language")
-        ->where(new CondOr(new Compare("uid", $langId), new Compare("code", $langCode)))
-        ->execute();
+      $sql = $this->context->getSQL();
+      $languages = Language::findAll($sql,
+        new CondOr(new Compare("id", $langId), new Compare("code", $langCode))
+      );
 
-      $this->success = ($res !== FALSE);
-      $this->lastError = $this->user->getSQL()->getLastError();
+      $this->success = ($languages !== null);
+      $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        if(count($res) == 0) {
+        if (count($languages) === 0) {
           return $this->createError(L("This Language does not exist"));
         } else {
-          $row = $res[0];
-          $this->language = Language::newInstance($row['uid'], $row['code'], $row['name']);
-          if(!$this->language) {
-            return $this->createError(L("Error while loading language"));
-          }
+          $this->language = array_shift($languages);
         }
       }
 
       return $this->success;
     }
 
-    private function updateLanguage() {
+    private function updateLanguage(): bool {
       $languageId = $this->language->getId();
-      $userId = $this->user->getId();
-      $sql = $this->user->getSQL();
+      $userId = $this->context->getUser()->getId();
+      $sql = $this->context->getSQL();
 
       $this->success = $sql->update("User")
         ->set("language_id", $languageId)
-        ->where(new Compare("uid", $userId))
+        ->where(new Compare("id", $userId))
         ->execute();
+
       $this->lastError = $sql->getLastError();
       return $this->success;
     }
 
     public function _execute(): bool {
-      if(!$this->checkLanguage())
+      if (!$this->checkLanguage())
         return false;
 
-      if($this->user->isLoggedIn()) {
+      if ($this->context->getSession()) {
         $this->updateLanguage();
       }
 
-      $this->user->setLanguage($this->language);
+      $this->context->setLanguage($this->language);
       return $this->success;
     }
   }
-
 }

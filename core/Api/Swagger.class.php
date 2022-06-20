@@ -3,12 +3,13 @@
 namespace Api;
 
 use Api\Parameter\StringType;
-use Objects\User;
+use Objects\Context;
+use Objects\DatabaseEntity\User;
 
 class Swagger extends Request {
 
-  public function __construct(User $user, bool $externalCall = false) {
-    parent::__construct($user, $externalCall, []);
+  public function __construct(Context $context, bool $externalCall = false) {
+    parent::__construct($context, $externalCall, []);
     $this->csrfTokenRequired = false;
   }
 
@@ -61,7 +62,7 @@ class Swagger extends Request {
   }
 
   private function fetchPermissions(): array {
-    $req = new Permission\Fetch($this->user);
+    $req = new Permission\Fetch($this->context);
     $this->success = $req->execute();
     $permissions = [];
     foreach( $req->getResult()["permissions"] as $permission) {
@@ -76,17 +77,19 @@ class Swagger extends Request {
       return false;
     }
 
-    if (($request->loginRequired() || !empty($requiredGroups)) && !$this->user->isLoggedIn()) {
+    $currentUser = $this->context->getUser();
+    if (($request->loginRequired() || !empty($requiredGroups)) && !$currentUser) {
       return false;
     }
 
     // special case: hardcoded permission
-    if ($request instanceof Permission\Save && (!$this->user->isLoggedIn() || !$this->user->hasGroup(USER_GROUP_ADMIN))) {
+    if ($request instanceof Permission\Save && (!$currentUser || !$currentUser->hasGroup(USER_GROUP_ADMIN))) {
       return false;
     }
 
     if (!empty($requiredGroups)) {
-      return !empty(array_intersect($requiredGroups, $this->user->getGroups()));
+      $userGroups = array_keys($currentUser?->getGroups() ?? []);
+      return !empty(array_intersect($requiredGroups, $userGroups));
     }
 
     return true;
@@ -94,7 +97,7 @@ class Swagger extends Request {
 
   private function getDocumentation(): string {
 
-    $settings = $this->user->getConfiguration()->getSettings();
+    $settings = $this->context->getSettings();
     $siteName = $settings->getSiteName();
     $domain = parse_url($settings->getBaseUrl(), PHP_URL_HOST);
 
@@ -105,7 +108,7 @@ class Swagger extends Request {
     foreach (self::getApiEndpoints() as $endpoint => $apiClass) {
       $body = null;
       $requiredProperties = [];
-      $apiObject = $apiClass->newInstance($this->user, false);
+      $apiObject = $apiClass->newInstance($this->context, false);
       if (!$this->canView($permissions[strtolower($endpoint)] ?? [], $apiObject)) {
         continue;
       }

@@ -159,15 +159,15 @@ namespace Documents\Install {
         }
       }
 
-      $user = $this->getDocument()->getUser();
-      $config = $user->getConfiguration();
+      $context = $this->getDocument()->getContext();
+      $config = $context->getConfig();
 
       // Check if database configuration exists
       if (!$config->getDatabase()) {
         return self::DATABASE_CONFIGURATION;
       }
 
-      $sql = $user->getSQL();
+      $sql = $context->getSQL();
       if (!$sql || !$sql->isConnected()) {
         return self::DATABASE_CONFIGURATION;
       }
@@ -185,7 +185,7 @@ namespace Documents\Install {
       }
 
       if ($step === self::ADD_MAIL_SERVICE) {
-        $req = new \Api\Settings\Get($user);
+        $req = new \Api\Settings\Get($context);
         $success = $req->execute(array("key" => "^mail_enabled$"));
         if (!$success) {
           $this->errorString = $req->getLastError();
@@ -193,12 +193,12 @@ namespace Documents\Install {
         } else if (isset($req->getResult()["settings"]["mail_enabled"])) {
           $step = self::FINISH_INSTALLATION;
 
-          $req = new \Api\Settings\Set($user);
+          $req = new \Api\Settings\Set($context);
           $success = $req->execute(array("settings" => array("installation_completed" => "1")));
           if (!$success) {
             $this->errorString = $req->getLastError();
           } else {
-            $req = new \Api\Notifications\Create($user);
+            $req = new \Api\Notifications\Create($context);
             $req->execute(array(
                 "title" => "Welcome",
                 "message" => "Your Web-base was successfully installed. Check out the admin dashboard. Have fun!",
@@ -365,21 +365,23 @@ namespace Documents\Install {
             }
           }
 
-          $user = $this->getDocument()->getUser();
-          $config = $user->getConfiguration();
-          if (Configuration::create("Database", $connectionData) === false) {
-            $success = false;
-            $msg = "Unable to write database file";
-          } else {
-            $config->setDatabase($connectionData);
-            if (!$user->connectDB()) {
+          if ($success) {
+            $context = $this->getDocument()->getContext();
+            $config = $context->getConfig();
+            if (Configuration::create("Database", $connectionData) === false) {
               $success = false;
-              $msg = "Unable to verify database connection after installation";
+              $msg = "Unable to write database file";
             } else {
-              $req = new \Api\Routes\GenerateCache($user);
-              if (!$req->execute()) {
+              $config->setDatabase($connectionData);
+              if (!$context->initSQL()) {
                 $success = false;
-                $msg = "Unable to write route file: " . $req->getLastError();
+                $msg = "Unable to verify database connection after installation";
+              } else {
+                $req = new \Api\Routes\GenerateCache($context);
+                if (!$req->execute()) {
+                  $success = false;
+                  $msg = "Unable to write route file: " . $req->getLastError();
+                }
               }
             }
           }
@@ -393,9 +395,9 @@ namespace Documents\Install {
 
     private function createUser(): array {
 
-      $user = $this->getDocument()->getUser();
+      $context = $this->getDocument()->getContext();
       if ($this->getParameter("prev") === "true") {
-        $success = $user->getConfiguration()->delete("Database");
+        $success = $context->getConfig()->delete("Database");
         $msg = $success ? "" : error_get_last();
         return array("success" => $success, "msg" => $msg);
       }
@@ -427,8 +429,7 @@ namespace Documents\Install {
         $msg = "Please fill out the following inputs:<br>" .
           $this->createUnorderedList($missingInputs);
       } else {
-        $sql = $user->getSQL();
-        $req = new \Api\User\Create($user);
+        $req = new \Api\User\Create($context);
         $success = $req->execute(array(
           'username' => $username,
           'email' => $email,
@@ -438,6 +439,7 @@ namespace Documents\Install {
 
         $msg = $req->getLastError();
         if ($success) {
+          $sql = $context->getSQL();
           $success = $sql->insert("UserGroup", array("group_id", "user_id"))
             ->addRow(USER_GROUP_ADMIN, $req->getResult()["userId"])
             ->execute();
@@ -450,18 +452,16 @@ namespace Documents\Install {
 
     private function addMailService(): array {
 
-      $user = $this->getDocument()->getUser();
+      $context = $this->getDocument()->getContext();
       if ($this->getParameter("prev") === "true") {
-        $sql = $user->getSQL();
+        $sql = $context->getSQL();
         $success = $sql->delete("User")->execute();
         $msg = $sql->getLastError();
         return array("success" => $success, "msg" => $msg);
       }
 
-      $success = true;
-      $msg = $this->errorString;
       if ($this->getParameter("skip") === "true") {
-        $req = new \Api\Settings\Set($user);
+        $req = new \Api\Settings\Set($context);
         $success = $req->execute(array("settings" => array("mail_enabled" => "0")));
         $msg = $req->getLastError();
       } else {
@@ -473,17 +473,17 @@ namespace Documents\Install {
         $success = true;
 
         $missingInputs = array();
-        if (is_null($address) || empty($address)) {
+        if (empty($address)) {
           $success = false;
           $missingInputs[] = "SMTP Address";
         }
 
-        if (is_null($port) || empty($port)) {
+        if (empty($port)) {
           $success = false;
           $missingInputs[] = "Port";
         }
 
-        if (is_null($username) || empty($username)) {
+        if (empty($username)) {
           $success = false;
           $missingInputs[] = "Username";
         }
@@ -527,7 +527,7 @@ namespace Documents\Install {
           }
 
           if ($success) {
-            $req = new \Api\Settings\Set($user);
+            $req = new \Api\Settings\Set($context);
             $success = $req->execute(array("settings" => array(
               "mail_enabled" => "1",
               "mail_host" => "$address",
@@ -655,39 +655,25 @@ namespace Documents\Install {
         }
       }
 
-      $replacements = array("+" => " ", "&" => "\" ", "=" => "=\"");
-      $attributes = http_build_query($attributes) . "\"";
-      foreach ($replacements as $key => $val) {
-        $attributes = str_replace($key, $val, $attributes);
-      }
-
+      // $attributes = html_attributes($attributes);
       if ($type === "select") {
         $items = $formItem["items"] ?? array();
-        $element = "<select $attributes>";
+        $options = [];
         foreach ($items as $key => $val) {
-          $element .= "<option value=\"$key\">$val</option>";
+          $options[] = html_tag_ex("option", ["value" => $key], $val, true, false);
         }
-        $element .= "</select>";
+
+        $element = html_tag_ex("select", $attributes, $options, false);
       } else {
-        $element = "<input $attributes>";
+        $element = html_tag_short("input", $attributes);
       }
 
-      if (!$inline) {
-        return
-          "<div class=\"d-block my-3\">
-            <label for=\"$name\">$title</label>
-            $element
-          </div>";
-      } else {
-        return
-          "<div class=\"col-md-6 mb-3\">
-            <label for=\"$name\">$title</label>
-            $element
-          </div>";
-      }
+      $label = html_tag_ex("label", ["for" => $name], $title, true, false);
+      $className = ($inline ? "col-md-6 mb-3" : "d-block my-3");
+      return html_tag_ex("div", ["class" => $className], $label . $element, false);
     }
 
-    private function createProgessMainview(): string {
+    private function createProgressMainview(): string {
 
       $isDocker = $this->isDocker();
       $defaultHost = ($isDocker ? "db" : "localhost");
@@ -773,7 +759,7 @@ namespace Documents\Install {
       $spinnerIcon = $this->createIcon("spinner");
       $title = $currentView["title"];
 
-      $html = "<h4 class=\"mb-3\">$title</h4><hr class=\"mb-4\">";
+      $html = "<h4 class=\"mb-3\">$title</h4><hr class=\"mb-4\" />";
 
       if (isset($currentView["text"])) {
         $text = $currentView["text"];
@@ -905,7 +891,7 @@ namespace Documents\Install {
       }
 
       $progressSidebar = $this->createProgressSidebar();
-      $progressMainview = $this->createProgessMainview();
+      $progressMainView = $this->createProgressMainview();
 
       $errorStyle = ($this->errorString ? '' : ' style="display:none"');
       $errorClass = ($this->errorString ? ' alert-danger' : '');
@@ -931,7 +917,7 @@ namespace Documents\Install {
               </ul>
             </div>
             <div class=\"col-md-8 order-md-1\">
-              $progressMainview
+              $progressMainView
               <div class=\"alert$errorClass mt-4\" id=\"status\"$errorStyle>$this->errorString</div>
             </div>
           </div>

@@ -43,6 +43,11 @@ class Select extends Query {
     return $this;
   }
 
+  public function addValue($value): Select {
+    $this->selectValues[] = $value;
+    return $this;
+  }
+
   public function where(...$conditions): Select {
     $this->conditions[] = (count($conditions) === 1 ? $conditions : new CondOr($conditions));
     return $this;
@@ -60,6 +65,11 @@ class Select extends Query {
 
   public function leftJoin(string $table, string $columnA, string $columnB, ?string $tableAlias = null, array $conditions = []): Select {
     $this->joins[] = new Join("LEFT", $table, $columnA, $columnB, $tableAlias, $conditions);
+    return $this;
+  }
+
+  public function addJoin(Join $join): Select {
+    $this->joins[] = $join;
     return $this;
   }
 

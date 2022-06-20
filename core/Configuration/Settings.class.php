@@ -7,7 +7,7 @@
 namespace Configuration;
 
 use Driver\SQL\Query\Insert;
-use Objects\User;
+use Objects\Context;
 
 class Settings {
 
@@ -58,8 +58,8 @@ class Settings {
     return $settings;
   }
 
-  public function loadFromDatabase(User $user): bool {
-    $req = new \Api\Settings\Get($user);
+  public function loadFromDatabase(Context $context): bool {
+    $req = new \Api\Settings\Get($context);
     $success = $req->execute();
 
     if ($success) {
@@ -78,7 +78,7 @@ class Settings {
       $this->allowedExtensions = explode(",", $result["allowed_extensions"] ?? strtolower(implode(",", $this->allowedExtensions)));
 
       if (!isset($result["jwt_secret"])) {
-        $req = new \Api\Settings\Set($user);
+        $req = new \Api\Settings\Set($context);
         $req->execute(array("settings" => array(
           "jwt_secret" => $this->jwtSecret
         )));
@@ -134,5 +134,9 @@ class Settings {
 
   public function isExtensionAllowed(string $ext): bool {
     return empty($this->allowedExtensions) || in_array(strtolower(trim($ext)), $this->allowedExtensions);
+  }
+
+  public function getDomain(): string {
+    return parse_url($this->getBaseUrl(), PHP_URL_HOST);
   }
 }

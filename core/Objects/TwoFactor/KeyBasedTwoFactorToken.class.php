@@ -3,18 +3,19 @@
 namespace Objects\TwoFactor;
 
 use Cose\Algorithm\Signature\ECDSA\ECSignature;
+use Objects\DatabaseEntity\Attribute\Transient;
+use Objects\DatabaseEntity\TwoFactorToken;
 
 class KeyBasedTwoFactorToken extends TwoFactorToken {
 
   const TYPE = "fido";
 
-  private ?string $challenge;
-  private ?string $credentialId;
-  private ?PublicKey $publicKey;
+  #[Transient] private ?string $challenge;
+  #[Transient] private ?string $credentialId;
+  #[Transient] private ?PublicKey $publicKey;
 
-  public function __construct(string $data, ?int $id = null, bool $confirmed = false) {
-    parent::__construct(self::TYPE, $id, $confirmed);
-    if (!$confirmed) {
+  protected function readData(string $data) {
+    if ($this->isConfirmed()) {
       $this->challenge = base64_decode($data);
       $this->credentialId = null;
       $this->publicKey = null;
@@ -34,7 +35,7 @@ class KeyBasedTwoFactorToken extends TwoFactorToken {
     return $this->publicKey;
   }
 
-  public function getCredentialId() {
+  public function getCredentialId(): ?string {
     return $this->credentialId;
   }
 

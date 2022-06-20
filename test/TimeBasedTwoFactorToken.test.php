@@ -3,7 +3,7 @@
 use Base32\Base32;
 use Configuration\Configuration;
 use Objects\TwoFactor\TimeBasedTwoFactorToken;
-use Objects\User;
+use Objects\DatabaseEntity\User;
 
 class TimeBasedTwoFactorTokenTest extends PHPUnit\Framework\TestCase {
 
@@ -31,13 +31,14 @@ class TimeBasedTwoFactorTokenTest extends PHPUnit\Framework\TestCase {
 
   public function testURL() {
     $secret = Base32::encode("12345678901234567890");
-    $configuration = new Configuration();
-    $user = new User($configuration);
+    $context = new \Objects\Context();
+
+    // $context->
 
     $token = new TimeBasedTwoFactorToken($secret);
-    $siteName = $configuration->getSettings()->getSiteName();
-    $username = $user->getUsername();
-    $url = $token->getUrl($user);
+    $siteName = $context->getSettings()->getSiteName();
+    $username = $context->getUser()->getUsername();
+    $url = $token->getUrl($context);
     $this->assertEquals("otpauth://totp/$username?secret=$secret&issuer=$siteName", $url);
   }
 }

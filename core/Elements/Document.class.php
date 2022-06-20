@@ -5,8 +5,9 @@ namespace Elements;
 use Configuration\Settings;
 use Driver\Logger\Logger;
 use Driver\SQL\SQL;
+use Objects\Context;
 use Objects\Router\Router;
-use Objects\User;
+use Objects\DatabaseEntity\User;
 
 abstract class Document {
 
@@ -32,16 +33,20 @@ abstract class Document {
     return $this->logger;
   }
 
-  public function getUser(): User {
-    return $this->router->getUser();
+  public function getUser(): ?User {
+    return $this->getContext()->getUser();
+  }
+
+  public function getContext(): Context {
+    return $this->router->getContext();
   }
 
   public function getSQL(): ?SQL {
-    return $this->getUser()->getSQL();
+    return $this->getContext()->getSQL();
   }
 
   public function getSettings(): Settings {
-    return $this->getUser()->getConfiguration()->getSettings();
+    return $this->getContext()->getSettings();
   }
 
   public function getCSPNonce(): ?string {

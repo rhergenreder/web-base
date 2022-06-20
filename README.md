@@ -59,7 +59,7 @@ Each endpoint is represented by a class inheriting the [Request Class](/core/Api
 ```php
 namespace Api;
 use Api\Parameter\Parameter;
-use Objects\User;
+use Objects\DatabaseEntity\User;
 
 class SingleEndpoint extends Request {
 
@@ -108,7 +108,7 @@ Some endpoints are set to private, which means, they can be only accessed inside
 can be used by creating the desired request object, and calling the execute function with our parameters like shown below:
 
 ```php
-$req = new \Api\Mail\Send($user);
+$req = new \Api\Mail\Send($context);
 $success = $req->execute(array(
   "to" => "mail@example.org", 
   "subject" => "Example Mail", 

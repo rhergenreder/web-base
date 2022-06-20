@@ -2,21 +2,20 @@
 
 namespace Api {
 
-  use Objects\User;
+  use Objects\Context;
 
   abstract class ContactAPI extends Request {
 
     protected ?string $messageId;
 
-    public function __construct(User $user, bool $externalCall, array $params) {
-      parent::__construct($user, $externalCall, $params);
+    public function __construct(Context $context, bool $externalCall, array $params) {
+      parent::__construct($context, $externalCall, $params);
       $this->messageId = null;
       $this->csrfTokenRequired = false;
-
     }
 
     protected function sendMail(string $name, ?string $fromEmail, string $subject, string $message, ?string $to = null): bool {
-      $request = new \Api\Mail\Send($this->user);
+      $request = new \Api\Mail\Send($this->context);
       $this->success = $request->execute(array(
         "subject" => $subject,
         "body" => $message,
@@ -45,30 +44,30 @@ namespace Api\Contact {
   use Driver\SQL\Condition\CondNot;
   use Driver\SQL\Expression\CaseWhen;
   use Driver\SQL\Expression\Sum;
-  use Objects\User;
+  use Objects\Context;
 
   class Request extends ContactAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
+    public function __construct(Context $context, bool $externalCall = false) {
       $parameters = array(
         'fromName' => new StringType('fromName', 32),
         'fromEmail' => new Parameter('fromEmail', Parameter::TYPE_EMAIL),
         'message' => new StringType('message', 512),
       );
 
-      $settings = $user->getConfiguration()->getSettings();
+      $settings = $context->getSettings();
       if ($settings->isRecaptchaEnabled()) {
         $parameters["captcha"] = new StringType("captcha");
       }
 
-      parent::__construct($user, $externalCall, $parameters);
+      parent::__construct($context, $externalCall, $parameters);
     }
 
     public function _execute(): bool {
-      $settings = $this->user->getConfiguration()->getSettings();
+      $settings = $this->context->getSettings();
       if ($settings->isRecaptchaEnabled()) {
         $captcha = $this->getParam("captcha");
-        $req = new VerifyCaptcha($this->user);
+        $req = new VerifyCaptcha($this->context);
         if (!$req->execute(array("captcha" => $captcha, "action" => "contact"))) {
           return $this->createError($req->getLastError());
         }
@@ -80,23 +79,7 @@ namespace Api\Contact {
       $email = $this->getParam("fromEmail");
 
       $sendMail = $this->sendMail($name, $email, "Contact Request", $message);
-      $mailError = $this->getLastError();
-
       $insertDB = $this->insertContactRequest();
-      $dbError = $this->getLastError();
-
-      // Create a log entry
-      if (!$sendMail || $mailError) {
-        $message = "Error processing contact request.";
-        if (!$sendMail) {
-          $message .= " Mail: $mailError";
-        }
-
-        if (!$insertDB) {
-          $message .= " Mail: $dbError";
-        }
-      }
-
       if (!$sendMail && !$insertDB) {
         return $this->createError("The contact request could not be sent. The Administrator is already informed. Please try again later.");
       }
@@ -105,7 +88,7 @@ namespace Api\Contact {
     }
 
     private function insertContactRequest(): bool {
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $name = $this->getParam("fromName");
       $email = $this->getParam("fromEmail");
       $message = $this->getParam("message");
@@ -113,7 +96,7 @@ namespace Api\Contact {
 
       $res = $sql->insert("ContactRequest", array("from_name", "from_email", "message", "messageId"))
         ->addRow($name, $email, $message, $messageId)
-        ->returning("uid")
+        ->returning("id")
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -124,21 +107,20 @@ namespace Api\Contact {
 
   class Respond extends ContactAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         "requestId" => new Parameter("requestId", Parameter::TYPE_INT),
         'message' => new StringType('message', 512),
       ));
       $this->loginRequired = true;
-      $this->csrfTokenRequired = false;
     }
 
     private function getSenderMail(): ?string {
       $requestId = $this->getParam("requestId");
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->select("from_email")
         ->from("ContactRequest")
-        ->where(new Compare("uid", $requestId))
+        ->where(new Compare("id", $requestId))
         ->execute();
 
       $this->success = ($res !== false);
@@ -156,12 +138,12 @@ namespace Api\Contact {
     }
 
     private function insertResponseMessage(): bool {
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $message = $this->getParam("message");
       $requestId = $this->getParam("requestId");
 
       $this->success = $sql->insert("ContactMessage", ["request_id", "user_id", "message", "messageId", "read"])
-        ->addRow($requestId, $this->user->getId(), $message, $this->messageId, true)
+        ->addRow($requestId, $this->context->getUser()->getId(), $message, $this->messageId, true)
         ->execute();
 
       $this->lastError = $sql->getLastError();
@@ -169,7 +151,7 @@ namespace Api\Contact {
     }
 
     private function updateEntity() {
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $requestId = $this->getParam("requestId");
 
       $sql->update("EntityLog")
@@ -185,8 +167,9 @@ namespace Api\Contact {
         return false;
       }
 
-      $fromName = $this->user->getUsername();
-      $fromEmail = $this->user->getEmail();
+      $user = $this->context->getUser();
+      $fromName = $user->getUsername();
+      $fromEmail = $user->getEmail();
 
       if (!$this->sendMail($fromName, $fromEmail, "Re: Contact Request", $message, $senderMail)) {
         return false;
@@ -203,19 +186,19 @@ namespace Api\Contact {
 
   class Fetch extends ContactAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array());
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array());
       $this->loginRequired = true;
       $this->csrfTokenRequired = false;
     }
 
     public function _execute(): bool {
-      $sql = $this->user->getSQL();
-      $res = $sql->select("ContactRequest.uid", "from_name", "from_email", "from_name",
+      $sql = $this->context->getSQL();
+      $res = $sql->select("ContactRequest.id", "from_name", "from_email", "from_name",
           new Sum(new CaseWhen(new CondNot("ContactMessage.read"), 1, 0), "unread"))
         ->from("ContactRequest")
-        ->groupBy("ContactRequest.uid")
-        ->leftJoin("ContactMessage", "ContactRequest.uid", "ContactMessage.request_id")
+        ->groupBy("ContactRequest.id")
+        ->leftJoin("ContactMessage", "ContactRequest.id", "ContactMessage.request_id")
         ->execute();
 
       $this->success = ($res !== false);
@@ -225,7 +208,7 @@ namespace Api\Contact {
         $this->result["contactRequests"] = [];
         foreach ($res as $row) {
           $this->result["contactRequests"][] = array(
-            "uid" => intval($row["uid"]),
+            "id" => intval($row["id"]),
             "from_name" => $row["from_name"],
             "from_email" => $row["from_email"],
             "unread" => intval($row["unread"]),
@@ -239,8 +222,8 @@ namespace Api\Contact {
 
   class Get extends ContactAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         "requestId" => new Parameter("requestId", Parameter::TYPE_INT),
       ));
       $this->loginRequired = true;
@@ -249,7 +232,7 @@ namespace Api\Contact {
 
     private function updateRead() {
       $requestId = $this->getParam("requestId");
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $sql->update("ContactMessage")
         ->set("read", 1)
         ->where(new Compare("request_id", $requestId))
@@ -258,11 +241,11 @@ namespace Api\Contact {
 
     public function _execute(): bool {
       $requestId = $this->getParam("requestId");
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
 
       $res = $sql->select("from_name", "from_email", "message", "created_at")
         ->from("ContactRequest")
-        ->where(new Compare("uid", $requestId))
+        ->where(new Compare("id", $requestId))
         ->execute();
 
       $this->success = ($res !== false);

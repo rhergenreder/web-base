@@ -3,7 +3,7 @@
 namespace Api;
 
 use Driver\Logger\Logger;
-use Objects\User;
+use Objects\Context;
 use PhpMqtt\Client\MqttClient;
 
 /**
@@ -14,7 +14,7 @@ use PhpMqtt\Client\MqttClient;
 
 abstract class Request {
 
-  protected User $user;
+  protected Context $context;
   protected Logger $logger;
   protected array $params;
   protected string $lastError;
@@ -31,9 +31,9 @@ abstract class Request {
   private array $allowedMethods;
   private bool $externalCall;
 
-  public function __construct(User $user, bool $externalCall = false, array $params = array()) {
-    $this->user = $user;
-    $this->logger = new Logger($this->getAPIName(), $this->user->getSQL());
+  public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+    $this->context = $context;
+    $this->logger = new Logger($this->getAPIName(), $this->context->getSQL());
     $this->defaultParams = $params;
 
     $this->success = false;
@@ -137,8 +137,9 @@ abstract class Request {
     $this->result = array();
     $this->lastError = '';
 
-    if ($this->user->isLoggedIn()) {
-      $this->result['logoutIn'] = $this->user->getSession()->getExpiresSeconds();
+    $session = $this->context->getSession();
+    if ($session) {
+      $this->result['logoutIn'] = $session->getExpiresSeconds();
     }
 
     if ($this->externalCall) {
@@ -183,25 +184,24 @@ abstract class Request {
       }
 
       $apiKeyAuthorized = false;
-
-      if (!$this->user->isLoggedIn() && $this->apiKeyAllowed) {
+      if (!$session && $this->apiKeyAllowed) {
         if (isset($_SERVER["HTTP_AUTHORIZATION"])) {
           $authHeader = $_SERVER["HTTP_AUTHORIZATION"];
           if (startsWith($authHeader, "Bearer ")) {
             $apiKey = substr($authHeader, strlen("Bearer "));
-            $apiKeyAuthorized = $this->user->loadApiKey($apiKey);
+            $apiKeyAuthorized = $this->context->loadApiKey($apiKey);
           }
         }
       }
 
       // Logged in or api key authorized?
       if ($this->loginRequired) {
-        if (!$this->user->isLoggedIn() && !$apiKeyAuthorized) {
+        if (!$session && !$apiKeyAuthorized) {
           $this->lastError = 'You are not logged in.';
           http_response_code(401);
           return false;
-        } else if ($this->user->isLoggedIn()) {
-          $tfaToken = $this->user->getTwoFactorToken();
+        } else if ($session) {
+          $tfaToken = $session->getUser()->getTwoFactorToken();
           if ($tfaToken && $tfaToken->isConfirmed() && !$tfaToken->isAuthenticated()) {
             $this->lastError = '2FA-Authorization is required';
             http_response_code(401);
@@ -211,11 +211,11 @@ abstract class Request {
       }
 
       // CSRF Token
-      if ($this->csrfTokenRequired && $this->user->isLoggedIn()) {
+      if ($this->csrfTokenRequired && $session) {
         // csrf token required + external call
         // if it's not a call with API_KEY, check for csrf_token
         $csrfToken = $values["csrf_token"] ?? $_SERVER["HTTP_XSRF_TOKEN"] ?? null;
-        if (!$csrfToken || strcmp($csrfToken, $this->user->getSession()->getCsrfToken()) !== 0) {
+        if (!$csrfToken || strcmp($csrfToken, $session->getCsrfToken()) !== 0) {
           $this->lastError = "CSRF-Token mismatch";
           http_response_code(403);
           return false;
@@ -224,7 +224,7 @@ abstract class Request {
 
       // Check for permission
       if (!($this instanceof \Api\Permission\Save)) {
-        $req = new \Api\Permission\Check($this->user);
+        $req = new \Api\Permission\Check($this->context);
         $this->success = $req->execute(array("method" => $this->getMethod()));
         $this->lastError = $req->getLastError();
         if (!$this->success) {
@@ -241,8 +241,9 @@ abstract class Request {
       $this->parseVariableParams($values);
     }
 
-    if (!$this->user->getSQL()->isConnected()) {
-      $this->lastError = $this->user->getSQL()->getLastError();
+    $sql = $this->context->getSQL();
+    if (!$sql->isConnected()) {
+      $this->lastError = $sql->getLastError();
       return false;
     }
 
@@ -254,7 +255,7 @@ abstract class Request {
       $this->success = $success;
     }
 
-    $this->user->getSQL()->setLastError('');
+    $sql->setLastError('');
     return $this->success;
   }
 
@@ -331,8 +332,8 @@ abstract class Request {
   }
 
   protected function setupSSE() {
-    $this->user->getSQL()->close();
-    $this->user->sendCookies();
+    $this->context->sendCookies();
+    $this->context->getSQL()?->close();
     set_time_limit(0);
     ignore_user_abort(true);
     header('Content-Type: text/event-stream');

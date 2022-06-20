@@ -20,12 +20,12 @@ if (!is_readable(getClassPath(Configuration::class))) {
   die(json_encode([ "success" => false, "msg" => "Configuration class is not readable, check permissions before proceeding." ]));
 }
 
-$config = new Configuration();
-$user   = new Objects\User($config);
-$sql    = $user->getSQL();
-$settings = $config->getSettings();
-$installation = !$sql || ($sql->isConnected() && !$settings->isInstalled());
+$context = new \Objects\Context();
+$sql = $context->initSQL();
+$settings = $context->getSettings();
+$context->parseCookies();
 
+$installation = !$sql || ($sql->isConnected() && !$settings->isInstalled());
 $requestedUri = $_GET["site"] ?? $_GET["api"] ?? $_SERVER["REQUEST_URI"];
 
 if ($installation) {
@@ -34,7 +34,7 @@ if ($installation) {
     $response = "Redirecting to <a href=\"/\">/</a>";
     header("Location: /");
   } else {
-    $document = new Documents\Install(new Router($user));
+    $document = new Documents\Install(new Router($context));
     $response = $document->getCode();
   }
 } else {
@@ -45,17 +45,17 @@ if ($installation) {
   if (is_file($routerCachePath)) {
     @include_once $routerCachePath;
     if (class_exists($routerCacheClass)) {
-      $router = new $routerCacheClass($user);
+      $router = new $routerCacheClass($context);
     }
   }
 
   if ($router === null) {
-    $req = new \Api\Routes\GenerateCache($user);
+    $req = new \Api\Routes\GenerateCache($context);
     if ($req->execute()) {
       $router = $req->getRouter();
     } else {
       $message = "Unable to generate router cache: " . $req->getLastError();
-      $response = (new Router($user))->returnStatusCode(500, [ "message" => $message ]);
+      $response = (new Router($context))->returnStatusCode(500, [ "message" => $message ]);
     }
   }
 
@@ -68,8 +68,8 @@ if ($installation) {
     }
   }
 
-  $user->processVisit();
+  $context->processVisit();
 }
 
-$user->sendCookies();
+$context->sendCookies();
 die($response);

@@ -3,12 +3,12 @@
 namespace Api;
 
 use Api\Parameter\StringType;
-use Objects\User;
+use Objects\Context;
 
 class VerifyCaptcha extends Request {
 
-  public function __construct(User $user, bool $externalCall = false) {
-    parent::__construct($user, $externalCall, array(
+  public function __construct(Context $context, bool $externalCall = false) {
+    parent::__construct($context, $externalCall, array(
       "captcha" => new StringType("captcha"),
       "action" => new StringType("action"),
     ));
@@ -17,7 +17,7 @@ class VerifyCaptcha extends Request {
   }
 
   public function _execute(): bool {
-    $settings = $this->user->getConfiguration()->getSettings();
+    $settings = $this->context->getSettings();
     if (!$settings->isRecaptchaEnabled()) {
       return $this->createError("Google reCaptcha is not enabled.");
     }

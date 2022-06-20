@@ -2,9 +2,17 @@
 
 namespace Api {
 
+  use Objects\Context;
+
   abstract class PermissionAPI extends Request {
+
+    public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
+    }
+
     protected function checkStaticPermission(): bool {
-      if (!$this->user->isLoggedIn() || !$this->user->hasGroup(USER_GROUP_ADMIN)) {
+      $user = $this->context->getUser();
+      if (!$user || !$user->hasGroup(USER_GROUP_ADMIN)) {
         return $this->createError("Permission denied.");
       }
 
@@ -24,12 +32,14 @@ namespace Api\Permission {
   use Driver\SQL\Condition\CondLike;
   use Driver\SQL\Condition\CondNot;
   use Driver\SQL\Strategy\UpdateStrategy;
-  use Objects\User;
+  use Objects\Context;
+  use Objects\DatabaseEntity\Group;
+  use Objects\DatabaseEntity\User;
 
   class Check extends PermissionAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'method' => new StringType('method', 323)
       ));
 
@@ -39,7 +49,7 @@ namespace Api\Permission {
     public function _execute(): bool {
 
       $method = $this->getParam("method");
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->select("groups")
         ->from("ApiPermission")
         ->where(new CondLike($method, new Column("method")))
@@ -58,8 +68,9 @@ namespace Api\Permission {
           return true;
         }
 
-        $userGroups = $this->user->getGroups();
-        if (empty($userGroups) || empty(array_intersect($groups, array_keys($this->user->getGroups())))) {
+        $currentUser = $this->context->getUser();
+        $userGroups = $currentUser ? $currentUser->getGroups() : [];
+        if (empty($userGroups) || empty(array_intersect($groups, array_keys($userGroups)))) {
           http_response_code(401);
           return $this->createError("Permission denied.");
         }
@@ -71,33 +82,17 @@ namespace Api\Permission {
 
   class Fetch extends PermissionAPI {
 
-    private array $groups;
+    private ?array $groups;
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array());
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array());
     }
 
-    private function fetchGroups() {
-      $sql = $this->user->getSQL();
-      $res = $sql->select("uid", "name", "color")
-        ->from("Group")
-        ->orderBy("uid")
-        ->ascending()
-        ->execute();
-
-      $this->success = ($res !== FALSE);
+    private function fetchGroups(): bool {
+      $sql = $this->context->getSQL();
+      $this->groups = Group::findAll($sql);
+      $this->success = ($this->groups !== FALSE);
       $this->lastError = $sql->getLastError();
-
-      if ($this->success) {
-        $this->groups = array();
-        foreach($res as $row) {
-          $groupId = $row["uid"];
-          $groupName = $row["name"];
-          $groupColor = $row["color"];
-          $this->groups[$groupId] = array("name" => $groupName, "color" => $groupColor);
-        }
-      }
-
       return $this->success;
     }
 
@@ -107,7 +102,7 @@ namespace Api\Permission {
         return false;
       }
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $res = $sql->select("method", "groups", "description")
         ->from("ApiPermission")
         ->execute();
@@ -137,8 +132,8 @@ namespace Api\Permission {
 
   class Save extends PermissionAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, array(
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, array(
         'permissions' => new Parameter('permissions', Parameter::TYPE_ARRAY)
       ));
     }
@@ -150,27 +145,27 @@ namespace Api\Permission {
       }
 
       $permissions = $this->getParam("permissions");
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $methodParam = new StringType('method', 32);
       $groupsParam = new Parameter('groups', Parameter::TYPE_ARRAY);
 
       $updateQuery = $sql->insert("ApiPermission", array("method", "groups"))
-        ->onDuplicateKeyStrategy(new UpdateStrategy(array("method"), array( "groups" => new Column("groups") )));
+        ->onDuplicateKeyStrategy(new UpdateStrategy(array("method"), array("groups" => new Column("groups"))));
 
       $insertedMethods = array();
 
-      foreach($permissions as $permission) {
+      foreach ($permissions as $permission) {
         if (!is_array($permission)) {
           return $this->createError("Invalid data type found in parameter: permissions, expected: object");
-        } else if(!isset($permission["method"]) || !array_key_exists("groups", $permission)) {
+        } else if (!isset($permission["method"]) || !array_key_exists("groups", $permission)) {
           return $this->createError("Invalid object found in parameter: permissions, expected keys 'method' and 'groups'");
         } else if (!$methodParam->parseParam($permission["method"])) {
           $expectedType = $methodParam->getTypeName();
           return $this->createError("Invalid data type found for attribute 'method', expected: $expectedType");
-        } else if(!$groupsParam->parseParam($permission["groups"])) {
+        } else if (!$groupsParam->parseParam($permission["groups"])) {
           $expectedType = $groupsParam->getTypeName();
           return $this->createError("Invalid data type found for attribute 'groups', expected: $expectedType");
-        } else if(empty(trim($methodParam->value))) {
+        } else if (empty(trim($methodParam->value))) {
           return $this->createError("Method cannot be empty.");
         } else {
           $method = $methodParam->value;

@@ -2,22 +2,23 @@
 
 namespace Api {
 
+  use Objects\Context;
   use Objects\TwoFactor\AuthenticationData;
   use Objects\TwoFactor\KeyBasedTwoFactorToken;
-  use Objects\User;
 
   abstract class TfaAPI extends Request {
 
-    private bool $userVerficiationRequired;
+    private bool $userVerificationRequired;
 
-    public function __construct(User $user, bool $externalCall = false, array $params = array()) {
-      parent::__construct($user, $externalCall, $params);
+    public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
       $this->loginRequired = true;
-      $this->userVerficiationRequired = false;
+      $this->apiKeyAllowed = false;
+      $this->userVerificationRequired = false;
     }
 
     protected function verifyAuthData(AuthenticationData $authData): bool {
-      $settings = $this->user->getConfiguration()->getSettings();
+      $settings = $this->context->getSettings();
       // $relyingParty = $settings->getSiteName();
       $domain = parse_url($settings->getBaseUrl(),  PHP_URL_HOST);
       // $domain = "localhost";
@@ -26,7 +27,7 @@ namespace Api {
         return $this->createError("mismatched rpIDHash. expected: " . hash("sha256", $domain) . " got: " . bin2hex($authData->getHash()));
       } else if (!$authData->isUserPresent()) {
         return $this->createError("No user present");
-      } else if ($this->userVerficiationRequired && !$authData->isUserVerified()) {
+      } else if ($this->userVerificationRequired && !$authData->isUserVerified()) {
         return $this->createError("user was not verified on device (PIN/Biometric/...)");
       } else if ($authData->hasExtensionData()) {
         return $this->createError("No extensions supported");
@@ -36,7 +37,7 @@ namespace Api {
     }
 
     protected function verifyClientDataJSON($jsonData, KeyBasedTwoFactorToken $token): bool {
-      $settings = $this->user->getConfiguration()->getSettings();
+      $settings = $this->context->getSettings();
       $expectedType = $token->isConfirmed() ? "webauthn.get" : "webauthn.create";
       $type = $jsonData["type"] ?? "null";
       if ($type !== $expectedType) {
@@ -58,33 +59,34 @@ namespace Api\TFA {
   use Api\Parameter\StringType;
   use Api\TfaAPI;
   use Driver\SQL\Condition\Compare;
+  use Objects\Context;
   use Objects\TwoFactor\AttestationObject;
   use Objects\TwoFactor\AuthenticationData;
   use Objects\TwoFactor\KeyBasedTwoFactorToken;
   use Objects\TwoFactor\TimeBasedTwoFactorToken;
-  use Objects\User;
 
   // General
   class Remove extends TfaAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, [
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
         "password" => new StringType("password", 0, true)
       ]);
     }
 
     public function _execute(): bool {
 
-      $token = $this->user->getTwoFactorToken();
+      $currentUser = $this->context->getUser();
+      $token = $currentUser->getTwoFactorToken();
       if (!$token) {
         return $this->createError("You do not have an active 2FA-Token");
       }
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $password = $this->getParam("password");
       if ($password) {
         $res = $sql->select("password")
           ->from("User")
-          ->where(new Compare("uid", $this->user->getId()))
+          ->where(new Compare("id", $currentUser->getId()))
           ->execute();
         $this->success = !empty($res);
         $this->lastError = $sql->getLastError();
@@ -99,7 +101,7 @@ namespace Api\TFA {
       }
 
       $res = $sql->delete("2FA")
-        ->where(new Compare("uid", $token->getId()))
+        ->where(new Compare("id", $token->getId()))
         ->execute();
 
       $this->success = $res !== false;
@@ -107,12 +109,12 @@ namespace Api\TFA {
 
       if ($this->success && $token->isConfirmed()) {
         // send an email
-        $settings = $this->user->getConfiguration()->getSettings();
-        $req = new \Api\Template\Render($this->user);
+        $settings = $this->context->getSettings();
+        $req = new \Api\Template\Render($this->context);
         $this->success = $req->execute([
           "file" => "mail/2fa_remove.twig",
           "parameters" => [
-            "username" => $this->user->getFullName() ?? $this->user->getUsername(),
+            "username" => $currentUser->getFullName() ?? $currentUser->getUsername(),
             "site_name" => $settings->getSiteName(),
             "sender_mail" => $settings->getMailSender()
           ]
@@ -120,13 +122,13 @@ namespace Api\TFA {
 
         if ($this->success) {
           $body = $req->getResult()["html"];
-          $gpg = $this->user->getGPG();
-          $req = new \Api\Mail\Send($this->user);
+          $gpg = $currentUser->getGPG();
+          $req = new \Api\Mail\Send($this->context);
           $this->success = $req->execute([
-            "to" => $this->user->getEmail(),
+            "to" => $currentUser->getEmail(),
             "subject" => "[Security Lab] 2FA-Authentication removed",
             "body" => $body,
-            "gpgFingerprint" => $gpg ? $gpg->getFingerprint() : null
+            "gpgFingerprint" => $gpg?->getFingerprint()
           ]);
         }
 
@@ -140,27 +142,28 @@ namespace Api\TFA {
   // TOTP
   class GenerateQR extends TfaAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall);
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall);
       $this->csrfTokenRequired = false;
     }
 
     public function _execute(): bool {
 
-      $twoFactorToken = $this->user->getTwoFactorToken();
+      $currentUser = $this->context->getUser();
+      $twoFactorToken = $currentUser->getTwoFactorToken();
       if ($twoFactorToken && $twoFactorToken->isConfirmed()) {
         return $this->createError("You already added a two factor token");
       } else if (!($twoFactorToken instanceof TimeBasedTwoFactorToken)) {
         $twoFactorToken = new TimeBasedTwoFactorToken(generateRandomString(32, "base32"));
-        $sql = $this->user->getSQL();
+        $sql = $this->context->getSQL();
         $this->success = $sql->insert("2FA", ["type", "data"])
             ->addRow("totp", $twoFactorToken->getData())
-            ->returning("uid")
+            ->returning("id")
             ->execute() !== false;
         $this->lastError = $sql->getLastError();
         if ($this->success) {
           $this->success = $sql->update("User")
-              ->set("2fa_id", $sql->getLastInsertId())->where(new Compare("uid", $this->user->getId()))
+              ->set("2fa_id", $sql->getLastInsertId())->where(new Compare("id", $currentUser->getId()))
               ->execute() !== false;
           $this->lastError = $sql->getLastError();
         }
@@ -172,27 +175,27 @@ namespace Api\TFA {
 
       header("Content-Type: image/png");
       $this->disableCache();
-      die($twoFactorToken->generateQRCode($this->user));
+      die($twoFactorToken->generateQRCode($this->context));
     }
   }
 
   class ConfirmTotp extends VerifyTotp {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall);
-      $this->loginRequired = true;
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall);
     }
 
     public function _execute(): bool {
 
-      $twoFactorToken = $this->user->getTwoFactorToken();
+      $currentUser = $this->context->getUser();
+      $twoFactorToken = $currentUser->getTwoFactorToken();
       if ($twoFactorToken->isConfirmed()) {
         return $this->createError("Your two factor token is already confirmed.");
       }
 
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
       $this->success = $sql->update("2FA")
         ->set("confirmed", true)
-        ->where(new Compare("uid", $twoFactorToken->getId()))
+        ->where(new Compare("id", $twoFactorToken->getId()))
         ->execute() !== false;
       $this->lastError = $sql->getLastError();
       return $this->success;
@@ -201,22 +204,22 @@ namespace Api\TFA {
 
   class VerifyTotp extends TfaAPI {
 
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, [
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
         "code" => new StringType("code", 6)
       ]);
-      $this->loginRequired = false;
+      $this->loginRequired = true;
       $this->csrfTokenRequired = false;
     }
 
     public function _execute(): bool {
 
-      $session = $this->user->getSession();
-      if (!$session) {
+      $currentUser = $this->context->getUser();
+      if (!$currentUser) {
         return $this->createError("You are not logged in.");
       }
 
-      $twoFactorToken = $this->user->getTwoFactorToken();
+      $twoFactorToken = $currentUser->getTwoFactorToken();
       if (!$twoFactorToken) {
         return $this->createError("You did not add a two factor token yet.");
       } else if (!($twoFactorToken instanceof TimeBasedTwoFactorToken)) {
@@ -235,21 +238,23 @@ namespace Api\TFA {
 
   // Key
   class RegisterKey extends TfaAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, [
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
         "clientDataJSON" => new StringType("clientDataJSON", 0, true, "{}"),
         "attestationObject" => new StringType("attestationObject", 0, true, "")
       ]);
+      $this->loginRequired = true;
     }
 
     public function _execute(): bool {
 
+      $currentUser = $this->context->getUser();
       $clientDataJSON = json_decode($this->getParam("clientDataJSON"), true);
       $attestationObjectRaw = base64_decode($this->getParam("attestationObject"));
-      $twoFactorToken = $this->user->getTwoFactorToken();
-      $settings = $this->user->getConfiguration()->getSettings();
+      $twoFactorToken = $currentUser->getTwoFactorToken();
+      $settings = $this->context->getSettings();
       $relyingParty = $settings->getSiteName();
-      $sql = $this->user->getSQL();
+      $sql = $this->context->getSQL();
 
       // TODO: for react development, localhost / HTTP_HOST is required, otherwise a DOMException is thrown
       $domain = parse_url($settings->getBaseUrl(),  PHP_URL_HOST);
@@ -266,7 +271,7 @@ namespace Api\TFA {
           $challenge = base64_encode(generateRandomString(32, "raw"));
           $res = $sql->insert("2FA", ["type", "data"])
             ->addRow("fido", $challenge)
-            ->returning("uid")
+            ->returning("id")
             ->execute();
           $this->success = ($res !== false);
           $this->lastError = $sql->getLastError();
@@ -276,7 +281,7 @@ namespace Api\TFA {
 
           $this->success = $sql->update("User")
             ->set("2fa_id", $sql->getLastInsertId())
-            ->where(new Compare("uid", $this->user->getId()))
+            ->where(new Compare("id", $currentUser->getId()))
             ->execute() !== false;
           $this->lastError = $sql->getLastError();
           if (!$this->success) {
@@ -286,7 +291,7 @@ namespace Api\TFA {
 
         $this->result["data"] = [
           "challenge" => $challenge,
-          "id" => $this->user->getId() . "@" . $domain, // <userId>@<domain>
+          "id" => $currentUser->getId() . "@" . $domain, // <userId>@<domain>
           "relyingParty" => [
             "name" => $relyingParty,
             "id" => $domain
@@ -322,7 +327,7 @@ namespace Api\TFA {
         $this->success = $sql->update("2FA")
             ->set("data", json_encode($data))
             ->set("confirmed", true)
-            ->where(new Compare("uid", $twoFactorToken->getId()))
+            ->where(new Compare("id", $twoFactorToken->getId()))
             ->execute() !== false;
         $this->lastError = $sql->getLastError();
       }
@@ -332,25 +337,25 @@ namespace Api\TFA {
   }
 
   class VerifyKey extends TfaAPI {
-    public function __construct(User $user, bool $externalCall = false) {
-      parent::__construct($user, $externalCall, [
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
         "credentialID" => new StringType("credentialID"),
         "clientDataJSON" => new StringType("clientDataJSON"),
         "authData" => new StringType("authData"),
         "signature" => new StringType("signature"),
       ]);
-      $this->loginRequired = false;
+      $this->loginRequired = true;
       $this->csrfTokenRequired = false;
     }
 
     public function _execute(): bool {
 
-      $session = $this->user->getSession();
-      if (!$session) {
+      $currentUser = $this->context->getUser();
+      if (!$currentUser) {
         return $this->createError("You are not logged in.");
       }
 
-      $twoFactorToken = $this->user->getTwoFactorToken();
+      $twoFactorToken = $currentUser->getTwoFactorToken();
       if (!$twoFactorToken) {
         return $this->createError("You did not add a two factor token yet.");
       } else if (!($twoFactorToken instanceof KeyBasedTwoFactorToken)) {

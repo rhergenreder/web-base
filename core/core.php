@@ -10,7 +10,7 @@ if (is_file($autoLoad)) {
   require_once $autoLoad;
 }
 
-define("WEBBASE_VERSION", "1.5.2");
+define("WEBBASE_VERSION", "2.0.0-alpha");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function ($class) {
@@ -27,10 +27,6 @@ spl_autoload_register(function ($class) {
     throw new Exception("Class or Trait not found: $class");
   }
 });
-
-function is_cli(): bool {
-  return php_sapi_name() === "cli";
-}
 
 function getProtocol(): string {
   $isSecure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') ||
@@ -246,7 +242,7 @@ function getClassName($class, bool $short = true): string {
 }
 
 function createError($msg) {
-  return json_encode(array("success" => false, "msg" => $msg));
+  return ["success" => false, "msg" => $msg];
 }
 
 function downloadFile($handle, $offset = 0, $length = null): bool {
@@ -277,4 +273,9 @@ function parseClass($class): string {
   $parts = explode("\\", $class);
   $parts = array_map('ucfirst', $parts);
   return implode("\\", $parts);
+}
+
+function isClass(string $str): bool {
+  $path = getClassPath($str);
+  return is_file($path) && class_exists($str);
 }

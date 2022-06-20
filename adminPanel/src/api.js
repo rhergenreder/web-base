@@ -92,7 +92,7 @@ export default class API {
     }
 
     async deleteGroup(id) {
-        return this.apiCall("groups/delete", { uid: id });
+        return this.apiCall("groups/delete", { id: id });
     }
 
     async getSettings(key = "") {

@@ -46,13 +46,14 @@ class TemplateDocument extends Document {
   public function renderTemplate(string $name, array $params = []): string {
     try {
 
-      $user = $this->getUser();
+      $context = $this->getContext();
+      $session = $context->getSession();
       $params["user"] = [
-        "lang" => $user->getLanguage()->getShortCode(),
-        "loggedIn" => $user->isLoggedIn(),
-        "session" => (!$user->isLoggedIn() ? null : [
-          "csrfToken" => $user->getSession()->getCsrfToken()
-        ])
+        "lang" => $context->getLanguage()->getShortCode(),
+        "loggedIn" => $session !== null,
+        "session" => ($session ? [
+          "csrfToken" => $session->getCsrfToken()
+        ] : null)
       ];
 
       $settings = $this->getSettings();

@@ -72,7 +72,7 @@ abstract class View extends StaticView {
       $attributes["class"] = implode(" ", $classes);
     }
 
-    $content = array_map(function ($item) { html_tag("li", [], $item, false); }, $items);
+    $content = array_map(function ($item) { return html_tag("li", [], $item, false); }, $items);
     return html_tag_ex($tag, $attributes, $content, false);
   }
 

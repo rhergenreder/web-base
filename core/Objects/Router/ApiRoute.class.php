@@ -12,6 +12,11 @@ class ApiRoute extends AbstractRoute {
     parent::__construct("/api/{endpoint:?}/{method:?}", false);
   }
 
+  private static function checkClass(string $className): bool {
+    $classPath = getClassPath($className);
+    return file_exists($classPath) && class_exists($className);
+  }
+
   public function call(Router $router, array $params): string {
     if (empty($params["endpoint"])) {
       header("Content-Type: text/html");
@@ -22,7 +27,8 @@ class ApiRoute extends AbstractRoute {
       $response = createError("Invalid Method");
     } else {
       $apiEndpoint = ucfirst($params["endpoint"]);
-      if (!empty($params["method"])) {
+      $isNestedAPI = !empty($params["method"]);
+      if ($isNestedAPI) {
         $apiMethod = ucfirst($params["method"]);
         $parentClass = "\\Api\\${apiEndpoint}API";
         $apiClass = "\\Api\\${apiEndpoint}\\${apiMethod}";
@@ -32,13 +38,20 @@ class ApiRoute extends AbstractRoute {
       }
 
       try {
-        $file = getClassPath($parentClass);
-        if (!file_exists($file) || !class_exists($parentClass) || !class_exists($apiClass)) {
-          http_response_code(404);
-          $response = createError("Not found");
-        } else {
+        $classFound = False;
+
+        // first: check if the parent class exists, for example:
+        // /stats => Stats.class.php
+        // /mail/send => MailAPI.class.php
+        if ($this->checkClass($parentClass)) {
+          if (!$isNestedAPI || class_exists($apiClass)) {
+            $classFound = true;
+          }
+        }
+
+        if ($classFound) {
           $apiClass = new ReflectionClass($apiClass);
-          if(!$apiClass->isSubclassOf(Request::class) || !$apiClass->isInstantiable()) {
+          if (!$apiClass->isSubclassOf(Request::class) || !$apiClass->isInstantiable()) {
             http_response_code(400);
             $response = createError("Invalid Method");
           } else {
@@ -48,6 +61,9 @@ class ApiRoute extends AbstractRoute {
             $response["success"] = $success;
             $response["msg"] = $request->getLastError();
           }
+        } else {
+          http_response_code(404);
+          $response = createError("Not found");
         }
       } catch (ReflectionException $e) {
         http_response_code(500);

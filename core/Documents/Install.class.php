@@ -246,8 +246,9 @@ namespace Documents\Install {
         $success = false;
       }
 
-      if (version_compare(PHP_VERSION, '7.4', '<')) {
-        $failedRequirements[] = "PHP Version <b>>= 7.4</b> is required. Got: <b>" . PHP_VERSION . "</b>";
+      $requiredVersion = '8.0';
+      if (version_compare(PHP_VERSION, $requiredVersion, '<')) {
+        $failedRequirements[] = "PHP Version <b>>= $requiredVersion</b> is required. Got: <b>" . PHP_VERSION . "</b>";
         $success = false;
       }
 

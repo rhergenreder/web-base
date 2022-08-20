@@ -105,12 +105,6 @@ class Session extends DatabaseEntity {
     );
   }
 
-  public function insert(bool $stayLoggedIn = false): bool {
-    $this->stayLoggedIn = $stayLoggedIn;
-    $this->active = true;
-    return $this->update();
-  }
-
   public function destroy(): bool {
     session_destroy();
     $this->active = false;

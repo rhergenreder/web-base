@@ -10,6 +10,8 @@ use Objects\Router\Router;
 class Account extends TemplateDocument {
   public function __construct(Router $router, string $templateName) {
     parent::__construct($router, $templateName);
+    $this->title = "Account";
+    $this->searchable = false;
     $this->enableCSP();
   }
 

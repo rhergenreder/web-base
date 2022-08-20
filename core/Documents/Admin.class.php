@@ -10,6 +10,8 @@ class Admin extends TemplateDocument {
     $user = $router->getContext()->getUser();
     $template = $user ? "admin.twig" : "redirect.twig";
     $params = $user ? [] : ["url" => "/login"];
+    $this->title = "Administration";
+    $this->searchable = false;
     parent::__construct($router, $template, $params);
     $this->enableCSP();
   }

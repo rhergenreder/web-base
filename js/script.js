@@ -41,7 +41,7 @@ let Core = function () {
   };
 
   this.getParameters = function () {
-    return this.aParameters;
+    return this.parameters;
   };
 
   this.setTitle = function (title) {
@@ -71,27 +71,27 @@ let Core = function () {
   };
 
   this.removeParameter = function (param) {
-    if (typeof this.aParameters[param] !== 'undefined' && this.aParameters.hasOwnProperty(param)) {
-      delete this.aParameters[param];
+    if (typeof this.parameters[param] !== 'undefined' && this.parameters.hasOwnProperty(param)) {
+      delete this.parameters[param];
     }
     this.updateUrl();
   };
 
   this.getParameter = function (param) {
-    if (typeof this.aParameters[param] !== 'undefined' && this.aParameters.hasOwnProperty(param))
-      return this.aParameters[param];
+    if (typeof this.parameters[param] !== 'undefined' && this.parameters.hasOwnProperty(param))
+      return this.parameters[param];
     else
       return null;
   };
 
   this.setParameter = function (param, newvalue) {
     newvalue = typeof newvalue !== 'undefined' ? newvalue : '';
-    this.aParameters[param] = newvalue;
+    this.parameters[param] = newvalue;
     this.updateUrl();
   };
 
   this.parseParameters = function () {
-    this.aParameters = [];
+    this.parameters = [];
     if (this.url.indexOf('?') === -1)
       return;
 
@@ -103,30 +103,32 @@ let Core = function () {
       if (index !== -1) {
         var key = param.substr(0, index);
         var val = param.substr(index + 1);
-        this.aParameters[key] = val;
+        this.parameters[key] = val;
       } else
-        this.aParameters[param] = '';
+        this.parameters[param] = '';
     }
   };
 
   this.updateUrl = function () {
     this.clearUrl();
     let i = 0;
-    for (var parameter in this.aParameters) {
+    for (var parameter in this.parameters) {
       this.url += (i === 0 ? "?" : "&") + parameter;
-      if (this.aParameters.hasOwnProperty(parameter) && this.aParameters[parameter].toString().length > 0) {
-        this.url += "=" + this.aParameters[parameter];
+      if (this.parameters.hasOwnProperty(parameter) && this.parameters[parameter].toString().length > 0) {
+        this.url += "=" + this.parameters[parameter];
       }
       i++;
     }
   };
 
   this.clearParameters = function () {
-    this.aParameters = [];
+    this.parameters = [];
     this.updateUrl();
   };
 
   this.clearUrl = function () {
+    if (this.url.indexOf('#') !== -1)
+      this.url = this.url.substring(0, this.url.indexOf('#'));
     if (this.url.indexOf('?') !== -1)
       this.url = this.url.substring(0, this.url.indexOf('?'));
   };

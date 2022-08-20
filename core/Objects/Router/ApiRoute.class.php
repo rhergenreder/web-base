@@ -21,7 +21,7 @@ class ApiRoute extends AbstractRoute {
     if (empty($params["endpoint"])) {
       header("Content-Type: text/html");
       $document = new \Elements\TemplateDocument($router, "swagger.twig");
-      return $document->getCode();
+      return $document->load();
     } else if (!preg_match("/[a-zA-Z]+/", $params["endpoint"])) {
       http_response_code(400);
       $response = createError("Invalid Method");

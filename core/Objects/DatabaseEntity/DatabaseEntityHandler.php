@@ -311,10 +311,7 @@ class DatabaseEntityHandler {
     return $query->execute();
   }
 
-  public function insertOrUpdate(DatabaseEntity $entity, ?array $columns = null) {
-    $id = $entity->getId();
-    $action = $id === null ? "insert" : "update";
-
+  private function prepareRow(DatabaseEntity $entity, string $action, ?array $columns = null) {
     $row = [];
     foreach ($this->columns as $propertyName => $column) {
       if ($columns && !in_array($column->getName(), $columns)) {
@@ -331,7 +328,10 @@ class DatabaseEntityHandler {
       } else if (!$this->columns[$propertyName]->notNull()) {
         $value = null;
       } else {
-        if ($action !== "update") {
+        $defaultValue = self::getAttribute($property, DefaultValue::class);
+        if ($defaultValue) {
+          $value = $defaultValue->getValue();
+        } else if ($action !== "update") {
           $this->logger->error("Cannot $action entity: property '$propertyName' was not initialized yet.");
           return false;
         } else {
@@ -342,29 +342,62 @@ class DatabaseEntityHandler {
       $row[$column->getName()] = $value;
     }
 
+    return $row;
+  }
+
+  public function update(DatabaseEntity $entity, ?array $columns = null) {
+    $row = $this->prepareRow($entity, "update", $columns);
+    if ($row === false) {
+      return false;
+    }
+
+    $entity->preInsert($row);
+    $query = $this->sql->update($this->tableName)
+      ->where(new Compare($this->tableName . ".id", $entity->getId()));
+
+    foreach ($row as $columnName => $value) {
+      $query->set($columnName, $value);
+    }
+
+    return $query->execute();
+  }
+
+  public function insert(DatabaseEntity $entity) {
+    $row = $this->prepareRow($entity, "insert");
+    if ($row === false) {
+      return false;
+    }
+
     $entity->preInsert($row);
 
+    // insert with id?
+    $entityId = $entity->getId();
+    if ($entityId !== null) {
+      $row["id"] = $entityId;
+    }
 
-    if ($id === null) {
-      $res = $this->sql->insert($this->tableName, array_keys($row))
-        ->addRow(...array_values($row))
-        ->returning("id")
-        ->execute();
+    $query = $this->sql->insert($this->tableName, array_keys($row))
+      ->addRow(...array_values($row));
 
-      if ($res !== false) {
-        return $this->sql->getLastInsertId();
-      } else {
-        return false;
-      }
+    // return id if its auto-generated
+    if ($entityId === null) {
+      $query->returning("id");
+    }
+
+    $res = $query->execute();
+    if ($res !== false) {
+      return $this->sql->getLastInsertId();
     } else {
-      $query = $this->sql->update($this->tableName)
-        ->where(new Compare($this->tableName . ".id", $id));
+      return false;
+    }
+  }
 
-      foreach ($row as $columnName => $value) {
-        $query->set($columnName, $value);
-      }
-
-      return $query->execute();
+  public function insertOrUpdate(DatabaseEntity $entity, ?array $columns = null) {
+    $id = $entity->getId();
+    if ($id === null) {
+      return $this->insert($entity);
+    } else {
+      return $this->update($entity, $columns);
     }
   }
 

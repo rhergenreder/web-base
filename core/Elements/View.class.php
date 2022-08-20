@@ -6,13 +6,11 @@ abstract class View extends StaticView {
 
   private Document $document;
   private bool $loadView;
-  protected bool $searchable;
   protected string $title;
   protected array $langModules;
 
   public function __construct(Document $document, bool $loadView = true) {
     $this->document = $document;
-    $this->searchable = false;
     $this->title = "Untitled View";
     $this->langModules = array();
     $this->loadView = $loadView;
@@ -20,7 +18,6 @@ abstract class View extends StaticView {
 
   public function getTitle(): string { return $this->title; }
   public function getDocument(): Document { return $this->document; }
-  public function isSearchable(): bool { return $this->searchable; }
 
   public function getSiteName(): string {
     return $this->getDocument()->getSettings()->getSiteName();

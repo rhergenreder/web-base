@@ -188,7 +188,7 @@ function handleDatabase(array $argv) {
 
     $command = array_merge([$command_bin], $command_args);
     if ($config->getProperty("isDocker", false)) {
-      $command = array_merge(["docker", "exec", "-it", "db"], $command);
+      $command = array_merge(["docker", "exec", "-it", $config->getHost()], $command);
     }
 
     $process = proc_open($command, $descriptorSpec, $pipes, null, $env);

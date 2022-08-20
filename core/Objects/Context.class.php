@@ -12,6 +12,7 @@ use Firebase\JWT\JWT;
 use Objects\DatabaseEntity\Language;
 use Objects\DatabaseEntity\Session;
 use Objects\DatabaseEntity\User;
+use Objects\Router\Router;
 
 class Context {
 
@@ -20,12 +21,14 @@ class Context {
   private ?User $user;
   private Configuration $configuration;
   private Language $language;
+  public ?Router $router;
 
   public function __construct() {
 
     $this->sql = null;
     $this->session = null;
     $this->user = null;
+    $this->router = null;
     $this->configuration = new Configuration();
     $this->setLanguage(Language::DEFAULT_LANGUAGE());
 

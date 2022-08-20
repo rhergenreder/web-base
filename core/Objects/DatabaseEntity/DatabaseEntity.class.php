@@ -76,6 +76,18 @@ abstract class DatabaseEntity {
     return true;
   }
 
+  public function insert(SQL $sql): bool {
+    $handler = self::getHandler($sql);
+    $res = $handler->insert($this);
+    if ($res === false) {
+      return false;
+    } else if ($this->id === null) {
+      $this->id = $res;
+    }
+
+    return true;
+  }
+
   public function delete(SQL $sql): bool {
     $handler = self::getHandler($sql);
     if ($this->id === null) {

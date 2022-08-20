@@ -2,6 +2,7 @@
 
 namespace Objects\DatabaseEntity {
 
+  use Driver\SQL\SQL;
   use Objects\DatabaseEntity\Attribute\MaxLength;
   use Objects\DatabaseEntity\Attribute\Transient;
   use Objects\lang\LanguageModule;
@@ -14,15 +15,13 @@ namespace Objects\DatabaseEntity {
     #[MaxLength(5)] private string $code;
     #[MaxLength(32)] private string $name;
 
-    #[Transient] private array $modules;
-    #[Transient] protected array $entries;
+    #[Transient] private array $modules = [];
+    #[Transient] protected array $entries = [];
 
     public function __construct(int $id, string $code, string $name) {
       parent::__construct($id);
       $this->code = $code;
       $this->name = $name;
-      $this->entries = array();
-      $this->modules = array();
     }
 
     public function getCode(): string {
@@ -42,9 +41,11 @@ namespace Objects\DatabaseEntity {
         $module = new $module();
       }
 
-      $moduleEntries = $module->getEntries($this->code);
-      $this->entries = array_merge($this->entries, $moduleEntries);
-      $this->modules[] = $module;
+      if (!in_array($module, $this->modules)) {
+        $moduleEntries = $module->getEntries($this->code);
+        $this->entries = array_merge($this->entries, $moduleEntries);
+        $this->modules[] = $module;
+      }
     }
 
     public function translate(string $key): string {
@@ -88,6 +89,10 @@ namespace Objects\DatabaseEntity {
       }
 
       return new Language(1, "en_US", "American English");
+    }
+
+    public function getEntries(): array {
+      return $this->entries;
     }
   }
 }

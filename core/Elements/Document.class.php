@@ -6,8 +6,13 @@ use Configuration\Settings;
 use Driver\Logger\Logger;
 use Driver\SQL\SQL;
 use Objects\Context;
+use Objects\lang\LanguageModule;
+use Objects\Router\DocumentRoute;
 use Objects\Router\Router;
 use Objects\DatabaseEntity\User;
+use Objects\Search\Searchable;
+use Objects\Search\SearchQuery;
+use Objects\Search\SearchResult;
 
 abstract class Document {
 
@@ -18,6 +23,7 @@ abstract class Document {
   private ?string $cspNonce;
   private array $cspWhitelist;
   private string $domain;
+  protected bool $searchable;
 
   public function __construct(Router $router) {
     $this->router = $router;
@@ -27,6 +33,13 @@ abstract class Document {
     $this->cspWhitelist = [];
     $this->domain = $this->getSettings()->getBaseUrl();
     $this->logger = new Logger("Document", $this->getSQL());
+    $this->searchable = false;
+  }
+
+  public abstract function getTitle(): string;
+
+  public function isSearchable(): bool {
+    return $this->searchable;
   }
 
   public function getLogger(): Logger {
@@ -66,30 +79,29 @@ abstract class Document {
     return $this->router;
   }
 
-  protected function addCSPWhitelist(string $path) {
-    $this->cspWhitelist[] = $this->domain . $path;
+  public function addCSPWhitelist(string $path) {
+    $urlParts = parse_url($path);
+    if (!$urlParts || !isset($urlParts["host"])) {
+      $this->cspWhitelist[] = $this->domain . $path;
+    } else {
+      $this->cspWhitelist[] = $path;
+    }
   }
 
-  public function getCode(array $params = []): string {
-    if ($this->databaseRequired) {
-      $sql = $this->getSQL();
-      if (is_null($sql)) {
-        die("Database is not configured yet.");
-      } else if (!$sql->isConnected()) {
-        die("Database is not connected: " . $sql->getLastError());
-      }
-    }
+  public function loadLanguageModule(LanguageModule|string $module) {
+    $language = $this->getContext()->getLanguage();
+    $language->loadModule($module);
+  }
 
+  public function sendHeaders() {
     if ($this->cspEnabled) {
-
       $cspWhiteList = implode(" ", $this->cspWhitelist);
-
       $csp = [
-        "default-src 'self'",
+        "default-src $cspWhiteList 'self'",
         "object-src 'none'",
         "base-uri 'self'",
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data:",
+        "img-src 'self' 'unsafe-inline' data: https:;",
         "script-src $cspWhiteList 'nonce-$this->cspNonce'"
       ];
       if ($this->getSettings()->isRecaptchaEnabled()) {
@@ -99,7 +111,42 @@ abstract class Document {
       $compiledCSP = implode("; ", $csp);
       header("Content-Security-Policy: $compiledCSP;");
     }
+  }
 
-    return "";
+  public abstract function getCode(array $params = []);
+
+  public function load(array $params = []): string {
+
+    if ($this->databaseRequired) {
+      $sql = $this->getSQL();
+      if (is_null($sql)) {
+        return "Database is not configured yet.";
+      } else if (!$sql->isConnected()) {
+        return "Database is not connected: " . $sql->getLastError();
+      }
+    }
+
+
+    $code =  $this->getCode($params);
+    $this->sendHeaders();
+    return $code;
+  }
+
+  public function doSearch(SearchQuery $query, DocumentRoute $route): array {
+    $code = $this->getCode();
+    $results = Searchable::searchHtml($code, $query);
+    return array_map(function ($res) use ($route) {
+      return new SearchResult($route->getUrl(), $this->getTitle(), $res["text"]);
+    }, $results);
+  }
+
+  public function createScript($type, $src, $content = ""): Script {
+    $script = new Script($type, $src, $content);
+
+    if ($this->isCSPEnabled()) {
+      $script->setNonce($this->getCSPNonce());
+    }
+
+    return $script;
   }
 }

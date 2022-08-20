@@ -10,6 +10,7 @@ use Objects\Router\Router;
 class Info extends HtmlDocument {
   public function __construct(Router $router) {
     parent::__construct($router, EmptyHead::class, InfoBody::class);
+    $this->searchable = false;
   }
 }
 

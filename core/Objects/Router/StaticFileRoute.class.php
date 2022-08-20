@@ -2,7 +2,14 @@
 
 namespace Objects\Router;
 
+use Objects\Context;
+use Objects\Search\Searchable;
+use Objects\Search\SearchQuery;
+use Objects\Search\SearchResult;
+
 class StaticFileRoute extends AbstractRoute {
+
+  use Searchable;
 
   private string $path;
   private int $code;
@@ -15,7 +22,7 @@ class StaticFileRoute extends AbstractRoute {
 
   public function call(Router $router, array $params): string {
     http_response_code($this->code);
-    $this->serveStatic($this->path, $router);
+    $this->serveStatic($this->getAbsolutePath(), $router);
     return "";
   }
 
@@ -23,9 +30,11 @@ class StaticFileRoute extends AbstractRoute {
     return array_merge(parent::getArgs(), [$this->path, $this->code]);
   }
 
-  public static function serveStatic(string $path, ?Router $router = null) {
+  public function getAbsolutePath(): string {
+    return WEBROOT . DIRECTORY_SEPARATOR . $this->path;
+  }
 
-    $path = realpath(WEBROOT . DIRECTORY_SEPARATOR . $path);
+  public static function serveStatic(string $path, ?Router $router = null) {
     if (!startsWith($path, WEBROOT . DIRECTORY_SEPARATOR)) {
       http_response_code(406);
       echo "<b>Access restricted, requested file outside web root:</b> " . htmlspecialchars($path);
@@ -71,5 +80,35 @@ class StaticFileRoute extends AbstractRoute {
 
       downloadFile($handle, $offset, $length);
     }
+  }
+
+  public function doSearch(Context $context, SearchQuery $query): array {
+
+    $results = [];
+    $path = $this->getAbsolutePath();
+    if (is_file($path) && is_readable($path)) {
+      $pathInfo = pathinfo($path);
+      $extension = $pathInfo["extension"] ?? "";
+      $fileName = $pathInfo["filename"] ?? "";
+      if ($context->getSettings()->isExtensionAllowed($extension)) {
+        $mimeType = mime_content_type($path);
+        if (startsWith($mimeType, "text/")) {
+          $document = @file_get_contents($path);
+          if ($document) {
+            if ($mimeType === "text/html") {
+              $results = Searchable::searchHtml($document, $query);
+            } else {
+              $results = Searchable::searchText($document, $query);
+            }
+          }
+        }
+      }
+
+      $results = array_map(function ($res) use ($fileName) {
+        return new SearchResult($this->getPattern(), $fileName, $res["text"]);
+      }, $results);
+    }
+
+    return $results;
   }
 }

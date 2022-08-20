@@ -198,7 +198,7 @@ class CreateDatabase extends DatabaseScript {
     }
   }
 
-  private static function loadEntities(&$queries, $sql) {
+  public static function loadEntities(&$queries, $sql) {
     $entityDirectory = './core/Objects/DatabaseEntity/';
     if (file_exists($entityDirectory) && is_dir($entityDirectory)) {
       $scan_arr = scandir($entityDirectory);

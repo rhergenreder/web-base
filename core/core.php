@@ -10,7 +10,7 @@ if (is_file($autoLoad)) {
   require_once $autoLoad;
 }
 
-define("WEBBASE_VERSION", "2.0.0-alpha");
+define("WEBBASE_VERSION", "2.1.0");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function ($class) {

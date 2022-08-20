@@ -35,7 +35,7 @@ if ($installation) {
     header("Location: /");
   } else {
     $document = new Documents\Install(new Router($context));
-    $response = $document->getCode();
+    $response = $document->load();
   }
 } else {
 

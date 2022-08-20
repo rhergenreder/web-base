@@ -6,8 +6,8 @@ use Objects\Router\Router;
 
 class HtmlDocument extends Document {
 
-  protected Head $head;
-  protected Body $body;
+  protected ?Head $head;
+  protected ?Body $body;
   private ?string $activeView;
 
   public function __construct(Router $router, $headClass, $bodyClass, ?string $view = NULL) {
@@ -17,8 +17,8 @@ class HtmlDocument extends Document {
     $this->activeView = $view;
   }
 
-  public function getHead(): Head { return $this->head; }
-  public function getBody(): Body { return $this->body; }
+  public function getHead(): ?Head { return $this->head; }
+  public function getBody(): ?Body { return $this->body; }
 
   public function getView() : ?View {
 
@@ -35,24 +35,11 @@ class HtmlDocument extends Document {
     return new $view($this);
   }
 
-  public function createScript($type, $src, $content = ""): Script {
-    $script = new Script($type, $src, $content);
-
-    if ($this->isCSPEnabled()) {
-      $script->setNonce($this->getCSPNonce());
-    }
-
-    return $script;
-  }
-
   public function getRequestedView(): string {
     return $this->activeView;
   }
 
   function getCode(array $params = []): string {
-
-    parent::getCode();
-
     // generate body first, so we can modify head
     $body = $this->body->getCode();
 
@@ -74,4 +61,11 @@ class HtmlDocument extends Document {
   }
 
 
+  public function getTitle(): string {
+    if ($this->head !== null) {
+      return $this->head->getTitle();
+    }
+
+    return "Untitled Document";
+  }
 }

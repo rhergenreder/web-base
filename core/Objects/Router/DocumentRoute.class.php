@@ -3,9 +3,14 @@
 namespace Objects\Router;
 
 use Elements\Document;
+use Objects\Context;
+use Objects\Search\Searchable;
+use Objects\Search\SearchQuery;
 use ReflectionException;
 
 class DocumentRoute extends AbstractRoute {
+
+  use Searchable;
 
   private string $className;
   private array $args;
@@ -31,7 +36,7 @@ class DocumentRoute extends AbstractRoute {
         }
       } catch (ReflectionException $exception) {
         $this->reflectionClass = null;
-        return false;
+        throw $exception;
       }
 
       $this->reflectionClass = null;
@@ -55,16 +60,32 @@ class DocumentRoute extends AbstractRoute {
   }
 
   public function call(Router $router, array $params): string {
-    if (!$this->loadClass()) {
-      return $router->returnStatusCode(500, [ "message" =>  "Error loading class: $this->className"]);
-    }
-
     try {
-      $args = array_merge([$router], $this->args);
+      if (!$this->loadClass()) {
+        return $router->returnStatusCode(500, [ "message" =>  "Error loading class: $this->className"]);
+      }
+
+      $args = array_merge([$router], $this->args, $params);
       $document = $this->reflectionClass->newInstanceArgs($args);
-      return $document->getCode($params);
+      return $document->load($params);
     } catch (\ReflectionException $e) {
       return $router->returnStatusCode(500, [ "message" =>  "Error loading class $this->className: " . $e->getMessage()]);
+    }
+  }
+
+  public function doSearch(Context $context, SearchQuery $query): array {
+    try {
+      if ($this->loadClass()) {
+        $args = array_merge([$context->router], $this->args);
+        $document = $this->reflectionClass->newInstanceArgs($args);
+        if ($document->isSearchable()) {
+          return $document->doSearch($query, $this);
+        }
+      }
+
+      return [];
+    } catch (\ReflectionException) {
+      return [];
     }
   }
 }

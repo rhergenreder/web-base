@@ -9,6 +9,8 @@ class Router {
 
   private Context $context;
   private Logger $logger;
+  private ?AbstractRoute $activeRoute;
+  private ?string $requestedUri;
   protected array $routes;
   protected array $statusCodeRoutes;
 
@@ -16,6 +18,9 @@ class Router {
     $this->context = $context;
     $this->routes = [];
     $this->statusCodeRoutes = [];
+    $this->activeRoute = null;
+    $this->requestedUri = null;
+    $this->context->router = $this;
 
     $sql = $context->getSQL();
     if ($sql) {
@@ -26,14 +31,24 @@ class Router {
     }
   }
 
+  public function getActiveRoute(): ?AbstractRoute {
+    return $this->activeRoute;
+  }
+
+  public function getRequestedUri(): ?string {
+    return $this->requestedUri;
+  }
+
   public function run(string $url): string {
 
     // TODO: do we want a global try cache and return status page 500 on any error?
+    $this->requestedUri = $url;
 
     $url = strtok($url, "?");
     foreach ($this->routes as $route) {
       $pathParams = $route->match($url);
       if ($pathParams !== false) {
+        $this->activeRoute = $route;
         return $route->call($this, $pathParams);
       }
     }
@@ -54,7 +69,6 @@ class Router {
       if ($res) {
         return $req->getResult()["html"];
       } else {
-        var_dump($req->getLastError());
         $description = htmlspecialchars($params["status_description"]);
         return "<b>$code - $description</b>";
       }
@@ -62,11 +76,11 @@ class Router {
   }
 
   public function addRoute(AbstractRoute $route) {
-    if (preg_match("/^\d+$/", $route->getPattern())) {
-      $this->statusCodeRoutes[$route->getPattern()] = $route;
-    } else {
-      $this->routes[] = $route;
+    if (preg_match("/^\/(\d+)$/", $route->getPattern(), $re)) {
+      $this->statusCodeRoutes[$re[1]] = $route;
     }
+
+    $this->routes[] = $route;
   }
 
   public function writeCache(string $file): bool {
@@ -133,5 +147,16 @@ class RouterCache extends Router {
 
     // strip leading slash
     return preg_replace("/^\/+/", "", $url);
+  }
+
+  public function getRoutes(bool $includeStatusRoutes = false): array {
+
+    if (!$includeStatusRoutes && !empty($this->statusCodeRoutes)) {
+      return array_filter($this->routes, function ($route) {
+        return !in_array($route, $this->statusCodeRoutes);
+      });
+    }
+
+    return $this->routes;
   }
 }

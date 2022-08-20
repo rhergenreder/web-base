@@ -6,6 +6,8 @@ use Api\Parameter\Parameter;
 
 abstract class AbstractRoute {
 
+  const PARAMETER_PATTERN = "/^{([^:]+)(:(.*?)(\?)?)?}$/";
+
   private string $pattern;
   private bool $exact;
 
@@ -64,7 +66,7 @@ abstract class AbstractRoute {
 
     $params = [];
     for (; $patternOffset < $countPattern; $patternOffset++) {
-      if (!preg_match("/^{([^:]+)(:(.*?)(\?)?)?}$/", $patternParts[$patternOffset], $match)) {
+      if (!preg_match(self::PARAMETER_PATTERN, $patternParts[$patternOffset], $match)) {
 
         // not a parameter? check if it matches
         if ($urlOffset >= $countUrl || $urlParts[$urlOffset] !== $patternParts[$patternOffset]) {
@@ -121,5 +123,31 @@ abstract class AbstractRoute {
     }
 
     return $params;
+  }
+
+  public function getUrl(array $parameters = []): string {
+    $patternParts = explode("/", Router::cleanURL($this->pattern, false));
+
+    foreach ($patternParts as $i => $part) {
+      if (preg_match(self::PARAMETER_PATTERN, $part, $match)) {
+        $paramName = $match[1];
+        $patternParts[$i] = $parameters[$paramName] ?? null;
+      }
+    }
+
+    return "/" . implode("/", array_filter($patternParts));
+  }
+
+  public function getParameterNames(): array {
+    $parameterNames = [];
+    $patternParts = explode("/", Router::cleanURL($this->pattern, false));
+
+    foreach ($patternParts as $part) {
+      if (preg_match(self::PARAMETER_PATTERN, $part, $match)) {
+        $parameterNames[] = $match[1];
+      }
+    }
+
+    return $parameterNames;
   }
 }

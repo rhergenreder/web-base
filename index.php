@@ -8,7 +8,7 @@ define("WEBROOT", realpath("."));
 
 if (is_file("MAINTENANCE") && !in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1'])) {
   http_response_code(503);
-  \Objects\Router\StaticFileRoute::serveStatic("/static/maintenance.html");
+  \Objects\Router\StaticFileRoute::serveStatic(WEBROOT . "/static/maintenance.html");
   die();
 }
 

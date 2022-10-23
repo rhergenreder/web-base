@@ -99,7 +99,7 @@ class Context {
       try {
         $token = $_COOKIE['session'];
         $settings = $this->configuration->getSettings();
-        $decoded = (array)JWT::decode($token, $settings->getJwtKey());
+        $decoded = (array)JWT::decode($token, $settings->getJwtSecretKey());
         if (!is_null($decoded)) {
           $userId = ($decoded['userId'] ?? NULL);
           $sessionId = ($decoded['sessionId'] ?? NULL);

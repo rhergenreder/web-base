@@ -65,7 +65,7 @@ class MySQL extends SQL {
       return false;
     }
 
-    mysqli_set_charset($this->connection, $this->connectionData->getProperty('encoding', 'UTF-8'));
+    mysqli_set_charset($this->connection, $this->connectionData->getProperty('encoding', 'UTF8'));
     return true;
   }
 

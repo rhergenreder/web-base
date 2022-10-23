@@ -74,8 +74,8 @@ class Session extends DatabaseEntity {
     $this->updateMetaData();
     $settings = $this->context->getSettings();
     $token = ['userId' => $this->user->getId(), 'sessionId' => $this->getId()];
-    $jwtKey = $settings->getJwtKey();
-    return JWT::encode($token, $jwtKey->getKeyMaterial(), $jwtKey->getAlgorithm());
+    $jwtPublicKey = $settings->getJwtPublicKey();
+    return JWT::encode($token, $jwtPublicKey->getKeyMaterial(), $jwtPublicKey->getAlgorithm());
   }
 
   public function sendCookie(string $domain) {

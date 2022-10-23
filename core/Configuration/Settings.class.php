@@ -6,6 +6,7 @@
 
 namespace Configuration;
 
+use Driver\Logger\Logger;
 use Driver\SQL\Query\Insert;
 use Objects\Context;
 
@@ -17,7 +18,9 @@ class Settings {
   // settings
   private string $siteName;
   private string $baseUrl;
-  private string $jwtSecret;
+  private string $jwtPublicKey;
+  private string $jwtSecretKey;
+  private string $jwtAlgorithm;
   private bool $registrationAllowed;
   private bool $recaptchaEnabled;
   private bool $mailEnabled;
@@ -27,9 +30,19 @@ class Settings {
   private string $mailFooter;
   private array $allowedExtensions;
 
-  public function getJwtKey(): \Firebase\JWT\Key {
-    // TODO: allow the use of other JWT algorithms (e.g. RS256)
-    return new \Firebase\JWT\Key($this->jwtSecret, "HS256");
+  //
+  private Logger $logger;
+
+  public function __construct() {
+    $this->logger = new Logger("Settings");
+  }
+
+  public function getJwtPublicKey(): \Firebase\JWT\Key {
+    return new \Firebase\JWT\Key($this->jwtPublicKey ?? $this->jwtSecretKey, $this->jwtAlgorithm);
+  }
+
+  public function getJwtSecretKey(): \Firebase\JWT\Key {
+    return new \Firebase\JWT\Key($this->jwtSecretKey, $this->jwtAlgorithm);
   }
 
   public function isInstalled(): bool {
@@ -39,26 +52,74 @@ class Settings {
   public static function loadDefaults(): Settings {
     $hostname = $_SERVER["SERVER_NAME"] ?? "localhost";
     $protocol = getProtocol();
-    $jwt = generateRandomString(32);
-
     $settings = new Settings();
+
+    // General
     $settings->siteName = "WebBase";
     $settings->baseUrl = "$protocol://$hostname";
-    $settings->jwtSecret = $jwt;
+    $settings->allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'htm', 'html'];
     $settings->installationComplete = false;
     $settings->registrationAllowed = false;
+
+    // JWT
+    $settings->jwtSecretKey = null;
+    $settings->jwtPublicKey = null;
+    $settings->jwtAlgorithm = "HS256";
+
+    // Recaptcha
+    $settings->recaptchaEnabled = false;
     $settings->recaptchaPublicKey = "";
     $settings->recaptchaPrivateKey = "";
-    $settings->recaptchaEnabled = false;
+
+    // Mail
     $settings->mailEnabled = false;
     $settings->mailSender = "webmaster@localhost";
     $settings->mailFooter = "";
-    $settings->allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'htm', 'html'];
+
 
     return $settings;
   }
 
+  public function generateJwtKey(string $algorithm = null): bool {
+    $this->jwtAlgorithm = $algorithm ?? $this->jwtAlgorithm;
+
+    // TODO: key encryption necessary?
+    if (in_array($this->jwtAlgorithm, ["HS256", "HS384", "HS512"])) {
+      $this->jwtSecretKey = generateRandomString(32);
+      $this->jwtPublicKey = null;
+    } else if (in_array($this->jwtAlgorithm, ["RS256", "RS384", "RS512"])) {
+      $bits = intval(substr($this->jwtAlgorithm, 2));
+      $private_key = openssl_pkey_new(["private_key_bits" => $bits]);
+      $this->jwtPublicKey = openssl_pkey_get_details($private_key)['key'];
+      openssl_pkey_export($private_key, $this->jwtSecretKey);
+    } else if (in_array($this->jwtAlgorithm, ["ES256", "ES384"])) {
+      // $ec = new \Elliptic\EC('secp256k1'); ??
+      $this->logger->error("JWT algorithm: '$this->jwtAlgorithm' is currently not supported.");
+      return false;
+    } else if ($this->jwtAlgorithm == "EdDSA") {
+      $keyPair = sodium_crypto_sign_keypair();
+      $this->jwtSecretKey = base64_encode(sodium_crypto_sign_secretkey($keyPair));
+      $this->jwtPublicKey = base64_encode(sodium_crypto_sign_publickey($keyPair));
+    } else {
+      $this->logger->error("Invalid JWT algorithm: '$this->jwtAlgorithm', expected one of: " .
+        implode(",", array_keys(\Firebase\JWT\JWT::$supported_algs)));
+      return false;
+    }
+
+    return true;
+  }
+
+  public function saveJwtKey(Context $context) {
+    $req = new \Api\Settings\Set($context);
+    $req->execute(array("settings" => array(
+      "jwt_secret_key" => $this->jwtSecretKey,
+      "jwt_public_key" => $this->jwtSecretKey,
+      "jwt_algorithm" => $this->jwtAlgorithm,
+    )));
+  }
+
   public function loadFromDatabase(Context $context): bool {
+    $this->logger = new Logger("Settings", $context->getSQL());
     $req = new \Api\Settings\Get($context);
     $success = $req->execute();
 
@@ -68,7 +129,9 @@ class Settings {
       $this->baseUrl = $result["base_url"] ?? $this->baseUrl;
       $this->registrationAllowed = $result["user_registration_enabled"] ?? $this->registrationAllowed;
       $this->installationComplete = $result["installation_completed"] ?? $this->installationComplete;
-      $this->jwtSecret = $result["jwt_secret"] ?? $this->jwtSecret;
+      $this->jwtSecretKey = $result["jwt_secret_key"] ?? $this->jwtSecretKey;
+      $this->jwtPublicKey = $result["jwt_public_key"] ?? $this->jwtPublicKey;
+      $this->jwtAlgorithm = $result["jwt_algorithm"] ?? $this->jwtAlgorithm;
       $this->recaptchaEnabled = $result["recaptcha_enabled"] ?? $this->recaptchaEnabled;
       $this->recaptchaPublicKey = $result["recaptcha_public_key"] ?? $this->recaptchaPublicKey;
       $this->recaptchaPrivateKey = $result["recaptcha_private_key"] ?? $this->recaptchaPrivateKey;
@@ -77,11 +140,10 @@ class Settings {
       $this->mailFooter = $result["mail_footer"] ?? $this->mailFooter;
       $this->allowedExtensions = explode(",", $result["allowed_extensions"] ?? strtolower(implode(",", $this->allowedExtensions)));
 
-      if (!isset($result["jwt_secret"])) {
-        $req = new \Api\Settings\Set($context);
-        $req->execute(array("settings" => array(
-          "jwt_secret" => $this->jwtSecret
-        )));
+      if (!isset($result["jwt_secret_key"])) {
+        if ($this->generateJwtKey()) {
+          $this->saveJwtKey($context);
+        }
       }
     }
 
@@ -93,7 +155,9 @@ class Settings {
       ->addRow("base_url", $this->baseUrl, false, false)
       ->addRow("user_registration_enabled", $this->registrationAllowed ? "1" : "0", false, false)
       ->addRow("installation_completed", $this->installationComplete ? "1" : "0", true, true)
-      ->addRow("jwt_secret", $this->jwtSecret, true, true)
+      ->addRow("jwt_secret_key", $this->jwtSecretKey, true, false)
+      ->addRow("jwt_public_key", $this->jwtPublicKey, false, false)
+      ->addRow("jwt_algorithm", $this->jwtAlgorithm, false, false)
       ->addRow("recaptcha_enabled", $this->recaptchaEnabled ? "1" : "0", false, false)
       ->addRow("recaptcha_public_key", $this->recaptchaPublicKey, false, false)
       ->addRow("recaptcha_private_key", $this->recaptchaPrivateKey, true, false)

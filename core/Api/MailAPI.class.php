@@ -72,7 +72,7 @@ namespace Api\Mail {
         "subject" => "Test E-Mail",
         "body" => "Hey! If you receive this e-mail, your mail configuration seems to be working.",
         "gpgFingerprint" => $this->getParam("gpgFingerprint"),
-        "asnyc" => false
+        "async" => false
       ));
 
       $this->lastError = $req->getLastError();

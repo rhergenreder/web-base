@@ -24,7 +24,7 @@ function _exit(string $line = "") {
 }
 
 function getDatabaseConfig(): ConnectionData {
-  $configClass = "\\Configuration\\Database";
+  $configClass = "\\Site\\Configuration\\Database";
   $file = getClassPath($configClass);
   if (!file_exists($file) || !is_readable($file)) {
     _exit("Database configuration does not exist or is not readable");

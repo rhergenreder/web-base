@@ -58,8 +58,8 @@ Each endpoint is represented by a class inheriting the [Request Class](/core/Api
 
 ```php
 namespace Api;
-use Api\Parameter\Parameter;
-use Objects\DatabaseEntity\User;
+use Core\API\Parameter\Parameter;
+use Core\Objects\DatabaseEntity\User;
 
 class SingleEndpoint extends Request {
 
@@ -108,7 +108,7 @@ Some endpoints are set to private, which means, they can be only accessed inside
 can be used by creating the desired request object, and calling the execute function with our parameters like shown below:
 
 ```php
-$req = new \Api\Mail\Send($context);
+$req = new \Core\API\Mail\Send($context);
 $success = $req->execute(array(
   "to" => "mail@example.org", 
   "subject" => "Example Mail", 
@@ -132,7 +132,7 @@ an additional patch file, which can be executed using the [CLI](#CLI), can be cr
 located in [/core/Configuration/Patch](/core/Configuration/Patch) and have the following structure:
 
 ```php
-namespace Configuration\Patch;
+namespace Core\Configuration\Patch;
 
 use Configuration\DatabaseScript;
 use Driver\SQL\SQL;

@@ -1,8 +1,8 @@
 <?php
 
-use Api\Parameter\ArrayType;
-use Api\Parameter\StringType;
-use Api\Parameter\Parameter;
+use Core\API\Parameter\ArrayType;
+use Core\API\Parameter\StringType;
+use Core\API\Parameter\Parameter;
 
 class ParameterTest extends \PHPUnit\Framework\TestCase {
 

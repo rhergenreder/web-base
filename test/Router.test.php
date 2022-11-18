@@ -1,8 +1,8 @@
 <?php
 
-use Objects\Context;
-use Objects\Router\EmptyRoute;
-use Objects\Router\Router;
+use Core\Objects\Context;
+use Core\Objects\Router\EmptyRoute;
+use Core\Objects\Router\Router;
 
 class RouterTest extends \PHPUnit\Framework\TestCase {
 

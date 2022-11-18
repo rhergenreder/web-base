@@ -1,6 +1,6 @@
 <?php
 
-use Objects\AesStream;
+use Core\Objects\AesStream;
 
 class AesStreamTest extends PHPUnit\Framework\TestCase {
 

@@ -2,17 +2,17 @@
 
 define('WEBROOT', realpath("."));
 
-include_once 'core/core.php';
-require_once 'core/datetime.php';
-include_once 'core/constants.php';
+include_once 'Core/core.php';
+require_once 'Core/datetime.php';
+include_once 'Core/constants.php';
 
-use Configuration\DatabaseScript;
-use Driver\SQL\Column\Column;
-use Driver\SQL\Condition\Compare;
-use Driver\SQL\Condition\CondIn;
-use Driver\SQL\Expression\DateSub;
-use Driver\SQL\SQL;
-use Objects\ConnectionData;
+use Core\Configuration\DatabaseScript;
+use Core\Driver\SQL\Column\Column;
+use Core\Driver\SQL\Condition\Compare;
+use Core\Driver\SQL\Condition\CondIn;
+use Core\Driver\SQL\Expression\DateSub;
+use Core\Driver\SQL\SQL;
+use Core\Objects\ConnectionData;
 
 function printLine(string $line = "") {
   echo $line . PHP_EOL;
@@ -34,7 +34,7 @@ function getDatabaseConfig(): ConnectionData {
   return new $configClass();
 }
 
-$context = new \Objects\Context();
+$context = new \Core\Objects\Context();
 if (!$context->isCLI()) {
   _exit("Can only be executed via CLI");
 }
@@ -74,7 +74,7 @@ function printHelp() {
   // TODO: help
 }
 
-function applyPatch(\Driver\SQL\SQL $sql, string $patchName): bool {
+function applyPatch(\Core\Driver\SQL\SQL $sql, string $patchName): bool {
   $class = str_replace('/', '\\', $patchName);
   $className = "\\Configuration\\$class";
   $classPath = getClassPath($className);
@@ -420,7 +420,7 @@ function onSettings(array $argv) {
 
   if ($action === "list" || $action === "get") {
     $key = (($action === "list" || count($argv) < 4) ? null : $argv[3]);
-    $req = new Api\Settings\Get($context);
+    $req = new \Core\API\Settings\Get($context);
     $success = $req->execute(["key" => $key]);
     if (!$success) {
       _exit("Error listings settings: " . $req->getLastError());
@@ -437,7 +437,7 @@ function onSettings(array $argv) {
     } else {
       $key = $argv[3];
       $value = $argv[4];
-      $req = new Api\Settings\Set($context);
+      $req = new \Core\API\Settings\Set($context);
       $success = $req->execute(["settings" => [$key => $value]]);
       if (!$success) {
         _exit("Error updating settings: " . $req->getLastError());
@@ -448,7 +448,7 @@ function onSettings(array $argv) {
       _exit("Usage: $argv[0] settings $argv[2] <key>");
     } else {
       $key = $argv[3];
-      $req = new Api\Settings\Set($context);
+      $req = new \Core\API\Settings\Set($context);
       $success = $req->execute(["settings" => [$key => null]]);
       if (!$success) {
         _exit("Error updating settings: " . $req->getLastError());
@@ -465,7 +465,7 @@ function onRoutes(array $argv) {
   $action = $argv[2] ?? "list";
 
   if ($action === "list") {
-    $req = new Api\Routes\Fetch($context);
+    $req = new \Core\API\Routes\Fetch($context);
     $success = $req->execute();
     if (!$success) {
       _exit("Error fetching routes: " . $req->getLastError());
@@ -493,7 +493,7 @@ function onRoutes(array $argv) {
       "extra" => $argv[7] ?? "",
     );
 
-    $req  = new Api\Routes\Add($context);
+    $req  = new \Core\API\Routes\Add($context);
     $success = $req->execute($params);
     if (!$success) {
       _exit($req->getLastError());
@@ -520,13 +520,13 @@ function onRoutes(array $argv) {
         echo "Remove route #$uid? (y|n): ";
       } while(($input = trim(fgets(STDIN))) !== "y");
 
-      $req = new Api\Routes\Remove($context);
+      $req = new \Core\API\Routes\Remove($context);
     } else if ($action === "enable") {
-      $req = new Api\Routes\Enable($context);
+      $req = new \Core\API\Routes\Enable($context);
     } else if ($action === "disable") {
-      $req = new Api\Routes\Disable($context);
+      $req = new \Core\API\Routes\Disable($context);
     } else if ($action === "modify") {
-      $req = new Api\Routes\Update($context);
+      $req = new \Core\API\Routes\Update($context);
       $params["request"] = $argv[4];
       $params["action"] = $argv[5];
       $params["target"] = $argv[6];
@@ -606,28 +606,14 @@ function onTest($argv) {
 function onMail($argv) {
   global $context;
   $action = $argv[2] ?? null;
-  if ($action === "sync") {
-    $sql = connectSQL() or die();
-    if (!$context->getSettings()->isMailEnabled()) {
-      _exit("Mails are not configured yet.");
-    }
-
-    $req = new Api\Mail\Sync($context);
-    printLine("Syncing emails…");
-    if (!$req->execute()) {
-      _exit("Error syncing mails: " . $req->getLastError());
-    }
-
-    _exit("Done.");
-  } else if ($action === "send_queue") {
-    $sql = connectSQL() or die();
-    $req = new \Api\Mail\SendQueue($context);
+  if ($action === "send_queue") {
+    $req = new \Core\API\Mail\SendQueue($context);
     $debug = in_array("debug", $argv);
     if (!$req->execute(["debug" => $debug])) {
       _exit("Error processing mail queue: " . $req->getLastError());
     }
   } else {
-    _exit("Usage: cli.php mail <sync|send_news|send_queue> [options...]");
+    _exit("Usage: cli.php mail <send_queue> [options...]");
   }
 }
 
@@ -653,8 +639,8 @@ function onImpersonate($argv) {
     }
   }
 
-  $user = new \Objects\DatabaseEntity\User($userId);
-  $session = new \Objects\DatabaseEntity\Session($context, $user);
+  $user = new \Core\Objects\DatabaseEntity\User($userId);
+  $session = new \Core\Objects\DatabaseEntity\Session($context, $user);
   $session->setData(["2faAuthenticated" => true]);
   $session->update();
   echo "session=" . $session->getCookie() . PHP_EOL;

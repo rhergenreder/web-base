@@ -9,7 +9,7 @@ RewriteRule ^(api(/.*)?)$ /index.php?api=$1 [L,QSA]
 
 RewriteEngine On
 RewriteOptions AllowNoSlash
-RewriteRule ^((\.idea|\.git|src|test|core|docker|files)(/.*)?)$ /index.php?site=$1 [L,QSA]
+RewriteRule ^((\.idea|\.git|src|test|Site|Core|docker|files)(/.*)?)$ /index.php?site=$1 [L,QSA]
 
 FallbackResource /index.php
 

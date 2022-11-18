@@ -1,9 +1,8 @@
 <?php
 
-use Api\Request;
-use Configuration\Configuration;
-use Objects\Context;
-use Objects\DatabaseEntity\User;
+use Core\API\Request;
+use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\User;
 
 function __new_header_impl(string $line) {
   if (preg_match("/^HTTP\/([0-9.]+) (\d+) (.*)$/", $line, $m)) {

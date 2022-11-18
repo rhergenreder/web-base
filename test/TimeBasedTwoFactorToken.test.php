@@ -1,9 +1,8 @@
 <?php
 
 use Base32\Base32;
-use Configuration\Configuration;
-use Objects\TwoFactor\TimeBasedTwoFactorToken;
-use Objects\DatabaseEntity\User;
+use Core\Objects\Context;
+use Core\Objects\TwoFactor\TimeBasedTwoFactorToken;
 
 class TimeBasedTwoFactorTokenTest extends PHPUnit\Framework\TestCase {
 
@@ -31,7 +30,7 @@ class TimeBasedTwoFactorTokenTest extends PHPUnit\Framework\TestCase {
 
   public function testURL() {
     $secret = Base32::encode("12345678901234567890");
-    $context = new \Objects\Context();
+    $context = new Context();
 
     // $context->
 

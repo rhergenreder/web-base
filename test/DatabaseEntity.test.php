@@ -1,11 +1,12 @@
 <?php
 
-use Configuration\Configuration;
-use Driver\SQL\Query\CreateTable;
-use Driver\SQL\SQL;
-use Objects\Context;
-use Objects\DatabaseEntity\DatabaseEntityHandler;
-use Objects\DatabaseEntity\User;
+use Core\API\Parameter\Parameter;
+use Core\Driver\SQL\Query\CreateTable;
+use Core\Driver\SQL\SQL;
+use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\DatabaseEntity;
+use Core\Objects\DatabaseEntity\DatabaseEntityHandler;
+use Core\Objects\DatabaseEntity\User;
 
 class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
 
@@ -55,8 +56,8 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
     $this->assertEquals($entity2->d, $entity->d);
     $this->assertNotNull($entity2->e);
     $this->assertEquals(
-      $entity2->e->format(\Api\Parameter\Parameter::DATE_TIME_FORMAT),
-      $entity->e->format(\Api\Parameter\Parameter::DATE_TIME_FORMAT)
+      $entity2->e->format(Parameter::DATE_TIME_FORMAT),
+      $entity->e->format(Parameter::DATE_TIME_FORMAT)
     );
     $this->assertNull($entity2->f);
 
@@ -100,7 +101,7 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
   }
 }
 
-class TestEntity extends \Objects\DatabaseEntity\DatabaseEntity {
+class TestEntity extends DatabaseEntity {
   public int $a;
   public string $b;
   public bool $c;

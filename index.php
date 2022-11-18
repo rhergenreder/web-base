@@ -1,26 +1,26 @@
 <?php
 
-include_once 'core/core.php';
-include_once 'core/datetime.php';
-include_once 'core/constants.php';
+include_once 'Core/core.php';
+include_once 'Core/datetime.php';
+include_once 'Core/constants.php';
 
 define("WEBROOT", realpath("."));
 
 if (is_file("MAINTENANCE") && !in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1'])) {
   http_response_code(503);
-  \Objects\Router\StaticFileRoute::serveStatic(WEBROOT . "/static/maintenance.html");
+  \Core\Objects\Router\StaticFileRoute::serveStatic(WEBROOT . "/static/maintenance.html");
   die();
 }
 
-use Configuration\Configuration;
-use Objects\Router\Router;
+use Core\Configuration\Configuration;
+use Core\Objects\Router\Router;
 
 if (!is_readable(getClassPath(Configuration::class))) {
   header("Content-Type: application/json");
   die(json_encode([ "success" => false, "msg" => "Configuration class is not readable, check permissions before proceeding." ]));
 }
 
-$context = new \Objects\Context();
+$context = new \Core\Objects\Context();
 $sql = $context->initSQL();
 $settings = $context->getSettings();
 $context->parseCookies();
@@ -34,13 +34,13 @@ if ($installation) {
     $response = "Redirecting to <a href=\"/\">/</a>";
     header("Location: /");
   } else {
-    $document = new Documents\Install(new Router($context));
+    $document = new \Core\Documents\Install(new Router($context));
     $response = $document->load();
   }
 } else {
 
   $router = null;
-  $routerCacheClass = '\Cache\RouterCache';
+  $routerCacheClass = '\Core\Cache\RouterCache';
   $routerCachePath = getClassPath($routerCacheClass);
   if (is_file($routerCachePath)) {
     @include_once $routerCachePath;
@@ -50,7 +50,7 @@ if ($installation) {
   }
 
   if ($router === null) {
-    $req = new \Api\Routes\GenerateCache($context);
+    $req = new \Core\API\Routes\GenerateCache($context);
     if ($req->execute()) {
       $router = $req->getRouter();
     } else {

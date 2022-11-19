@@ -19,14 +19,6 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("en_US", 'American English')
       ->addRow("de_DE", 'Deutsch Standard');
 
-    $queries[] = $sql->createTable("UserToken")
-      ->addInt("user_id")
-      ->addString("token", 36)
-      ->addEnum("token_type", array("password_reset", "email_confirm", "invite", "gpg_confirm"))
-      ->addDateTime("valid_until")
-      ->addBool("used", false)
-      ->foreignKey("user_id", "User", "id", new CascadeStrategy());
-
     $queries[] = $sql->insert("Group", array("name", "color"))
       ->addRow(USER_GROUP_MODERATOR_NAME, "#007bff")
       ->addRow(USER_GROUP_SUPPORT_NAME, "#28a745")

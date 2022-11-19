@@ -15,20 +15,28 @@ class Settings {
   //
   private bool $installationComplete;
 
-  // settings
+  // general settings
   private string $siteName;
   private string $baseUrl;
+  private bool $registrationAllowed;
+  private array $allowedExtensions;
+  private string $timeZone;
+
+  // jwt
   private ?string $jwtPublicKey;
   private ?string $jwtSecretKey;
   private string $jwtAlgorithm;
-  private bool $registrationAllowed;
+
+  // recaptcha
   private bool $recaptchaEnabled;
-  private bool $mailEnabled;
   private string $recaptchaPublicKey;
   private string $recaptchaPrivateKey;
+
+  // mail
+  private bool $mailEnabled;
   private string $mailSender;
   private string $mailFooter;
-  private array $allowedExtensions;
+  private bool $mailAsync;
 
   //
   private Logger $logger;
@@ -55,7 +63,11 @@ class Settings {
   }
 
   public static function loadDefaults(): Settings {
-    $hostname = $_SERVER["SERVER_NAME"] ?? "localhost";
+    $hostname = $_SERVER["SERVER_NAME"];
+    if (empty($hostname)) {
+      $hostname = "localhost";
+    }
+
     $protocol = getProtocol();
     $settings = new Settings();
 
@@ -65,6 +77,7 @@ class Settings {
     $settings->allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'htm', 'html'];
     $settings->installationComplete = false;
     $settings->registrationAllowed = false;
+    $settings->timeZone = date_default_timezone_get();
 
     // JWT
     $settings->jwtSecretKey = null;
@@ -80,7 +93,7 @@ class Settings {
     $settings->mailEnabled = false;
     $settings->mailSender = "webmaster@localhost";
     $settings->mailFooter = "";
-
+    $settings->mailAsync = false;
 
     return $settings;
   }
@@ -118,7 +131,7 @@ class Settings {
     return in_array(strtoupper($algorithm), ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "EDDSA"]);
   }
 
-  public function saveJwtKey(Context $context) {
+  public function saveJwtKey(Context $context): \Core\API\Settings\Set {
     $req = new \Core\API\Settings\Set($context);
     $req->execute(array("settings" => array(
       "jwt_secret_key" => $this->jwtSecretKey,
@@ -140,6 +153,7 @@ class Settings {
       $this->baseUrl = $result["base_url"] ?? $this->baseUrl;
       $this->registrationAllowed = $result["user_registration_enabled"] ?? $this->registrationAllowed;
       $this->installationComplete = $result["installation_completed"] ?? $this->installationComplete;
+      $this->timeZone = $result["time_zone"] ?? $this->timeZone;
       $this->jwtSecretKey = $result["jwt_secret_key"] ?? $this->jwtSecretKey;
       $this->jwtPublicKey = $result["jwt_public_key"] ?? $this->jwtPublicKey;
       $this->jwtAlgorithm = $result["jwt_algorithm"] ?? $this->jwtAlgorithm;
@@ -149,6 +163,7 @@ class Settings {
       $this->mailEnabled = $result["mail_enabled"] ?? $this->mailEnabled;
       $this->mailSender = $result["mail_from"] ?? $this->mailSender;
       $this->mailFooter = $result["mail_footer"] ?? $this->mailFooter;
+      $this->mailAsync = $result["mail_async"] ?? $this->mailAsync;
       $this->allowedExtensions = explode(",", $result["allowed_extensions"] ?? strtolower(implode(",", $this->allowedExtensions)));
 
       if (!isset($result["jwt_secret_key"])) {
@@ -156,16 +171,19 @@ class Settings {
           $this->saveJwtKey($context);
         }
       }
+
+      date_default_timezone_set($this->timeZone);
     }
 
     return false;
   }
 
-  public function addRows(Insert $query) {
+  public function addRows(Insert $query): void {
     $query->addRow("site_name", $this->siteName, false, false)
       ->addRow("base_url", $this->baseUrl, false, false)
       ->addRow("user_registration_enabled", $this->registrationAllowed ? "1" : "0", false, false)
       ->addRow("installation_completed", $this->installationComplete ? "1" : "0", true, true)
+      ->addRow("time_zone", $this->timeZone, false, false)
       ->addRow("jwt_secret_key", $this->jwtSecretKey, true, false)
       ->addRow("jwt_public_key", $this->jwtPublicKey, false, false)
       ->addRow("jwt_algorithm", $this->jwtAlgorithm, false, false)
@@ -177,6 +195,14 @@ class Settings {
 
   public function getSiteName(): string {
     return $this->siteName;
+  }
+
+  public function getTimeZone(): string {
+    return $this->timeZone;
+  }
+
+  public function setTimeZone(string $tz) {
+    $this->timeZone = $tz;
   }
 
   public function getBaseUrl(): string {
@@ -201,6 +227,10 @@ class Settings {
 
   public function isMailEnabled(): bool {
     return $this->mailEnabled;
+  }
+
+  public function isMailAsync(): bool {
+    return $this->mailAsync;
   }
 
   public function getMailSender(): string {

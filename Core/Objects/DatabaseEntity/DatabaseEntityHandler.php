@@ -322,7 +322,7 @@ class DatabaseEntityHandler {
       if ($property->isInitialized($entity)) {
         $value = $property->getValue($entity);
         if (isset($this->relations[$propertyName])) {
-          $value = $value->getId();
+          $value = $value?->getId();
         }
       } else if (!$this->columns[$propertyName]->notNull()) {
         $value = null;
@@ -410,5 +410,9 @@ class DatabaseEntityHandler {
   private function raiseError(string $message) {
     $this->logger->error($message);
     throw new Exception($message);
+  }
+
+  public function getSQL(): SQL {
+    return $this->sql;
   }
 }

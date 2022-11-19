@@ -72,7 +72,7 @@ class Logger {
     $module = preg_replace("/[^a-zA-Z0-9-]/", "-", $this->module);
     $date = (\DateTime::createFromFormat('U.u', microtime(true)))->format(self::LOG_FILE_DATE_FORMAT);
     $logFile = implode("_", [$module, $severity, $date]) . ".log";
-    $logPath = implode(DIRECTORY_SEPARATOR, [WEBROOT, "core", "Logs", $logFile]);
+    $logPath = implode(DIRECTORY_SEPARATOR, [WEBROOT, "Core", "Logs", $logFile]);
     @file_put_contents($logPath, $message);
   }
 

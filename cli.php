@@ -48,17 +48,6 @@ if ($database !== null && $database->getProperty("isDocker", false) && !is_file(
   }
 }
 
-/*function getUser(): ?User {
-  global $config;
-  $user = new User($config);
-  if (!$user->getSQL() || !$user->getSQL()->isConnected()) {
-    printLine("Could not establish database connection");
-    return null;
-  }
-
-  return $user;
-}*/
-
 function connectSQL(): ?SQL {
   global $context;
   $sql = $context->initSQL();
@@ -76,7 +65,7 @@ function printHelp() {
 
 function applyPatch(\Core\Driver\SQL\SQL $sql, string $patchName): bool {
   $class = str_replace('/', '\\', $patchName);
-  $className = "\\Configuration\\$class";
+  $className = "\\Core\\Configuration\\$class";
   $classPath = getClassPath($className);
   if (!file_exists($classPath) || !is_readable($classPath)) {
     printLine("Database script file does not exist or is not readable");
@@ -282,7 +271,7 @@ function onMaintenance(array $argv) {
     _exit("Maintenance disabled");
   } else if ($action === "update") {
 
-    $oldPatchFiles = glob('core/Configuration/Patch/*.php');
+    $oldPatchFiles = glob('Core/Configuration/Patch/*.php');
     printLine("$ git remote -v");
     exec("git remote -v", $gitRemote, $ret);
     if ($ret !== 0) {
@@ -339,14 +328,15 @@ function onMaintenance(array $argv) {
       die();
     }
 
-    $newPatchFiles = glob('core/Configuration/Patch/*.php');
+    // TODO: also collect patches from Site/Configuration/Patch ... and what about database entities?
+    $newPatchFiles = glob('Core/Configuration/Patch/*.php');
     $newPatchFiles = array_diff($newPatchFiles, $oldPatchFiles);
     if (count($newPatchFiles) > 0) {
       printLine("Applying new database patches");
       $sql = connectSQL();
       if ($sql) {
         foreach ($newPatchFiles as $patchFile) {
-          if (preg_match("/core\/Configuration\/(Patch\/.*)\.class\.php/", $patchFile, $match)) {
+          if (preg_match("/Core\/Configuration\/(Patch\/.*)\.class\.php/", $patchFile, $match)) {
             $patchName = $match[1];
             applyPatch($sql, $patchName);
           }
@@ -415,7 +405,7 @@ function printTable(array $head, array $body) {
 
 function onSettings(array $argv) {
   global $context;
-  $sql = connectSQL() or die();
+  connectSQL() or die();
   $action = $argv[2] ?? "list";
 
   if ($action === "list" || $action === "get") {
@@ -461,7 +451,7 @@ function onSettings(array $argv) {
 
 function onRoutes(array $argv) {
   global $context;
-  $sql = connectSQL() or die();
+  connectSQL() or die();
   $action = $argv[2] ?? "list";
 
   if ($action === "list") {
@@ -607,6 +597,7 @@ function onMail($argv) {
   global $context;
   $action = $argv[2] ?? null;
   if ($action === "send_queue") {
+    connectSQL() or die();
     $req = new \Core\API\Mail\SendQueue($context);
     $debug = in_array("debug", $argv);
     if (!$req->execute(["debug" => $debug])) {

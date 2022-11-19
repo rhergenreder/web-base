@@ -96,7 +96,7 @@ class Session extends DatabaseEntity {
     return array(
       'id' => $this->getId(),
       'active' => $this->active,
-      'expires' => $this->expires,
+      'expires' => $this->expires->getTimestamp(),
       'ipAddress' => $this->ipAddress,
       'os' => $this->os,
       'browser' => $this->browser,

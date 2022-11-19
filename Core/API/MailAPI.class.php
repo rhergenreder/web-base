@@ -32,6 +32,7 @@ namespace Core\API {
         $connectionData->setProperty("from", $settings["mail_from"] ?? "");
         $connectionData->setProperty("last_sync", $settings["mail_last_sync"] ?? "");
         $connectionData->setProperty("mail_footer", $settings["mail_footer"] ?? "");
+        $connectionData->setProperty("mail_async", $settings["mail_async"] ?? false);
         return $connectionData;
       }
 
@@ -89,7 +90,7 @@ namespace Core\API\Mail {
         'replyTo' => new Parameter('replyTo', Parameter::TYPE_EMAIL, true, null),
         'replyName' => new StringType('replyName', 32, true, ""),
         'gpgFingerprint' => new StringType("gpgFingerprint", 64, true, null),
-        'async' => new Parameter("async", Parameter::TYPE_BOOLEAN, true, true)
+        'async' => new Parameter("async", Parameter::TYPE_BOOLEAN, true, null)
       ));
       $this->isPublic = false;
     }
@@ -110,7 +111,13 @@ namespace Core\API\Mail {
       $body = $this->getParam('body');
       $gpgFingerprint = $this->getParam("gpgFingerprint");
 
-      if ($this->getParam("async")) {
+      $mailAsync = $this->getParam("async");
+      if ($mailAsync === null) {
+        // not set? grab from settings
+        $mailAsync = $mailConfig->getProperty("mail_async", false);
+      }
+
+      if ($mailAsync) {
         $sql = $this->context->getSQL();
         $this->success = $sql->insert("MailQueue", ["from", "to", "subject", "body",
           "replyTo", "replyName", "gpgFingerprint"])

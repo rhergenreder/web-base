@@ -7,6 +7,7 @@ use Core\Configuration\Settings;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondLike;
 use Core\Driver\SQL\Condition\CondOr;
+use Core\Driver\SQL\Join;
 use Core\Driver\SQL\SQL;
 use Firebase\JWT\JWT;
 use Core\Objects\DatabaseEntity\Language;
@@ -92,6 +93,9 @@ class Context {
   private function loadSession(int $userId, int $sessionId) {
     $this->session = Session::init($this, $userId, $sessionId);
     $this->user = $this->session?->getUser();
+    if ($this->user) {
+      $this->user->session = $this->session;
+    }
   }
 
   public function parseCookies() {
@@ -173,7 +177,7 @@ class Context {
 
   public function loadApiKey(string $apiKey): bool {
     $this->user = User::findBuilder($this->sql)
-      ->addJoin(new \Driver\SQL\Join("INNER","ApiKey", "ApiKey.user_id", "User.id"))
+      ->addJoin(new Join("INNER","ApiKey", "ApiKey.user_id", "User.id"))
       ->where(new Compare("ApiKey.api_key", $apiKey))
       ->where(new Compare("valid_until", $this->sql->currentTimestamp(), ">"))
       ->where(new Compare("ApiKey.active", true))
@@ -184,19 +188,18 @@ class Context {
     return $this->user !== null;
   }
 
-  public function createSession(int $userId, bool $stayLoggedIn): ?Session {
-    $this->user = User::find($this->sql, $userId);
-    if ($this->user) {
-      $this->session = new Session($this, $this->user);
-      $this->session->stayLoggedIn = $stayLoggedIn;
-      if ($this->session->update()) {
-        return $this->session;
-      }
+  public function createSession(User $user, bool $stayLoggedIn): ?Session {
+    $this->user = $user;
+    $this->session = new Session($this, $this->user);
+    $this->session->stayLoggedIn = $stayLoggedIn;
+    if ($this->session->update()) {
+      $user->session = $this->session;
+      return $this->session;
+    } else {
+      $this->user = null;
+      $this->session = null;
+      return null;
     }
-
-    $this->user = null;
-    $this->session = null;
-    return null;
   }
 
   public function getLanguage(): Language {

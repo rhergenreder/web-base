@@ -223,7 +223,7 @@ abstract class Request {
       }
 
       // Check for permission
-      if (!($this instanceof \API\Permission\Save)) {
+      if (!($this instanceof \Core\API\Permission\Save)) {
         $req = new \Core\API\Permission\Check($this->context);
         $this->success = $req->execute(array("method" => $this->getMethod()));
         $this->lastError = $req->getLastError();
@@ -242,8 +242,8 @@ abstract class Request {
     }
 
     $sql = $this->context->getSQL();
-    if (!$sql->isConnected()) {
-      $this->lastError = $sql->getLastError();
+    if ($sql === null || !$sql->isConnected()) {
+      $this->lastError = $sql ? $sql->getLastError() : "Database not connected yet.";
       return false;
     }
 
@@ -265,8 +265,8 @@ abstract class Request {
     return false;
   }
 
-  protected function getParam($name, $obj = NULL) {
-    // i don't know why phpstorm
+  protected function getParam($name, $obj = NULL): mixed {
+    // I don't know why phpstorm
     if ($obj === NULL) {
       $obj = $this->params;
     }

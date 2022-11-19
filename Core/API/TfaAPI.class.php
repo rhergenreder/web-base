@@ -123,10 +123,11 @@ namespace Core\API\TFA {
         if ($this->success) {
           $body = $req->getResult()["html"];
           $gpg = $currentUser->getGPG();
+          $siteName = $settings->getSiteName();
           $req = new \Core\API\Mail\Send($this->context);
           $this->success = $req->execute([
             "to" => $currentUser->getEmail(),
-            "subject" => "[Security Lab] 2FA-Authentication removed",
+            "subject" => "[$siteName] 2FA-Authentication removed",
             "body" => $body,
             "gpgFingerprint" => $gpg?->getFingerprint()
           ]);

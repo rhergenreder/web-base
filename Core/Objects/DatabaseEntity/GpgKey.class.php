@@ -3,6 +3,7 @@
 namespace Core\Objects\DatabaseEntity;
 
 use Core\Driver\SQL\Expression\CurrentTimeStamp;
+use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 
@@ -16,12 +17,13 @@ class GpgKey extends DatabaseEntity {
   private \DateTime $expires;
   #[DefaultValue(CurrentTimeStamp::class)] private \DateTime $added;
 
-  public function __construct(int $id, bool $confirmed, string $fingerprint, string $algorithm, string $expires) {
-    parent::__construct($id);
-    $this->confirmed = $confirmed;
+  public function __construct(string $fingerprint, string $algorithm, \DateTime $expires) {
+    parent::__construct();
+    $this->confirmed = false;
     $this->fingerprint = $fingerprint;
     $this->algorithm = $algorithm;
-    $this->expires = new \DateTime($expires);
+    $this->expires = $expires;
+    $this->added = new \DateTime();
   }
 
   public static function encrypt(string $body, string $gpgFingerprint): array {
@@ -129,5 +131,10 @@ class GpgKey extends DatabaseEntity {
       "added" => $this->added->getTimestamp(),
       "confirmed" => $this->confirmed
     ];
+  }
+
+  public function confirm(SQL $sql): bool {
+    $this->confirmed = true;
+    return $this->save($sql);
   }
 }

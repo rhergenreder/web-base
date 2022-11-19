@@ -1,11 +1,14 @@
 FROM composer:latest AS composer
 FROM php:8.0-fpm
 WORKDIR "/application"
-RUN mkdir -p /application/core/Configuration
-RUN chown -R www-data:www-data /application
+RUN mkdir -p /application/core/Configuration /var/www/.gnupg && \
+    chown -R www-data:www-data /application /var/www/ && \
+    chmod 700 /var/www/.gnupg
 
 # YAML + dev dependencies
-RUN apt-get update -y && apt-get install libyaml-dev libzip-dev libgmp-dev -y && apt-get clean && \
+RUN apt-get update -y &&  \
+    apt-get install -y libyaml-dev libzip-dev libgmp-dev gnupg2 && \
+    apt-get clean && \
     pecl install yaml && docker-php-ext-enable yaml
 
 # Runkit (no stable release available)

@@ -45,16 +45,23 @@ namespace Core\API\Template {
         return $this->createError("Invalid template file extension. Allowed: " . implode(",", $allowedExtensions));
       }
 
-      $templateDir = WEBROOT . "/Core/Templates/";
       $templateCache = WEBROOT . "/Core/Cache/Templates/";
-      $path = realpath($templateDir . $templateFile);
-      if (!startsWith($path, realpath($templateDir))) {
-        return $this->createError("Template file not in template directory");
-      } else if (!is_file($path)) {
-        return $this->createError("Template file not found");
+      $baseDirs = ["Site", "Core"];
+      $valid = false;
+
+      foreach ($baseDirs as $baseDir) {
+        $path = realpath(implode("/", [WEBROOT, $baseDir, "Templates", $templateFile]));
+        if ($path && is_file($path)) {
+          $valid = true;
+          break;
+        }
       }
 
-      $twigLoader = new FilesystemLoader($templateDir);
+      if (!$valid) {
+        return $this->createError("Template file not found or not inside template directory");
+      }
+
+      $twigLoader = new FilesystemLoader(dirname($path));
       $twigEnvironment = new Environment($twigLoader, [
         'cache' => $templateCache,
         'auto_reload' => true

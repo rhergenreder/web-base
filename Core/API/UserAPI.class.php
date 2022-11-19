@@ -2,10 +2,11 @@
 
 namespace Core\API {
 
-  use Cassandra\Date;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Language;
+  use Core\Objects\DatabaseEntity\User;
+  use Core\Objects\DatabaseEntity\UserToken;
 
   abstract class UserAPI extends Request {
 
@@ -74,10 +75,10 @@ namespace Core\API {
         $this->checkPasswordRequirements($password, $confirmPassword);
     }
 
-    protected function insertUser($username, $email, $password, $confirmed, $fullName = "") {
+    protected function insertUser($username, $email, $password, $confirmed, $fullName = ""): bool|User {
       $sql = $this->context->getSQL();
 
-      $user = new \Core\Objects\DatabaseEntity\User();
+      $user = new User();
       $user->language = Language::DEFAULT_LANGUAGE(false);
       $user->registeredAt = new \DateTime();
       $user->password = $this->hashPassword($password);
@@ -89,55 +90,11 @@ namespace Core\API {
       $this->success = ($user->save($sql) !== FALSE);
       $this->lastError = $sql->getLastError();
 
-      if ($this->success) {
-        return $user->getId();
-      }
-
-      return $this->success;
+      return $this->success ? $user : false;
     }
 
     protected function hashPassword($password): string {
       return password_hash($password, PASSWORD_BCRYPT);
-    }
-
-    protected function getUser(int $id) {
-      $sql = $this->context->getSQL();
-      $res = $sql->select("User.id as userId", "User.name", "User.full_name", "User.email",
-        "User.registered_at", "User.confirmed", "User.last_online", "User.profile_picture",
-        "User.gpg_id", "GpgKey.confirmed as gpg_confirmed", "GpgKey.fingerprint as gpg_fingerprint",
-        "GpgKey.expires as gpg_expires", "GpgKey.algorithm as gpg_algorithm",
-        "Group.id as groupId", "Group.name as groupName", "Group.color as groupColor")
-        ->from("User")
-        ->leftJoin("UserGroup", "User.id", "UserGroup.user_id")
-        ->leftJoin("Group", "Group.id", "UserGroup.group_id")
-        ->leftJoin("GpgKey", "GpgKey.id", "User.gpg_id")
-        ->where(new Compare("User.id", $id))
-        ->execute();
-
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-
-      return ($this->success && !empty($res) ? $res : array());
-    }
-
-    protected function invalidateToken($token) {
-      $this->context->getSQL()
-        ->update("UserToken")
-        ->set("used", true)
-        ->where(new Compare("token", $token))
-        ->execute();
-    }
-
-    protected function insertToken(int $userId, string $token, string $tokenType, int $duration): bool {
-      $validUntil = (new \DateTime())->modify("+$duration hour");
-      $sql = $this->context->getSQL();
-      $res = $sql->insert("UserToken", array("user_id", "token", "token_type", "valid_until"))
-        ->addRow($userId, $token, $tokenType, $validUntil)
-        ->execute();
-
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-      return $this->success;
     }
 
     protected function formatDuration(int $count, string $string): string {
@@ -145,6 +102,24 @@ namespace Core\API {
         return $string;
       } else {
         return "the next $count ${string}s";
+      }
+    }
+
+    protected function checkToken(string $token) : UserToken|bool {
+      $sql = $this->context->getSQL();
+      $userToken = UserToken::findBuilder($sql)
+        ->where(new Compare("UserToken.token", $token))
+        ->where(new Compare("UserToken.valid_until", $sql->now(), ">"))
+        ->where(new Compare("UserToken.used", 0))
+        ->fetchEntities()
+        ->execute();
+
+      if ($userToken === false) {
+        return $this->createError("Error verifying token: " . $sql->getLastError());
+      } else if ($userToken === null) {
+        return $this->createError("This token does not exist or is no longer valid");
+      } else {
+        return $userToken;
       }
     }
   }
@@ -158,18 +133,14 @@ namespace Core\API\User {
   use Core\API\Template\Render;
   use Core\API\UserAPI;
   use Core\API\VerifyCaptcha;
-  use DateTime;
+  use Core\Objects\DatabaseEntity\UserToken;
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\Compare;
-  use Core\Driver\SQL\Condition\CondBool;
   use Core\Driver\SQL\Condition\CondIn;
-  use Core\Driver\SQL\Condition\CondNot;
   use Core\Driver\SQL\Expression\JsonArrayAgg;
   use ImagickException;
   use Core\Objects\Context;
-  use Core\Objects\DatabaseEntity\DatabaseEntityHandler;
   use Core\Objects\DatabaseEntity\GpgKey;
-  use Core\Objects\DatabaseEntity\TwoFactorToken;
   use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
   use Core\Objects\DatabaseEntity\User;
 
@@ -192,7 +163,6 @@ namespace Core\API\User {
       $email = $this->getParam('email');
       $password = $this->getParam('password');
       $confirmPassword = $this->getParam('confirmPassword');
-
       if (!$this->checkRequirements($username, $password, $confirmPassword)) {
         return false;
       }
@@ -203,10 +173,9 @@ namespace Core\API\User {
 
       // prevent duplicate keys
       $email = (!is_null($email) && empty($email)) ? null : $email;
-
-      $id = $this->insertUser($username, $email, $password, true);
-      if ($id !== false) {
-        $this->result["userId"] = $id;
+      $user = $this->insertUser($username, $email, $password, true);
+      if ($user !== false) {
+        $this->result["userId"] = $user->getId();
       }
 
       return $this->success;
@@ -357,80 +326,60 @@ namespace Core\API\User {
 
       $sql = $this->context->getSQL();
       $userId = $this->getParam("id");
-      $user = $this->getUser($userId);
-      if ($this->success) {
-        if (empty($user)) {
-          return $this->createError("User not found");
-        } else {
+      $user = User::find($sql, $userId, true);
+      if ($user === false) {
+        return $this->createError("Error querying user: " . $sql->getLastError());
+      } else if ($user === null) {
+        return $this->createError("User not found");
+      } else {
 
-          $gpgFingerprint = null;
-          if ($user[0]["gpg_id"] && $sql->parseBool($user[0]["gpg_confirmed"])) {
-            $gpgFingerprint = $user[0]["gpg_fingerprint"];
+        $queriedUser = $user->jsonSerialize();
+
+        // either we are querying own info or we are support / admin
+        $currentUser = $this->context->getUser();
+        $canView = ($userId === $currentUser->getId() ||
+          $currentUser->hasGroup(USER_GROUP_ADMIN) ||
+          $currentUser->hasGroup(USER_GROUP_SUPPORT));
+
+        // full info only when we have administrative privileges, or we are querying ourselves
+        $fullInfo = ($userId === $currentUser->getId() ||
+          $currentUser->hasGroup(USER_GROUP_ADMIN) ||
+          $currentUser->hasGroup(USER_GROUP_SUPPORT));
+
+        if (!$canView) {
+
+          // check if user posted something publicly
+          $res = $sql->select(new JsonArrayAgg(new Column("publishedBy"), "publisherIds"))
+            ->from("News")
+            ->execute();
+          $this->success = ($res !== false);
+          $this->lastError = $sql->getLastError();
+          if (!$this->success) {
+            return false;
+          } else {
+            $canView = in_array($userId, json_decode($res[0]["publisherIds"], true));
           }
+        }
 
-          $queriedUser = array(
-            "id" => $userId,
-            "name" => $user[0]["name"],
-            "fullName" => $user[0]["full_name"],
-            "email" => $user[0]["email"],
-            "registered_at" => $user[0]["registered_at"],
-            "last_online" => $user[0]["last_online"],
-            "profilePicture" => $user[0]["profile_picture"],
-            "confirmed" => $sql->parseBool($user["0"]["confirmed"]),
-            "groups" => array(),
-            "gpgFingerprint" => $gpgFingerprint,
-          );
+        if (!$canView) {
+          return $this->createError("No permissions to access this user");
+        }
 
-          foreach ($user as $row) {
-            if (!is_null($row["groupId"])) {
-              $queriedUser["groups"][$row["groupId"]] = array(
-                "name" => $row["groupName"],
-                "color" => $row["groupColor"],
-              );
-            }
-          }
-
-          // either we are querying own info or we are support / admin
-          $currentUser = $this->context->getUser();
-          $canView = ($userId === $currentUser->getId() ||
-            $currentUser->hasGroup(USER_GROUP_ADMIN) ||
-            $currentUser->hasGroup(USER_GROUP_SUPPORT));
-
-          // full info only when we have administrative privileges, or we are querying ourselves
-          $fullInfo = ($userId === $currentUser->getId() ||
-            $currentUser->hasGroup(USER_GROUP_ADMIN) ||
-            $currentUser->hasGroup(USER_GROUP_SUPPORT));
-
-          if (!$canView) {
-
-            // check if user posted something publicly
-            $res = $sql->select(new JsonArrayAgg(new Column("publishedBy"), "publisherIds"))
-              ->from("News")
-              ->execute();
-            $this->success = ($res !== false);
-            $this->lastError = $sql->getLastError();
-            if (!$this->success) {
-              return false;
-            } else {
-              $canView = in_array($userId, json_decode($res[0]["publisherIds"], true));
-            }
-          }
-
-          if (!$canView) {
+        if (!$fullInfo) {
+          if (!$queriedUser["confirmed"]) {
             return $this->createError("No permissions to access this user");
           }
 
-          if (!$fullInfo) {
-            if (!$queriedUser["confirmed"]) {
-              return $this->createError("No permissions to access this user");
+          $publicAttributes = ["id", "name", "fullName", "profilePicture", "email", "groups"];
+          foreach (array_keys($queriedUser) as $attr) {
+            if (!in_array($attr, $publicAttributes)) {
+              unset($queriedUser[$attr]);
             }
-            unset($queriedUser["registered_at"]);
-            unset($queriedUser["confirmed"]);
-            unset($queriedUser["last_online"]);
           }
-
-          $this->result["user"] = $queriedUser;
         }
+
+        unset($queriedUser["session"]); // strip session information
+        $this->result["user"] = $queriedUser;
       }
 
       return $this->success;
@@ -469,7 +418,6 @@ namespace Core\API\User {
 
         $this->result["permissions"] = $permissions;
         $this->result["user"] = $currentUser->jsonSerialize();
-        $this->result["user"]["session"] = $this->context->getSession()?->jsonSerialize();
       }
 
       return $this->success;
@@ -496,25 +444,19 @@ namespace Core\API\User {
       }
 
       // Create user
-      $id = $this->insertUser($username, $email, "", false);
-      if (!$this->success) {
+      $user = $this->insertUser($username, $email, "", false);
+      if ($user === false) {
         return false;
       }
 
       // Create Token
       $token = generateRandomString(36);
       $validDays = 7;
-      $valid_until = (new DateTime())->modify("+$validDays day");
       $sql = $this->context->getSQL();
-      $res = $sql->insert("UserToken", array("user_id", "token", "token_type", "valid_until"))
-        ->addRow($id, $token, "invite", $valid_until)
-        ->execute();
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
+      $userToken = new UserToken($user, $token, UserToken::TYPE_INVITE, $validDays * 24);
 
-      //send validation mail
-      if ($this->success) {
-
+      if ($userToken->save($sql)) {
+        //send validation mail
         $settings = $this->context->getSettings();
         $baseUrl = $settings->getBaseUrl();
         $siteName = $settings->getSiteName();
@@ -551,7 +493,7 @@ namespace Core\API\User {
         }
       }
 
-      $this->logger->info("Created new user with id=$id");
+      $this->logger->info("Created new user with id=" . $user->getId());
       return $this->success;
     }
   }
@@ -566,56 +508,37 @@ namespace Core\API\User {
       $this->csrfTokenRequired = false;
     }
 
-    private function updateUser($uid, $password): bool {
-      $sql = $this->context->getSQL();
-      $res = $sql->update("User")
-        ->set("password", $this->hashPassword($password))
-        ->set("confirmed", true)
-        ->where(new Compare("id", $uid))
-        ->execute();
-
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-      return $this->success;
-    }
-
     public function _execute(): bool {
 
       if ($this->context->getUser()) {
         return $this->createError("You are already logged in.");
       }
 
+      $sql = $this->context->getSQL();
       $token = $this->getParam("token");
       $password = $this->getParam("password");
       $confirmPassword = $this->getParam("confirmPassword");
-
-      $req = new CheckToken($this->context);
-      $this->success = $req->execute(array("token" => $token));
-      $this->lastError = $req->getLastError();
-
-      if (!$this->success) {
+      $userToken = $this->checkToken($token);
+      if ($userToken === false) {
         return false;
+      } else if ($userToken->getType() !== UserToken::TYPE_INVITE) {
+        return $this->createError("Invalid token type");
       }
 
-      $result = $req->getResult();
-      if (strcasecmp($result["token"]["type"], "invite") !== 0) {
-        return $this->createError("Invalid token type");
-      } else if ($result["user"]["confirmed"]) {
+      $user = $userToken->getUser();
+      if ($user->confirmed) {
         return $this->createError("Your email address is already confirmed.");
       } else if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
         return false;
-      } else if (!$this->updateUser($result["user"]["id"], $password)) {
-        return false;
       } else {
-
-        // Invalidate token
-        $this->context->getSQL()
-          ->update("UserToken")
-          ->set("used", true)
-          ->where(new Compare("token", $token))
-          ->execute();
-
-        return true;
+        $user->password = $this->hashPassword($password);
+        $user->confirmed = true;
+        if ($user->save($sql)) {
+          $userToken->invalidate($sql);
+          return true;
+        } else {
+          return $this->createError("Unable to update user details: " . $sql->getLastError());
+        }
       }
     }
   }
@@ -629,44 +552,33 @@ namespace Core\API\User {
       $this->csrfTokenRequired = false;
     }
 
-    private function updateUser($uid): bool {
-      $sql = $this->context->getSQL();
-      $res = $sql->update("User")
-        ->set("confirmed", true)
-        ->where(new Compare("id", $uid))
-        ->execute();
-
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-      return $this->success;
-    }
-
     public function _execute(): bool {
 
       if ($this->context->getUser()) {
         return $this->createError("You are already logged in.");
       }
 
+      $sql = $this->context->getSQL();
       $token = $this->getParam("token");
-      $req = new CheckToken($this->context);
-      $this->success = $req->execute(array("token" => $token));
-      $this->lastError = $req->getLastError();
-
-      if ($this->success) {
-        $result = $req->getResult();
-        if (strcasecmp($result["token"]["type"], "email_confirm") !== 0) {
-          return $this->createError("Invalid token type");
-        } else if ($result["user"]["confirmed"]) {
-          return $this->createError("Your email address is already confirmed.");
-        } else if (!$this->updateUser($result["user"]["id"])) {
-          return false;
-        } else {
-          $this->invalidateToken($token);
-          return true;
-        }
+      $userToken = $this->checkToken($token);
+      if ($userToken === false) {
+        return false;
+      } else if ($userToken->getType() !== UserToken::TYPE_EMAIL_CONFIRM) {
+        return $this->createError("Invalid token type");
       }
 
-      return $this->success;
+      $user = $userToken->getUser();
+      if ($user->confirmed) {
+        return $this->createError("Your email address is already confirmed.");
+      } else {
+        $user->confirmed = true;
+        if ($user->save($sql)) {
+          $userToken->invalidate($sql);
+          return true;
+        } else {
+          return $this->createError("Unable to update user details: " . $sql->getLastError());
+        }
+      }
     }
   }
 
@@ -705,39 +617,29 @@ namespace Core\API\User {
       $stayLoggedIn = $this->getParam('stayLoggedIn');
 
       $sql = $this->context->getSQL();
-      $res = $sql->select("User.id", "User.password", "User.confirmed",
-        "TwoFactorToken.id as 2fa_id", "TwoFactorToken.type as 2fa_type",
-        "TwoFactorToken.confirmed as 2fa_confirmed", "TwoFactorToken.data as 2fa_data")
-        ->from("User")
+      $user = User::findBuilder($sql)
         ->where(new Compare("User.name", $username), new Compare("User.email", $username))
-        ->leftJoin("TwoFactorToken", "TwoFactorToken.id", "User.two_factor_token_id")
-        ->first()
+        ->fetchEntities()
         ->execute();
 
-      $session = null;
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-
-      if ($this->success) {
-        if ($res === null) {
+      if ($user !== false) {
+        if ($user === null) {
           return $this->wrongCredentials();
         } else {
-          $userId = $res['id'];
-          $confirmed = $sql->parseBool($res["confirmed"]);
-          $token = $res["2fa_id"] ? TwoFactorToken::fromRow($sql, DatabaseEntityHandler::getPrefixedRow($res, "2fa_")) : null;
-          if (password_verify($password, $res['password'])) {
-            if (!$confirmed) {
+          if (password_verify($password, $user->password)) {
+            if (!$user->confirmed) {
               $this->result["emailConfirmed"] = false;
               return $this->createError("Your email address has not been confirmed yet.");
-            } else if (!($session = $this->context->createSession($userId, $stayLoggedIn))) {
+            } else if (!($session = $this->context->createSession($user, $stayLoggedIn))) {
               return $this->createError("Error creating Session: " . $sql->getLastError());
             } else {
+              $tfaToken = $user->getTwoFactorToken();
               $this->result["loggedIn"] = true;
               $this->result["logoutIn"] = $session->getExpiresSeconds();
               $this->result["csrf_token"] = $session->getCsrfToken();
-              if ($token && $token->isConfirmed()) {
-                $this->result["2fa"] = ["type" => $token->getType()];
-                if ($token instanceof KeyBasedTwoFactorToken) {
+              if ($tfaToken && $tfaToken->isConfirmed()) {
+                $this->result["2fa"] = ["type" => $tfaToken->getType()];
+                if ($tfaToken instanceof KeyBasedTwoFactorToken) {
                   $challenge = base64_encode(generateRandomString(32, "raw"));
                   $this->result["2fa"]["challenge"] = $challenge;
                   $_SESSION["challenge"] = $challenge;
@@ -749,6 +651,8 @@ namespace Core\API\User {
             return $this->wrongCredentials();
           }
         }
+      } else {
+        return $this->createError("Error fetching user details: " . $sql->getLastError());
       }
 
       return $this->success;
@@ -778,9 +682,6 @@ namespace Core\API\User {
   }
 
   class Register extends UserAPI {
-
-    private ?int $userId;
-    private string $token;
 
     public function __construct(Context $context, bool $externalCall = false) {
       $parameters = array(
@@ -837,14 +738,17 @@ namespace Core\API\User {
         }, explode(".", $fullName))
       );
 
-      $this->userId = $this->insertUser($username, $email, $password, false, $fullName);
-      if (!$this->success) {
+      $sql = $this->context->getSQL();
+      $user = $this->insertUser($username, $email, $password, false, $fullName);
+      if ($user === false) {
         return false;
       }
 
       $validHours = 48;
-      $this->token = generateRandomString(36);
-      if ($this->insertToken($this->userId, $this->token, "email_confirm", $validHours)) {
+      $token = generateRandomString(36);
+      $userToken = new UserToken($user, $token, UserToken::TYPE_EMAIL_CONFIRM, $validHours);
+
+      if ($userToken->save($sql)) {
 
         $baseUrl = $settings->getBaseUrl();
         $siteName = $settings->getSiteName();
@@ -852,7 +756,7 @@ namespace Core\API\User {
         $this->success = $req->execute([
           "file" => "mail/confirm_email.twig",
           "parameters" => [
-            "link" => "$baseUrl/confirmEmail?token=$this->token",
+            "link" => "$baseUrl/confirmEmail?token=$token",
             "site_name" => $siteName,
             "base_url" => $baseUrl,
             "username" => $username,
@@ -868,10 +772,12 @@ namespace Core\API\User {
             "to" => $email,
             "subject" => "[$siteName] E-Mail Confirmation",
             "body" => $messageBody,
-            "async" => true,
           ));
           $this->lastError = $request->getLastError();
         }
+      } else {
+        $this->lastError = "Could create user token: " . $sql->getLastError();
+        $this->success = false;
       }
 
       if (!$this->success) {
@@ -880,59 +786,7 @@ namespace Core\API\User {
           "Please contact the server administration. This issue has been automatically logged. Reason: " . $this->lastError;
       }
 
-      $this->logger->info("Registered new user with id=" . $this->userId);
-      return $this->success;
-    }
-  }
-
-  class CheckToken extends UserAPI {
-
-    public function __construct(Context $context, $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
-        'token' => new StringType('token', 36),
-      ));
-    }
-
-    private function checkToken($token) {
-      $sql = $this->context->getSQL();
-      $res = $sql->select("UserToken.token_type", "User.id", "User.name", "User.email", "User.confirmed")
-        ->from("UserToken")
-        ->innerJoin("User", "UserToken.user_id", "User.id")
-        ->where(new Compare("UserToken.token", $token))
-        ->where(new Compare("UserToken.valid_until", $sql->now(), ">"))
-        ->where(new Compare("UserToken.used", 0))
-        ->execute();
-      $this->lastError = $sql->getLastError();
-      $this->success = ($res !== FALSE);
-
-      if ($this->success && !empty($res)) {
-        return $res[0];
-      }
-
-      return array();
-    }
-
-    public function _execute(): bool {
-
-      $token = $this->getParam('token');
-      $tokenEntry = $this->checkToken($token);
-
-      if ($this->success) {
-        if (!empty($tokenEntry)) {
-          $this->result["token"] = array(
-            "type" => $tokenEntry["token_type"]
-          );
-
-          $this->result["user"] = array(
-            "name" => $tokenEntry["name"],
-            "email" => $tokenEntry["email"],
-            "id" => $tokenEntry["id"],
-            "confirmed" => $tokenEntry["confirmed"]
-          );
-        } else {
-          return $this->createError("This token does not exist or is no longer valid");
-        }
-      }
+      $this->logger->info("Registered new user with id=" . $user->getId());
       return $this->success;
     }
   }
@@ -956,11 +810,13 @@ namespace Core\API\User {
 
     public function _execute(): bool {
 
+      $sql = $this->context->getSQL();
+      $currentUser = $this->context->getUser();
       $id = $this->getParam("id");
-      $user = $this->getUser($id);
+      $user = User::find($sql, $id, true);
 
-      if ($this->success) {
-        if (empty($user)) {
+      if ($user !== false) {
+        if ($user === null) {
           return $this->createError("User not found");
         }
 
@@ -986,45 +842,35 @@ namespace Core\API\User {
             $groupIds[] = $param->value;
           }
 
-          if ($id === $this->context->getUser()->getId() && !in_array(USER_GROUP_ADMIN, $groupIds)) {
+          if ($id === $currentUser->getId() && !in_array(USER_GROUP_ADMIN, $groupIds)) {
             return $this->createError("Cannot remove Administrator group from own user.");
           }
         }
 
         // Check for duplicate username, email
-        $usernameChanged = !is_null($username) && strcasecmp($username, $user[0]["name"]) !== 0;
-        $fullNameChanged = !is_null($fullName) && strcasecmp($fullName, $user[0]["full_name"]) !== 0;
-        $emailChanged = !is_null($email) && strcasecmp($email, $user[0]["email"]) !== 0;
+        $usernameChanged = !is_null($username) && strcasecmp($username, $user->name) !== 0;
+        $fullNameChanged = !is_null($fullName) && strcasecmp($fullName, $user->fullName) !== 0;
+        $emailChanged = !is_null($email) && strcasecmp($email, $user->email) !== 0;
         if ($usernameChanged || $emailChanged) {
           if (!$this->checkUserExists($usernameChanged ? $username : NULL, $emailChanged ? $email : NULL)) {
             return false;
           }
         }
 
-        $sql = $this->context->getSQL();
-        $query = $sql->update("User");
-
-        if ($usernameChanged) $query->set("name", $username);
-        if ($fullNameChanged) $query->set("full_name", $fullName);
-        if ($emailChanged) $query->set("email", $email);
-        if (!is_null($password)) $query->set("password", $this->hashPassword($password));
+        if ($usernameChanged) $user->name = $username;
+        if ($fullNameChanged) $user->fullName = $fullName;
+        if ($emailChanged) $user->email = $email;
+        if (!is_null($password)) $user->password = $this->hashPassword($password);
 
         if (!is_null($confirmed)) {
-          if ($id === $this->context->getUser()->getId() && $confirmed === false) {
+          if ($id === $currentUser->getId() && $confirmed === false) {
             return $this->createError("Cannot make own account unconfirmed.");
           } else {
-            $query->set("confirmed", $confirmed);
+            $user->confirmed = $confirmed;
           }
         }
 
-        if (!empty($query->getValues())) {
-          $query->where(new Compare("User.id", $id));
-          $res = $query->execute();
-          $this->lastError = $sql->getLastError();
-          $this->success = ($res !== FALSE);
-        }
-
-        if ($this->success) {
+        if ($user->save($sql)) {
 
           $deleteQuery = $sql->delete("UserGroup")->where(new Compare("user_id", $id));
           $insertQuery = $sql->insert("UserGroup", array("user_id", "group_id"));
@@ -1036,6 +882,8 @@ namespace Core\API\User {
           $this->success = ($deleteQuery->execute() !== FALSE) && (empty($groupIds) || $insertQuery->execute() !== FALSE);
           $this->lastError = $sql->getLastError();
         }
+      } else {
+        return $this->createError("Error fetching user details: " . $sql->getLastError());
       }
 
       return $this->success;
@@ -1054,19 +902,18 @@ namespace Core\API\User {
 
     public function _execute(): bool {
 
+      $currentUser = $this->context->getUser();
       $id = $this->getParam("id");
-      if ($id === $this->context->getUser()->getId()) {
+      if ($id === $currentUser->getId()) {
         return $this->createError("You cannot delete your own user.");
       }
 
-      $user = $this->getUser($id);
-      if ($this->success) {
-        if (empty($user)) {
+      $sql = $this->context->getSQL();
+      $user = User::find($sql, $id);
+      if ($user !== false) {
+        if ($user === null) {
           return $this->createError("User not found");
         } else {
-
-          $sql = $this->context->getSQL();
-          $user = new User($id);
           $this->success = ($user->delete($sql) !== FALSE);
           $this->lastError = $sql->getLastError();
         }
@@ -1109,17 +956,20 @@ namespace Core\API\User {
         }
       }
 
+      $sql = $this->context->getSQL();
       $email = $this->getParam("email");
-      $user = $this->findUser($email);
-      if ($this->success === false) {
-        return false;
-      }
-
-      if ($user !== null) {
+      $user = User::findBuilder($sql)
+        ->where(new Compare("email", $email))
+        ->fetchEntities()
+        ->execute();
+      if ($user === false) {
+        return $this->createError("Could not fetch user details: " . $sql->getLastError());
+      } else if ($user !== null) {
         $validHours = 1;
         $token = generateRandomString(36);
-        if (!$this->insertToken($user["id"], $token, "password_reset", $validHours)) {
-          return false;
+        $userToken = new UserToken($user, $token, UserToken::TYPE_PASSWORD_RESET, $validHours);
+        if (!$userToken->save($sql)) {
+          return $this->createError("Could not create user token: " . $sql->getLastError());
         }
 
         $baseUrl = $settings->getBaseUrl();
@@ -1132,7 +982,7 @@ namespace Core\API\User {
             "link" => "$baseUrl/resetPassword?token=$token",
             "site_name" => $siteName,
             "base_url" => $baseUrl,
-            "username" => $user["name"],
+            "username" => $user->name,
             "valid_time" => $this->formatDuration($validHours, "hour")
           ]
         ]);
@@ -1141,11 +991,8 @@ namespace Core\API\User {
         if ($this->success) {
           $messageBody = $req->getResult()["html"];
 
-          $gpgFingerprint = null;
-          if ($user["gpg_id"] && $user["gpg_confirmed"]) {
-            $gpgFingerprint = $user["gpg_fingerprint"];
-          }
-
+          $gpgKey = $user->getGPG();
+          $gpgFingerprint = ($gpgKey && $gpgKey->isConfirmed()) ? $gpgKey->getFingerprint() : null;
           $request = new \Core\API\Mail\Send($this->context);
           $this->success = $request->execute(array(
             "to" => $email,
@@ -1154,32 +1001,11 @@ namespace Core\API\User {
             "gpgFingerprint" => $gpgFingerprint
           ));
           $this->lastError = $request->getLastError();
-          $this->logger->info("Requested password reset for user id=" . $user["id"] . " by ip_address=" . $_SERVER["REMOTE_ADDR"]);
+          $this->logger->info("Requested password reset for user id=" . $user->getId() . " by ip_address=" . $_SERVER["REMOTE_ADDR"]);
         }
       }
 
       return $this->success;
-    }
-
-    private function findUser($email): ?array {
-      $sql = $this->context->getSQL();
-      $res = $sql->select("User.id", "User.name",
-        "User.gpg_id", "GpgKey.confirmed as gpg_confirmed", "GpgKey.fingerprint as gpg_fingerprint")
-        ->from("User")
-        ->leftJoin("GpgKey", "GpgKey.id", "User.gpg_id")
-        ->where(new Compare("User.email", $email))
-        ->where(new CondBool("User.confirmed"))
-        ->execute();
-
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-      if ($this->success) {
-        if (!empty($res)) {
-          return $res[0];
-        }
-      }
-
-      return null;
     }
   }
 
@@ -1214,46 +1040,39 @@ namespace Core\API\User {
 
       $email = $this->getParam("email");
       $sql = $this->context->getSQL();
-      $res = $sql->select("User.id", "User.name", "UserToken.token", "UserToken.token_type", "UserToken.used")
-        ->from("User")
-        ->leftJoin("UserToken", "User.id", "UserToken.user_id")
+      $user = User::findBuilder($sql)
         ->where(new Compare("User.email", $email))
         ->where(new Compare("User.confirmed", false))
         ->execute();
 
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-      if (!$this->success) {
-        return $this->createError($sql->getLastError());
-      } else if (!is_array($res) || empty($res)) {
-        // user does not exist
+      if ($user === false) {
+        return $this->createError("Error retrieving user details: " . $sql->getLastError());
+      } else if ($user === null) {
+        // token does not exist: ignore!
         return true;
       }
 
-      $userId = $res[0]["id"];
-      $token = current(
-        array_map(function ($row) {
-          return $row["token"];
-        }, array_filter($res, function ($row) use ($sql) {
-          return !$sql->parseBool($row["used"]) && $row["token_type"] === "email_confirm";
-        }))
-      );
+      $userToken = UserToken::findBuilder($sql)
+        ->where(new Compare("used", false))
+        ->where(new Compare("tokenType", UserToken::TYPE_EMAIL_CONFIRM))
+        ->where(new Compare("user_id", $user->getId()))
+        ->execute();
 
       $validHours = 48;
-      if (!$token) {
+      if ($userToken === false) {
+        return $this->createError("Error retrieving token details: " . $sql->getLastError());
+      } else if ($userToken === null) {
         // no token generated yet, let's generate one
         $token = generateRandomString(36);
-        if (!$this->insertToken($userId, $token, "email_confirm", $validHours)) {
-          return false;
+        $userToken = new UserToken($user, $token, UserToken::TYPE_EMAIL_CONFIRM, $validHours);
+        if (!$userToken->save($sql)) {
+          return $this->createError("Error generating new token: " . $sql->getLastError());
         }
       } else {
-        $sql->update("UserToken")
-          ->set("valid_until", (new DateTime())->modify("+$validHours hour"))
-          ->where(new Compare("token", $token))
-          ->execute();
+        $userToken->updateDurability($sql, $validHours);
       }
 
-      $username = $res[0]["name"];
+      $username = $user->name;
       $baseUrl = $settings->getBaseUrl();
       $siteName = $settings->getSiteName();
 
@@ -1261,7 +1080,7 @@ namespace Core\API\User {
       $this->success = $req->execute([
         "file" => "mail/confirm_email.twig",
         "parameters" => [
-          "link" => "$baseUrl/confirmEmail?token=$token",
+          "link" => "$baseUrl/confirmEmail?token=" . $userToken->getToken(),
           "site_name" => $siteName,
           "base_url" => $baseUrl,
           "username" => $username,
@@ -1298,46 +1117,35 @@ namespace Core\API\User {
       $this->csrfTokenRequired = false;
     }
 
-    private function updateUser($uid, $password): bool {
-      $sql = $this->context->getSQL();
-      $res = $sql->update("User")
-        ->set("password", $this->hashPassword($password))
-        ->where(new Compare("id", $uid))
-        ->execute();
-
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-      return $this->success;
-    }
-
     public function _execute(): bool {
 
       if ($this->context->getUser()) {
         return $this->createError("You are already logged in.");
       }
 
+      $sql = $this->context->getSQL();
       $token = $this->getParam("token");
       $password = $this->getParam("password");
       $confirmPassword = $this->getParam("confirmPassword");
-
-      $req = new CheckToken($this->context);
-      $this->success = $req->execute(array("token" => $token));
-      $this->lastError = $req->getLastError();
-      if (!$this->success) {
+      $userToken = $this->checkToken($token);
+      if ($userToken === false) {
         return false;
+      } else if ($userToken->getType() !== UserToken::TYPE_PASSWORD_RESET) {
+        return $this->createError("Invalid token type");
       }
 
-      $result = $req->getResult();
-      if (strcasecmp($result["token"]["type"], "password_reset") !== 0) {
-        return $this->createError("Invalid token type");
-      } else if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
-        return false;
-      } else if (!$this->updateUser($result["user"]["id"], $password)) {
+      $user = $token->getUser();
+      if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
         return false;
       } else {
-        $this->logger->info("Issued password reset for user id=" . $result["user"]["id"]);
-        $this->invalidateToken($token);
-        return true;
+        $user->password = $this->hashPassword($password);
+        if ($user->save($sql)) {
+          $this->logger->info("Issued password reset for user id=" . $user->getId());
+          $userToken->invalidate($sql);
+          return true;
+        } else {
+          return $this->createError("Error updating user details: " . $sql->getLastError());
+        }
       }
     }
   }
@@ -1370,43 +1178,33 @@ namespace Core\API\User {
       }
 
       $sql = $this->context->getSQL();
-      $query = $sql->update("User")->where(new Compare("id", $this->context->getUser()->getId()));
+
+      $currentUser = $this->context->getUser();
       if ($newUsername !== null) {
         if (!$this->checkUsernameRequirements($newUsername) || !$this->checkUserExists($newUsername)) {
           return false;
         } else {
-          $query->set("name", $newUsername);
+          $currentUser->name = $newUsername;
         }
       }
 
       if ($newFullName !== null) {
-        $query->set("full_name", $newFullName);
+        $currentUser->fullName = $newFullName;
       }
 
       if ($newPassword !== null || $newPasswordConfirm !== null) {
         if (!$this->checkPasswordRequirements($newPassword, $newPasswordConfirm)) {
           return false;
         } else {
-          $res = $sql->select("password")
-            ->from("User")
-            ->where(new Compare("id", $this->context->getUser()->getId()))
-            ->execute();
-
-          $this->success = ($res !== false);
-          $this->lastError = $sql->getLastError();
-          if (!$this->success) {
-            return false;
-          }
-
-          if (!password_verify($oldPassword, $res[0]["password"])) {
+          if (!password_verify($oldPassword, $currentUser->password)) {
             return $this->createError("Wrong password");
           }
 
-          $query->set("password", $this->hashPassword($newPassword));
+          $currentUser->password = $this->hashPassword($newPassword);
         }
       }
 
-      $this->success = $query->execute();
+      $this->success = $currentUser->save($sql) !== false;
       $this->lastError = $sql->getLastError();
       return $this->success;
     }
@@ -1425,7 +1223,7 @@ namespace Core\API\User {
     private function testKey(string $keyString) {
       $res = GpgKey::getKeyInfo($keyString);
       if (!$res["success"]) {
-        return $this->createError($res["error"]);
+        return $this->createError($res["error"] ?? $res["msg"]);
       }
 
       $keyData = $res["data"];
@@ -1466,38 +1264,15 @@ namespace Core\API\User {
       }
 
       $sql = $this->context->getSQL();
-      $res = $sql->insert("GpgKey", ["fingerprint", "algorithm", "expires"])
-        ->addRow($keyData["fingerprint"], $keyData["algorithm"], $keyData["expires"])
-        ->returning("id")
-        ->execute();
-
-      $this->success = ($res !== false);
-      $this->lastError = $sql->getLastError();
-      if (!$this->success) {
-        return false;
-      }
-
-      $gpgKeyId = $sql->getLastInsertId();
-      $res = $sql->update("User")
-        ->set("gpg_id", $gpgKeyId)
-        ->where(new Compare("id", $currentUser->getId()))
-        ->execute();
-
-      $this->success = ($res !== false);
-      $this->lastError = $sql->getLastError();
-      if (!$this->success) {
-        return false;
+      $gpgKey = new GpgKey($keyData["fingerprint"], $keyData["algorithm"], $keyData["expires"]);
+      if (!$gpgKey->save($sql)) {
+        return $this->createError("Error creating gpg key: " . $sql->getLastError());
       }
 
       $token = generateRandomString(36);
-      $res = $sql->insert("UserToken", ["user_id", "token", "token_type", "valid_until"])
-        ->addRow($currentUser->getId(), $token, "gpg_confirm", (new DateTime())->modify("+1 hour"))
-        ->execute();
-
-      $this->success = ($res !== false);
-      $this->lastError = $sql->getLastError();
-      if (!$this->success) {
-        return false;
+      $userToken = new UserToken($currentUser, $token, UserToken::TYPE_GPG_CONFIRM, 1);
+      if (!$userToken->save($sql)) {
+        return $this->createError("Error saving user token: " . $sql->getLastError());
       }
 
       $name = htmlspecialchars($currentUser->getFullName());
@@ -1508,32 +1283,32 @@ namespace Core\API\User {
       $settings = $this->context->getSettings();
       $baseUrl = htmlspecialchars($settings->getBaseUrl());
       $token = htmlspecialchars(urlencode($token));
-      $url = "$baseUrl/settings?confirmGPG&token=$token";
+      $url = "$baseUrl/settings?confirmGPG&token=$token"; // TODO: fix this url
       $mailBody = "Hello $name,<br><br>" .
         "you imported a GPG public key for end-to-end encrypted mail communication. " .
         "To confirm the key and verify, you own the corresponding private key, please click on the following link. " .
         "The link is active for one hour.<br><br>" .
         "<a href='$url'>$url</a><br>
-        Best Regards<br>
-        ilum:e Security Lab";
+        Best Regards<br>" .
+      $settings->getSiteName() . " Administration";
 
       $sendMail = new \Core\API\Mail\Send($this->context);
       $this->success = $sendMail->execute(array(
         "to" => $currentUser->getEmail(),
-        "subject" => "Security Lab - Confirm GPG-Key",
+        "subject" => $settings->getSiteName() . " - Confirm GPG-Key",
         "body" => $mailBody,
-        "gpgFingerprint" => $keyData["fingerprint"]
+        "gpgFingerprint" => $gpgKey->getFingerprint()
       ));
 
       $this->lastError = $sendMail->getLastError();
 
       if ($this->success) {
-        $this->result["gpg"] = array(
-          "fingerprint" => $keyData["fingerprint"],
-          "confirmed" => false,
-          "algorithm" => $keyData["algorithm"],
-          "expires" => $keyData["expires"]->getTimestamp()
-        );
+        $currentUser->gpgKey = $gpgKey;
+        if ($currentUser->save($sql)) {
+          $this->result["gpg"] = $gpgKey->jsonSerialize();
+        } else {
+          return $this->createError("Error updating user details: " . $sql->getLastError());
+        }
       }
 
       return $this->success;
@@ -1558,29 +1333,11 @@ namespace Core\API\User {
       }
 
       $sql = $this->context->getSQL();
-      $res = $sql->select("password")
-        ->from("User")
-        ->where(new Compare("User.id", $currentUser->getId()))
-        ->execute();
-
-      $this->success = ($res !== false);
-      $this->lastError = $sql->getLastError();
-
-      if ($this->success && is_array($res)) {
-        $hash = $res[0]["password"];
-        $password = $this->getParam("password");
-        if (!password_verify($password, $hash)) {
-          return $this->createError("Incorrect password.");
-        } else {
-          $res = $sql->delete("GpgKey")
-            ->where(new Compare("id",
-              $sql->select("User.gpg_id")
-                ->from("User")
-                ->where(new Compare("User.id", $currentUser->getId()))
-            ))->execute();
-          $this->success = ($res !== false);
-          $this->lastError = $sql->getLastError();
-        }
+      $password = $this->getParam("password");
+      if (!password_verify($password, $currentUser->password)) {
+        return $this->createError("Incorrect password.");
+      } else if (!$gpgKey->delete($sql)) {
+        return $this->createError("Error deleting gpg key: " . $sql->getLastError());
       }
 
       return $this->success;
@@ -1608,41 +1365,26 @@ namespace Core\API\User {
 
       $token = $this->getParam("token");
       $sql = $this->context->getSQL();
-      $res = $sql->select($sql->count())
-        ->from("UserToken")
+
+      $userToken = UserToken::findBuilder($sql)
         ->where(new Compare("token", $token))
         ->where(new Compare("valid_until", $sql->now(), ">="))
         ->where(new Compare("user_id", $currentUser->getId()))
-        ->where(new Compare("token_type", "gpg_confirm"))
-        ->where(new CondNot(new CondBool("used")))
+        ->where(new Compare("token_type", UserToken::TYPE_GPG_CONFIRM))
         ->execute();
 
-      $this->success = ($res !== false);
-      $this->lastError = $sql->getLastError();
-
-      if ($this->success && is_array($res)) {
-        if ($res[0]["count"] === 0) {
+      if ($userToken !== false) {
+        if ($userToken === null) {
           return $this->createError("Invalid token");
         } else {
-          $res = $sql->update("GpgKey")
-            ->set("confirmed", 1)
-            ->where(new Compare("id", $gpgKey->getId()))
-            ->execute();
-
-          $this->success = ($res !== false);
-          $this->lastError = $sql->getLastError();
-          if (!$this->success) {
-            return false;
+          if (!$gpgKey->confirm($sql)) {
+            return $this->createError("Error updating gpg key: " . $sql->getLastError());
           }
 
-          $res = $sql->update("UserToken")
-            ->set("used", 1)
-            ->where(new Compare("token", $token))
-            ->execute();
-
-          $this->success = ($res !== false);
-          $this->lastError = $sql->getLastError();
+          $userToken->invalidate($sql);
         }
+      } else {
+        return $this->createError("Error validating token: " . $sql->getLastError());
       }
 
       return $this->success;
@@ -1676,24 +1418,23 @@ namespace Core\API\User {
         }
 
         $email = $currentUser->getEmail();
-        $gpgFingerprint = $gpgKey->getFingerprint();
       } else {
-        $req = new Get($this->context);
-        $this->success = $req->execute(["id" => $userId]);
-        $this->lastError = $req->getLastError();
-        if (!$this->success) {
-          return false;
+        $sql = $this->context->getSQL();
+        $user = User::find($sql, $userId, true);
+        if ($user === false) {
+          return $this->createError("Error fetching user details: " . $sql->getLastError());
+        } else if ($user === null) {
+          return $this->createError("User not found");
         }
 
-        $res = $req->getResult()["user"];
-        $email = $res["email"];
-        $gpgFingerprint = $res["gpgFingerprint"];
-        if (!$gpgFingerprint) {
-          return $this->createError("This user has not added a gpg key yet");
+        $email = $user->getEmail();
+        $gpgKey = $user->getGPG();
+        if (!$gpgKey || !$gpgKey->isConfirmed()) {
+          return $this->createError("This user has not added a gpg key yet or has not confirmed it yet.");
         }
       }
 
-      $res = GpgKey::export($gpgFingerprint, $format !== "gpg");
+      $res = GpgKey::export($gpgKey->getFingerprint(), $format !== "gpg");
       if (!$res["success"]) {
         return $this->createError($res["error"]);
       }
@@ -1817,14 +1558,11 @@ namespace Core\API\User {
       }
 
       $sql = $this->context->getSQL();
-      $this->success = $sql->update("User")
-        ->set("profile_picture", $fileName)
-        ->where(new Compare("id", $userId))
-        ->execute();
-
-      $this->lastError = $sql->getLastError();
-      if ($this->success) {
+      $currentUser->profilePicture = $fileName;
+      if ($currentUser->save($sql)) {
         $this->result["profilePicture"] = $fileName;
+      } else {
+        return $this->createError("Error updating user details: " . $sql->getLastError());
       }
 
       return $this->success;
@@ -1839,25 +1577,22 @@ namespace Core\API\User {
 
     public function _execute(): bool {
 
+      $sql = $this->context->getSQL();
       $currentUser = $this->context->getUser();
+      $userId = $currentUser->getId();
       $pfp = $currentUser->getProfilePicture();
       if (!$pfp) {
         return $this->createError("You did not upload a profile picture yet");
       }
 
-      $userId = $currentUser->getId();
-      $sql = $this->context->getSQL();
-      $this->success = $sql->update("User")
-        ->set("profile_picture", NULL)
-        ->where(new Compare("id", $userId))
-        ->execute();
-      $this->lastError = $sql->getLastError();
+      $currentUser->profilePicture = null;
+      if (!$currentUser->save($sql)) {
+        return $this->createError("Error updating user details: " . $sql->getLastError());
+      }
 
-      if ($this->success) {
-        $path = WEBROOT . "/img/uploads/user/$userId/$pfp";
-        if (is_file($path)) {
-          @unlink($path);
-        }
+      $path = WEBROOT . "/img/uploads/user/$userId/$pfp";
+      if (is_file($path)) {
+        @unlink($path);
       }
 
       return $this->success;

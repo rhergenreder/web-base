@@ -2,6 +2,7 @@
 
 namespace Core\Objects\DatabaseEntity;
 
+use Core\Driver\Logger\Logger;
 use Core\Driver\SQL\Condition\Condition;
 use Core\Driver\SQL\Join;
 use Core\Driver\SQL\Query\Select;
@@ -13,18 +14,27 @@ use Core\Driver\SQL\SQL;
 */
 class DatabaseEntityQuery {
 
+  private Logger $logger;
   private DatabaseEntityHandler $handler;
   private Select $selectQuery;
   private int $resultType;
+  private bool $logVerbose;
 
   private function __construct(DatabaseEntityHandler $handler, int $resultType) {
     $this->handler = $handler;
     $this->selectQuery = $handler->getSelectQuery();
+    $this->logger = new Logger("DB-EntityQuery", $handler->getSQL());
     $this->resultType = $resultType;
+    $this->logVerbose = false;
 
     if ($this->resultType === SQL::FETCH_ONE) {
       $this->selectQuery->first();
     }
+  }
+
+  public function debug(): DatabaseEntityQuery {
+    $this->logVerbose = true;
+    return $this;
   }
 
   public static function fetchAll(DatabaseEntityHandler $handler): DatabaseEntityQuery {
@@ -106,6 +116,13 @@ class DatabaseEntityQuery {
   }
 
   public function execute(): DatabaseEntity|array|null {
+
+    if ($this->logVerbose) {
+      $params = [];
+      $query = $this->selectQuery->build($params);
+      $this->logger->debug("QUERY: $query\nARGS: " . print_r($params, true));
+    }
+
     $res = $this->selectQuery->execute();
     if ($res === null || $res === false) {
       return null;

@@ -4,8 +4,8 @@ use Core\API\Parameter\Parameter;
 use Core\Driver\SQL\Query\CreateTable;
 use Core\Driver\SQL\SQL;
 use Core\Objects\Context;
-use Core\Objects\DatabaseEntity\DatabaseEntity;
-use Core\Objects\DatabaseEntity\DatabaseEntityHandler;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntityHandler;
 use Core\Objects\DatabaseEntity\User;
 
 class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
@@ -28,8 +28,9 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
   }
 
   public function testCreateTable() {
-    $this->assertInstanceOf(CreateTable::class, self::$HANDLER->getTableQuery());
-    $this->assertTrue(self::$HANDLER->createTable());
+    $query = self::$HANDLER->getTableQuery(self::$CONTEXT->getSQL());
+    $this->assertInstanceOf(CreateTable::class, $query);
+    $this->assertTrue($query->execute());
   }
 
   public function testInsertEntity() {

@@ -2,13 +2,16 @@
 
 namespace Core\Objects\DatabaseEntity {
 
-  use Core\Driver\SQL\SQL;
   use Core\Objects\DatabaseEntity\Attribute\MaxLength;
   use Core\Objects\DatabaseEntity\Attribute\Transient;
   use Core\Objects\lang\LanguageModule;
+  use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
   // TODO: language from cookie?
   class Language extends DatabaseEntity {
+
+    const AMERICAN_ENGLISH = 1;
+    const GERMAN_STANDARD = 2;
 
     const LANG_CODE_PATTERN = "/^[a-zA-Z]{2}_[a-zA-Z]{2}$/";
 

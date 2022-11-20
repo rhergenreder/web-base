@@ -1,6 +1,6 @@
 <?php
 
-namespace Core\Objects\DatabaseEntity;
+namespace Core\Objects\DatabaseEntity\Controller;
 
 use Core\Driver\Logger\Logger;
 use Core\Driver\SQL\Condition\Condition;
@@ -14,11 +14,17 @@ use Core\Driver\SQL\SQL;
 */
 class DatabaseEntityQuery {
 
+  const FETCH_NONE = 0;
+  const FETCH_DIRECT = 1;
+  const FETCH_RECURSIVE = 2;
+
   private Logger $logger;
   private DatabaseEntityHandler $handler;
   private Select $selectQuery;
   private int $resultType;
   private bool $logVerbose;
+
+  private int $fetchSubEntities;
 
   private function __construct(DatabaseEntityHandler $handler, int $resultType) {
     $this->handler = $handler;
@@ -26,6 +32,7 @@ class DatabaseEntityQuery {
     $this->logger = new Logger("DB-EntityQuery", $handler->getSQL());
     $this->resultType = $resultType;
     $this->logVerbose = false;
+    $this->fetchSubEntities = self::FETCH_NONE;
 
     if ($this->resultType === SQL::FETCH_ONE) {
       $this->selectQuery->first();
@@ -47,6 +54,11 @@ class DatabaseEntityQuery {
 
   public function limit(int $limit): DatabaseEntityQuery {
     $this->selectQuery->limit($limit);
+    return $this;
+  }
+
+  public function offset(int $offset): static {
+    $this->selectQuery->offset($offset);
     return $this;
   }
 
@@ -74,6 +86,7 @@ class DatabaseEntityQuery {
   public function fetchEntities(bool $recursive = false): DatabaseEntityQuery {
 
     // $this->selectQuery->dump();
+    $this->fetchSubEntities = ($recursive ? self::FETCH_RECURSIVE : self::FETCH_DIRECT);
 
     $relIndex = 1;
     foreach ($this->handler->getRelations() as $propertyName => $relationHandler) {
@@ -136,9 +149,19 @@ class DatabaseEntityQuery {
           $entities[$entity->getId()] = $entity;
         }
       }
+
+      if ($this->fetchSubEntities !== self::FETCH_NONE) {
+        $this->handler->fetchNMRelations($entities, $this->fetchSubEntities === self::FETCH_RECURSIVE);
+      }
+
       return $entities;
     } else if ($this->resultType === SQL::FETCH_ONE) {
-      return $this->handler->entityFromRow($res);
+      $entity = $this->handler->entityFromRow($res);
+      if ($entity instanceof DatabaseEntity && $this->fetchSubEntities !== self::FETCH_NONE) {
+        $this->handler->fetchNMRelations([$entity->getId() => $entity], $this->fetchSubEntities === self::FETCH_RECURSIVE);
+      }
+
+      return $entity;
     } else {
       $this->handler->getLogger()->error("Invalid result type for query builder, must be FETCH_ALL or FETCH_ONE");
       return null;
@@ -148,5 +171,9 @@ class DatabaseEntityQuery {
   public function addJoin(Join $join): DatabaseEntityQuery {
     $this->selectQuery->addJoin($join);
     return $this;
+  }
+
+  public function getQuery(): Select {
+    return $this->selectQuery;
   }
 }

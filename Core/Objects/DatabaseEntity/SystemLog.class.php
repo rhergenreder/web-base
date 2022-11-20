@@ -7,6 +7,7 @@ use Core\Driver\SQL\Expression\CurrentTimeStamp;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\Enum;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
 class SystemLog extends DatabaseEntity {
 

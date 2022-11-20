@@ -1,12 +1,19 @@
 <?php
 
-namespace Core\Objects\DatabaseEntity;
+namespace Core\Objects\DatabaseEntity\Controller;
 
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\Condition;
 use Core\Driver\SQL\SQL;
 
 abstract class DatabaseEntity {
+
+  protected static array $entityLogConfig = [
+    "insert" => false,
+    "update" => false,
+    "delete" => false,
+    "lifetime" => null,
+  ];
 
   private static array $handlers = [];
   protected ?int $id;
@@ -51,8 +58,8 @@ abstract class DatabaseEntity {
     return $res !== false && $res[0]["count"] !== 0;
   }
 
-  public static function findBuilder(SQL $sql): DatabaseEntityQuery {
-    return DatabaseEntityQuery::fetchOne(self::getHandler($sql));
+  public static function findBy(DatabaseEntityQuery $dbQuery): static|array|bool|null {
+    return $dbQuery->execute();
   }
 
   public static function findAll(SQL $sql, ?Condition $condition = null): ?array {
@@ -60,17 +67,22 @@ abstract class DatabaseEntity {
     return $handler->fetchMultiple($condition);
   }
 
-  public static function findAllBuilder(SQL $sql): DatabaseEntityQuery {
-    return DatabaseEntityQuery::fetchAll(self::getHandler($sql));
+  public static function createBuilder(SQL $sql, bool $one): DatabaseEntityQuery {
+    if ($one) {
+      return DatabaseEntityQuery::fetchOne(self::getHandler($sql));
+    } else {
+      return DatabaseEntityQuery::fetchAll(self::getHandler($sql));
+    }
   }
 
-  public function save(SQL $sql, ?array $columns = null): bool {
+  public function save(SQL $sql, ?array $columns = null, bool $saveNM = false): bool {
     $handler = self::getHandler($sql);
-    $res = $handler->insertOrUpdate($this, $columns);
+    $res = $handler->insertOrUpdate($this, $columns, $saveNM);
     if ($res === false) {
       return false;
     } else if ($this->id === null) {
       $this->id = $res;
+      $handler->insertNM($this);
     }
 
     return true;
@@ -126,5 +138,23 @@ abstract class DatabaseEntity {
 
   public function getId(): ?int {
     return $this->id;
+  }
+
+  public static function count(SQL $sql, ?Condition $condition = null): int|bool {
+    $handler = self::getHandler($sql);
+    $query = $sql->select($sql->count())
+      ->from($handler->getTableName());
+
+    if ($condition) {
+      $query->where($condition);
+    }
+
+    $res = $query->execute();
+
+    if (!empty($res)) {
+      return $res[0]["count"];
+    }
+
+    return false;
   }
 }

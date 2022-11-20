@@ -4,6 +4,7 @@ namespace Core\API;
 
 use Core\API\Parameter\StringType;
 use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\Group;
 use Core\Objects\DatabaseEntity\User;
 
 class Swagger extends Request {
@@ -90,7 +91,7 @@ class Swagger extends Request {
     }
 
     // special case: hardcoded permission
-    if ($request instanceof Permission\Save && (!$currentUser || !$currentUser->hasGroup(USER_GROUP_ADMIN))) {
+    if ($request instanceof Permission\Save && (!$currentUser || !$currentUser->hasGroup(Group::ADMIN))) {
       return false;
     }
 

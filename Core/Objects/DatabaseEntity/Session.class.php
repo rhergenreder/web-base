@@ -10,6 +10,7 @@ use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\Json;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Attribute\Transient;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
 class Session extends DatabaseEntity {
 

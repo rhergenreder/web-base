@@ -3,6 +3,7 @@
 namespace Core\API {
 
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\Group;
 
   abstract class PermissionAPI extends Request {
 
@@ -12,7 +13,7 @@ namespace Core\API {
 
     protected function checkStaticPermission(): bool {
       $user = $this->context->getUser();
-      if (!$user || !$user->hasGroup(USER_GROUP_ADMIN)) {
+      if (!$user || !$user->hasGroup(Group::ADMIN)) {
         return $this->createError("Permission denied.");
       }
 
@@ -34,7 +35,6 @@ namespace Core\API\Permission {
   use Core\Driver\SQL\Strategy\UpdateStrategy;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
-  use Core\Objects\DatabaseEntity\User;
 
   class Check extends PermissionAPI {
 

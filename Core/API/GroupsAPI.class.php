@@ -31,6 +31,7 @@ namespace Core\API\Groups {
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\Controller\NMRelation;
   use Core\Objects\DatabaseEntity\Group;
 
   class Fetch extends GroupsAPI {
@@ -46,20 +47,6 @@ namespace Core\API\Groups {
       $this->groupCount = 0;
     }
 
-    private function fetchGroupCount(): bool {
-
-      $sql = $this->context->getSQL();
-      $res = $sql->select($sql->count())->from("Group")->execute();
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-
-      if ($this->success) {
-        $this->groupCount = $res[0]["count"];
-      }
-
-      return $this->success;
-    }
-
     public function _execute(): bool {
       $page = $this->getParam("page");
       if($page < 1) {
@@ -71,39 +58,42 @@ namespace Core\API\Groups {
         return $this->createError("Invalid fetch count");
       }
 
-      if (!$this->fetchGroupCount()) {
-        return false;
+      $sql = $this->context->getSQL();
+      $groupCount = Group::count($sql);
+      if ($groupCount === false) {
+        return $this->createError("Error fetching group count: " . $sql->getLastError());
       }
 
-      $sql = $this->context->getSQL();
-      $res = $sql->select("Group.id as groupId", "Group.name as groupName", "Group.color as groupColor", $sql->count("UserGroup.user_id"))
-        ->from("Group")
-        ->leftJoin("UserGroup", "UserGroup.group_id", "Group.id")
-        ->groupBy("Group.id")
-        ->orderBy("Group.id")
+      $groups = Group::findBy(Group::createBuilder($sql, false)
+        ->orderBy("id")
         ->ascending()
         ->limit($count)
-        ->offset(($page - 1) * $count)
-        ->execute();
+        ->offset(($page - 1) * $count));
 
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-
-      if($this->success) {
-        $this->result["groups"] = array();
-        foreach($res as $row) {
-          $groupId = intval($row["groupId"]);
-          $groupName = $row["groupName"];
-          $groupColor = $row["groupColor"];
-          $memberCount = $row["usergroup_user_id_count"];
-          $this->result["groups"][$groupId] = array(
-            "name" => $groupName,
-            "memberCount" => $memberCount,
-            "color" => $groupColor,
-          );
-        }
+      if ($groups !== false) {
+        $this->result["groups"] = [];
         $this->result["pageCount"] = intval(ceil($this->groupCount / $count));
         $this->result["totalCount"] = $this->groupCount;
+
+        foreach ($groups as $groupId => $group) {
+          $this->result["groups"][$groupId] = $group->jsonSerialize();
+          $this->result["groups"][$groupId]["memberCount"] = 0;
+        }
+
+        $nmTable = NMRelation::buildTableName("User", "Group");
+        $res = $sql->select("group_id", $sql->count("user_id"))
+          ->from($nmTable)
+          ->groupBy("group_id")
+          ->execute();
+
+        if (is_array($res)) {
+          foreach ($res as $row) {
+            list ($groupId, $memberCount) = [$row["group_id"], $row["user_id_count"]];
+            if (isset($this->result["groups"][$groupId])) {
+              $this->result["groups"][$groupId]["memberCount"] = $memberCount;
+            }
+          }
+        }
       }
 
       return $this->success;
@@ -162,7 +152,7 @@ namespace Core\API\Groups {
 
     public function _execute(): bool {
       $id = $this->getParam("id");
-      if (in_array($id, DEFAULT_GROUPS)) {
+      if (in_array($id, array_keys(Group::GROUPS))) {
         return $this->createError("You cannot delete a default group.");
       }
 

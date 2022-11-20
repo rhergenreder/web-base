@@ -2,14 +2,13 @@
 
 namespace Core\Objects\DatabaseEntity;
 
-use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Expression\CurrentTimeStamp;
-use Core\Driver\SQL\Join;
 use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
-use Core\Objects\DatabaseEntity\Attribute\Transient;
+use Core\Objects\DatabaseEntity\Attribute\Multiple;
 use Core\Objects\DatabaseEntity\Attribute\Unique;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
 class User extends DatabaseEntity {
 
@@ -20,30 +19,16 @@ class User extends DatabaseEntity {
   #[MaxLength(64)] public ?string $profilePicture;
   private ?\DateTime $lastOnline;
   #[DefaultValue(CurrentTimeStamp::class)] public \DateTime $registeredAt;
-  public bool $confirmed;
-  #[DefaultValue(1)] public Language $language;
+  #[DefaultValue(false)] public bool $confirmed;
+  #[DefaultValue(Language::AMERICAN_ENGLISH)] public Language $language;
   public ?GpgKey $gpgKey;
   private ?TwoFactorToken $twoFactorToken;
 
-  #[Transient] private array $groups;
+  #[Multiple(Group::class)]
+  public array $groups;
 
   public function __construct(?int $id = null) {
     parent::__construct($id);
-    $this->groups = [];
-  }
-
-  public function postFetch(SQL $sql, array $row) {
-    parent::postFetch($sql, $row);
-    $this->groups = [];
-
-    $groups = Group::findAllBuilder($sql)
-      ->addJoin(new Join("INNER", "UserGroup", "UserGroup.group_id", "Group.id"))
-      ->where(new Compare("UserGroup.user_id", $this->id))
-      ->execute();
-
-    if ($groups) {
-      $this->groups = $groups;
-    }
   }
 
   public function getUsername(): string {

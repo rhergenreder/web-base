@@ -10,12 +10,12 @@ if (is_file($autoLoad)) {
   require_once $autoLoad;
 }
 
-define("WEBBASE_VERSION", "2.2.0");
+define("WEBBASE_VERSION", "2.3.0");
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function ($class) {
   if (!class_exists($class)) {
-    $suffixes = ["", ".class", ".trait"];
+    $suffixes = ["", ".class", ".trait", ".interface"];
     foreach ($suffixes as $suffix) {
       $full_path = WEBROOT . "/" . getClassPath($class, $suffix);
       if (file_exists($full_path)) {

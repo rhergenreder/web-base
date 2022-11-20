@@ -94,13 +94,8 @@ function handleDatabase(array $argv) {
   $action = $argv[2] ?? "";
 
   if ($action === "migrate") {
-    $class = $argv[3] ?? null;
-    if (!$class) {
-      _exit("Usage: cli.php db migrate <class name>");
-    }
-
     $sql = connectSQL() or die();
-    applyPatch($sql, $class);
+
   } else if (in_array($action, ["export", "import", "shell"])) {
 
     // database config

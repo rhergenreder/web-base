@@ -19,6 +19,7 @@ namespace Core\API\News {
   use Core\API\Parameter\StringType;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\News;
 
   class Get extends NewsAPI {
@@ -40,7 +41,7 @@ namespace Core\API\News {
       }
 
       $sql = $this->context->getSQL();
-      $newsQuery = News::findAllBuilder($sql)
+      $newsQuery = News::createBuilder($sql, false)
         ->limit($limit)
         ->orderBy("published_at")
         ->descending()
@@ -50,7 +51,7 @@ namespace Core\API\News {
         $newsQuery->where(new Compare("published_at", $since, ">="));
       }
 
-      $newsArray = $newsQuery->execute();
+      $newsArray = News::findBy($newsQuery);
       $this->success = $newsArray !== null;
       $this->lastError = $sql->getLastError();
 
@@ -113,7 +114,7 @@ namespace Core\API\News {
         return false;
       } else if ($news === null) {
         return $this->createError("News Post not found");
-      } else if ($news->publishedBy->getId() !== $currentUser->getId() && !$currentUser->hasGroup(USER_GROUP_ADMIN)) {
+      } else if ($news->publishedBy->getId() !== $currentUser->getId() && !$currentUser->hasGroup(Group::ADMIN)) {
         return $this->createError("You do not have permissions to delete news post of other users.");
       }
 
@@ -144,7 +145,7 @@ namespace Core\API\News {
         return false;
       } else if ($news === null) {
         return $this->createError("News Post not found");
-      } else if ($news->publishedBy->getId() !== $currentUser->getId() && !$currentUser->hasGroup(USER_GROUP_ADMIN)) {
+      } else if ($news->publishedBy->getId() !== $currentUser->getId() && !$currentUser->hasGroup(Group::ADMIN)) {
         return $this->createError("You do not have permissions to edit news post of other users.");
       }
 

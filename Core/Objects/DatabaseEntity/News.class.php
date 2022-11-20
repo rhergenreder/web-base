@@ -6,6 +6,7 @@ use Core\API\Parameter\Parameter;
 use Core\Driver\SQL\Expression\CurrentTimeStamp;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
 class News extends DatabaseEntity {
 
@@ -16,6 +17,7 @@ class News extends DatabaseEntity {
 
   public function __construct(?int $id = null) {
     parent::__construct($id);
+    $this->publishedAt = new \DateTime();
   }
 
   public function jsonSerialize(): array {

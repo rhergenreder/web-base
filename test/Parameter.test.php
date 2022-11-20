@@ -56,6 +56,7 @@ class ParameterTest extends \PHPUnit\Framework\TestCase {
     // optional single value
     $arrayType = new ArrayType("int_array_single", Parameter::TYPE_INT, true);
     $this->assertTrue($arrayType->parseParam(1));
+    $this->assertEquals([1], $arrayType->value);
 
     // mixed values
     $arrayType = new ArrayType("mixed_array", Parameter::TYPE_MIXED);

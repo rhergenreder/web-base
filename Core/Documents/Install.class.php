@@ -30,6 +30,7 @@ namespace Documents\Install {
   use Core\External\PHPMailer\Exception;
   use Core\External\PHPMailer\PHPMailer;
   use Core\Objects\ConnectionData;
+  use Core\Objects\DatabaseEntity\Group;
 
   class InstallHead extends Head {
 
@@ -202,7 +203,7 @@ namespace Documents\Install {
             $req->execute(array(
                 "title" => "Welcome",
                 "message" => "Your Web-base was successfully installed. Check out the admin dashboard. Have fun!",
-                "groupId" => USER_GROUP_ADMIN
+                "groupId" => Group::ADMIN
               )
             );
             $this->errorString = $req->getLastError();
@@ -436,16 +437,10 @@ namespace Documents\Install {
           'email' => $email,
           'password' => $password,
           'confirmPassword' => $confirmPassword,
+          'groups' => [Group::ADMIN]
         ));
 
         $msg = $req->getLastError();
-        if ($success) {
-          $sql = $context->getSQL();
-          $success = $sql->insert("UserGroup", array("group_id", "user_id"))
-            ->addRow(USER_GROUP_ADMIN, $req->getResult()["userId"])
-            ->execute();
-          $msg = $sql->getLastError();
-        }
       }
 
       return array("msg" => $msg, "success" => $success);

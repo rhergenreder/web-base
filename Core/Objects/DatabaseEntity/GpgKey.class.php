@@ -6,6 +6,7 @@ use Core\Driver\SQL\Expression\CurrentTimeStamp;
 use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
 class GpgKey extends DatabaseEntity {
 

@@ -27,17 +27,4 @@ class TimeBasedTwoFactorTokenTest extends PHPUnit\Framework\TestCase {
       $this->assertEquals($code, $generated, "$code != $generated, at=$seed");
     }
   }
-
-  public function testURL() {
-    $secret = Base32::encode("12345678901234567890");
-    $context = new Context();
-
-    // $context->
-
-    $token = new TimeBasedTwoFactorToken($secret);
-    $siteName = $context->getSettings()->getSiteName();
-    $username = $context->getUser()->getUsername();
-    $url = $token->getUrl($context);
-    $this->assertEquals("otpauth://totp/$username?secret=$secret&issuer=$siteName", $url);
-  }
 }

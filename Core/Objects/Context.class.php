@@ -90,7 +90,7 @@ class Context {
     session_write_close();
   }
 
-  private function loadSession(int $userId, int $sessionId) {
+  private function loadSession(int $userId, int $sessionId): void {
     $this->session = Session::init($this, $userId, $sessionId);
     $this->user = $this->session?->getUser();
     if ($this->user) {
@@ -128,12 +128,13 @@ class Context {
 
   public function updateLanguage(string $lang): bool {
     if ($this->sql) {
-      $language = Language::findBuilder($this->sql)
+      $language = Language::findBy(Language::createBuilder($this->sql, true)
         ->where(new CondOr(
             new CondLike("name", "%$lang%"), // english
             new Compare("code", $lang), // de_DE
-            new CondLike("code", $lang . "_%"))) // de -> de_%
-        ->execute();
+            new CondLike("code", "${lang}_%") // de -> de_%
+        ))
+      );
       if ($language) {
         $this->setLanguage($language);
         return true;
@@ -176,14 +177,13 @@ class Context {
   }
 
   public function loadApiKey(string $apiKey): bool {
-    $this->user = User::findBuilder($this->sql)
+    $this->user = User::findBy(User::createBuilder($this->sql, true)
       ->addJoin(new Join("INNER","ApiKey", "ApiKey.user_id", "User.id"))
       ->where(new Compare("ApiKey.api_key", $apiKey))
       ->where(new Compare("valid_until", $this->sql->currentTimestamp(), ">"))
       ->where(new Compare("ApiKey.active", true))
       ->where(new Compare("User.confirmed", true))
-      ->fetchEntities()
-      ->execute();
+      ->fetchEntities());
 
     return $this->user !== null;
   }

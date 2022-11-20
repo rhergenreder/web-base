@@ -38,6 +38,11 @@ class Select extends Query {
     $this->fetchType = SQL::FETCH_ALL;
   }
 
+  public function addColumn(string $columnName): Select {
+    $this->selectValues[] = $columnName;
+    return $this;
+  }
+
   public function from(...$tables): Select {
     $this->tables = array_merge($this->tables, $tables);
     return $this;

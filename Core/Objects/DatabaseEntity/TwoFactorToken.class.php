@@ -7,6 +7,7 @@ use Core\Objects\DatabaseEntity\Attribute\Enum;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
 use Core\Objects\TwoFactor\TimeBasedTwoFactorToken;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
 abstract class TwoFactorToken extends DatabaseEntity {
 

@@ -46,6 +46,7 @@ namespace Core\API\Mail {
   use Core\API\MailAPI;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
+  use Core\Objects\DatabaseEntity\MailQueueItem;
   use DateTimeInterface;
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\Compare;
@@ -84,7 +85,7 @@ namespace Core\API\Mail {
   class Send extends MailAPI {
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, array(
-        'to' => new Parameter('to', Parameter::TYPE_EMAIL, true, null),
+        'to' => new Parameter('to', Parameter::TYPE_EMAIL),
         'subject' => new StringType('subject', -1),
         'body' => new StringType('body', -1),
         'replyTo' => new Parameter('replyTo', Parameter::TYPE_EMAIL, true, null),
@@ -104,7 +105,7 @@ namespace Core\API\Mail {
 
       $fromMail = $mailConfig->getProperty('from');
       $mailFooter = $mailConfig->getProperty('mail_footer');
-      $toMail = $this->getParam('to') ?? $fromMail;
+      $toMail = $this->getParam('to');
       $subject = $this->getParam('subject');
       $replyTo = $this->getParam('replyTo');
       $replyName = $this->getParam('replyName');
@@ -119,10 +120,8 @@ namespace Core\API\Mail {
 
       if ($mailAsync) {
         $sql = $this->context->getSQL();
-        $this->success = $sql->insert("MailQueue", ["from", "to", "subject", "body",
-          "replyTo", "replyName", "gpgFingerprint"])
-          ->addRow($fromMail, $toMail, $subject, $body, $replyTo, $replyName, $gpgFingerprint)
-          ->execute() !== false;
+        $mailQueueItem = new MailQueueItem($fromMail, $toMail, $subject, $body, $replyTo, $replyName, $gpgFingerprint);
+        $this->success = $mailQueueItem->save($sql);
         $this->lastError = $sql->getLastError();
         return $this->success;
       }
@@ -223,77 +222,37 @@ namespace Core\API\Mail {
       }
 
       $sql = $this->context->getSQL();
-      $res = $sql->select("id", "from", "to", "subject", "body",
-        "replyTo", "replyName", "gpgFingerprint", "retryCount")
-        ->from("MailQueue")
+      $mailQueueItems = MailQueueItem::findBy(MailQueueItem::createBuilder($sql, false)
         ->where(new Compare("retryCount", 0, ">"))
         ->where(new Compare("status", "waiting"))
-        ->where(new Compare("nextTry", $sql->now(), "<="))
-        ->execute();
+        ->where(new Compare("nextTry", $sql->now(), "<=")));
 
-      $this->success = ($res !== false);
+      $this->success = ($mailQueueItems !== false);
       $this->lastError = $sql->getLastError();
 
-      if ($this->success && is_array($res)) {
+      if ($this->success && is_array($mailQueueItems)) {
         if ($debug) {
-          echo "Found " . count($res) . " mails to send" . PHP_EOL;
+          echo "Found " . count($mailQueueItems) . " mails to send" . PHP_EOL;
         }
 
-        $successfulMails = [];
-        foreach ($res as $row) {
+        $successfulMails = 0;
+        foreach ($mailQueueItems as $mailQueueItem) {
 
           if (time() - $startTime >= 45) {
             $this->lastError = "Not able to process whole mail queue within 45 seconds, will continue on next time";
             break;
           }
 
-          $to = $row["to"];
-          $subject = $row["subject"];
-
           if ($debug) {
-            echo "Sending subject=$subject to=$to" . PHP_EOL;
+            echo "Sending subject=$mailQueueItem->subject to=$mailQueueItem->to" . PHP_EOL;
           }
 
-          $mailId = intval($row["id"]);
-          $retryCount = intval($row["retryCount"]);
-          $req = new Send($this->context);
-          $args = [
-            "to" => $to,
-            "subject" => $subject,
-            "body" => $row["body"],
-            "replyTo" => $row["replyTo"],
-            "replyName" => $row["replyName"],
-            "gpgFingerprint" => $row["gpgFingerprint"],
-            "async" => false
-          ];
-          $success = $req->execute($args);
-          $error = $req->getLastError();
-
-          if (!$success) {
-            $delay = [0, 720, 360, 60, 30, 1];
-            $minutes = $delay[max(0, min(count($delay) - 1, $retryCount))];
-            $nextTry = (new \DateTime())->modify("+$minutes minute");
-            $sql->update("MailQueue")
-              ->set("retryCount", $retryCount - 1)
-              ->set("status", "error")
-              ->set("errorMessage", $error)
-              ->set("nextTry", $nextTry)
-              ->where(new Compare("id", $mailId))
-              ->execute();
-          } else {
-            $successfulMails[] = $mailId;
+          if ($mailQueueItem->send($this->context)) {
+            $successfulMails++;
           }
         }
 
-        $this->success = count($successfulMails) === count($res);
-        if (!empty($successfulMails)) {
-          $res = $sql->update("MailQueue")
-            ->set("status", "success")
-            ->where(new CondIn(new Column("id"), $successfulMails))
-            ->execute();
-          $this->success = $res !== false;
-          $this->lastError = $sql->getLastError();
-        }
+        $this->success = $successfulMails === count($mailQueueItems);
       }
 
       return $this->success;

@@ -47,7 +47,8 @@ namespace Core\API\Logs {
         $shownLogLevels = array_slice(Logger::LOG_LEVELS, $logLevel);
       }
 
-      $query = SystemLog::findAllBuilder($sql)
+
+      $query = SystemLog::createBuilder($sql, false)
         ->orderBy("timestamp")
         ->descending();
 
@@ -59,7 +60,7 @@ namespace Core\API\Logs {
         $query->where(new CondIn(new Column("severity"), $shownLogLevels));
       }
 
-      $logEntries = $query->execute();
+      $logEntries = SystemLog::findBy($query);
       $this->success = $logEntries !== false;
       $this->lastError = $sql->getLastError();
 

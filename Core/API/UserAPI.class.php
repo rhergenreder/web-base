@@ -75,7 +75,7 @@ namespace Core\API {
         $this->checkPasswordRequirements($password, $confirmPassword);
     }
 
-    protected function insertUser($username, $email, $password, $confirmed, $fullName = ""): bool|User {
+    protected function insertUser(string $username, ?string $email, string $password, bool $confirmed, string $fullName = "", array $groups = []): bool|User {
       $sql = $this->context->getSQL();
 
       $user = new User();
@@ -86,6 +86,7 @@ namespace Core\API {
       $user->email = $email;
       $user->confirmed = $confirmed;
       $user->fullName = $fullName ?? "";
+      $user->groups = $groups;
 
       $this->success = ($user->save($sql) !== FALSE);
       $this->lastError = $sql->getLastError();
@@ -107,12 +108,11 @@ namespace Core\API {
 
     protected function checkToken(string $token) : UserToken|bool {
       $sql = $this->context->getSQL();
-      $userToken = UserToken::findBuilder($sql)
+      $userToken = UserToken::findBy(UserToken::createBuilder($sql, true)
         ->where(new Compare("UserToken.token", $token))
         ->where(new Compare("UserToken.valid_until", $sql->now(), ">"))
         ->where(new Compare("UserToken.used", 0))
-        ->fetchEntities()
-        ->execute();
+        ->fetchEntities());
 
       if ($userToken === false) {
         return $this->createError("Error verifying token: " . $sql->getLastError());
@@ -128,11 +128,16 @@ namespace Core\API {
 
 namespace Core\API\User {
 
+  use Core\API\Parameter\ArrayType;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\API\Template\Render;
   use Core\API\UserAPI;
   use Core\API\VerifyCaptcha;
+  use Core\Driver\SQL\Condition\CondBool;
+  use Core\Driver\SQL\Condition\CondNot;
+  use Core\Driver\SQL\Condition\CondOr;
+  use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\UserToken;
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\Compare;
@@ -146,12 +151,15 @@ namespace Core\API\User {
 
   class Create extends UserAPI {
 
+    private User $user;
+
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, array(
         'username' => new StringType('username', 32),
         'email' => new Parameter('email', Parameter::TYPE_EMAIL, true, NULL),
         'password' => new StringType('password'),
         'confirmPassword' => new StringType('confirmPassword'),
+        'groups' => new ArrayType("groups", Parameter::TYPE_INT, true, true, [])
       ));
 
       $this->loginRequired = true;
@@ -171,20 +179,35 @@ namespace Core\API\User {
         return false;
       }
 
+      $groups = [];
+      $sql = $this->context->getSQL();
+      $requestedGroups = array_unique($this->getParam("groups"));
+      if (!empty($requestedGroups)) {
+        $groups = Group::findAll($sql, new CondIn(new Column("id"), $requestedGroups));
+        foreach ($requestedGroups as $groupId) {
+          if (!isset($groups[$groupId])) {
+            return $this->createError("Group with id=$groupId does not exist.");
+          }
+        }
+      }
+
       // prevent duplicate keys
       $email = (!is_null($email) && empty($email)) ? null : $email;
-      $user = $this->insertUser($username, $email, $password, true);
+      $user = $this->insertUser($username, $email, $password, true, "", $groups);
       if ($user !== false) {
+        $this->user = $user;
         $this->result["userId"] = $user->getId();
       }
 
       return $this->success;
     }
+
+    public function getUser(): User {
+      return $this->user;
+    }
   }
 
   class Fetch extends UserAPI {
-
-    private int $userCount;
 
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, array(
@@ -193,21 +216,7 @@ namespace Core\API\User {
       ));
     }
 
-    private function getUserCount(): bool {
-
-      $sql = $this->context->getSQL();
-      $res = $sql->select($sql->count())->from("User")->execute();
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-
-      if ($this->success) {
-        $this->userCount = $res[0]["count"];
-      }
-
-      return $this->success;
-    }
-
-    private function selectIds($page, $count) {
+    private function selectIds($page, $count): array|bool {
       $sql = $this->context->getSQL();
       $res = $sql->select("User.id")
         ->from("User")
@@ -241,72 +250,57 @@ namespace Core\API\User {
         return $this->createError("Invalid fetch count");
       }
 
-      if (!$this->getUserCount()) {
-        return false;
-      }
-
-      $userIds = $this->selectIds($page, $count);
-      if ($userIds === false) {
-        return false;
+      $condition = null;
+      $currentUser = $this->context->getUser();
+      $fullInfo = ($currentUser->hasGroup(Group::ADMIN) ||
+                   $currentUser->hasGroup(Group::SUPPORT));
+      if (!$fullInfo) {
+        $condition = new CondOr(
+          new Compare("User.id", $currentUser->getId()),
+          new CondBool("User.confirmed")
+        );
       }
 
       $sql = $this->context->getSQL();
-      $res = $sql->select("User.id as userId", "User.name", "User.email", "User.registered_at", "User.confirmed",
-        "User.profile_picture", "User.full_name", "Group.id as groupId", "User.last_online",
-        "Group.name as groupName", "Group.color as groupColor")
-        ->from("User")
-        ->leftJoin("UserGroup", "User.id", "UserGroup.user_id")
-        ->leftJoin("Group", "Group.id", "UserGroup.group_id")
-        ->where(new CondIn(new Column("User.id"), $userIds))
-        ->execute();
+      $userCount = User::count($sql, $condition);
+      if ($userCount === false) {
+        return $this->createError("Error fetching user count: " . $sql->getLastError());
+      }
 
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-      $currentUser = $this->context->getUser();
+      $userQuery = User::createBuilder($sql, false)
+        ->orderBy("id")
+        ->ascending()
+        ->limit($count)
+        ->offset(($page - 1) * $count)
+        ->fetchEntities();
 
-      if ($this->success) {
-        $this->result["users"] = array();
-        foreach ($res as $row) {
-          $userId = intval($row["userId"]);
-          $groupId = $row["groupId"];
-          $groupName = $row["groupName"];
-          $groupColor = $row["groupColor"];
+      if ($condition) {
+        $userQuery->where($condition);
+      }
 
-          $fullInfo = ($userId === $currentUser->getId() ||
-            $currentUser->hasGroup(USER_GROUP_ADMIN) ||
-            $currentUser->hasGroup(USER_GROUP_SUPPORT));
+      $users = User::findBy($userQuery);
+      if ($users !== false) {
+        $this->result["users"] = [];
 
-          if (!isset($this->result["users"][$userId])) {
-            $user = array(
-              "id" => $userId,
-              "name" => $row["name"],
-              "fullName" => $row["full_name"],
-              "profilePicture" => $row["profile_picture"],
-              "email" => $row["email"],
-              "confirmed" => $sql->parseBool($row["confirmed"]),
-              "groups" => array(),
-            );
+        foreach ($users as $userId => $user) {
+          $serialized = $user->jsonSerialize();
 
-            if ($fullInfo) {
-              $user["registered_at"] = $row["registered_at"];
-              $user["last_online"] = $row["last_online"];
-            } else if (!$sql->parseBool($row["confirmed"])) {
-              continue;
+          if (!$fullInfo && $userId !== $currentUser->getId()) {
+            $publicAttributes = ["id", "name", "fullName", "profilePicture", "email", "groups"];
+            foreach (array_keys($serialized) as $attr) {
+              if (!in_array($attr, $publicAttributes)) {
+                unset($serialized[$attr]);
+              }
             }
-
-            $this->result["users"][$userId] = $user;
           }
 
-          if (!is_null($groupId)) {
-            $this->result["users"][$userId]["groups"][intval($groupId)] = array(
-              "id" => intval($groupId),
-              "name" => $groupName,
-              "color" => $groupColor
-            );
-          }
+          $this->result["users"][$userId] = $serialized;
         }
+
         $this->result["pageCount"] = intval(ceil($this->userCount / $count));
         $this->result["totalCount"] = $this->userCount;
+      } else {
+        return $this->createError("Error fetching users: " . $sql->getLastError());
       }
 
       return $this->success;
@@ -338,13 +332,13 @@ namespace Core\API\User {
         // either we are querying own info or we are support / admin
         $currentUser = $this->context->getUser();
         $canView = ($userId === $currentUser->getId() ||
-          $currentUser->hasGroup(USER_GROUP_ADMIN) ||
-          $currentUser->hasGroup(USER_GROUP_SUPPORT));
+          $currentUser->hasGroup(Group::ADMIN) ||
+          $currentUser->hasGroup(Group::SUPPORT));
 
         // full info only when we have administrative privileges, or we are querying ourselves
         $fullInfo = ($userId === $currentUser->getId() ||
-          $currentUser->hasGroup(USER_GROUP_ADMIN) ||
-          $currentUser->hasGroup(USER_GROUP_SUPPORT));
+          $currentUser->hasGroup(Group::ADMIN) ||
+          $currentUser->hasGroup(Group::SUPPORT));
 
         if (!$canView) {
 
@@ -617,10 +611,9 @@ namespace Core\API\User {
       $stayLoggedIn = $this->getParam('stayLoggedIn');
 
       $sql = $this->context->getSQL();
-      $user = User::findBuilder($sql)
+      $user = User::findBy(User::createBuilder($sql, true)
         ->where(new Compare("User.name", $username), new Compare("User.email", $username))
-        ->fetchEntities()
-        ->execute();
+        ->fetchEntities());
 
       if ($user !== false) {
         if ($user === null) {
@@ -842,7 +835,7 @@ namespace Core\API\User {
             $groupIds[] = $param->value;
           }
 
-          if ($id === $currentUser->getId() && !in_array(USER_GROUP_ADMIN, $groupIds)) {
+          if ($id === $currentUser->getId() && !in_array(Group::ADMIN, $groupIds)) {
             return $this->createError("Cannot remove Administrator group from own user.");
           }
         }
@@ -958,10 +951,9 @@ namespace Core\API\User {
 
       $sql = $this->context->getSQL();
       $email = $this->getParam("email");
-      $user = User::findBuilder($sql)
+      $user = User::findBy(User::createBuilder($sql, true)
         ->where(new Compare("email", $email))
-        ->fetchEntities()
-        ->execute();
+        ->fetchEntities());
       if ($user === false) {
         return $this->createError("Could not fetch user details: " . $sql->getLastError());
       } else if ($user !== null) {
@@ -1040,10 +1032,9 @@ namespace Core\API\User {
 
       $email = $this->getParam("email");
       $sql = $this->context->getSQL();
-      $user = User::findBuilder($sql)
+      $user = User::findBy(User::createBuilder($sql, true)
         ->where(new Compare("User.email", $email))
-        ->where(new Compare("User.confirmed", false))
-        ->execute();
+        ->where(new Compare("User.confirmed", false)));
 
       if ($user === false) {
         return $this->createError("Error retrieving user details: " . $sql->getLastError());
@@ -1052,11 +1043,10 @@ namespace Core\API\User {
         return true;
       }
 
-      $userToken = UserToken::findBuilder($sql)
+      $userToken = UserToken::findBy(UserToken::createBuilder($sql, true)
         ->where(new Compare("used", false))
         ->where(new Compare("tokenType", UserToken::TYPE_EMAIL_CONFIRM))
-        ->where(new Compare("user_id", $user->getId()))
-        ->execute();
+        ->where(new Compare("user_id", $user->getId())));
 
       $validHours = 48;
       if ($userToken === false) {
@@ -1366,12 +1356,11 @@ namespace Core\API\User {
       $token = $this->getParam("token");
       $sql = $this->context->getSQL();
 
-      $userToken = UserToken::findBuilder($sql)
+      $userToken = UserToken::findBy(UserToken::createBuilder($sql, true)
         ->where(new Compare("token", $token))
         ->where(new Compare("valid_until", $sql->now(), ">="))
         ->where(new Compare("user_id", $currentUser->getId()))
-        ->where(new Compare("token_type", UserToken::TYPE_GPG_CONFIRM))
-        ->execute();
+        ->where(new Compare("token_type", UserToken::TYPE_GPG_CONFIRM)));
 
       if ($userToken !== false) {
         if ($userToken === null) {

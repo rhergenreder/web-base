@@ -63,7 +63,7 @@ class Settings {
   }
 
   public static function loadDefaults(): Settings {
-    $hostname = $_SERVER["SERVER_NAME"];
+    $hostname = $_SERVER["SERVER_NAME"] ?? null;
     if (empty($hostname)) {
       $hostname = "localhost";
     }
@@ -190,7 +190,14 @@ class Settings {
       ->addRow("recaptcha_enabled", $this->recaptchaEnabled ? "1" : "0", false, false)
       ->addRow("recaptcha_public_key", $this->recaptchaPublicKey, false, false)
       ->addRow("recaptcha_private_key", $this->recaptchaPrivateKey, true, false)
-      ->addRow("allowed_extensions", implode(",", $this->allowedExtensions), true, false);
+      ->addRow("allowed_extensions", implode(",", $this->allowedExtensions), true, false)
+      ->addRow("mail_host", "", false, false)
+      ->addRow("mail_port", "", false, false)
+      ->addRow("mail_username", "", false, false)
+      ->addRow("mail_password", "", true, false)
+      ->addRow("mail_from", "", false, false)
+      ->addRow("mail_last_sync", "", false, false)
+      ->addRow("mail_footer", "", false, false);
   }
 
   public function getSiteName(): string {

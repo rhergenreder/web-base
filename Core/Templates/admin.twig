@@ -7,6 +7,6 @@
 
 {% block body %}
     <noscript>You need Javascript enabled to run this app</noscript>
-    <div class="wrapper" id="root"></div>
-    <script src="/js/admin.min.js" nonce="{{ site.csp.nonce }}"></script>
+    <div class="wrapper" type="module" id="admin-panel"></div>
+    <script src="/js/admin-panel/index.js" nonce="{{ site.csp.nonce }}"></script>
 {% endblock %}

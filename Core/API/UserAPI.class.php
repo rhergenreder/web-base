@@ -328,36 +328,12 @@ namespace Core\API\User {
       } else {
 
         $queriedUser = $user->jsonSerialize();
-
-        // either we are querying own info or we are support / admin
         $currentUser = $this->context->getUser();
-        $canView = ($userId === $currentUser->getId() ||
-          $currentUser->hasGroup(Group::ADMIN) ||
-          $currentUser->hasGroup(Group::SUPPORT));
 
         // full info only when we have administrative privileges, or we are querying ourselves
         $fullInfo = ($userId === $currentUser->getId() ||
           $currentUser->hasGroup(Group::ADMIN) ||
           $currentUser->hasGroup(Group::SUPPORT));
-
-        if (!$canView) {
-
-          // check if user posted something publicly
-          $res = $sql->select(new JsonArrayAgg(new Column("publishedBy"), "publisherIds"))
-            ->from("News")
-            ->execute();
-          $this->success = ($res !== false);
-          $this->lastError = $sql->getLastError();
-          if (!$this->success) {
-            return false;
-          } else {
-            $canView = in_array($userId, json_decode($res[0]["publisherIds"], true));
-          }
-        }
-
-        if (!$canView) {
-          return $this->createError("No permissions to access this user");
-        }
 
         if (!$fullInfo) {
           if (!$queriedUser["confirmed"]) {

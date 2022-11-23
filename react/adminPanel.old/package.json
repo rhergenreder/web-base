@@ -25,9 +25,6 @@
     "build": "webpack --mode production && mv dist/main.js ../js/admin.min.js",
     "debug": "react-scripts start"
   },
-  "eslintConfig": {
-    "extends": "react-app"
-  },
   "browserslist": {
     "production": [
       ">0.2%",

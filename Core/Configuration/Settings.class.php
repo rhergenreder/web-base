@@ -47,15 +47,18 @@ class Settings {
 
   public function getJwtPublicKey(bool $allowPrivate = true): ?\Firebase\JWT\Key {
     if (empty($this->jwtPublicKey)) {
-      // we might have a symmetric key, should we instead return the private key?
-      return $allowPrivate ? new \Firebase\JWT\Key($this->jwtSecretKey, $this->jwtAlgorithm) : null;
+      if ($allowPrivate && $this->jwtSecretKey) {
+        // we might have a symmetric key, should we instead return the private key?
+        return new \Firebase\JWT\Key($this->jwtSecretKey, $this->jwtAlgorithm);
+      }
+      return null;
     } else {
       return new \Firebase\JWT\Key($this->jwtPublicKey, $this->jwtAlgorithm);
     }
   }
 
-  public function getJwtSecretKey(): \Firebase\JWT\Key {
-    return new \Firebase\JWT\Key($this->jwtSecretKey, $this->jwtAlgorithm);
+  public function getJwtSecretKey(): ?\Firebase\JWT\Key {
+    return $this->jwtSecretKey ? new \Firebase\JWT\Key($this->jwtSecretKey, $this->jwtAlgorithm) : null;
   }
 
   public function isInstalled(): bool {

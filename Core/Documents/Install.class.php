@@ -198,15 +198,6 @@ namespace Documents\Install {
           $success = $req->execute(array("settings" => array("installation_completed" => "1")));
           if (!$success) {
             $this->errorString = $req->getLastError();
-          } else {
-            $req = new \Core\API\Notifications\Create($context);
-            $req->execute(array(
-                "title" => "Welcome",
-                "message" => "Your Web-base was successfully installed. Check out the admin dashboard. Have fun!",
-                "groupId" => Group::ADMIN
-              )
-            );
-            $this->errorString = $req->getLastError();
           }
         }
       }

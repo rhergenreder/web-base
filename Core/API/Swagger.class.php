@@ -5,7 +5,6 @@ namespace Core\API;
 use Core\API\Parameter\StringType;
 use Core\Objects\Context;
 use Core\Objects\DatabaseEntity\Group;
-use Core\Objects\DatabaseEntity\User;
 
 class Swagger extends Request {
 
@@ -26,7 +25,7 @@ class Swagger extends Request {
     $classes = [];
     $apiDirs = ["Core", "Site"];
     foreach ($apiDirs as $apiDir) {
-      $basePath = realpath(WEBROOT . "/$apiDir/Api/");
+      $basePath = realpath(WEBROOT . "/$apiDir/API/");
       if (!$basePath) {
         continue;
       }
@@ -36,7 +35,7 @@ class Swagger extends Request {
         if (is_file($fullPath) && endsWith($fileName, ".class.php")) {
           require_once $fullPath;
           $apiName = explode(".", $fileName)[0];
-          $className = "\\API\\$apiName";
+          $className = "\\$apiDir\\API\\$apiName";
           if (!class_exists($className)) {
             var_dump("Class not exist: $className");
             continue;
@@ -108,6 +107,7 @@ class Swagger extends Request {
     $settings = $this->context->getSettings();
     $siteName = $settings->getSiteName();
     $domain = parse_url($settings->getBaseUrl(), PHP_URL_HOST);
+    $protocol = getProtocol();
 
     $permissions = $this->fetchPermissions();
 
@@ -194,7 +194,7 @@ class Swagger extends Request {
       ],
       "host" => $domain,
       "basePath" => "/api",
-      "schemes" => ["https"],
+      "schemes" => ["$protocol"],
       "paths" => $paths,
       "definitions" => $definitions
     ];

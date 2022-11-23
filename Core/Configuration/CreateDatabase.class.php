@@ -21,9 +21,9 @@ class CreateDatabase extends DatabaseScript {
     ]);
 
     $queries[] = Group::getHandler($sql)->getInsertQuery([
-      new Group(Group::ADMIN, Group::GROUPS[Group::ADMIN], "#007bff"),
+      new Group(Group::ADMIN, Group::GROUPS[Group::ADMIN], "#dc3545"),
       new Group(Group::MODERATOR, Group::GROUPS[Group::MODERATOR], "#28a745"),
-      new Group(Group::SUPPORT, Group::GROUPS[Group::SUPPORT], "#dc3545"),
+      new Group(Group::SUPPORT, Group::GROUPS[Group::SUPPORT], "#007bff"),
     ]);
 
     $queries[] = $sql->createTable("Visitor")
@@ -84,6 +84,7 @@ class CreateDatabase extends DatabaseScript {
       ->addRow("Mail/Sync", array(Group::SUPPORT, Group::ADMIN), "Allows users to synchronize mails with the database")
       ->addRow("Settings/get", array(Group::ADMIN), "Allows users to fetch server settings")
       ->addRow("Settings/set", array(Group::ADMIN), "Allows users create, delete or modify server settings")
+      ->addRow("Settings/generateJWT", array(Group::ADMIN), "Allows users generate a new jwt key")
       ->addRow("Stats", array(Group::ADMIN, Group::SUPPORT), "Allows users to fetch server stats")
       ->addRow("User/create", array(Group::ADMIN), "Allows users to create a new user, email address does not need to be confirmed")
       ->addRow("User/fetch", array(Group::ADMIN, Group::SUPPORT), "Allows users to list all registered users")

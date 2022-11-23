@@ -1,0 +1,39 @@
+{
+  "name": "web-base-frontend",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "targets": {
+    "admin-panel": {
+      "source": "./admin-panel/src/index.jsx",
+      "distDir": "./dist/admin-panel"
+    }
+  },
+  "workspaces": [
+    "admin-panel"
+  ],
+  "scripts": {
+    "build": "npx parcel build",
+    "deploy": "cp -r dist/* ../js/",
+    "clean": "rm -rfd .parcel-cache dist/*"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.20.2",
+    "customize-cra": "^1.0.0",
+    "parcel": "^2.8.0",
+    "react-app-rewired": "^2.2.1",
+    "react-scripts": "^5.0.1"
+  },
+  "@parcel/bundler-default": {
+    "minBundles": 1,
+    "minBundleSize": 3000,
+    "maxParallelRequests": 1
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.4.3"
+  }
+}

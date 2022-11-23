@@ -10,7 +10,7 @@ if (is_file($autoLoad)) {
   require_once $autoLoad;
 }
 
-define("WEBBASE_VERSION", "2.3.0");
+const WEBBASE_VERSION = "2.3.0";
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function ($class) {
@@ -81,7 +81,7 @@ function generateRandomString($length, $type = "ascii"): string {
   return $randomString;
 }
 
-function base64url_decode($data) {
+function base64url_decode($data): bool|string {
   $base64 = strtr($data, '-_', '+/');
   return base64_decode($base64);
 }
@@ -247,7 +247,7 @@ function getClassName($class, bool $short = true): string {
   }
 }
 
-function createError($msg) {
+function createError($msg): array {
   return ["success" => false, "msg" => $msg];
 }
 

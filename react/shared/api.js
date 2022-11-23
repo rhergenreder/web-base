@@ -1,4 +1,4 @@
-import 'babel-polyfill';
+// import 'babel-polyfill';
 
 export default class API {
     constructor() {
@@ -41,14 +41,6 @@ export default class API {
 
     async logout() {
         return this.apiCall("user/logout");
-    }
-
-    async getNotifications(onlyNew = true) {
-        return this.apiCall("notifications/fetch", { new: onlyNew });
-    }
-
-    async markNotificationsSeen() {
-        return this.apiCall("notifications/seen");
     }
 
     async getUser(id) {
@@ -117,17 +109,5 @@ export default class API {
 
     async getVisitors(type, date) {
         return this.apiCall("visitors/stats", { type: type, date: date });
-    }
-
-    async fetchContactRequests() {
-        return this.apiCall('contact/fetch');
-    }
-
-    async getContactMessages(id) {
-        return this.apiCall('contact/get', { requestId: id });
-    }
-
-    async sendContactMessage(id, message) {
-        return this.apiCall('contact/respond', { requestId: id, message: message });
     }
 };

@@ -2,25 +2,17 @@
 
 namespace Core\Driver\SQL\Query;
 
-use Core\Driver\SQL\Condition\CondOr;
 use Core\Driver\SQL\SQL;
 
-class Update extends Query {
+class Update extends ConditionalQuery {
 
   private array $values;
   private string $table;
-  private array $conditions;
 
   public function __construct(SQL $sql, string $table) {
     parent::__construct($sql);
     $this->values = array();
     $this->table = $table;
-    $this->conditions = array();
-  }
-
-  public function where(...$conditions): Update {
-    $this->conditions[] = (count($conditions) === 1 ? $conditions : new CondOr($conditions));
-    return $this;
   }
 
   public function set(string $key, $val): Update {
@@ -29,7 +21,6 @@ class Update extends Query {
   }
 
   public function getTable(): string { return $this->table; }
-  public function getConditions(): array { return $this->conditions; }
   public function getValues(): array { return $this->values; }
 
   public function build(array &$params): ?string {
@@ -41,7 +32,7 @@ class Update extends Query {
     }
     $valueStr = implode(",", $valueStr);
 
-    $where = $this->sql->getWhereClause($this->getConditions(), $params);
+    $where = $this->getWhereClause($params);
     return "UPDATE $table SET $valueStr$where";
   }
 }

@@ -40,7 +40,7 @@ abstract class DatabaseEntity {
     $handler = self::getHandler($sql);
     if ($fetchEntities) {
       return DatabaseEntityQuery::fetchOne(self::getHandler($sql))
-        ->where(new Compare($handler->getTableName() . ".id", $id))
+        ->whereEq($handler->getTableName() . ".id", $id)
         ->fetchEntities($fetchRecursive)
         ->execute();
     } else {
@@ -52,7 +52,7 @@ abstract class DatabaseEntity {
     $handler = self::getHandler($sql);
     $res = $sql->select($sql->count())
       ->from($handler->getTableName())
-      ->where(new Compare($handler->getTableName() . ".id", $id))
+      ->whereEq($handler->getTableName() . ".id", $id)
       ->execute();
 
     return $res !== false && $res[0]["count"] !== 0;

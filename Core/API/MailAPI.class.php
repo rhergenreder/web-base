@@ -223,8 +223,8 @@ namespace Core\API\Mail {
 
       $sql = $this->context->getSQL();
       $mailQueueItems = MailQueueItem::findBy(MailQueueItem::createBuilder($sql, false)
-        ->where(new Compare("retryCount", 0, ">"))
-        ->where(new Compare("status", "waiting"))
+        ->whereGt("retryCount", 0)
+        ->whereEq("status", "waiting")
         ->where(new Compare("nextTry", $sql->now(), "<=")));
 
       $this->success = ($mailQueueItems !== false);

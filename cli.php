@@ -616,7 +616,7 @@ function onImpersonate($argv) {
   if (!is_numeric($userId)) {
     $res = $sql->select("id")
       ->from("User")
-      ->where(new Compare("name", $userId))
+      ->whereEq("name", $userId)
       ->execute();
     if ($res === false) {
       _exit("SQL error: " . $sql->getLastError());

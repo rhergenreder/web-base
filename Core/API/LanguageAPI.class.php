@@ -94,7 +94,7 @@ namespace Core\API\Language {
 
       $this->success = $sql->update("User")
         ->set("language_id", $languageId)
-        ->where(new Compare("id", $userId))
+        ->whereEq("id", $userId)
         ->execute();
 
       $this->lastError = $sql->getLastError();

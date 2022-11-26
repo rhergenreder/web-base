@@ -7,7 +7,7 @@ use Core\Configuration\Settings;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondLike;
 use Core\Driver\SQL\Condition\CondOr;
-use Core\Driver\SQL\Join;
+use Core\Driver\SQL\Join\InnerJoin;
 use Core\Driver\SQL\SQL;
 use Firebase\JWT\JWT;
 use Core\Objects\DatabaseEntity\Language;
@@ -179,11 +179,11 @@ class Context {
 
   public function loadApiKey(string $apiKey): bool {
     $this->user = User::findBy(User::createBuilder($this->sql, true)
-      ->addJoin(new Join("INNER","ApiKey", "ApiKey.user_id", "User.id"))
-      ->where(new Compare("ApiKey.api_key", $apiKey))
-      ->where(new Compare("valid_until", $this->sql->currentTimestamp(), ">"))
-      ->where(new Compare("ApiKey.active", true))
-      ->where(new Compare("User.confirmed", true))
+      ->addJoin(new InnerJoin("ApiKey", "ApiKey.user_id", "User.id"))
+      ->whereEq("ApiKey.api_key", $apiKey)
+      ->whereGt("valid_until", $this->sql->currentTimestamp())
+      ->whereTrue("ApiKey.active", true)
+      ->whereTrue("User.confirmed", true)
       ->fetchEntities());
 
     return $this->user !== null;

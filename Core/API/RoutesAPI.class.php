@@ -22,7 +22,7 @@ namespace Core\API {
       $sql = $this->context->getSQL();
       $res = $sql->select($sql->count())
         ->from("Route")
-        ->where(new Compare("id", $uid))
+        ->whereEq("id", $uid)
         ->execute();
 
       $this->success = ($res !== false);
@@ -44,7 +44,7 @@ namespace Core\API {
       $sql = $this->context->getSQL();
       $this->success = $sql->update("Route")
         ->set("active", $active)
-        ->where(new Compare("id", $uid))
+        ->whereEq("id", $uid)
         ->execute();
 
       $this->lastError = $sql->getLastError();
@@ -275,7 +275,7 @@ namespace Core\API\Routes {
         ->set("action", $action)
         ->set("target", $target)
         ->set("extra", $extra)
-        ->where(new Compare("id", $id))
+        ->whereEq("id", $id)
         ->execute();
 
       $this->lastError = $sql->getLastError();
@@ -294,14 +294,14 @@ namespace Core\API\Routes {
 
     public function _execute(): bool {
 
-      $uid = $this->getParam("id");
-      if (!$this->routeExists($uid)) {
+      $id = $this->getParam("id");
+      if (!$this->routeExists($id)) {
         return false;
       }
 
       $sql = $this->context->getSQL();
       $this->success = $sql->delete("Route")
-        ->where(new Compare("id", $uid))
+        ->where("id", $id)
         ->execute();
 
       $this->lastError = $sql->getLastError();

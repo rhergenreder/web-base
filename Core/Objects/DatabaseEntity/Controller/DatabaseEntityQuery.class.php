@@ -12,7 +12,7 @@ use Core\Driver\SQL\SQL;
  * this class is similar to \Driver\SQL\Query\Select but with reduced functionality
  * and more adapted to entities.
 */
-class DatabaseEntityQuery {
+class DatabaseEntityQuery extends Select {
 
   const FETCH_NONE = 0;
   const FETCH_DIRECT = 1;
@@ -20,22 +20,22 @@ class DatabaseEntityQuery {
 
   private Logger $logger;
   private DatabaseEntityHandler $handler;
-  private Select $selectQuery;
   private int $resultType;
   private bool $logVerbose;
 
   private int $fetchSubEntities;
 
   private function __construct(DatabaseEntityHandler $handler, int $resultType) {
+    parent::__construct($handler->getSQL(), ...$handler->getColumnNames());
     $this->handler = $handler;
-    $this->selectQuery = $handler->getSelectQuery();
     $this->logger = new Logger("DB-EntityQuery", $handler->getSQL());
     $this->resultType = $resultType;
     $this->logVerbose = false;
-    $this->fetchSubEntities = self::FETCH_NONE;
 
+    $this->from($handler->getTableName());
+    $this->fetchSubEntities = self::FETCH_NONE;
     if ($this->resultType === SQL::FETCH_ONE) {
-      $this->selectQuery->first();
+      $this->first();
     }
   }
 
@@ -50,36 +50,6 @@ class DatabaseEntityQuery {
 
   public static function fetchOne(DatabaseEntityHandler $handler): DatabaseEntityQuery {
     return new DatabaseEntityQuery($handler, SQL::FETCH_ONE);
-  }
-
-  public function limit(int $limit): DatabaseEntityQuery {
-    $this->selectQuery->limit($limit);
-    return $this;
-  }
-
-  public function offset(int $offset): static {
-    $this->selectQuery->offset($offset);
-    return $this;
-  }
-
-  public function where(Condition ...$condition): DatabaseEntityQuery {
-    $this->selectQuery->where(...$condition);
-    return $this;
-  }
-
-  public function orderBy(string ...$column): DatabaseEntityQuery {
-    $this->selectQuery->orderBy(...$column);
-    return $this;
-  }
-
-  public function ascending(): DatabaseEntityQuery {
-    $this->selectQuery->ascending();
-    return $this;
-  }
-
-  public function descending(): DatabaseEntityQuery {
-    $this->selectQuery->descending();
-    return $this;
   }
 
   // TODO: clean this up
@@ -110,9 +80,9 @@ class DatabaseEntityQuery {
 
 
     if ($isNullable) {
-      $this->selectQuery->leftJoin($referencedTable, "$tableName.$foreignColumnName", "$alias.id", $alias);
+      $this->leftJoin($referencedTable, "$tableName.$foreignColumnName", "$alias.id", $alias);
     } else {
-      $this->selectQuery->innerJoin($referencedTable, "$tableName.$foreignColumnName", "$alias.id", $alias);
+      $this->innerJoin($referencedTable, "$tableName.$foreignColumnName", "$alias.id", $alias);
     }
 
     $relationColumnPrefix .= DatabaseEntityHandler::getColumnName($propertyName) . "_";
@@ -120,7 +90,7 @@ class DatabaseEntityQuery {
     foreach ($relationHandler->getColumns() as $relPropertyName => $relColumn) {
       $relColumnName = $relColumn->getName();
       if (!isset($recursiveRelations[$relPropertyName]) || $recursive) {
-        $this->selectQuery->addValue("$alias.$relColumnName as $relationColumnPrefix$relColumnName");
+        $this->addValue("$alias.$relColumnName as $relationColumnPrefix$relColumnName");
         if (isset($recursiveRelations[$relPropertyName]) && $recursive) {
           $this->fetchRelation($relPropertyName, $alias, $relationHandler, $recursiveRelations[$relPropertyName], $relIndex, $recursive, $relationColumnPrefix);
         }
@@ -132,11 +102,11 @@ class DatabaseEntityQuery {
 
     if ($this->logVerbose) {
       $params = [];
-      $query = $this->selectQuery->build($params);
+      $query = $this->build($params);
       $this->logger->debug("QUERY: $query\nARGS: " . print_r($params, true));
     }
 
-    $res = $this->selectQuery->execute();
+    $res = parent::execute();
     if ($res === null || $res === false) {
       return null;
     }
@@ -166,14 +136,5 @@ class DatabaseEntityQuery {
       $this->handler->getLogger()->error("Invalid result type for query builder, must be FETCH_ALL or FETCH_ONE");
       return null;
     }
-  }
-
-  public function addJoin(Join $join): DatabaseEntityQuery {
-    $this->selectQuery->addJoin($join);
-    return $this;
-  }
-
-  public function getQuery(): Select {
-    return $this->selectQuery;
   }
 }

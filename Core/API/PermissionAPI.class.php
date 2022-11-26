@@ -183,7 +183,7 @@ namespace Core\API\Permission {
 
       if ($this->success) {
         $res = $sql->delete("ApiPermission")
-          ->where(new Compare("description", "")) // only delete non default permissions
+          ->whereEq("description", "") // only delete non default permissions
           ->where(new CondNot(new CondIn(new Column("method"), $insertedMethods)))
           ->execute();
 

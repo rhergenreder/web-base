@@ -20,7 +20,7 @@ use Core\Driver\SQL\Column\FloatColumn;
 use Core\Driver\SQL\Condition\CondNot;
 use Core\Driver\SQL\Condition\CondOr;
 use Core\Driver\SQL\Constraint\ForeignKey;
-use Core\Driver\SQL\Join;
+use Core\Driver\SQL\Join\InnerJoin;
 use Core\Driver\SQL\Query\CreateProcedure;
 use Core\Driver\SQL\Query\CreateTable;
 use Core\Driver\SQL\Query\Insert;
@@ -323,7 +323,7 @@ class DatabaseEntityHandler implements Persistable {
 
       // delete from n:m table if no longer exists
       $deleteStatement = $this->sql->delete($nmTable)
-        ->where(new Compare($thisIdColumn, $entity->getId()));
+        ->whereEq($thisIdColumn, $entity->getId());
 
       if (!empty($dataColumns)) {
         $conditions = [];
@@ -439,9 +439,8 @@ class DatabaseEntityHandler implements Persistable {
       $dataColumns = $nmRelation->getDataColumns();
 
       $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
-        ->addJoin(new Join("INNER", $nmTable, "$nmTable.$refIdColumn", "$refTableName.id"))
-        ->where(new CondIn(new Column($thisIdColumn), $entityIds))
-        ->getQuery();
+        ->addJoin(new InnerJoin($nmTable, "$nmTable.$refIdColumn", "$refTableName.id"))
+        ->where(new CondIn(new Column($thisIdColumn), $entityIds));
 
       $relEntityQuery->addColumn($thisIdColumn);
       foreach ($dataColumns as $tableDataColumns) {
@@ -498,7 +497,7 @@ class DatabaseEntityHandler implements Persistable {
 
   public function fetchOne(int $id): DatabaseEntity|bool|null {
     $res = $this->getSelectQuery()
-      ->where(new Compare($this->tableName . ".id", $id))
+      ->whereEq($this->tableName . ".id", $id)
       ->first()
       ->execute();
 
@@ -637,7 +636,7 @@ class DatabaseEntityHandler implements Persistable {
 
     $entity->preInsert($row);
     $query = $this->sql->update($this->tableName)
-      ->where(new Compare($this->tableName . ".id", $entity->getId()));
+      ->whereEq($this->tableName . ".id", $entity->getId());
 
     foreach ($row as $columnName => $value) {
       $query->set($columnName, $value);
@@ -693,7 +692,7 @@ class DatabaseEntityHandler implements Persistable {
   public function delete(int $id) {
     return $this->sql
       ->delete($this->tableName)
-      ->where(new Compare($this->tableName . ".id", $id))
+      ->whereEq($this->tableName . ".id", $id)
       ->execute();
   }
 

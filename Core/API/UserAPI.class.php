@@ -109,9 +109,9 @@ namespace Core\API {
     protected function checkToken(string $token) : UserToken|bool {
       $sql = $this->context->getSQL();
       $userToken = UserToken::findBy(UserToken::createBuilder($sql, true)
-        ->where(new Compare("UserToken.token", $token))
-        ->where(new Compare("UserToken.valid_until", $sql->now(), ">"))
-        ->where(new Compare("UserToken.used", 0))
+        ->whereEq("UserToken.token", $token)
+        ->whereGt("UserToken.valid_until", $sql->now())
+        ->whereFalse("UserToken.used")
         ->fetchEntities());
 
       if ($userToken === false) {
@@ -841,7 +841,7 @@ namespace Core\API\User {
 
         if ($user->save($sql)) {
 
-          $deleteQuery = $sql->delete("UserGroup")->where(new Compare("user_id", $id));
+          $deleteQuery = $sql->delete("UserGroup")->whereEq("user_id", $id);
           $insertQuery = $sql->insert("UserGroup", array("user_id", "group_id"));
 
           foreach ($groupIds as $groupId) {
@@ -928,7 +928,7 @@ namespace Core\API\User {
       $sql = $this->context->getSQL();
       $email = $this->getParam("email");
       $user = User::findBy(User::createBuilder($sql, true)
-        ->where(new Compare("email", $email))
+        ->whereEq("email", $email)
         ->fetchEntities());
       if ($user === false) {
         return $this->createError("Could not fetch user details: " . $sql->getLastError());
@@ -1009,8 +1009,8 @@ namespace Core\API\User {
       $email = $this->getParam("email");
       $sql = $this->context->getSQL();
       $user = User::findBy(User::createBuilder($sql, true)
-        ->where(new Compare("User.email", $email))
-        ->where(new Compare("User.confirmed", false)));
+        ->whereEq("User.email", $email)
+        ->whereFalse("User.confirmed"));
 
       if ($user === false) {
         return $this->createError("Error retrieving user details: " . $sql->getLastError());
@@ -1020,9 +1020,9 @@ namespace Core\API\User {
       }
 
       $userToken = UserToken::findBy(UserToken::createBuilder($sql, true)
-        ->where(new Compare("used", false))
-        ->where(new Compare("tokenType", UserToken::TYPE_EMAIL_CONFIRM))
-        ->where(new Compare("user_id", $user->getId())));
+        ->whereFalse("used")
+        ->whereEq("tokenType", UserToken::TYPE_EMAIL_CONFIRM)
+        ->whereEq("user_id", $user->getId()));
 
       $validHours = 48;
       if ($userToken === false) {
@@ -1333,10 +1333,10 @@ namespace Core\API\User {
       $sql = $this->context->getSQL();
 
       $userToken = UserToken::findBy(UserToken::createBuilder($sql, true)
-        ->where(new Compare("token", $token))
+        ->whereEq("token", $token)
         ->where(new Compare("valid_until", $sql->now(), ">="))
-        ->where(new Compare("user_id", $currentUser->getId()))
-        ->where(new Compare("token_type", UserToken::TYPE_GPG_CONFIRM)));
+        ->whereEq("user_id", $currentUser->getId())
+        ->whereEq("token_type", UserToken::TYPE_GPG_CONFIRM));
 
       if ($userToken !== false) {
         if ($userToken === null) {

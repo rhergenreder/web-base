@@ -39,8 +39,8 @@ class EntityLog_2021_04_08 extends DatabaseScript {
       ->exec(array(
         $sql->update("EntityLog")
           ->set("modified", $sql->now())
-          ->where(new Compare("entityId", new CurrentColumn("id")))
-          ->where(new Compare("tableName", new CurrentTable()))
+          ->whereEq("entityId", new CurrentColumn("id"))
+          ->whereEq("tableName", new CurrentTable())
       ));
 
     $deleteProcedure = $sql->createProcedure("DeleteEntityLog")
@@ -49,8 +49,8 @@ class EntityLog_2021_04_08 extends DatabaseScript {
       ->returns(new Trigger())
       ->exec(array(
         $sql->delete("EntityLog")
-          ->where(new Compare("entityId", new CurrentColumn("id")))
-          ->where(new Compare("tableName", new CurrentTable()))
+          ->whereEq("entityId", new CurrentColumn("id"))
+          ->whereEq("tableName", new CurrentTable())
       ));
 
     $queries[] = $insertProcedure;

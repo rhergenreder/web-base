@@ -15,7 +15,7 @@ namespace Core\API {
       $sql = $this->context->getSQL();
       $res = $sql->select($sql->count())
         ->from("Group")
-        ->where(new Compare("name", $name))
+        ->whereEq("name", $name)
         ->execute();
 
       $this->success = ($res !== FALSE);

@@ -84,7 +84,7 @@ namespace Core\API\Visitors {
       $sql = $this->context->getSQL();
       $query = $sql->select($sql->count(), "day")
         ->from("Visitor")
-        ->where(new Compare("count", 1, ">"))
+        ->whereGt("count", 1)
         ->groupBy("day")
         ->orderBy("day")
         ->ascending();

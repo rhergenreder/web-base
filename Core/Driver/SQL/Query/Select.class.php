@@ -4,14 +4,15 @@ namespace Core\Driver\SQL\Query;
 
 use Core\Driver\SQL\Condition\CondOr;
 use Core\Driver\SQL\Expression\JsonArrayAgg;
-use Core\Driver\SQL\Join;
+use Core\Driver\SQL\Join\InnerJoin;
+use Core\Driver\SQL\Join\Join;
+use Core\Driver\SQL\Join\LeftJoin;
 use Core\Driver\SQL\SQL;
 
-class Select extends Query {
+class Select extends ConditionalQuery {
 
   private array $selectValues;
   private array $tables;
-  private array $conditions;
   private array $joins;
   private array $orderColumns;
   private array $groupColumns;
@@ -26,7 +27,6 @@ class Select extends Query {
     parent::__construct($sql);
     $this->selectValues = (!empty($selectValues) && is_array($selectValues[0])) ? $selectValues[0] : $selectValues;
     $this->tables = array();
-    $this->conditions = array();
     $this->havings = array();
     $this->joins = array();
     $this->orderColumns = array();
@@ -53,23 +53,18 @@ class Select extends Query {
     return $this;
   }
 
-  public function where(...$conditions): Select {
-    $this->conditions[] = (count($conditions) === 1 ? $conditions : new CondOr($conditions));
-    return $this;
-  }
-
   public function having(...$conditions): Select {
     $this->havings[] = (count($conditions) === 1 ? $conditions : new CondOr($conditions));
     return $this;
   }
 
   public function innerJoin(string $table, string $columnA, string $columnB, ?string $tableAlias = null, array $conditions = []): Select {
-    $this->joins[] = new Join("INNER", $table, $columnA, $columnB, $tableAlias, $conditions);
+    $this->joins[] = new InnerJoin($table, $columnA, $columnB, $tableAlias, $conditions);
     return $this;
   }
 
   public function leftJoin(string $table, string $columnA, string $columnB, ?string $tableAlias = null, array $conditions = []): Select {
-    $this->joins[] = new Join("LEFT", $table, $columnA, $columnB, $tableAlias, $conditions);
+    $this->joins[] = new LeftJoin($table, $columnA, $columnB, $tableAlias, $conditions);
     return $this;
   }
 
@@ -133,7 +128,6 @@ class Select extends Query {
 
   public function getSelectValues(): array { return $this->selectValues; }
   public function getTables(): array { return $this->tables; }
-  public function getConditions(): array { return $this->conditions; }
   public function getJoins(): array { return $this->joins; }
   public function isOrderedAscending(): bool { return $this->sortAscending; }
   public function getOrderBy(): array { return $this->orderColumns; }
@@ -180,7 +174,7 @@ class Select extends Query {
     }
 
     $tables = $this->sql->tableName($tables);
-    $where = $this->sql->getWhereClause($this->getConditions(), $params);
+    $where = $this->getWhereClause($params);
     $havingClause = "";
     if (count($this->havings) > 0) {
       $havingClause  = " HAVING " . $this->sql->buildCondition($this->getHavings(), $params);

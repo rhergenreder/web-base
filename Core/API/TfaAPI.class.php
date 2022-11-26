@@ -86,7 +86,7 @@ namespace Core\API\TFA {
       if ($password) {
         $res = $sql->select("password")
           ->from("User")
-          ->where(new Compare("id", $currentUser->getId()))
+          ->whereEq("id", $currentUser->getId())
           ->execute();
         $this->success = !empty($res);
         $this->lastError = $sql->getLastError();
@@ -101,7 +101,7 @@ namespace Core\API\TFA {
       }
 
       $res = $sql->delete("2FA")
-        ->where(new Compare("id", $token->getId()))
+        ->whereEq("id", $token->getId())
         ->execute();
 
       $this->success = $res !== false;
@@ -164,7 +164,8 @@ namespace Core\API\TFA {
         $this->lastError = $sql->getLastError();
         if ($this->success) {
           $this->success = $sql->update("User")
-              ->set("2fa_id", $sql->getLastInsertId())->where(new Compare("id", $currentUser->getId()))
+              ->set("2fa_id", $sql->getLastInsertId())
+              ->whereEq("id", $currentUser->getId())
               ->execute() !== false;
           $this->lastError = $sql->getLastError();
         }
@@ -196,7 +197,7 @@ namespace Core\API\TFA {
       $sql = $this->context->getSQL();
       $this->success = $sql->update("2FA")
         ->set("confirmed", true)
-        ->where(new Compare("id", $twoFactorToken->getId()))
+        ->whereEq("id", $twoFactorToken->getId())
         ->execute() !== false;
       $this->lastError = $sql->getLastError();
       return $this->success;
@@ -282,7 +283,7 @@ namespace Core\API\TFA {
 
           $this->success = $sql->update("User")
             ->set("2fa_id", $sql->getLastInsertId())
-            ->where(new Compare("id", $currentUser->getId()))
+            ->whereEq("id", $currentUser->getId())
             ->execute() !== false;
           $this->lastError = $sql->getLastError();
           if (!$this->success) {
@@ -328,7 +329,7 @@ namespace Core\API\TFA {
         $this->success = $sql->update("2FA")
             ->set("data", json_encode($data))
             ->set("confirmed", true)
-            ->where(new Compare("id", $twoFactorToken->getId()))
+            ->whereEq("id", $twoFactorToken->getId())
             ->execute() !== false;
         $this->lastError = $sql->getLastError();
       }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Core\Driver\SQL;
+namespace Core\Driver\SQL\Join;
 
 use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Condition\Compare;

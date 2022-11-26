@@ -15,10 +15,10 @@ namespace Core\API {
       $sql = $this->context->getSQL();
       $res = $sql->select($sql->count())
         ->from("ApiKey")
-        ->where(new Compare("id", $id))
-        ->where(new Compare("user_id", $this->context->getUser()->getId()))
-        ->where(new Compare("valid_until", $sql->currentTimestamp(), ">"))
-        ->where(new Compare("active", 1))
+        ->whereEq("id", $id)
+        ->whereEq("user_id", $this->context->getUser()->getId())
+        ->whereGt("valid_until", $sql->currentTimestamp())
+        ->whereEq("active", 1)
         ->execute();
 
       $this->success = ($res !== FALSE);
@@ -120,12 +120,12 @@ namespace Core\API\ApiKey {
         return false;
       }
 
-      $validUntil = (new \DateTime)->modify("+30 DAY");
+      $validUntil = (new \DateTime())->modify("+30 DAY");
       $sql = $this->context->getSQL();
       $this->success = $sql->update("ApiKey")
         ->set("valid_until", $validUntil)
-        ->where(new Compare("id", $id))
-        ->where(new Compare("user_id", $this->context->getUser()->getId()))
+        ->whereEq("id", $id)
+        ->whereEq("user_id", $this->context->getUser()->getId())
         ->execute();
       $this->lastError = $sql->getLastError();
 
@@ -155,8 +155,8 @@ namespace Core\API\ApiKey {
       $sql = $this->context->getSQL();
       $this->success = $sql->update("ApiKey")
         ->set("active", false)
-        ->where(new Compare("id", $id))
-        ->where(new Compare("user_id", $this->context->getUser()->getId()))
+        ->whereEq("id", $id)
+        ->whereEq("user_id", $this->context->getUser()->getId())
         ->execute();
       $this->lastError = $sql->getLastError();
 

@@ -19,7 +19,7 @@ abstract class TwoFactorToken extends DatabaseEntity {
   #[ExtendingEnum(self::TWO_FACTOR_TOKEN_TYPES)] private string $type;
   private bool $confirmed;
   private bool $authenticated;
-  #[MaxLength(512)] private string $data;
+  #[MaxLength(512)] private ?string $data;
 
   public function __construct(string $type, ?int $id = null, bool $confirmed = false) {
     parent::__construct($id);
@@ -27,6 +27,7 @@ abstract class TwoFactorToken extends DatabaseEntity {
     $this->type = $type;
     $this->confirmed = $confirmed;
     $this->authenticated = $_SESSION["2faAuthenticated"] ?? false;
+    $this->data = null;
   }
 
   public function jsonSerialize(): array {
@@ -63,11 +64,12 @@ abstract class TwoFactorToken extends DatabaseEntity {
     return $this->confirmed;
   }
 
-  public function getId(): int {
-    return $this->id;
-  }
-
   public function isAuthenticated(): bool {
     return $this->authenticated;
+  }
+
+  public function confirm(SQL $sql): bool {
+    $this->confirmed = true;
+    return $this->save($sql) !== false;
   }
 }

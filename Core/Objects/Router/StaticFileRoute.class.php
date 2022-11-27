@@ -22,9 +22,14 @@ class StaticFileRoute extends Route {
     $this->extra = json_encode($this->code);
   }
 
-  public function postFetch(SQL $sql, array $row) {
-    parent::postFetch($sql, $row);
+  protected function readExtra() {
+    parent::readExtra();
     $this->code = json_decode($this->extra);
+  }
+
+  public function preInsert(array &$row) {
+    parent::preInsert($row);
+    $this->extra = json_encode($this->code);
   }
 
   public function call(Router $router, array $params): string {

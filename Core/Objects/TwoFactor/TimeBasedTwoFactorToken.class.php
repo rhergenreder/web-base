@@ -5,6 +5,7 @@ namespace Core\Objects\TwoFactor;
 use Base32\Base32;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
+use Core\Driver\SQL\SQL;
 use Core\Objects\Context;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
 

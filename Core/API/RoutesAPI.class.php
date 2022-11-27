@@ -3,12 +3,11 @@
 namespace Core\API {
 
   use Core\API\Routes\GenerateCache;
-  use Core\Driver\SQL\Condition\Compare;
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\Route;
 
   abstract class RoutesAPI extends Request {
 
-    const ACTIONS = array("redirect_temporary", "redirect_permanently", "static", "dynamic");
     const ROUTER_CACHE_CLASS = "\\Core\\Cache\\RouterCache";
 
     protected string $routerCachePath;
@@ -18,38 +17,19 @@ namespace Core\API {
       $this->routerCachePath = getClassPath(self::ROUTER_CACHE_CLASS);
     }
 
-    protected function routeExists($uid): bool {
+    protected function toggleRoute(int $id, bool $active): bool {
       $sql = $this->context->getSQL();
-      $res = $sql->select($sql->count())
-        ->from("Route")
-        ->whereEq("id", $uid)
-        ->execute();
-
-      $this->success = ($res !== false);
-      $this->lastError = $sql->getLastError();
-      if ($this->success) {
-        if ($res[0]["count"] === 0) {
-          return $this->createError("Route not found");
-        }
-      }
-
-      return $this->success;
-    }
-
-    protected function toggleRoute($uid, $active): bool {
-      if (!$this->routeExists($uid)) {
+      $route = Route::find($sql, $id);
+      if ($route === false) {
         return false;
+      } else if ($route === null) {
+        return $this->createError("Route not found");
       }
 
-      $sql = $this->context->getSQL();
-      $this->success = $sql->update("Route")
-        ->set("active", $active)
-        ->whereEq("id", $uid)
-        ->execute();
-
+      $route->setActive($active);
+      $this->success = $route->save($sql);
       $this->lastError = $sql->getLastError();
-      $this->success = $this->success && $this->regenerateCache();
-      return $this->success;
+      return $this->success && $this->regenerateCache();
     }
 
     protected function regenerateCache(): bool {
@@ -57,6 +37,27 @@ namespace Core\API {
       $this->success = $req->execute();
       $this->lastError = $req->getLastError();
       return $this->success;
+    }
+
+    protected function createRoute(string $type, string $pattern, string $target,
+                                   ?string $extra, bool $exact, bool $active = true): ?Route {
+
+      $routeClass = Route::ROUTE_TYPES[$type] ?? null;
+      if (!$routeClass) {
+        $this->createError("Invalid type: $type");
+        return null;
+      }
+
+      try {
+        $routeClass = new \ReflectionClass($routeClass);
+        $routeObj = $routeClass->newInstance($pattern, $exact, $target);
+        $routeObj->setExtra($extra);
+        $routeObj->setActive($active);
+        return $routeObj;
+      } catch (\ReflectionException $exception) {
+        $this->createError("Error instantiating route class: " . $exception->getMessage());
+        return null;
+      }
     }
   }
 }
@@ -68,6 +69,7 @@ namespace Core\API\Routes {
   use Core\API\RoutesAPI;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Condition\CondBool;
+  use Core\Driver\SQL\Query\StartTransaction;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Route;
   use Core\Objects\Router\DocumentRoute;
@@ -86,31 +88,15 @@ namespace Core\API\Routes {
     public function _execute(): bool {
       $sql = $this->context->getSQL();
 
-      $res = $sql
-        ->select("id", "request", "action", "target", "extra", "active", "exact")
-        ->from("Route")
-        ->orderBy("id")
-        ->ascending()
-        ->execute();
-
+      $routes = Route::findAll($sql);
       $this->lastError = $sql->getLastError();
-      $this->success = ($res !== FALSE);
+      $this->success = ($routes !== FALSE);
 
       if ($this->success) {
-        $routes = array();
-        foreach ($res as $row) {
-          $routes[] = array(
-            "id" => intval($row["id"]),
-            "request" => $row["request"],
-            "action" => $row["action"],
-            "target" => $row["target"],
-            "extra" => $row["extra"] ?? "",
-            "active" => intval($sql->parseBool($row["active"])),
-            "exact" => intval($sql->parseBool($row["exact"])),
-          );
+        $this->result["routes"] = [];
+        foreach ($routes as $route) {
+          $this->result["routes"][$route->getId()] = $route->jsonSerialize();
         }
-
-        $this->result["routes"] = $routes;
       }
 
       return $this->success;
@@ -133,32 +119,35 @@ namespace Core\API\Routes {
       }
 
       $sql = $this->context->getSQL();
+      $sql->startTransaction();
 
-      // DELETE old rules
+      // DELETE old rules;
       $this->success = ($sql->truncate("Route")->execute() !== FALSE);
       $this->lastError = $sql->getLastError();
 
       // INSERT new routes
       if ($this->success) {
-        $stmt = $sql->insert("Route", array("request", "action", "target", "extra", "active", "exact"));
-
-        foreach ($this->routes as $route) {
-          $stmt->addRow($route["request"], $route["action"], $route["target"], $route["extra"], $route["active"], $route["exact"]);
-        }
-        $this->success = ($stmt->execute() !== FALSE);
+        $insertStatement = Route::getHandler($sql)->getInsertQuery($this->routes);
+        $this->success = ($insertStatement->execute() !== FALSE);
         $this->lastError = $sql->getLastError();
       }
 
-      $this->success = $this->success && $this->regenerateCache();
-      return $this->success;
+      if ($this->success) {
+        $sql->commit();
+        return $this->regenerateCache();
+      } else {
+        $sql->rollback();
+        return false;
+      }
     }
 
     private function validateRoutes(): bool {
 
       $this->routes = array();
       $keys = array(
-        "request" => [Parameter::TYPE_STRING, Parameter::TYPE_INT],
-        "action" => Parameter::TYPE_STRING,
+        "id" => Parameter::TYPE_INT,
+        "pattern" => [Parameter::TYPE_STRING, Parameter::TYPE_INT],
+        "type" => Parameter::TYPE_STRING,
         "target" => Parameter::TYPE_STRING,
         "extra" => Parameter::TYPE_STRING,
         "active" => Parameter::TYPE_BOOLEAN,
@@ -168,7 +157,11 @@ namespace Core\API\Routes {
       foreach ($this->getParam("routes") as $index => $route) {
         foreach ($keys as $key => $expectedType) {
           if (!array_key_exists($key, $route)) {
-            return $this->createError("Route $index missing key: $key");
+            if ($key !== "id") {  // id is optional
+              return $this->createError("Route $index missing key: $key");
+            } else {
+              continue;
+            }
           }
 
           $value = $route[$key];
@@ -191,13 +184,13 @@ namespace Core\API\Routes {
           }
         }
 
-        $action = $route["action"];
-        if (!in_array($action, self::ACTIONS)) {
-          return $this->createError("Invalid action: $action");
+        $type = $route["type"];
+        if (!isset(Route::ROUTE_TYPES[$type])) {
+          return $this->createError("Invalid type: $type");
         }
 
-        if (empty($route["request"])) {
-          return $this->createError("Request cannot be empty.");
+        if (empty($route["pattern"])) {
+          return $this->createError("Pattern cannot be empty.");
         }
 
         if (empty($route["target"])) {
@@ -215,33 +208,33 @@ namespace Core\API\Routes {
 
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, array(
-        "request" => new StringType("request", 128),
-        "action" => new StringType("action"),
+        "pattern" => new StringType("pattern", 128),
+        "type" => new StringType("type"),
         "target" => new StringType("target", 128),
         "extra" => new StringType("extra", 64, true, ""),
+        "exact" => new Parameter("exact", Parameter::TYPE_BOOLEAN),
+        "active" => new Parameter("active", Parameter::TYPE_BOOLEAN, true, true),
       ));
       $this->isPublic = false;
     }
 
     public function _execute(): bool {
 
-      $request = $this->getParam("request");
-      $action = $this->getParam("action");
+      $pattern = $this->getParam("pattern");
+      $type = $this->getParam("type");
       $target = $this->getParam("target");
       $extra = $this->getParam("extra");
-
-      if (!in_array($action, self::ACTIONS)) {
-        return $this->createError("Invalid action: $action");
+      $exact = $this->getParam("exact");
+      $active = $this->getParam("active");
+      $route = $this->createRoute($type, $pattern, $target, $extra, $exact, $active);
+      if ($route === null) {
+        return false;
       }
 
       $sql = $this->context->getSQL();
-      $this->success = $sql->insert("Route", ["request", "action", "target", "extra"])
-        ->addRow($request, $action, $target, $extra)
-        ->execute();
-
+      $this->success = $route->save($sql) !== false;
       $this->lastError = $sql->getLastError();
-      $this->success = $this->success && $this->regenerateCache();
-      return $this->success;
+      return $this->success && $this->regenerateCache();
     }
   }
 
@@ -249,8 +242,8 @@ namespace Core\API\Routes {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, array(
         "id" => new Parameter("id", Parameter::TYPE_INT),
-        "request" => new StringType("request", 128),
-        "action" => new StringType("action"),
+        "pattern" => new StringType("pattern", 128),
+        "type" => new StringType("type"),
         "target" => new StringType("target", 128),
         "extra" => new StringType("extra", 64, true, ""),
       ));
@@ -260,30 +253,36 @@ namespace Core\API\Routes {
     public function _execute(): bool {
 
       $id = $this->getParam("id");
-      if (!$this->routeExists($id)) {
-        return false;
+      $sql = $this->context->getSQL();
+      $route = Route::find($sql, $id);
+      if ($route === false) {
+        return $this->createError("Error fetching route: " . $sql->getLastError());
+      } else if ($route === null) {
+        return $this->createError("Route not found");
       }
 
-      $request = $this->getParam("request");
-      $action = $this->getParam("action");
       $target = $this->getParam("target");
       $extra = $this->getParam("extra");
-      if (!in_array($action, self::ACTIONS)) {
-        return $this->createError("Invalid action: $action");
+      $type = $this->getParam("type");
+      $pattern = $this->getParam("pattern");
+      $exact = $this->getParam("exact");
+      $active = $this->getParam("active");
+      if ($route->getType() !== $type) {
+        $route = $this->createRoute($type, $pattern, $target, $extra, $exact, $active);
+        if ($route === null) {
+          return false;
+        }
+      } else {
+        $route->setPattern($pattern);
+        $route->setActive($active);
+        $route->setExtra($extra);
+        $route->setTarget($target);
+        $route->setExact($exact);
       }
 
-      $sql = $this->context->getSQL();
-      $this->success = $sql->update("Route")
-        ->set("request", $request)
-        ->set("action", $action)
-        ->set("target", $target)
-        ->set("extra", $extra)
-        ->whereEq("id", $id)
-        ->execute();
-
+      $this->success = $route->save($sql) !== false;
       $this->lastError = $sql->getLastError();
-      $this->success = $this->success && $this->regenerateCache();
-      return $this->success;
+      return $this->success && $this->regenerateCache();
     }
   }
 
@@ -297,19 +296,18 @@ namespace Core\API\Routes {
 
     public function _execute(): bool {
 
+      $sql = $this->context->getSQL();
       $id = $this->getParam("id");
-      if (!$this->routeExists($id)) {
-        return false;
+      $route = Route::find($sql, $id);
+      if ($route === false) {
+        return $this->createError("Error fetching route: " . $sql->getLastError());
+      } else if ($route === null) {
+        return $this->createError("Route not found");
       }
 
-      $sql = $this->context->getSQL();
-      $this->success = $sql->delete("Route")
-        ->where("id", $id)
-        ->execute();
-
+      $this->success = $route->delete($sql) !== false;
       $this->lastError = $sql->getLastError();
-      $this->success = $this->success && $this->regenerateCache();
-      return $this->success;
+      return $this->success && $this->regenerateCache();
     }
   }
 
@@ -322,8 +320,8 @@ namespace Core\API\Routes {
     }
 
     public function _execute(): bool {
-      $uid = $this->getParam("id");
-      return $this->toggleRoute($uid, true);
+      $id = $this->getParam("id");
+      return $this->toggleRoute($id, true);
     }
   }
 
@@ -336,8 +334,8 @@ namespace Core\API\Routes {
     }
 
     public function _execute(): bool {
-      $uid = $this->getParam("id");
-      return $this->toggleRoute($uid, false);
+      $id = $this->getParam("id");
+      return $this->toggleRoute($id, false);
     }
   }
 

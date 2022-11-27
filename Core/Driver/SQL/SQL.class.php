@@ -23,6 +23,7 @@ use Core\Driver\SQL\Expression\CurrentTimeStamp;
 use Core\Driver\SQL\Expression\Expression;
 use Core\Driver\SQL\Expression\Sum;
 use Core\Driver\SQL\Query\AlterTable;
+use Core\Driver\SQL\Query\Commit;
 use Core\Driver\SQL\Query\CreateProcedure;
 use Core\Driver\SQL\Query\CreateTable;
 use Core\Driver\SQL\Query\CreateTrigger;
@@ -30,7 +31,9 @@ use Core\Driver\SQL\Query\Delete;
 use Core\Driver\SQL\Query\Drop;
 use Core\Driver\SQL\Query\Insert;
 use Core\Driver\SQL\Query\Query;
+use Core\Driver\SQL\Query\RollBack;
 use Core\Driver\SQL\Query\Select;
+use Core\Driver\SQL\Query\StartTransaction;
 use Core\Driver\SQL\Query\Truncate;
 use Core\Driver\SQL\Query\Update;
 use Core\Driver\SQL\Strategy\CascadeStrategy;
@@ -97,6 +100,18 @@ abstract class SQL {
 
   public function drop(string $table): Drop {
     return new Drop($this, $table);
+  }
+
+  public function startTransaction(): bool {
+    return (new StartTransaction($this))->execute();
+  }
+
+  public function commit(): bool {
+    return (new Commit($this))->execute();
+  }
+
+  public function rollback(): bool {
+    return (new RollBack($this))->execute();
   }
 
   public function alterTable($tableName): AlterTable {

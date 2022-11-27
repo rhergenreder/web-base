@@ -93,4 +93,8 @@ class User extends DatabaseEntity {
     $this->lastOnline = new \DateTime();
     return $this->save($sql, ["last_online", "language_id"]);
   }
+
+  public function setTwoFactorToken(TwoFactorToken $twoFactorToken) {
+    $this->twoFactorToken = $twoFactorToken;
+  }
 }

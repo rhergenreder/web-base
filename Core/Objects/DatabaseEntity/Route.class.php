@@ -3,6 +3,7 @@
 namespace Core\Objects\DatabaseEntity;
 
 use Core\API\Parameter\Parameter;
+use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\ExtendingEnum;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
@@ -16,11 +17,16 @@ use Core\Objects\Router\StaticFileRoute;
 abstract class Route extends DatabaseEntity {
 
   const PARAMETER_PATTERN = "/^{([^:]+)(:(.*?)(\?)?)?}$/";
+
+  const TYPE_DYNAMIC = "dynamic";
+  const TYPE_STATIC = "static";
+  const TYPE_REDIRECT_PERMANENTLY = "redirect_permanently";
+  const TYPE_REDIRECT_TEMPORARY = "redirect_temporary";
   const ROUTE_TYPES = [
-    "redirect_temporary" => RedirectRoute::class,
-    "redirect_permanently" => RedirectRoute::class,
-    "static" => StaticFileRoute::class,
-    "dynamic" => DocumentRoute::class
+    self::TYPE_REDIRECT_TEMPORARY => RedirectRoute::class,
+    self::TYPE_REDIRECT_PERMANENTLY => RedirectRoute::class,
+    self::TYPE_STATIC => StaticFileRoute::class,
+    self::TYPE_DYNAMIC => DocumentRoute::class
   ];
 
   #[MaxLength(128)]
@@ -76,6 +82,13 @@ abstract class Route extends DatabaseEntity {
   }
 
   public abstract function call(Router $router, array $params): string;
+
+  protected function readExtra() { }
+
+  public function postFetch(SQL $sql, array $row) {
+    parent::postFetch($sql, $row);
+    $this->readExtra();
+  }
 
   protected function getArgs(): array {
     return [$this->pattern, $this->exact];
@@ -203,5 +216,29 @@ abstract class Route extends DatabaseEntity {
       "exact" => $this->exact,
       "active" => $this->active,
     ];
+  }
+
+  public function setActive(bool $active) {
+    $this->active = $active;
+  }
+
+  public function getType(): string {
+    return $this->type;
+  }
+
+  public function setPattern(string $pattern) {
+    $this->pattern = $pattern;
+  }
+
+  public function setExtra(string $extra) {
+    $this->extra = $extra;
+  }
+
+  public function setTarget(string $target) {
+    $this->target = $target;
+  }
+
+  public function setExact(bool $exact) {
+    $this->exact = $exact;
   }
 }

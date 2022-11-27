@@ -50,10 +50,13 @@ namespace Core\API\Template {
       $valid = false;
 
       foreach ($baseDirs as $baseDir) {
-        $path = realpath(implode("/", [WEBROOT, $baseDir, "Templates", $templateFile]));
-        if ($path && is_file($path)) {
-          $valid = true;
-          break;
+        $templateDir = realpath(implode("/", [WEBROOT, $baseDir, "Templates"]));
+        if ($templateDir) {
+          $path = realpath(implode("/", [$templateDir, $templateFile]));
+          if ($path && is_file($path)) {
+            $valid = true;
+            break;
+          }
         }
       }
 
@@ -61,7 +64,7 @@ namespace Core\API\Template {
         return $this->createError("Template file not found or not inside template directory");
       }
 
-      $twigLoader = new FilesystemLoader(dirname($path));
+      $twigLoader = new FilesystemLoader($templateDir);
       $twigEnvironment = new Environment($twigLoader, [
         'cache' => $templateCache,
         'auto_reload' => true

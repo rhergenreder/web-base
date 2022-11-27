@@ -20,7 +20,6 @@ namespace Documents\Install {
   use Core\Configuration\Configuration;
   use Core\Configuration\CreateDatabase;
   use Core\Driver\SQL\Query\Commit;
-  use Core\Driver\SQL\Query\RollBack;
   use Core\Driver\SQL\Query\StartTransaction;
   use Core\Driver\SQL\SQL;
   use Core\Elements\Body;
@@ -349,7 +348,7 @@ namespace Documents\Install {
               }
             } finally {
               if (!$success) {
-                (new RollBack($sql))->execute();
+                $sql->rollback();
               }
             }
 

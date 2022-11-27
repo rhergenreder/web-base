@@ -84,27 +84,14 @@ namespace Core\API\TFA {
       $sql = $this->context->getSQL();
       $password = $this->getParam("password");
       if ($password) {
-        $res = $sql->select("password")
-          ->from("User")
-          ->whereEq("id", $currentUser->getId())
-          ->execute();
-        $this->success = !empty($res);
-        $this->lastError = $sql->getLastError();
-        if (!$this->success) {
-          return false;
-        } else if (!password_verify($password, $res[0]["password"])) {
+        if (!password_verify($password, $currentUser->password)) {
           return $this->createError("Wrong password");
         }
       } else if ($token->isConfirmed()) {
         // if the token is fully confirmed, require a password to remove it
         return $this->createError("Missing parameter: password");
       }
-
-      $res = $sql->delete("2FA")
-        ->whereEq("id", $token->getId())
-        ->execute();
-
-      $this->success = $res !== false;
+      $this->success = $token->delete($sql) !== false;
       $this->lastError = $sql->getLastError();
 
       if ($this->success && $token->isConfirmed()) {
@@ -157,16 +144,11 @@ namespace Core\API\TFA {
       } else if (!($twoFactorToken instanceof TimeBasedTwoFactorToken)) {
         $twoFactorToken = new TimeBasedTwoFactorToken(generateRandomString(32, "base32"));
         $sql = $this->context->getSQL();
-        $this->success = $sql->insert("2FA", ["type", "data"])
-            ->addRow("totp", $twoFactorToken->getData())
-            ->returning("id")
-            ->execute() !== false;
+        $this->success = $twoFactorToken->save($sql) !== false;
         $this->lastError = $sql->getLastError();
         if ($this->success) {
-          $this->success = $sql->update("User")
-              ->set("2fa_id", $sql->getLastInsertId())
-              ->whereEq("id", $currentUser->getId())
-              ->execute() !== false;
+          $currentUser->setTwoFactorToken($twoFactorToken);
+          $this->success = $currentUser->save($sql);
           $this->lastError = $sql->getLastError();
         }
 
@@ -194,11 +176,12 @@ namespace Core\API\TFA {
         return $this->createError("Your two factor token is already confirmed.");
       }
 
+      if (!parent::_execute()) {
+        return false;
+      }
+
       $sql = $this->context->getSQL();
-      $this->success = $sql->update("2FA")
-        ->set("confirmed", true)
-        ->whereEq("id", $twoFactorToken->getId())
-        ->execute() !== false;
+      $this->success = $twoFactorToken->confirm($sql) !== false;
       $this->lastError = $sql->getLastError();
       return $this->success;
     }
@@ -271,20 +254,15 @@ namespace Core\API\TFA {
           }
         } else {
           $challenge = base64_encode(generateRandomString(32, "raw"));
-          $res = $sql->insert("2FA", ["type", "data"])
-            ->addRow("fido", $challenge)
-            ->returning("id")
-            ->execute();
-          $this->success = ($res !== false);
+          $twoFactorToken = new KeyBasedTwoFactorToken($challenge);
+          $this->success = ($twoFactorToken->save($sql) !== false);
           $this->lastError = $sql->getLastError();
           if (!$this->success) {
             return false;
           }
 
-          $this->success = $sql->update("User")
-            ->set("2fa_id", $sql->getLastInsertId())
-            ->whereEq("id", $currentUser->getId())
-            ->execute() !== false;
+          $currentUser->setTwoFactorToken($twoFactorToken);
+          $this->success = $currentUser->save($sql) !== false;
           $this->lastError = $sql->getLastError();
           if (!$this->success) {
             return false;
@@ -321,16 +299,7 @@ namespace Core\API\TFA {
           return $this->createError("Unsupported key type. Expected: -7");
         }
 
-        $data = [
-          "credentialID" => base64_encode($authData->getCredentialID()),
-          "publicKey" => $publicKey->jsonSerialize()
-        ];
-
-        $this->success = $sql->update("2FA")
-            ->set("data", json_encode($data))
-            ->set("confirmed", true)
-            ->whereEq("id", $twoFactorToken->getId())
-            ->execute() !== false;
+        $this->success = $twoFactorToken->confirmKeyBased($sql, base64_encode($authData->getCredentialID()), $publicKey) !== false;
         $this->lastError = $sql->getLastError();
       }
 

@@ -2,6 +2,7 @@
 
 namespace Core\Objects\TwoFactor;
 
+use Core\Driver\SQL\SQL;
 use Cose\Algorithm\Signature\ECDSA\ECSignature;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
 
@@ -13,8 +14,13 @@ class KeyBasedTwoFactorToken extends TwoFactorToken {
   private ?string $credentialId;
   private ?PublicKey $publicKey;
 
+  public function __construct(string $challenge) {
+    parent::__construct(self::TYPE);
+    $this->challenge = $challenge;
+  }
+
   protected function readData(string $data) {
-    if ($this->isConfirmed()) {
+    if (!$this->isConfirmed()) {
       $this->challenge = base64_decode($data);
       $this->credentialId = null;
       $this->publicKey = null;
@@ -27,8 +33,22 @@ class KeyBasedTwoFactorToken extends TwoFactorToken {
   }
 
   public function getData(): string {
-    return $this->challenge;
+    if ($this->isConfirmed()) {
+      return base64_encode($this->challenge);
+    } else {
+      return json_encode([
+        "credentialId" => $this->credentialId,
+        "publicKey" => $this->publicKey->jsonSerialize()
+      ]);
+    }
   }
+
+  public function confirmKeyBased(SQL $sql, string $credentialId, PublicKey $publicKey): bool {
+    $this->credentialId = $credentialId;
+    $this->publicKey = $publicKey;
+    return parent::confirm($sql);
+  }
+
 
   public function getPublicKey(): ?PublicKey {
     return $this->publicKey;

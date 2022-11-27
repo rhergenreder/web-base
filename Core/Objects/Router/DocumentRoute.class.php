@@ -24,9 +24,14 @@ class DocumentRoute extends Route {
     $this->extra = json_encode($args);
   }
 
-  public function postFetch(SQL $sql, array $row) {
-    parent::postFetch($sql, $row);
+  protected function readExtra() {
+    parent::readExtra();
     $this->args = json_decode($this->extra);
+  }
+
+  public function preInsert(array &$row) {
+    parent::preInsert($row);
+    $this->extra = json_encode($this->args);
   }
 
   #[Pure] private function getClassName(): string {

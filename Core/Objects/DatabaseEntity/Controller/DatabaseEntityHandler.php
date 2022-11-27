@@ -10,7 +10,6 @@ use Core\Driver\SQL\Column\EnumColumn;
 use Core\Driver\SQL\Column\IntColumn;
 use Core\Driver\SQL\Column\JsonColumn;
 use Core\Driver\SQL\Column\StringColumn;
-use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondAnd;
 use Core\Driver\SQL\Condition\CondBool;
 use Core\Driver\SQL\Condition\CondIn;
@@ -33,12 +32,12 @@ use Core\Driver\SQL\Type\CurrentColumn;
 use Core\Driver\SQL\Type\CurrentTable;
 use Core\Objects\DatabaseEntity\Attribute\Enum;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
+use Core\Objects\DatabaseEntity\Attribute\ExtendingEnum;
 use Core\Objects\DatabaseEntity\Attribute\Json;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Attribute\Multiple;
 use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Core\Objects\DatabaseEntity\Attribute\Unique;
-use PHPUnit\Util\Exception;
 
 class DatabaseEntityHandler implements Persistable {
 
@@ -49,6 +48,8 @@ class DatabaseEntityHandler implements Persistable {
   private array $relations;
   private array $constraints;
   private array $nmRelations;
+  private array $extendingClasses;
+  private ?\ReflectionProperty $extendingProperty;
   private SQL $sql;
   private Logger $logger;
 
@@ -66,7 +67,9 @@ class DatabaseEntityHandler implements Persistable {
     $this->properties = [];  // property name => \ReflectionProperty
     $this->relations = [];   // property name => DatabaseEntityHandler
     $this->constraints = []; // \Driver\SQL\Constraint\Constraint
-    $this->nmRelations = [];    // table name => NMRelation
+    $this->nmRelations = []; // table name => NMRelation
+    $this->extendingClasses = [];  // enum value => \ReflectionClass
+    $this->extendingProperty = null;  // only one attribute can hold the type of the extending class
 
     foreach ($this->entityClass->getProperties() as $property) {
       $propertyName = $property->getName();
@@ -91,6 +94,36 @@ class DatabaseEntityHandler implements Persistable {
         continue;
       }
 
+      $ext = self::getAttribute($property, ExtendingEnum::class);
+      if ($ext !== null) {
+        if ($this->extendingProperty !== null) {
+          $this->raiseError("Cannot have more than one extending property");
+        } else {
+          $this->extendingProperty = $property;
+          $enumMappings = $ext->getMappings();
+          foreach ($enumMappings as $key => $extendingClass) {
+            if (!is_string($key)) {
+              $type = gettype($key);
+              $this->raiseError("Extending enum must be an array of string => class, got type '$type' for key: " . print_r($key, true));
+            } else if (!is_string($extendingClass)) {
+              $type = gettype($extendingClass);
+              $this->raiseError("Extending enum must be an array of string => class, got type '$type' for value: " . print_r($extendingClass, true));
+            }
+
+            try {
+              $requestedClass = new \ReflectionClass($extendingClass);
+              if (!$requestedClass->isSubclassOf($this->entityClass)) {
+                $this->raiseError("Class '$extendingClass' must be an inheriting from '" . $this->entityClass->getName() . "' for an extending enum");
+              } else {
+                $this->extendingClasses[$key] = $requestedClass;
+              }
+            } catch (\ReflectionException $ex) {
+              $this->raiseError("Cannot persist extending enum for class $extendingClass: " . $ex->getMessage());
+            }
+          }
+        }
+      }
+
       $defaultValue = (self::getAttribute($property, DefaultValue::class))?->getValue();
       $isUnique = !empty($property->getAttributes(Unique::class));
 
@@ -112,18 +145,6 @@ class DatabaseEntityHandler implements Persistable {
         $this->columns[$propertyName] = new BoolColumn($columnName, $defaultValue ?? false);
       } else if ($propertyTypeName === 'DateTime') {
         $this->columns[$propertyName] = new DateTimeColumn($columnName, $nullable, $defaultValue);
-        /*} else if ($propertyName === 'array') {
-          $many = self::getAttribute($property, Many::class);
-          if ($many) {
-            $requestedType = $many->getValue();
-            if (isClass($requestedType)) {
-              $requestedClass = new \ReflectionClass($requestedType);
-            } else {
-              $this->raiseError("Cannot persist class '$className': Property '$propertyName' has non persist-able type: $requestedType");
-            }
-          } else {
-            $this->raiseError("Cannot persist class '$className': Property '$propertyName' has non persist-able type: $propertyTypeName");
-          }*/
       } else if ($propertyTypeName === "array") {
         $multiple = self::getAttribute($property, Multiple::class);
         if (!$multiple) {
@@ -248,42 +269,62 @@ class DatabaseEntityHandler implements Persistable {
     return $rel_row;
   }
 
+  private function getValueFromRow(array $row, string $propertyName, mixed &$value): bool {
+    $column = $this->columns[$propertyName] ?? null;
+    if (!$column) {
+      return false;
+    }
+
+    $columnName = $column->getName();
+    if (!array_key_exists($columnName, $row)) {
+      return false;
+    }
+
+    $value = $row[$columnName];
+    if ($column instanceof DateTimeColumn) {
+      $value = new \DateTime($value);
+    } else if ($column instanceof JsonColumn) {
+      $value = json_decode($value);
+    } else if (isset($this->relations[$propertyName])) {
+      $relColumnPrefix = self::getColumnName($propertyName) . "_";
+      if (array_key_exists($relColumnPrefix . "id", $row)) {
+        $relId = $row[$relColumnPrefix . "id"];
+        if ($relId !== null) {
+          $relationHandler = $this->relations[$propertyName];
+          $value = $relationHandler->entityFromRow(self::getPrefixedRow($row, $relColumnPrefix));
+        } else if (!$column->notNull()) {
+          $value = null;
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   public function entityFromRow(array $row): ?DatabaseEntity {
     try {
 
-      $entity = call_user_func($this->entityClass->getName() . "::newInstance", $this->entityClass, $row);
+      $constructorClass = $this->entityClass;
+      if ($this->extendingProperty !== null) {
+        if ($this->getValueFromRow($row, $this->extendingProperty->getName(), $enumValue)) {
+          if ($enumValue && isset($this->extendingClasses[$enumValue])) {
+            $constructorClass = $this->extendingClasses[$enumValue];
+          }
+        }
+      }
+
+      $entity = call_user_func($constructorClass->getName() . "::newInstance", $constructorClass);
       if (!($entity instanceof DatabaseEntity)) {
         $this->logger->error("Created Object is not of type DatabaseEntity");
         return null;
       }
 
-      foreach ($this->columns as $propertyName => $column) {
-        $columnName = $column->getName();
-        if (array_key_exists($columnName, $row)) {
-          $value = $row[$columnName];
-          $property = $this->properties[$propertyName];
-
-          if ($column instanceof DateTimeColumn) {
-            $value = new \DateTime($value);
-          } else if ($column instanceof JsonColumn) {
-            $value = json_decode($value);
-          } else if (isset($this->relations[$propertyName])) {
-            $relColumnPrefix = self::getColumnName($propertyName) . "_";
-            if (array_key_exists($relColumnPrefix . "id", $row)) {
-              $relId = $row[$relColumnPrefix . "id"];
-              if ($relId !== null) {
-                $relationHandler = $this->relations[$propertyName];
-                $value = $relationHandler->entityFromRow(self::getPrefixedRow($row, $relColumnPrefix));
-              } else if (!$column->notNull()) {
-                $value = null;
-              } else {
-                continue;
-              }
-            } else {
-              continue;
-            }
-          }
-
+      foreach ($this->properties as $property) {
+        if ($this->getValueFromRow($row, $property->getName(), $value)) {
           $property->setAccessible(true);
           $property->setValue($entity, $value);
         }
@@ -449,7 +490,7 @@ class DatabaseEntityHandler implements Persistable {
         }
       }
 
-      $rows = $relEntityQuery->execute();
+      $rows = $relEntityQuery->executeSQL();
       if (!is_array($rows)) {
         $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
         return;
@@ -698,7 +739,7 @@ class DatabaseEntityHandler implements Persistable {
 
   private function raiseError(string $message) {
     $this->logger->error($message);
-    throw new Exception($message);
+    throw new \Exception($message);
   }
 
   public function getSQL(): SQL {
@@ -713,6 +754,9 @@ class DatabaseEntityHandler implements Persistable {
 
     $firstEntity = (is_array($entities) ? current($entities) : $entities);
     $firstRow = $this->prepareRow($firstEntity, "insert");
+    if ($firstRow === false) {
+      return null;
+    }
 
     $statement = $this->sql->insert($this->tableName, array_keys($firstRow))
       ->addRow(...array_values($firstRow));

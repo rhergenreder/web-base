@@ -7,12 +7,18 @@ use Core\Driver\SQL\SQL;
 class Logger {
 
   public const LOG_FILE_DATE_FORMAT = "Y-m-d_H-i-s_v";
+  public const LOG_LEVEL_DEBUG = 0;
+  public const LOG_LEVEL_INFO = 1;
+  public const LOG_LEVEL_WARNING = 2;
+  public const LOG_LEVEL_ERROR = 3;
+  public const LOG_LEVEL_SEVERE = 4;
+
   public const LOG_LEVELS = [
-    0 => "debug",
-    1 => "info",
-    2 => "warning",
-    3 => "error",
-    4 => "severe"
+    self::LOG_LEVEL_DEBUG => "debug",
+    self::LOG_LEVEL_INFO => "info",
+    self::LOG_LEVEL_WARNING => "warning",
+    self::LOG_LEVEL_ERROR => "error",
+    self::LOG_LEVEL_SEVERE => "severe"
   ];
 
   public static Logger $INSTANCE;
@@ -57,6 +63,10 @@ class Logger {
     $this->lastLevel = $severity;
     if ($this->unitTestMode) {
       return;
+    }
+
+    if ($severity >= self::LOG_LEVEL_WARNING) {
+      error_log($message);
     }
 
     if ($this->sql !== null && $this->sql->isConnected()) {

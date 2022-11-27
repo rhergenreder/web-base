@@ -2,13 +2,15 @@
 
 namespace Core\Objects\Router;
 
-class StaticRoute extends AbstractRoute {
+use Core\Objects\DatabaseEntity\Route;
+
+class StaticRoute extends Route {
 
   private string $data;
   private int $code;
 
   public function __construct(string $pattern, bool $exact, string $data, int $code = 200) {
-    parent::__construct($pattern, $exact);
+    parent::__construct("static", $pattern, $exact);
     $this->data = $data;
     $this->code = $code;
   }

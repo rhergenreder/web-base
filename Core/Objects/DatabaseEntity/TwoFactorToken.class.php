@@ -3,7 +3,7 @@
 namespace Core\Objects\DatabaseEntity;
 
 use Core\Driver\SQL\SQL;
-use Core\Objects\DatabaseEntity\Attribute\Enum;
+use Core\Objects\DatabaseEntity\Attribute\ExtendingEnum;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
 use Core\Objects\TwoFactor\TimeBasedTwoFactorToken;
@@ -11,7 +11,12 @@ use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
 abstract class TwoFactorToken extends DatabaseEntity {
 
-  #[Enum('totp','fido')] private string $type;
+  const TWO_FACTOR_TOKEN_TYPES = [
+    "totp" => TimeBasedTwoFactorToken::class,
+    "fido" => KeyBasedTwoFactorToken::class,
+  ];
+
+  #[ExtendingEnum(self::TWO_FACTOR_TOKEN_TYPES)] private string $type;
   private bool $confirmed;
   private bool $authenticated;
   #[MaxLength(512)] private string $data;
@@ -60,17 +65,6 @@ abstract class TwoFactorToken extends DatabaseEntity {
 
   public function getId(): int {
     return $this->id;
-  }
-
-  public static function newInstance(\ReflectionClass $reflectionClass, array $row) {
-    if ($row["type"] === TimeBasedTwoFactorToken::TYPE) {
-      return (new \ReflectionClass(TimeBasedTwoFactorToken::class))->newInstanceWithoutConstructor();
-    } else if ($row["type"] === KeyBasedTwoFactorToken::TYPE) {
-      return (new \ReflectionClass(KeyBasedTwoFactorToken::class))->newInstanceWithoutConstructor();
-    } else {
-      // TODO: error message
-      return null;
-    }
   }
 
   public function isAuthenticated(): bool {

@@ -2,22 +2,29 @@
 
 namespace Core\Objects\Router;
 
+use Core\Driver\SQL\SQL;
 use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\Route;
 use Core\Objects\Search\Searchable;
 use Core\Objects\Search\SearchQuery;
 use Core\Objects\Search\SearchResult;
+use JetBrains\PhpStorm\Pure;
 
-class StaticFileRoute extends AbstractRoute {
+class StaticFileRoute extends Route {
 
   use Searchable;
 
-  private string $path;
   private int $code;
 
   public function __construct(string $pattern, bool $exact, string $path, int $code = 200) {
-    parent::__construct($pattern, $exact);
-    $this->path = $path;
+    parent::__construct("static", $pattern, $path, $exact);
     $this->code = $code;
+    $this->extra = json_encode($this->code);
+  }
+
+  public function postFetch(SQL $sql, array $row) {
+    parent::postFetch($sql, $row);
+    $this->code = json_decode($this->extra);
   }
 
   public function call(Router $router, array $params): string {
@@ -26,12 +33,16 @@ class StaticFileRoute extends AbstractRoute {
     return "";
   }
 
+  #[Pure] private function getPath(): string {
+    return $this->getTarget();
+  }
+
   protected function getArgs(): array {
-    return array_merge(parent::getArgs(), [$this->path, $this->code]);
+    return array_merge(parent::getArgs(), [$this->getPath(), $this->code]);
   }
 
   public function getAbsolutePath(): string {
-    return WEBROOT . DIRECTORY_SEPARATOR . $this->path;
+    return WEBROOT . DIRECTORY_SEPARATOR . $this->getPath();
   }
 
   public static function serveStatic(string $path, ?Router $router = null) {

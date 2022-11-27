@@ -32,7 +32,7 @@ abstract class DatabaseEntity {
     return $handler->entityFromRow($row);
   }
 
-  public static function newInstance(\ReflectionClass $reflectionClass, array $row) {
+  public static function newInstance(\ReflectionClass $reflectionClass) {
     return $reflectionClass->newInstanceWithoutConstructor();
   }
 
@@ -125,6 +125,12 @@ abstract class DatabaseEntity {
       $class = new \ReflectionClass($obj_or_class);
     } else {
       $class = $obj_or_class;
+    }
+
+    // if we are in an extending context, get the database handler for the root entity,
+    // as we do not persist attributes of the inheriting class
+    while ($class->getParentClass()->getName() !== DatabaseEntity::class) {
+      $class = $class->getParentClass();
     }
 
     $handler = self::$handlers[$class->getShortName()] ?? null;

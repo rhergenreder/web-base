@@ -137,4 +137,8 @@ class DatabaseEntityQuery extends Select {
       return null;
     }
   }
+
+  public function executeSQL() {
+    return parent::execute();
+  }
 }

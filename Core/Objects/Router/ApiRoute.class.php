@@ -4,13 +4,14 @@ namespace Core\Objects\Router;
 
 use Core\API\Request;
 use Core\Elements\TemplateDocument;
+use Core\Objects\DatabaseEntity\Route;
 use ReflectionClass;
 use ReflectionException;
 
-class ApiRoute extends AbstractRoute {
+class ApiRoute extends Route {
 
   public function __construct() {
-    parent::__construct("/api/{endpoint:?}/{method:?}", false);
+    parent::__construct("API", "/api/{endpoint:?}/{method:?}", false);
   }
 
   private static function checkClass(string $className): bool {

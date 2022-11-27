@@ -2,34 +2,44 @@
 
 namespace Core\Objects\Router;
 
+use Core\Driver\SQL\SQL;
 use Core\Elements\Document;
 use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\Route;
 use Core\Objects\Search\Searchable;
 use Core\Objects\Search\SearchQuery;
+use JetBrains\PhpStorm\Pure;
 use ReflectionException;
 
-class DocumentRoute extends AbstractRoute {
+class DocumentRoute extends Route {
 
   use Searchable;
 
-  private string $className;
   private array $args;
-  private ?\ReflectionClass $reflectionClass;
+  private ?\ReflectionClass $reflectionClass = null;
 
   public function __construct(string $pattern, bool $exact, string $className, ...$args) {
-    parent::__construct($pattern, $exact);
-    $this->className = $className;
+    parent::__construct("dynamic", $pattern, $className, $exact);
     $this->args = $args;
-    $this->reflectionClass = null;
+    $this->extra = json_encode($args);
+  }
+
+  public function postFetch(SQL $sql, array $row) {
+    parent::postFetch($sql, $row);
+    $this->args = json_decode($this->extra);
+  }
+
+  #[Pure] private function getClassName(): string {
+    return $this->getTarget();
   }
 
   private function loadClass(): bool {
 
     if ($this->reflectionClass === null) {
       try {
-        $file = getClassPath($this->className);
+        $file = getClassPath($this->getClassName());
         if (file_exists($file)) {
-          $this->reflectionClass = new \ReflectionClass($this->className);
+          $this->reflectionClass = new \ReflectionClass($this->getClassName());
           if ($this->reflectionClass->isSubclassOf(Document::class)) {
             return true;
           }
@@ -56,20 +66,22 @@ class DocumentRoute extends AbstractRoute {
   }
 
   protected function getArgs(): array {
-    return array_merge(parent::getArgs(), [$this->className], $this->args);
+    return array_merge(parent::getArgs(), [$this->getClassName()], $this->args);
   }
 
   public function call(Router $router, array $params): string {
+    $className = $this->getClassName();
+
     try {
       if (!$this->loadClass()) {
-        return $router->returnStatusCode(500, [ "message" =>  "Error loading class: $this->className"]);
+        return $router->returnStatusCode(500, [ "message" =>  "Error loading class: $className"]);
       }
 
       $args = array_merge([$router], $this->args, $params);
       $document = $this->reflectionClass->newInstanceArgs($args);
       return $document->load($params);
     } catch (\ReflectionException $e) {
-      return $router->returnStatusCode(500, [ "message" =>  "Error loading class $this->className: " . $e->getMessage()]);
+      return $router->returnStatusCode(500, [ "message" =>  "Error loading class $className: " . $e->getMessage()]);
     }
   }
 

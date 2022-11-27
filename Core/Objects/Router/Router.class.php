@@ -4,12 +4,13 @@ namespace Core\Objects\Router;
 
 use Core\Driver\Logger\Logger;
 use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\Route;
 
 class Router {
 
   private Context $context;
   private Logger $logger;
-  private ?AbstractRoute $activeRoute;
+  private ?Route $activeRoute;
   private ?string $requestedUri;
   protected array $routes;
   protected array $statusCodeRoutes;
@@ -31,7 +32,7 @@ class Router {
     }
   }
 
-  public function getActiveRoute(): ?AbstractRoute {
+  public function getActiveRoute(): ?Route {
     return $this->activeRoute;
   }
 
@@ -75,7 +76,7 @@ class Router {
     }
   }
 
-  public function addRoute(AbstractRoute $route) {
+  public function addRoute(Route $route) {
     if (preg_match("/^\/(\d+)$/", $route->getPattern(), $re)) {
       $this->statusCodeRoutes[$re[1]] = $route;
     }

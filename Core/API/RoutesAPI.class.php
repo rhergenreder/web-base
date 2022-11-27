@@ -69,8 +69,11 @@ namespace Core\API\Routes {
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Condition\CondBool;
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\Route;
   use Core\Objects\Router\DocumentRoute;
+  use Core\Objects\Router\RedirectPermanentlyRoute;
   use Core\Objects\Router\RedirectRoute;
+  use Core\Objects\Router\RedirectTemporaryRoute;
   use Core\Objects\Router\Router;
   use Core\Objects\Router\StaticFileRoute;
 
@@ -350,41 +353,20 @@ namespace Core\API\Routes {
 
     protected function _execute(): bool {
       $sql = $this->context->getSQL();
-      $res = $sql
-        ->select("id", "request", "action", "target", "extra", "exact")
-        ->from("Route")
-        ->where(new CondBool("active"))
-        ->orderBy("id")->ascending()
-        ->execute();
+      $routes = Route::findBy(Route::createBuilder($sql, false)
+        ->whereTrue("active")
+        ->orderBy("id")
+        ->ascending());
 
-      $this->success = $res !== false;
+      $this->success = $routes !== false;
       $this->lastError = $sql->getLastError();
       if (!$this->success) {
         return false;
       }
 
       $this->router = new Router($this->context);
-      foreach ($res as $row) {
-        $request = $row["request"];
-        $target = $row["target"];
-        $exact = $sql->parseBool($row["exact"]);
-        switch ($row["action"]) {
-          case "redirect_temporary":
-            $this->router->addRoute(new RedirectRoute($request, $exact, $target, 307));
-            break;
-          case "redirect_permanently":
-            $this->router->addRoute(new RedirectRoute($request, $exact, $target, 308));
-            break;
-          case "static":
-            $this->router->addRoute(new StaticFileRoute($request, $exact, $target));
-            break;
-          case "dynamic":
-            $extra = json_decode($row["extra"]) ?? [];
-            $this->router->addRoute(new DocumentRoute($request, $exact, $target, ...$extra));
-            break;
-          default:
-            break;
-        }
+      foreach ($routes as $route) {
+        $this->router->addRoute($route);
       }
 
       $this->success = $this->router->writeCache($this->routerCachePath);

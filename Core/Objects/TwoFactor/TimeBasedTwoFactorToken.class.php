@@ -6,14 +6,12 @@ use Base32\Base32;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Core\Objects\Context;
-use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
-use Core\Objects\DatabaseEntity\User;
 
 class TimeBasedTwoFactorToken extends TwoFactorToken {
 
   const TYPE = "totp";
-  #[Transient] private string $secret;
+  private string $secret;
 
   public function __construct(string $secret) {
     parent::__construct(self::TYPE);

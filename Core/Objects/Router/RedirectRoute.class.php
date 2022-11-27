@@ -2,24 +2,29 @@
 
 namespace Core\Objects\Router;
 
-class RedirectRoute extends AbstractRoute {
+use Core\Objects\DatabaseEntity\Route;
+use JetBrains\PhpStorm\Pure;
 
-  private string $destination;
+class RedirectRoute extends Route {
+
   private int $code;
 
-  public function __construct(string $pattern, bool $exact, string $destination, int $code = 307) {
-    parent::__construct($pattern, $exact);
-    $this->destination = $destination;
+  public function __construct(string $type, string $pattern, bool $exact, string $destination, int $code = 307) {
+    parent::__construct($type, $pattern, $destination, $exact);
     $this->code = $code;
   }
 
+  #[Pure] private function getDestination(): string {
+    return $this->getTarget();
+  }
+
   public function call(Router $router, array $params): string {
-    header("Location: $this->destination");
+    header("Location: " . $this->getDestination());
     http_response_code($this->code);
     return "";
   }
 
   protected function getArgs(): array {
-    return array_merge(parent::getArgs(), [$this->destination, $this->code]);
+    return array_merge(parent::getArgs(), [$this->getDestination(), $this->code]);
   }
 }

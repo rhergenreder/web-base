@@ -2,10 +2,12 @@
 
 namespace Core\Objects\Router;
 
-class EmptyRoute extends AbstractRoute {
+use Core\Objects\DatabaseEntity\Route;
+
+class EmptyRoute extends Route {
 
   public function __construct(string $pattern, bool $exact = true) {
-    parent::__construct($pattern, $exact);
+    parent::__construct("empty", $pattern, $exact);
   }
 
   public function call(Router $router, array $params): string {

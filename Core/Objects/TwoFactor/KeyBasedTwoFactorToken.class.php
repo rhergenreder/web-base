@@ -3,16 +3,15 @@
 namespace Core\Objects\TwoFactor;
 
 use Cose\Algorithm\Signature\ECDSA\ECSignature;
-use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
 
 class KeyBasedTwoFactorToken extends TwoFactorToken {
 
   const TYPE = "fido";
 
-  #[Transient] private ?string $challenge;
-  #[Transient] private ?string $credentialId;
-  #[Transient] private ?PublicKey $publicKey;
+  private ?string $challenge;
+  private ?string $credentialId;
+  private ?PublicKey $publicKey;
 
   protected function readData(string $data) {
     if ($this->isConfirmed()) {

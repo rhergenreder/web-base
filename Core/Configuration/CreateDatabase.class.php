@@ -6,6 +6,10 @@ use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 use Core\Objects\DatabaseEntity\Group;
 use Core\Objects\DatabaseEntity\Language;
+use Core\Objects\DatabaseEntity\Route;
+use Core\Objects\Router\DocumentRoute;
+use Core\Objects\Router\StaticFileRoute;
+use Core\Objects\Router\StaticRoute;
 use PHPUnit\Util\Exception;
 
 class CreateDatabase extends DatabaseScript {
@@ -32,27 +36,17 @@ class CreateDatabase extends DatabaseScript {
       ->addString("cookie", 26)
       ->unique("day", "cookie");
 
-    $queries[] = $sql->createTable("Route")
-      ->addSerial("id")
-      ->addString("request", 128)
-      ->addEnum("action", array("redirect_temporary", "redirect_permanently", "static", "dynamic"))
-      ->addString("target", 128)
-      ->addString("extra", 64, true)
-      ->addBool("active", true)
-      ->addBool("exact", true)
-      ->primaryKey("id")
-      ->unique("request");
-
-    $queries[] = $sql->insert("Route", ["request", "action", "target", "extra", "exact"])
-      ->addRow("/admin", "dynamic", "\\Core\\Documents\\Admin", NULL, false)
-      ->addRow("/register", "dynamic", "\\Core\\Documents\\Account", json_encode(["account/register.twig"]), true)
-      ->addRow("/confirmEmail", "dynamic", "\\Core\\Documents\\Account", json_encode(["account/confirm_email.twig"]), true)
-      ->addRow("/acceptInvite", "dynamic", "\\Core\\Documents\\Account", json_encode(["account/accept_invite.twig"]), true)
-      ->addRow("/resetPassword", "dynamic", "\\Core\\Documents\\Account", json_encode(["account/reset_password.twig"]), true)
-      ->addRow("/login", "dynamic", "\\Core\\Documents\\Account", json_encode(["account/login.twig"]), true)
-      ->addRow("/resendConfirmEmail", "dynamic", "\\Core\\Documents\\Account", json_encode(["account/resend_confirm_email.twig"]), true)
-      ->addRow("/debug", "dynamic", "\\Core\\Documents\\Info", NULL, true)
-      ->addRow("/", "static", "/static/welcome.html", NULL, true);
+    $queries[] = Route::getHandler($sql)->getInsertQuery([
+      new DocumentRoute("/admin", false, \Core\Documents\Admin::class),
+      new DocumentRoute("/register", true, \Core\Documents\Account::class, "account/register.twig"),
+      new DocumentRoute("/confirmEmail", true, \Core\Documents\Account::class, "account/confirm_email.twig"),
+      new DocumentRoute("/acceptInvite", true, \Core\Documents\Account::class, "account/accept_invite.twig"),
+      new DocumentRoute("/resetPassword", true, \Core\Documents\Account::class, "account/reset_password.twig"),
+      new DocumentRoute("/login", true, \Core\Documents\Account::class, "account/login.twig"),
+      new DocumentRoute("/resendConfirmEmail", true, \Core\Documents\Account::class, "account/resend_confirm_email.twig"),
+      new DocumentRoute("/debug", true, \Core\Documents\Info::class),
+      new StaticFileRoute("/static", true, "/static/welcome.html"),
+    ]);
 
     $queries[] = $sql->createTable("Settings")
       ->addString("name", 32)
@@ -140,7 +134,7 @@ class CreateDatabase extends DatabaseScript {
             $className = substr($file, 0, strlen($file) - strlen($suffix));
             $className = "\\$baseDir\\Objects\\DatabaseEntity\\$className";
             $reflectionClass = new \ReflectionClass($className);
-            if ($reflectionClass->isSubclassOf(DatabaseEntity::class)) {
+            if ($reflectionClass->getParentClass()?->getName() === DatabaseEntity::class) {
               $method = "$className::getHandler";
               $handler = call_user_func($method, $sql);
               $persistables[$handler->getTableName()] = $handler;

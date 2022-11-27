@@ -1,19 +1,53 @@
 <?php
 
-namespace Core\Objects\Router;
+namespace Core\Objects\DatabaseEntity;
 
 use Core\API\Parameter\Parameter;
+use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
+use Core\Objects\DatabaseEntity\Attribute\ExtendingEnum;
+use Core\Objects\DatabaseEntity\Attribute\MaxLength;
+use Core\Objects\DatabaseEntity\Attribute\Unique;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
+use Core\Objects\Router\DocumentRoute;
+use Core\Objects\Router\RedirectRoute;
+use Core\Objects\Router\Router;
+use Core\Objects\Router\StaticFileRoute;
 
-abstract class AbstractRoute {
+abstract class Route extends DatabaseEntity {
 
   const PARAMETER_PATTERN = "/^{([^:]+)(:(.*?)(\?)?)?}$/";
+  const ROUTE_TYPES = [
+    "redirect_temporary" => RedirectRoute::class,
+    "redirect_permanently" => RedirectRoute::class,
+    "static" => StaticFileRoute::class,
+    "dynamic" => DocumentRoute::class
+  ];
 
+  #[MaxLength(128)]
+  #[Unique]
   private string $pattern;
+
+  #[ExtendingEnum(self::ROUTE_TYPES)]
+  private string $type;
+
+  #[MaxLength(128)]
+  private string $target;
+
+  #[MaxLength(64)]
+  protected ?string $extra;
+
+  #[DefaultValue(true)]
+  private bool $active;
+
   private bool $exact;
 
-  public function __construct(string $pattern, bool $exact = true) {
+  public function __construct(string $type, string $pattern, string $target, bool $exact = true) {
+    parent::__construct();
+    $this->target = $target;
     $this->pattern = $pattern;
     $this->exact = $exact;
+    $this->type = $type;
+    $this->active = true;
   }
 
   private static function parseParamType(?string $type): ?int {
@@ -35,6 +69,10 @@ abstract class AbstractRoute {
 
   public function getPattern(): string {
     return $this->pattern;
+  }
+
+  public function getTarget(): string {
+    return $this->target;
   }
 
   public abstract function call(Router $router, array $params): string;
@@ -153,5 +191,17 @@ abstract class AbstractRoute {
     }
 
     return $parameterNames;
+  }
+
+  public function jsonSerialize(): array {
+    return [
+      "id" => $this->getId(),
+      "pattern" => $this->pattern,
+      "type" => $this->type,
+      "target" => $this->target,
+      "extra" => $this->extra,
+      "exact" => $this->exact,
+      "active" => $this->active,
+    ];
   }
 }

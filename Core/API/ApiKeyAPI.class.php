@@ -10,26 +10,6 @@ namespace Core\API {
     public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
       parent::__construct($context, $externalCall, $params);
     }
-
-    protected function apiKeyExists(int $id): bool {
-      $sql = $this->context->getSQL();
-      $res = $sql->select($sql->count())
-        ->from("ApiKey")
-        ->whereEq("id", $id)
-        ->whereEq("user_id", $this->context->getUser()->getId())
-        ->whereGt("valid_until", $sql->currentTimestamp())
-        ->whereEq("active", 1)
-        ->execute();
-
-      $this->success = ($res !== FALSE);
-      $this->lastError = $sql->getLastError();
-
-      if($this->success && $res[0]["count"] === 0) {
-        return $this->createError("This API-Key does not exist.");
-      }
-
-      return $this->success;
-    }
   }
 }
 
@@ -115,22 +95,20 @@ namespace Core\API\ApiKey {
     }
 
     public function _execute(): bool {
+      $sql = $this->context->getSQL();
       $id = $this->getParam("id");
-      if (!$this->apiKeyExists($id)) {
-        return false;
+      $apiKey = ApiKey::find($sql, $id);
+      if ($apiKey === false) {
+        return $this->createError("Error fetching API-Key details: " . $sql->getLastError());
+      } else if ($apiKey === null) {
+        return $this->createError("API-Key does not exit");
       }
 
-      $validUntil = (new \DateTime())->modify("+30 DAY");
-      $sql = $this->context->getSQL();
-      $this->success = $sql->update("ApiKey")
-        ->set("valid_until", $validUntil)
-        ->whereEq("id", $id)
-        ->whereEq("user_id", $this->context->getUser()->getId())
-        ->execute();
+      $this->success = $apiKey->refresh($sql, 30) !== false;
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $this->result["valid_until"] = $validUntil;
+        $this->result["validUntil"] = $apiKey->getValidUntil()->getTimestamp();
       }
 
       return $this->success;
@@ -147,17 +125,16 @@ namespace Core\API\ApiKey {
     }
 
     public function _execute(): bool {
+      $sql = $this->context->getSQL();
       $id = $this->getParam("id");
-      if (!$this->apiKeyExists($id)) {
-        return false;
+      $apiKey = ApiKey::find($sql, $id);
+      if ($apiKey === false) {
+        return $this->createError("Error fetching API-Key details: " . $sql->getLastError());
+      } else if ($apiKey === null) {
+        return $this->createError("API-Key does not exit");
       }
 
-      $sql = $this->context->getSQL();
-      $this->success = $sql->update("ApiKey")
-        ->set("active", false)
-        ->whereEq("id", $id)
-        ->whereEq("user_id", $this->context->getUser()->getId())
-        ->execute();
+      $this->success = $apiKey->revoke($sql);
       $this->lastError = $sql->getLastError();
 
       return $this->success;

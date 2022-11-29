@@ -75,6 +75,7 @@ abstract class DatabaseEntity {
     }
   }
 
+  // TODO: rather take property names here instead of $columns? and translate then using DatabaseEntityHandler::columns[$propertyName]
   public function save(SQL $sql, ?array $columns = null, bool $saveNM = false): bool {
     $handler = self::getHandler($sql);
     $res = $handler->insertOrUpdate($this, $columns, $saveNM);

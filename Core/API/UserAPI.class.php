@@ -503,7 +503,7 @@ namespace Core\API\User {
       } else {
         $user->password = $this->hashPassword($password);
         $user->confirmed = true;
-        if ($user->save($sql)) {
+        if ($user->save($sql, ["password", "confirmed"])) {
           $userToken->invalidate($sql);
           return true;
         } else {
@@ -542,7 +542,7 @@ namespace Core\API\User {
         return $this->createError("Your email address is already confirmed.");
       } else {
         $user->confirmed = true;
-        if ($user->save($sql)) {
+        if ($user->save($sql, ["confirmed"])) {
           $userToken->invalidate($sql);
           return true;
         } else {
@@ -826,20 +826,37 @@ namespace Core\API\User {
           }
         }
 
-        if ($usernameChanged) $user->name = $username;
-        if ($fullNameChanged) $user->fullName = $fullName;
-        if ($emailChanged) $user->email = $email;
-        if (!is_null($password)) $user->password = $this->hashPassword($password);
+        $columnsToUpdate = [];
+        if ($usernameChanged) {
+          $user->name = $username;
+          $columnsToUpdate[] = "name";
+        }
+
+        if ($fullNameChanged) {
+          $user->fullName = $fullName;
+          $columnsToUpdate[] = "full_name";
+        }
+
+        if ($emailChanged) {
+          $user->email = $email;
+          $columnsToUpdate[] = "email";
+        }
+
+        if (!is_null($password)) {
+          $user->password = $this->hashPassword($password);
+          $columnsToUpdate[] = "password";
+        }
 
         if (!is_null($confirmed)) {
           if ($id === $currentUser->getId() && $confirmed === false) {
             return $this->createError("Cannot make own account unconfirmed.");
           } else {
             $user->confirmed = $confirmed;
+            $columnsToUpdate[] = "confirmed";
           }
         }
 
-        if ($user->save($sql)) {
+        if (empty($columnsToUpdate) || $user->save($sql, $columnsToUpdate)) {
 
           $deleteQuery = $sql->delete("UserGroup")->whereEq("user_id", $id);
           $insertQuery = $sql->insert("UserGroup", array("user_id", "group_id"));
@@ -1270,7 +1287,7 @@ namespace Core\API\User {
 
       if ($this->success) {
         $currentUser->gpgKey = $gpgKey;
-        if ($currentUser->save($sql)) {
+        if ($currentUser->save($sql, ["gpg_key_id"])) {
           $this->result["gpg"] = $gpgKey->jsonSerialize();
         } else {
           return $this->createError("Error updating user details: " . $sql->getLastError());
@@ -1524,7 +1541,7 @@ namespace Core\API\User {
 
       $sql = $this->context->getSQL();
       $currentUser->profilePicture = $fileName;
-      if ($currentUser->save($sql)) {
+      if ($currentUser->save($sql, ["profile_picture"])) {
         $this->result["profilePicture"] = $fileName;
       } else {
         return $this->createError("Error updating user details: " . $sql->getLastError());
@@ -1551,7 +1568,7 @@ namespace Core\API\User {
       }
 
       $currentUser->profilePicture = null;
-      if (!$currentUser->save($sql)) {
+      if (!$currentUser->save($sql, ["profile_picture"])) {
         return $this->createError("Error updating user details: " . $sql->getLastError());
       }
 

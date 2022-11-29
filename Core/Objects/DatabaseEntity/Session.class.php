@@ -109,7 +109,7 @@ class Session extends DatabaseEntity {
   public function destroy(): bool {
     session_destroy();
     $this->active = false;
-    return $this->save($this->context->getSQL());
+    return $this->save($this->context->getSQL(), ["active"]);
   }
 
   public function update(): bool {
@@ -120,7 +120,7 @@ class Session extends DatabaseEntity {
 
     $sql = $this->context->getSQL();
     return $this->user->update($sql) &&
-           $this->save($sql);
+           $this->save($sql, ["expires", "data"]);
   }
 
   public function getCsrfToken(): string {

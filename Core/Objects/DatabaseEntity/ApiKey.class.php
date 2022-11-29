@@ -2,6 +2,7 @@
 
 namespace Core\Objects\DatabaseEntity;
 
+use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
@@ -24,5 +25,19 @@ class ApiKey extends DatabaseEntity {
       "apiKey" => $this->apiKey,
       "validUntil" => $this->validUntil->getTimestamp()
     ];
+  }
+
+  public function getValidUntil(): \DateTime {
+    return $this->validUntil;
+  }
+
+  public function refresh(SQL $sql, int $days): bool {
+    $this->validUntil = (new \DateTime())->modify("+$days days");
+    return $this->save($sql, ["valid_until"]);
+  }
+
+  public function revoke(SQL $sql): bool {
+    $this->active = false;
+    return $this->save($sql, ["active"]);
   }
 }

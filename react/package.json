@@ -5,7 +5,7 @@
   "private": true,
   "targets": {
     "admin-panel": {
-      "source": "./admin-panel/src/index.jsx",
+      "source": "./admin-panel/src/index.js",
       "distDir": "./dist/admin-panel"
     }
   },
@@ -32,6 +32,11 @@
     "maxParallelRequests": 1
   },
   "dependencies": {
+    "@material-ui/core": "^4.12.4",
+    "@material-ui/icons": "^4.11.3",
+    "@material-ui/lab": "^4.0.0-alpha.61",
+    "clsx": "^1.2.1",
+    "date-fns": "^2.29.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.4.3"

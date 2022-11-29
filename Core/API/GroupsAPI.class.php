@@ -128,10 +128,7 @@ namespace Core\API\Groups {
 
       $sql = $this->context->getSQL();
 
-      $group = new Group();
-      $group->name = $name;
-      $group->color = $color;
-
+      $group = new Group(null, $name, $color);
       $this->success = ($group->save($sql) !== FALSE);
       $this->lastError = $sql->getLastError();
 

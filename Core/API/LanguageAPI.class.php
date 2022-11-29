@@ -54,18 +54,18 @@ namespace Core\API\Language {
 
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, array(
-        'langId' => new Parameter('langId', Parameter::TYPE_INT, true, NULL),
-        'langCode' => new StringType('langCode', 5, true, NULL),
+        'id' => new Parameter('id', Parameter::TYPE_INT, true, NULL),
+        'code' => new StringType('code', 5, true, NULL),
       ));
 
     }
 
     private function checkLanguage(): bool {
-      $langId = $this->getParam("langId");
-      $langCode = $this->getParam("langCode");
+      $langId = $this->getParam("id");
+      $langCode = $this->getParam("code");
 
       if (is_null($langId) && is_null($langCode)) {
-        return $this->createError(L("Either langId or langCode must be given"));
+        return $this->createError(L("Either 'id' or 'code' must be given"));
       }
 
       $sql = $this->context->getSQL();
@@ -88,15 +88,10 @@ namespace Core\API\Language {
     }
 
     private function updateLanguage(): bool {
-      $languageId = $this->language->getId();
-      $userId = $this->context->getUser()->getId();
       $sql = $this->context->getSQL();
-
-      $this->success = $sql->update("User")
-        ->set("language_id", $languageId)
-        ->whereEq("id", $userId)
-        ->execute();
-
+      $currentUser = $this->context->getUser();
+      $currentUser->language = $this->language;
+      $this->success = $currentUser->save($sql, ["language_id"]);
       $this->lastError = $sql->getLastError();
       return $this->success;
     }

@@ -136,6 +136,6 @@ class GpgKey extends DatabaseEntity {
 
   public function confirm(SQL $sql): bool {
     $this->confirmed = true;
-    return $this->save($sql);
+    return $this->save($sql, ["confirmed"]);
   }
 }

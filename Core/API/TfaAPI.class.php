@@ -142,13 +142,13 @@ namespace Core\API\TFA {
       if ($twoFactorToken && $twoFactorToken->isConfirmed()) {
         return $this->createError("You already added a two factor token");
       } else if (!($twoFactorToken instanceof TimeBasedTwoFactorToken)) {
-        $twoFactorToken = new TimeBasedTwoFactorToken(generateRandomString(32, "base32"));
         $sql = $this->context->getSQL();
+        $twoFactorToken = new TimeBasedTwoFactorToken(generateRandomString(32, "base32"));
         $this->success = $twoFactorToken->save($sql) !== false;
         $this->lastError = $sql->getLastError();
         if ($this->success) {
           $currentUser->setTwoFactorToken($twoFactorToken);
-          $this->success = $currentUser->save($sql);
+          $this->success = $currentUser->save($sql, ["two_factor_token_id"]);
           $this->lastError = $sql->getLastError();
         }
 

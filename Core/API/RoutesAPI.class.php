@@ -27,7 +27,7 @@ namespace Core\API {
       }
 
       $route->setActive($active);
-      $this->success = $route->save($sql);
+      $this->success = $route->save($sql, ["active"]);
       $this->lastError = $sql->getLastError();
       return $this->success && $this->regenerateCache();
     }

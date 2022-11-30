@@ -5,7 +5,6 @@ namespace Core\Driver\SQL\Query;
 use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Column\EnumColumn;
 use Core\Driver\SQL\Constraint\Constraint;
-use Core\Driver\SQL\Constraint\ForeignKey;
 use Core\Driver\SQL\Constraint\PrimaryKey;
 use Core\Driver\SQL\PostgreSQL;
 use Core\Driver\SQL\SQL;

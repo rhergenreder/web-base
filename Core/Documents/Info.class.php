@@ -5,6 +5,7 @@ namespace Core\Documents;
 use Core\Elements\EmptyHead;
 use Core\Elements\HtmlDocument;
 use Core\Elements\SimpleBody;
+use Core\Objects\DatabaseEntity\Group;
 use Core\Objects\Router\Router;
 
 class Info extends HtmlDocument {
@@ -16,7 +17,7 @@ class Info extends HtmlDocument {
 
 class InfoBody extends SimpleBody {
   protected function getContent(): string {
-    $user = $this->getDocument()->getUser();
+    $user = $this->getContext()->getUser();
     if ($user && $user->hasGroup(Group::ADMIN)) {
       phpinfo();
       return "";

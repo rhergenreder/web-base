@@ -2,7 +2,6 @@
 
 namespace Core\Objects\DatabaseEntity\Controller;
 
-use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\Condition;
 use Core\Driver\SQL\SQL;
 

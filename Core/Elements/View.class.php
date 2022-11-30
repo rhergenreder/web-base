@@ -2,6 +2,8 @@
 
 namespace Core\Elements;
 
+use Core\Objects\Context;
+
 abstract class View extends StaticView {
 
   private Document $document;
@@ -18,9 +20,10 @@ abstract class View extends StaticView {
 
   public function getTitle(): string { return $this->title; }
   public function getDocument(): Document { return $this->document; }
+  public function getContext(): Context { return $this->document->getContext(); }
 
   public function getSiteName(): string {
-    return $this->getDocument()->getSettings()->getSiteName();
+    return $this->getContext()->getSettings()->getSiteName();
   }
 
   protected function load(string $viewClass) : string {
@@ -38,23 +41,13 @@ abstract class View extends StaticView {
     return "";
   }
 
-  private function loadLanguageModules() {
-    $lang = $this->document->getContext()->getLanguage();
-    foreach ($this->langModules as $langModule) {
-      $lang->loadModule($langModule);
-    }
-  }
-
   // Virtual Methods
   public function loadView() { }
 
   public function getCode(): string {
 
-    // Load translations
-    $this->loadLanguageModules();
-
     // Load metadata + head (title, scripts, includes, ...)
-    if($this->loadView) {
+    if ($this->loadView) {
       $this->loadView();
     }
 

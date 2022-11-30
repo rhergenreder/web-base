@@ -2,10 +2,11 @@
   "name": "admin-panel",
   "version": "1.0.0",
   "dependencies": {
-    "shared": "link:../shared"
+    "shared": "link:../shared",
+    "react": "^18.2.0"
   },
   "scripts": {
-    "debug": "react-app-rewired start"
+    "dev": "react-app-rewired start"
   },
   "author": "",
   "license": "ISC",

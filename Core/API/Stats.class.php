@@ -6,7 +6,6 @@ use DateTime;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondBool;
 use Core\Objects\Context;
-use Core\Objects\DatabaseEntity\User;
 
 class Stats extends Request {
 

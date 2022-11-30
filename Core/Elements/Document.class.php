@@ -6,7 +6,6 @@ use Core\Configuration\Settings;
 use Core\Driver\Logger\Logger;
 use Core\Driver\SQL\SQL;
 use Core\Objects\Context;
-use Core\Objects\lang\LanguageModule;
 use Core\Objects\Router\DocumentRoute;
 use Core\Objects\Router\Router;
 use Core\Objects\DatabaseEntity\User;
@@ -24,6 +23,7 @@ abstract class Document {
   private array $cspWhitelist;
   private string $domain;
   protected bool $searchable;
+  protected array $languageModules;
 
   public function __construct(Router $router) {
     $this->router = $router;
@@ -34,6 +34,7 @@ abstract class Document {
     $this->domain = $this->getSettings()->getBaseUrl();
     $this->logger = new Logger("Document", $this->getSQL());
     $this->searchable = false;
+    $this->languageModules = [];
   }
 
   public abstract function getTitle(): string;
@@ -88,11 +89,6 @@ abstract class Document {
     }
   }
 
-  public function loadLanguageModule(LanguageModule|string $module) {
-    $language = $this->getContext()->getLanguage();
-    $language->loadModule($module);
-  }
-
   public function sendHeaders() {
     if ($this->cspEnabled) {
       $cspWhiteList = implode(" ", $this->cspWhitelist);
@@ -126,8 +122,12 @@ abstract class Document {
       }
     }
 
+    $language = $this->getContext()->getLanguage();
+    foreach ($this->languageModules as $module) {
+      $language->loadModule($module);
+    }
 
-    $code =  $this->getCode($params);
+    $code = $this->getCode($params);
     $this->sendHeaders();
     return $code;
   }

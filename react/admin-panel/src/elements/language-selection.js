@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {initLocale, L} from "shared/locale/locale";
+import {L} from "shared/locale";
 import {Box} from "@material-ui/core";
 import {makeStyles} from "@material-ui/core/styles";
 
@@ -20,8 +20,9 @@ export default function LanguageSelection(props) {
     const onSetLanguage = (code) => {
         api.setLanguageByCode(code).then((res) => {
             if (res.success) {
-                initLocale(code);
                 props.onUpdateLocale();
+            } else {
+                alert(res.msg);
             }
         });
     };
@@ -42,6 +43,6 @@ export default function LanguageSelection(props) {
     }
 
     return <Box mt={1}>
-        {L("Language") + ": "} { flags }
+        {L("general.language") + ": "} { flags }
     </Box>
 }

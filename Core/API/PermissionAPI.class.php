@@ -28,7 +28,6 @@ namespace Core\API\Permission {
   use Core\API\Parameter\StringType;
   use Core\API\PermissionAPI;
   use Core\Driver\SQL\Column\Column;
-  use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Condition\CondIn;
   use Core\Driver\SQL\Condition\CondLike;
   use Core\Driver\SQL\Condition\CondNot;

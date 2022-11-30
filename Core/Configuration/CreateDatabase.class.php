@@ -9,7 +9,6 @@ use Core\Objects\DatabaseEntity\Language;
 use Core\Objects\DatabaseEntity\Route;
 use Core\Objects\Router\DocumentRoute;
 use Core\Objects\Router\StaticFileRoute;
-use Core\Objects\Router\StaticRoute;
 use PHPUnit\Util\Exception;
 
 class CreateDatabase extends DatabaseScript {
@@ -21,7 +20,7 @@ class CreateDatabase extends DatabaseScript {
 
     $queries[] = Language::getHandler($sql)->getInsertQuery([
       new Language(Language::AMERICAN_ENGLISH, "en_US", 'American English'),
-      new Language(Language::AMERICAN_ENGLISH, "de_DE", 'Deutsch Standard'),
+      new Language(Language::GERMAN_STANDARD, "de_DE", 'Deutsch Standard'),
     ]);
 
     $queries[] = Group::getHandler($sql)->getInsertQuery([

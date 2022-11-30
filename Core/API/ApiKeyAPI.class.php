@@ -2,7 +2,6 @@
 
 namespace Core\API {
 
-  use Core\Driver\SQL\Condition\Compare;
   use Core\Objects\Context;
 
   abstract class ApiKeyAPI extends Request {

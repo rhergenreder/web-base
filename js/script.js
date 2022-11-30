@@ -150,7 +150,25 @@ let Core = function () {
     return this.getJsonDateTime(date).split(' ')[1];
   };
 
+  this.isRecaptchaEnabled = function () {
+    return (typeof grecaptcha !== 'undefined');
+  }
+
   this.__construct();
 };
 
 let jsCore = new Core();
+
+function L(key) {
+
+  let entries = window.languageEntries || {};
+  let [module, variable] = key.split(".");
+  if (module && variable && entries.hasOwnProperty(module)) {
+    let translation = entries[module][variable];
+    if (translation) {
+      return translation;
+    }
+  }
+
+  return "[" + key + "]";
+}

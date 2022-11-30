@@ -4,7 +4,6 @@ namespace Core\Objects\DatabaseEntity {
 
   use Core\Objects\DatabaseEntity\Attribute\MaxLength;
   use Core\Objects\DatabaseEntity\Attribute\Transient;
-  use Core\Objects\lang\LanguageModule;
   use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
   // TODO: language from cookie?
@@ -14,11 +13,11 @@ namespace Core\Objects\DatabaseEntity {
     const GERMAN_STANDARD = 2;
 
     const LANG_CODE_PATTERN = "/^[a-zA-Z]{2}_[a-zA-Z]{2}$/";
+    const LANG_MODULE_PATTERN = "/[a-zA-Z0-9_-]/";
 
     #[MaxLength(5)] private string $code;
     #[MaxLength(32)] private string $name;
 
-    #[Transient] private array $modules = [];
     #[Transient] protected array $entries = [];
 
     public function __construct(int $id, string $code, string $name) {
@@ -39,22 +38,6 @@ namespace Core\Objects\DatabaseEntity {
       return $this->name;
     }
 
-    public function loadModule(LanguageModule|string $module) {
-      if (!is_object($module)) {
-        $module = new $module();
-      }
-
-      if (!in_array($module, $this->modules)) {
-        $moduleEntries = $module->getEntries($this->code);
-        $this->entries = array_merge($this->entries, $moduleEntries);
-        $this->modules[] = $module;
-      }
-    }
-
-    public function translate(string $key): string {
-      return $this->entries[$key] ?? $key;
-    }
-
     public function sendCookie(string $domain) {
       setcookie('lang', $this->code, 0, "/", $domain, false, false);
     }
@@ -71,6 +54,11 @@ namespace Core\Objects\DatabaseEntity {
     public function activate() {
       global $LANGUAGE;
       $LANGUAGE = $this;
+    }
+
+    public static function getInstance(): Language {
+      global $LANGUAGE;
+      return $LANGUAGE;
     }
 
     public static function DEFAULT_LANGUAGE(bool $fromCookie = true): Language {
@@ -94,16 +82,70 @@ namespace Core\Objects\DatabaseEntity {
       return new Language(1, "en_US", "American English");
     }
 
-    public function getEntries(): array {
-      return $this->entries;
+    public function getEntries(?string $module = null): ?array {
+      if (!$module) {
+        return $this->entries;
+      } else {
+        return $this->entries[$module] ?? null;
+      }
+    }
+
+    public function translate(string $key): string {
+      if (preg_match("/(\w+)\.(\w+)/", $key, $matches)) {
+        $module = $matches[1];
+        $moduleKey = $matches[2];
+        if ($this->hasModule($module) && array_key_exists($moduleKey, $this->entries[$module])) {
+          return $this->entries[$module][$moduleKey];
+        }
+      }
+
+      return "[$key]";
+    }
+
+    public function addModule(string $module, array $entries) {
+      if ($this->hasModule($module)) {
+        $this->entries[$module] = array_merge($this->entries[$module], $entries);
+      } else {
+        $this->entries[$module] = $entries;
+      }
+    }
+
+    public function loadModule(string $module, bool $forceReload=false): bool {
+      if ($this->hasModule($module) && !$forceReload) {
+        return true;
+      }
+
+      if (!preg_match(self::LANG_MODULE_PATTERN, $module)) {
+        return false;
+      }
+
+      if (!preg_match(self::LANG_CODE_PATTERN, $this->code)) {
+        return false;
+      }
+
+      foreach (["Site", "Core"] as $baseDir) {
+        $filePath = realpath(implode("/", [$baseDir, "Localization", $this->code, "$module.php"]));
+        if ($filePath && is_file($filePath)) {
+          $moduleEntries = @include_once $filePath;
+          $this->addModule($module, $moduleEntries);
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    public function hasModule(string $module): bool {
+      return array_key_exists($module, $this->entries);
     }
   }
 }
 
 namespace {
-  function L($key) {
-    if (!array_key_exists('LANGUAGE', $GLOBALS))
-      return $key;
+  function L(string $key): string {
+    if (!array_key_exists('LANGUAGE', $GLOBALS)) {
+      return "[$key]";
+    }
 
     global $LANGUAGE;
     return $LANGUAGE->translate($key);

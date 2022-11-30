@@ -1,8 +1,6 @@
-import ReactDOM from "react-dom";
+import React from "react";
+import {createRoot} from "react-dom/client";
 import AdminDashboard from "./App";
 
-
-ReactDOM.render(
-    <AdminDashboard />,
-    document.getElementById('admin-panel')
-);
+const root = createRoot(document.getElementById('admin-panel'));
+root.render(<AdminDashboard />);

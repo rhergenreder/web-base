@@ -13,10 +13,11 @@ import {makeStyles} from '@material-ui/core/styles';
 import {Alert} from '@material-ui/lab';
 import React, {useCallback, useEffect, useState} from "react";
 import {Navigate} from "react-router-dom";
-import {L} from "shared/locale/locale";
+import {L} from "shared/locale";
 import ReplayIcon from '@material-ui/icons/Replay';
 import LanguageSelection from "../elements/language-selection";
 import {decodeText, encodeText, getParameter, removeParameter} from "shared/util";
+import Icon from "shared/elements/icon";
 
 const useStyles = makeStyles((theme) => ({
     paper: {
@@ -79,13 +80,29 @@ export default function LoginForm(props) {
     let [tfaCode, set2FACode] = useState("");
     let [tfaState, set2FAState] = useState(0); // 0: not sent, 1: sent, 2: retry
     let [tfaError, set2FAError] = useState("");
+    let [error, setError] = useState("");
+    let [loaded, setLoaded] = useState(0);
 
     const getNextUrl = () => {
         return getParameter("next") || "/admin";
     }
 
+    const onUpdateLocale = useCallback(() => {
+        api.getLanguageEntries(["general", "account"]).then(data => {
+            setLoaded(loaded + 1);
+           if (!data.success) {
+               alert(data.msg);
+           }
+        });
+    }, [loaded]);
+
+    useEffect(() => {
+        onUpdateLocale();
+    }, []);
+
     const onLogin = useCallback(() => {
         if (!isLoggingIn) {
+            setError("");
             setLoggingIn(true);
             removeParameter("success");
             props.onLogin(username, password, rememberMe, (res) => {
@@ -94,6 +111,7 @@ export default function LoginForm(props) {
                 setPassword("");
                 if (!res.success) {
                     setEmailConfirmed(res.emailConfirmed);
+                    setError(res.msg);
                 }
             });
         }
@@ -162,24 +180,24 @@ export default function LoginForm(props) {
         // 2FA
         if (api.loggedIn && api.user["2fa"]) {
             return <>
-                <div>Additional information is required for logging in: {api.user["2fa"].type}</div>
+                <div>{L("account.2fa_title")}: {api.user["2fa"].type}</div>
                 { api.user["2fa"].type === "totp" ?
                     <TextField
                         variant="outlined" margin="normal"
-                        id="code" label={L("6-Digit Code")} name="code"
+                        id="code" label={L("account.6_digit_code")} name="code"
                         autoComplete="code"
                         required fullWidth autoFocus
                         value={tfaCode} onChange={(e) => set2FACode(e.target.value)}
                     /> : <>
-                        Plugin your 2FA-Device. Interaction might be required, e.g. typing in a PIN or touching it.
+                        {L("account.2fa_text")}
                         <Box mt={2} textAlign={"center"}>
                             {tfaState !== 2
                                 ? <CircularProgress/>
                                 : <div className={classes.error2FA}>
-                                    <div>{L("Something went wrong:")}<br />{tfaError}</div>
+                                    <div>{L("general.something_went_wrong")}:<br />{tfaError}</div>
                                     <Button onClick={() => set2FAState(0)}
                                             variant={"outlined"} color={"secondary"} size={"small"}>
-                                        <ReplayIcon />&nbsp;{L("Retry")}
+                                        <ReplayIcon />&nbsp;{L("general.retry")}
                                     </Button>
                                 </div>
                             }
@@ -187,7 +205,7 @@ export default function LoginForm(props) {
                     </>
                 }
                 {
-                    props.error ? <Alert severity="error">{props.error}</Alert> : <></>
+                    error ? <Alert severity="error">{error}</Alert> : <></>
                 }
                 <Grid container spacing={2} className={classes.buttons2FA}>
                     <Grid item xs={6}>
@@ -196,7 +214,7 @@ export default function LoginForm(props) {
                             color="inherit" size={"medium"}
                             disabled={isLoggingIn}
                             onClick={onCancel2FA}>
-                            {L("Go back")}
+                            {L("general.go_back")}
                         </Button>
                     </Grid>
                     <Grid item xs={6}>
@@ -206,8 +224,8 @@ export default function LoginForm(props) {
                             disabled={isLoggingIn || api.user["2fa"].type !== "totp"}
                             onClick={onSubmit2FA}>
                             {isLoggingIn ?
-                                <>{L("Submitting…")}… <CircularProgress size={15}/></> :
-                                L("Submit")
+                                <>{L("general.submitting")}… <CircularProgress size={15}/></> :
+                                L("general.submit")
                             }
                         </Button>
                     </Grid>
@@ -218,35 +236,35 @@ export default function LoginForm(props) {
         return <>
                 <TextField
                     variant="outlined" margin="normal"
-                    id="username" label={L("Username")} name="username"
+                    id="username" label={L("account.username")} name="username"
                     autoComplete="username" disabled={isLoggingIn}
                     required fullWidth autoFocus
                     value={username} onChange={(e) => setUsername(e.target.value)}
                 />
                 <TextField
                     variant="outlined" margin="normal"
-                    name="password" label={L("Password")} type="password" id="password"
+                    name="password" label={L("account.password")} type="password" id="password"
                     autoComplete="current-password"
                     required fullWidth disabled={isLoggingIn}
                     value={password} onChange={(e) => setPassword(e.target.value)}
                 />
                 <FormControlLabel
                     control={<Checkbox value="remember" color="primary"/>}
-                    label={L("Remember me")}
+                    label={L("account.remember_me")}
                     checked={rememberMe} onClick={(e) => setRememberMe(!rememberMe)}
                 />
                 {
-                    props.error ?
-                        <Alert severity="error">
-                            {props.error}
+                    error
+                        ? <Alert severity="error">
+                            {error}
                             {emailConfirmed === false
                                 ? <> <Link href={"/resendConfirmation"}>Click here</Link> to resend the confirmation email.</>
                                 : <></>
                             }
-                        </Alert> :
-                        successMessage
+                        </Alert>
+                        : (successMessage
                             ? <Alert severity="success">{successMessage}</Alert>
-                            : <></>
+                            : <></>)
                 }
                 <Button
                     type={"submit"} fullWidth variant={"contained"}
@@ -255,25 +273,29 @@ export default function LoginForm(props) {
                     disabled={isLoggingIn}
                     onClick={onLogin}>
                     {isLoggingIn ?
-                        <>{L("Signing in")}… <CircularProgress size={15}/></> :
-                        L("Sign In")
+                        <>{L("account.signing_in")}… <CircularProgress size={15}/></> :
+                        L("account.sign_in")
                     }
                 </Button>
                 <Grid container>
                     <Grid item xs>
                         <Link href="/resetPassword" variant="body2">
-                            {L("Forgot password?")}
+                            {L("account.forgot_password")}
                         </Link>
                     </Grid>
                     { props.info.registrationAllowed ?
                         <Grid item>
                             <Link href="/register" variant="body2">
-                                {L("Don't have an account? Sign Up")}
+                                {L("account.register_text")}
                             </Link>
                         </Grid> : <></>
                     }
                 </Grid>
             </>
+    }
+
+    if (loaded === 0) {
+        return <b>{L("general.loading")}… <Icon icon={"spinner"}/></b>
     }
 
     let successMessage = getParameter("success");
@@ -287,7 +309,7 @@ export default function LoginForm(props) {
             </div>
             <form className={classes.form} onSubmit={(e) => e.preventDefault()}>
                 { createForm() }
-                <LanguageSelection api={api} locale={props.locale} onUpdateLocale={props.onUpdateLocale}/>
+                <LanguageSelection api={api} onUpdateLocale={onUpdateLocale} />
             </form>
         </div>
     </Container>

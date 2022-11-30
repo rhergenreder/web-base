@@ -14,6 +14,7 @@ namespace Core\API {
 namespace Core\API\Language {
 
   use Core\API\LanguageAPI;
+  use Core\API\Parameter\ArrayType;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\Driver\SQL\Condition\Compare;
@@ -105,7 +106,58 @@ namespace Core\API\Language {
       }
 
       $this->context->setLanguage($this->language);
+      $this->result["language"] = $this->language->jsonSerialize();
       return $this->success;
+    }
+  }
+
+  class GetEntries extends LanguageAPI {
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        "code" => new StringType("code", 5, true, NULL),
+        "modules" => new ArrayType("modules", Parameter::TYPE_STRING, true, false)
+      ]);
+      $this->loginRequired = false;
+      $this->csrfTokenRequired = false;
+    }
+
+    protected function _execute(): bool {
+      $code = $this->getParam("code");
+      if ($code === null) {
+        $code = $this->context->getLanguage()->getCode();
+      }
+
+      if (!preg_match(Language::LANG_CODE_PATTERN, $code)) {
+        return $this->createError("Invalid lang code format: $code");
+      }
+
+      $entries = [];
+      $modulePaths = [];
+      $requestedModules = $this->getParam("modules");
+      foreach ($requestedModules as $module) {
+        if (!preg_match(Language::LANG_MODULE_PATTERN, $module)) {
+          return $this->createError("Invalid module name: $module");
+        }
+
+        $moduleFound = false;
+        foreach (["Site", "Core"] as $baseDir) {
+          $filePath = realpath(implode("/", [$baseDir, "Localization", $code, "$module.php"]));
+          if ($filePath && is_file($filePath)) {
+            $moduleFound = true;
+            $moduleEntries = @include_once $filePath;
+            $entries[$module] = $moduleEntries;
+            break;
+          }
+        }
+
+        if (!$moduleFound) {
+          return $this->createError("Module not found: $module");
+        }
+      }
+
+      $this->result["code"] = $code;
+      $this->result["entries"] = $entries;
+      return true;
     }
   }
 }

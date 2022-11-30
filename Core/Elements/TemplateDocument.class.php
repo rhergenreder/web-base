@@ -94,6 +94,12 @@ class TemplateDocument extends Document {
           "csp" => [
             "nonce" => $this->getCSPNonce(),
             "enabled" => $this->isCSPEnabled()
+          ],
+          "language" => [
+            "code" => $language->getCode(),
+            "shortCode" => $language->getShortCode(),
+            "name" => $language->getName(),
+            "entries" => $language->getEntries()
           ]
         ]
       ], $params);

@@ -3,7 +3,7 @@ import './res/adminlte.min.css';
 import './res/index.css';
 import API from "shared/api";
 import Icon from "shared/elements/icon";
-import {BrowserRouter, Route, Routes} from "react-router-dom";
+import {BrowserRouter, Routes} from "react-router-dom";
 import Dialog from "./elements/dialog";
 import Footer from "./elements/footer";
 import Header from "./elements/header";
@@ -11,12 +11,14 @@ import Sidebar from "./elements/sidebar";
 import LoginForm from "./views/login";
 import {Alert} from "@material-ui/lab";
 import {Button} from "@material-ui/core";
+import {Locale} from "shared/locale";
 
 export default class AdminDashboard extends React.Component {
 
     constructor(props) {
         super(props);
         this.api = new API();
+        this.locale = Locale.getInstance();
         this.state = {
             loaded: false,
             dialog: { onClose: () => this.hideDialog() },
@@ -39,13 +41,19 @@ export default class AdminDashboard extends React.Component {
 
     onInit() {
         this.setState({ ...this.state, loaded: false, error: null });
-        this.api.info().then(data => {
+        this.api.getLanguageEntries("general").then(data => {
             if (data.success) {
-                this.setState({...this.state, info: data.info })
-                this.api.fetchUser().then(data => {
+                this.api.info().then(data => {
                     if (data.success) {
-                        setInterval(this.onUpdate.bind(this), 60*1000);
-                        this.setState({...this.state, loaded: true});
+                        this.setState({...this.state, info: data.info })
+                        this.api.fetchUser().then(data => {
+                            if (data.success) {
+                                setInterval(this.onUpdate.bind(this), 60*1000);
+                                this.setState({...this.state, loaded: true});
+                            } else {
+                                this.setState({ ...this.state, error: data.msg })
+                            }
+                        });
                     } else {
                         this.setState({ ...this.state, error: data.msg })
                     }
@@ -73,7 +81,6 @@ export default class AdminDashboard extends React.Component {
                     callback(res);
                 })
             } else {
-                this.setState({ ...this.state, error: res.msg });
                 callback(res);
             }
         });
@@ -96,7 +103,6 @@ export default class AdminDashboard extends React.Component {
                     callback(res);
                 })
             } else {
-                this.setState({ ...this.state, error: res.msg });
                 callback(res);
             }
         });
@@ -111,7 +117,6 @@ export default class AdminDashboard extends React.Component {
                     callback(res);
                 })
             } else {
-                this.setState({ ...this.state, error: res.msg });
                 callback(res);
             }
         });
@@ -136,6 +141,7 @@ export default class AdminDashboard extends React.Component {
             showDialog: this.showDialog.bind(this),
             api: this.api,
             info: this.state.info,
+            locale: this.locale,
             onUpdateLocale: this.onUpdateLocale.bind(this),
             onLogout: this.onLogout.bind(this),
             onLogin: this.onLogin.bind(this),

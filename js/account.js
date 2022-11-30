@@ -1,9 +1,5 @@
 $(document).ready(function () {
 
-    function isRecaptchaEnabled() {
-        return (typeof grecaptcha !== 'undefined');
-    }
-
     function showAlert(type, msg, raw=false) {
         let alert = $("#alertMessage");
         if (raw) {
@@ -46,12 +42,12 @@ $(document).ready(function () {
 
         hideAlert();
         btn.prop("disabled", true);
-        btn.html("Logging in… <i class=\"fa fa-spin fa-circle-notch\"></i>");
+        btn.html(L("account.signing_in") + "… <i class=\"fa fa-spin fa-circle-notch\"></i>");
         jsCore.apiCall("/user/login", {"username": username, "password": password, "stayLoggedIn": stayLoggedIn }, function(res) {
             if (res.success) {
                 document.location.reload();
             } else {
-                btn.html("Login");
+                btn.text(L("account.sign_in"));
                 btn.prop("disabled", false);
                 $("#password").val("");
                 createdDiv.hide();
@@ -77,10 +73,10 @@ $(document).ready(function () {
         if (username === '' || email === '' || password === '' || confirmPassword === '') {
             showAlert("danger", "Please fill out every field.");
         } else if(password !== confirmPassword) {
-            showAlert("danger", "Your passwords did not match.");
+            showAlert("danger", L("register.passwords_do_not_match"));
         } else {
             let params = { username: username, email: email, password: password, confirmPassword: confirmPassword };
-            if (isRecaptchaEnabled()) {
+            if (jsCore.isRecaptchaEnabled()) {
                 let siteKey = $("#siteKey").val().trim();
                 grecaptcha.ready(function() {
                     grecaptcha.execute(siteKey, {action: 'register'}).then(function(captcha) {
@@ -138,7 +134,7 @@ $(document).ready(function () {
         let email = $("#email").val();
 
         let params = { email: email };
-        if (isRecaptchaEnabled()) {
+        if (jsCore.isRecaptchaEnabled()) {
             let siteKey = $("#siteKey").val().trim();
             grecaptcha.ready(function() {
                 grecaptcha.execute(siteKey, {action: 'resetPassword'}).then(function(captcha) {
@@ -196,7 +192,7 @@ $(document).ready(function () {
         let btn = $(this);
         let email = $("#email").val();
         let params = { email: email };
-        if (isRecaptchaEnabled()) {
+        if (jsCore.isRecaptchaEnabled()) {
             let siteKey = $("#siteKey").val().trim();
             grecaptcha.ready(function() {
                 grecaptcha.execute(siteKey, {action: 'resendConfirmation'}).then(function(captcha) {

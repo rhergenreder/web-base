@@ -297,8 +297,8 @@ namespace Core\API\User {
           $this->result["users"][$userId] = $serialized;
         }
 
-        $this->result["pageCount"] = intval(ceil($this->userCount / $count));
-        $this->result["totalCount"] = $this->userCount;
+        $this->result["pageCount"] = intval(ceil($userCount / $count));
+        $this->result["totalCount"] = $userCount;
       } else {
         return $this->createError("Error fetching users: " . $sql->getLastError());
       }
@@ -1577,6 +1577,35 @@ namespace Core\API\User {
         @unlink($path);
       }
 
+      return $this->success;
+    }
+  }
+
+  class CheckToken extends UserAPI {
+
+    private ?UserToken $userToken;
+
+    public function __construct($user, $externalCall = false) {
+      parent::__construct($user, $externalCall, array(
+        'token' => new StringType('token', 36),
+      ));
+      $this->userToken = null;
+    }
+
+    public function getToken(): ?UserToken {
+      return $this->userToken;
+    }
+
+    public function _execute(): bool {
+
+      $token = $this->getParam('token');
+      $userToken = $this->checkToken($token);
+      if ($userToken === false) {
+        return false;
+      }
+
+      $this->userToken = $userToken;
+      $this->result["token"] = $userToken->jsonSerialize();
       return $this->success;
     }
   }

@@ -48,9 +48,7 @@ namespace Core\API\Mail {
   use Core\API\Parameter\StringType;
   use Core\Objects\DatabaseEntity\MailQueueItem;
   use DateTimeInterface;
-  use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\Compare;
-  use Core\Driver\SQL\Condition\CondIn;
   use Core\External\PHPMailer\Exception;
   use Core\External\PHPMailer\PHPMailer;
   use Core\Objects\Context;

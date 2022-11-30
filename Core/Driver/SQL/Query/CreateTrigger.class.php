@@ -2,7 +2,6 @@
 
 namespace Core\Driver\SQL\Query;
 
-use Core\API\User\Create;
 use Core\Driver\SQL\SQL;
 
 class CreateTrigger extends Query {

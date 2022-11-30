@@ -2,7 +2,6 @@
 
 namespace Core\Driver\SQL\Query;
 
-use Core\Driver\SQL\Condition\CondOr;
 use Core\Driver\SQL\SQL;
 
 class Delete extends ConditionalQuery {

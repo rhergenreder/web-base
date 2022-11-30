@@ -2,7 +2,6 @@
 
 namespace Core\Driver\SQL\Column;
 
-use Core\Driver\SQL\Column\Column;
 
 class NumericColumn extends Column {
 

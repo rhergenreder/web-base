@@ -2,6 +2,7 @@
 
 return [
   "something_went_wrong" => "Etwas ist schief gelaufen",
+  "error_occurred" => "Ein Fehler ist aufgetreten",
   "retry" => "Erneut versuchen",
   "Go back" => "Zurück",
   "submitting" => "Übermittle",

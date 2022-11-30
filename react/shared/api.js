@@ -1,5 +1,3 @@
-import {Locale} from "./locale";
-
 export default class API {
     constructor() {
         this.loggedIn = false;
@@ -139,68 +137,18 @@ export default class API {
     }
 
     async setLanguage(params) {
-        let res = await this.apiCall("language/set", params);
-        if (res.success) {
-            Locale.getInstance().setLocale(res.language.code);
-        }
-
-        return res;
+        return await this.apiCall("language/set", params);
     }
 
-    async setLanguageByCode(code) {
-        return this.setLanguage({ code: code });
-    }
-
-    async setLanguageByName(name) {
-        return this.setLanguage({ name: name });
-    }
-
-    async getLanguageEntries(modules, code=null, useCache=true) {
+    async getLanguageEntries(modules, code=null, useCache=false) {
         if (!Array.isArray(modules)) {
             modules = [modules];
         }
 
-        let locale = Locale.getInstance();
-        if (code === null) {
-            code = locale.currentLocale;
-            if (code === null && this.loggedIn) {
-                code = this.user.language.code;
-            }
-        }
-
-        if (code === null) {
-            return { success: false, msg: "No locale selected currently" };
-        }
-
-        let languageEntries = {};
-        if (useCache) {
-            // remove cached modules from request array
-            for (const module of [...modules]) {
-                let moduleEntries = locale.getModule(code, module);
-                if (moduleEntries) {
-                    modules.splice(modules.indexOf(module), 1);
-                    languageEntries = {...languageEntries, [module]: moduleEntries};
-                }
-            }
-        }
-
-        if (modules.length > 0) {
-            let data = await this.apiCall("language/getEntries", { code: code, modules: modules });
-
-            if (useCache) {
-                if (data && data.success) {
-                    // insert into cache
-                    for (const [module, entries] of Object.entries(data.entries)) {
-                        locale.loadModule(code, module, entries);
-                    }
-                    data.entries = {...data.entries, ...languageEntries};
-                    data.cached = false;
-                }
-            }
-
-            return data;
-        } else {
-            return { success: true, msg: "", entries: languageEntries, code: code, cached: true };
-        }
+        return this.apiCall("language/getEntries", {code: code, modules: modules});
     }
+
+        /*
+
+    } */
 };

@@ -12,9 +12,6 @@
     {% if site.recaptcha.enabled %}
         <script src="https://www.google.com/recaptcha/api.js?render={{ site.recaptcha.key }}" nonce="{{ site.csp.nonce }}"></script>
     {% endif %}
-    <script nonce="{{ site.csp.nonce }}">
-        window.languageEntries = {{ site.language.entries|json_encode()|raw }};
-    </script>
 {% endblock %}
 
 {% block body %}

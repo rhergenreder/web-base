@@ -11,19 +11,24 @@ import Sidebar from "./elements/sidebar";
 import LoginForm from "./views/login";
 import {Alert} from "@material-ui/lab";
 import {Button} from "@material-ui/core";
-import {Locale} from "shared/locale";
+import { LocaleContext } from "shared/locale";
+
+const L = (key) => {
+    return "<nope>";
+}
 
 export default class AdminDashboard extends React.Component {
+
+    static contextType = LocaleContext;
 
     constructor(props) {
         super(props);
         this.api = new API();
-        this.locale = Locale.getInstance();
         this.state = {
             loaded: false,
             dialog: { onClose: () => this.hideDialog() },
             info: { },
-            error: null,
+            error: null
         };
     }
 
@@ -40,6 +45,7 @@ export default class AdminDashboard extends React.Component {
     }
 
     onInit() {
+        // return;
         this.setState({ ...this.state, loaded: false, error: null });
         this.api.getLanguageEntries("general").then(data => {
             if (data.success) {
@@ -66,10 +72,6 @@ export default class AdminDashboard extends React.Component {
 
     componentDidMount() {
         this.onInit();
-    }
-
-    onUpdateLocale() {
-        this.setState({ ...this.state, locale: currentLocale })
     }
 
     onLogin(username, password, rememberMe, callback) {
@@ -126,14 +128,14 @@ export default class AdminDashboard extends React.Component {
 
         if (!this.state.loaded) {
             if (this.state.error) {
-                return <Alert severity={"error"} title={"An error occurred"}>
+                return <Alert severity={"error"} title={L("general.error_occurred")}>
                     <div>{this.state.error}</div>
                     <Button type={"button"} variant={"outlined"} onClick={() => this.onInit()}>
                         Retry
                     </Button>
                 </Alert>
             } else {
-                return <b>Loading… <Icon icon={"spinner"}/></b>
+                return <b>{L("general.loading")}… <Icon icon={"spinner"}/></b>
             }
         }
 
@@ -141,8 +143,6 @@ export default class AdminDashboard extends React.Component {
             showDialog: this.showDialog.bind(this),
             api: this.api,
             info: this.state.info,
-            locale: this.locale,
-            onUpdateLocale: this.onUpdateLocale.bind(this),
             onLogout: this.onLogout.bind(this),
             onLogin: this.onLogin.bind(this),
             onTotp2FA: this.onTotp2FA.bind(this),
@@ -179,7 +179,7 @@ export default class AdminDashboard extends React.Component {
                     <Dialog {...this.state.dialog}/>
                 </section>
             </div>
-            <Footer />
+            <Footer info={this.state.info} />
         </BrowserRouter>
     }
 }

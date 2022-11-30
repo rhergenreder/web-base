@@ -1,7 +1,7 @@
-import React, {useState} from 'react';
-import {L} from "shared/locale";
+import React, {useCallback, useContext, useState} from 'react';
 import {Box} from "@material-ui/core";
 import {makeStyles} from "@material-ui/core/styles";
+import {LocaleContext} from "shared/locale";
 
 const useStyles = makeStyles((theme) => ({
     languageFlag: {
@@ -15,17 +15,16 @@ export default function LanguageSelection(props) {
 
     const api = props.api;
     const classes = useStyles();
-    let [languages, setLanguages] = useState(null);
+    const [languages, setLanguages] = useState(null);
+    const {translate: L, setLanguageByCode} = useContext(LocaleContext);
 
-    const onSetLanguage = (code) => {
-        api.setLanguageByCode(code).then((res) => {
-            if (res.success) {
-                props.onUpdateLocale();
-            } else {
+    const onSetLanguage = useCallback((code) => {
+        setLanguageByCode(api, code).then((res) => {
+            if (!res.success) {
                 alert(res.msg);
             }
         });
-    };
+    }, []);
 
     let flags = [];
     if (languages === null) {

@@ -34,7 +34,7 @@ abstract class Document {
     $this->domain = $this->getSettings()->getBaseUrl();
     $this->logger = new Logger("Document", $this->getSQL());
     $this->searchable = false;
-    $this->languageModules = [];
+    $this->languageModules = ["general"];
   }
 
   public abstract function getTitle(): string;

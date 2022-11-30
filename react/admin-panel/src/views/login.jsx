@@ -11,13 +11,13 @@ import {
 
 import {makeStyles} from '@material-ui/core/styles';
 import {Alert} from '@material-ui/lab';
-import React, {useCallback, useEffect, useState} from "react";
+import React, {useCallback, useContext, useEffect, useState} from "react";
 import {Navigate} from "react-router-dom";
-import {L} from "shared/locale";
 import ReplayIcon from '@material-ui/icons/Replay';
 import LanguageSelection from "../elements/language-selection";
 import {decodeText, encodeText, getParameter, removeParameter} from "shared/util";
 import Icon from "shared/elements/icon";
+import {LocaleContext} from "shared/locale";
 
 const useStyles = makeStyles((theme) => ({
     paper: {
@@ -81,24 +81,26 @@ export default function LoginForm(props) {
     let [tfaState, set2FAState] = useState(0); // 0: not sent, 1: sent, 2: retry
     let [tfaError, set2FAError] = useState("");
     let [error, setError] = useState("");
-    let [loaded, setLoaded] = useState(0);
+    let [loaded, setLoaded] = useState(false);
+
+    const {translate: L, currentLocale, requestModules} = useContext(LocaleContext);
 
     const getNextUrl = () => {
         return getParameter("next") || "/admin";
     }
 
     const onUpdateLocale = useCallback(() => {
-        api.getLanguageEntries(["general", "account"]).then(data => {
-            setLoaded(loaded + 1);
-           if (!data.success) {
-               alert(data.msg);
-           }
+        requestModules(api, ["general", "account"], currentLocale).then(data => {
+            setLoaded(true);
+            if (!data.success) {
+                alert(data.msg);
+            }
         });
-    }, [loaded]);
+    }, [currentLocale]);
 
     useEffect(() => {
         onUpdateLocale();
-    }, []);
+    }, [currentLocale]);
 
     const onLogin = useCallback(() => {
         if (!isLoggingIn) {
@@ -294,7 +296,7 @@ export default function LoginForm(props) {
             </>
     }
 
-    if (loaded === 0) {
+    if (!loaded) {
         return <b>{L("general.loading")}… <Icon icon={"spinner"}/></b>
     }
 
@@ -309,7 +311,7 @@ export default function LoginForm(props) {
             </div>
             <form className={classes.form} onSubmit={(e) => e.preventDefault()}>
                 { createForm() }
-                <LanguageSelection api={api} onUpdateLocale={onUpdateLocale} />
+                <LanguageSelection api={api} />
             </form>
         </div>
     </Container>

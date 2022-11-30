@@ -1,8 +1,8 @@
 <?php
 
 return [
-  "title" => "Einloggen",
-  "description" => "Loggen Sie sich in Ihren Account ein",
+  "login_title" => "Einloggen",
+  "login_description" => "Loggen Sie sich in Ihren Account ein",
   "form_title" => "Bitte geben Sie ihre Daten ein",
   "username" => "Benutzername",
   "username_or_email" => "Benutzername oder E-Mail",

@@ -7,6 +7,10 @@
     {% block head %}
       <title>{{ site.title }}</title>
     {% endblock %}
+    <script nonce="{{ site.csp.nonce }}">
+      window.languageCode = {{ site.language.code|json_encode()|raw }};
+      window.languageEntries = {{ site.language.entries|json_encode()|raw }};
+    </script>
   </head>
   <body>
     {% block body %}

@@ -12,7 +12,6 @@ import {
 import {makeStyles} from '@material-ui/core/styles';
 import {Alert} from '@material-ui/lab';
 import React, {useCallback, useContext, useEffect, useState} from "react";
-import {Navigate} from "react-router-dom";
 import ReplayIcon from '@material-ui/icons/Replay';
 import LanguageSelection from "../elements/language-selection";
 import {decodeText, encodeText, getParameter, removeParameter} from "shared/util";
@@ -85,10 +84,6 @@ export default function LoginForm(props) {
 
     const {translate: L, currentLocale, requestModules} = useContext(LocaleContext);
 
-    const getNextUrl = () => {
-        return getParameter("next") || "/admin";
-    }
-
     const onUpdateLocale = useCallback(() => {
         requestModules(api, ["general", "account"], currentLocale).then(data => {
             setLoaded(true);
@@ -107,17 +102,19 @@ export default function LoginForm(props) {
             setError("");
             setLoggingIn(true);
             removeParameter("success");
-            props.onLogin(username, password, rememberMe, (res) => {
+            api.login(username, password, rememberMe).then((res) => {
                 set2FAState(0);
                 setLoggingIn(false);
                 setPassword("");
                 if (!res.success) {
                     setEmailConfirmed(res.emailConfirmed);
                     setError(res.msg);
+                } else {
+                    props.onLogin();
                 }
             });
         }
-    }, [isLoggingIn, password, props, rememberMe, username]);
+    }, [api, isLoggingIn, password, props, rememberMe, username]);
 
     const onSubmit2FA = useCallback(() => {
         setLoggingIn(true);
@@ -168,14 +165,7 @@ export default function LoginForm(props) {
                 set2FAError(e.toString());
             });
         }
-    }, [api.loggedIn, api.user, tfaState, props])
-
-    if (api.loggedIn) {
-        if (!api.user["2fa"] || !api.user["2fa"].confirmed || api.user["2fa"].authenticated) {
-            // Redirect by default takes only path names
-            return <Navigate to={getNextUrl()}/>
-        }
-    }
+    }, [api.loggedIn, api.user, tfaState, props]);
 
     const createForm = () => {
 

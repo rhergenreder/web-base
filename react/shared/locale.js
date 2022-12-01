@@ -1,7 +1,7 @@
 import React from 'react';
 import {createContext, useCallback, useState} from "react";
 
-const LocaleContext = React.createContext(null);
+const LocaleContext = createContext(null);
 
 function LocaleProvider(props) {
 

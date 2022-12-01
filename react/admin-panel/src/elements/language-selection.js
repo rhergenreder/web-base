@@ -29,7 +29,12 @@ export default function LanguageSelection(props) {
     let flags = [];
     if (languages === null) {
         api.getLanguages().then((res) => {
-            setLanguages(res.languages);
+            if (res.success) {
+                setLanguages(res.languages);
+            } else {
+                setLanguages({});
+                alert(res.msg);
+            }
         });
     } else {
         for (const language of Object.values(languages)) {

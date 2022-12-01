@@ -1,55 +1,51 @@
-import React from 'react';
+import React, {useCallback, useContext} from 'react';
 import {Link, NavLink} from "react-router-dom";
 import Icon from "shared/elements/icon";
+import {LocaleContext} from "shared/locale";
 
 export default function Sidebar(props) {
 
-    let parent = {
-        showDialog: props.showDialog || function() {},
-        api: props.api,
-    };
+    const api = props.api;
+    const showDialog = props.showDialog;
+    const {translate: L} = useContext(LocaleContext);
 
-    function onLogout() {
-        parent.api.logout().then(obj => {
+    const onLogout = useCallback(() => {
+        api.logout().then(obj => {
             if (obj.success) {
                 document.location = "/admin";
             } else {
-                parent.showDialog("Error logging out: " + obj.msg, "Error logging out");
+                showDialog("Error logging out: " + obj.msg, "Error logging out");
             }
         });
-    }
+    }, [api, showDialog]);
 
     const menuItems = {
         "dashboard": {
-            "name": "Dashboard",
+            "name": "admin.dashboard",
             "icon": "tachometer-alt"
         },
         "visitors": {
-            "name": "Visitor Statistics",
+            "name": "admin.visitor_statistics",
             "icon": "chart-bar",
         },
         "users": {
-            "name": "Users & Groups",
+            "name": "admin.user_groups",
             "icon": "users"
         },
         "pages": {
-            "name": "Pages & Routes",
+            "name": "admin.page_routes",
             "icon": "copy",
         },
         "settings": {
-            "name": "Settings",
+            "name": "admin.settings",
             "icon": "tools"
         },
         "logs": {
-            "name": "Logs & Notifications",
+            "name": "admin.logs",
             "icon": "file-medical-alt"
         },
-        "contact": {
-            "name": "Contact Requests",
-            "icon": "comments"
-        },
         "help": {
-            "name": "Help",
+            "name": "admin.help",
             "icon": "question-circle"
         },
     };
@@ -61,8 +57,8 @@ export default function Sidebar(props) {
 
         li.push(
             <li key={id} className={"nav-item"}>
-                <NavLink to={"/admin/" + id} className={"nav-link"} activeClassName={"active"}>
-                    <Icon icon={obj.icon} className={"nav-icon"} /><p>{obj.name}{badge}</p>
+                <NavLink to={"/admin/" + id} className={"nav-link"}>
+                    <Icon icon={obj.icon} className={"nav-icon"} /><p>{L(obj.name)}{badge}</p>
                 </NavLink>
             </li>
         );
@@ -71,7 +67,7 @@ export default function Sidebar(props) {
     li.push(<li className={"nav-item"} key={"logout"}>
         <a href={"#"} onClick={() => onLogout()} className={"nav-link"}>
             <Icon icon={"arrow-left"} className={"nav-icon"} />
-            <p>Logout</p>
+            <p>{L("general.logout")}</p>
         </a>
     </li>);
 
@@ -96,7 +92,7 @@ export default function Sidebar(props) {
                         <div className={"os-content"} style={{padding: "0px 0px", height: "100%", width: "100%"}}>
                             <div className="user-panel mt-3 pb-3 mb-3 d-flex">
                                 <div className="info">
-                                    <a href="#" className="d-block">Logged in as: {parent.api.user.name}</a>
+                                    <a href="#" className="d-block">Logged in as: {api.user.name}</a>
                                 </div>
                             </div>
                             <nav className={"mt-2"}>

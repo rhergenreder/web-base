@@ -14,5 +14,6 @@ class Admin extends TemplateDocument {
     $this->searchable = false;
     parent::__construct($router, $template, $params);
     $this->enableCSP();
+    $this->addCSPWhitelist("/js/admin-panel/");
   }
 }

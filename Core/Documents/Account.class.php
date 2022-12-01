@@ -25,7 +25,6 @@ class Account extends TemplateDocument {
   protected function loadParameters() {
     $settings = $this->getSettings();
     $templateName = $this->getTemplateName();
-    $language = $this->getContext()->getLanguage();
     $this->parameters["view"] = ["success" => true];
     switch ($templateName) {
 

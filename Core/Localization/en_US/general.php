@@ -9,4 +9,5 @@ return [
   "submit" => "Submit",
   "language" => "Language",
   "loading" => "Loading",
+  "logout" => "Logout",
 ];

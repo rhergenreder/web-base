@@ -53,7 +53,12 @@ export default class API {
     }
 
     async logout() {
-        return this.apiCall("user/logout");
+        const res = await this.apiCall("user/logout");
+        if (res.success) {
+            this.loggedIn = false;
+        }
+
+        return res;
     }
 
     async getUser(id) {

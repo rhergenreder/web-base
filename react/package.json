@@ -14,7 +14,6 @@
   ],
   "scripts": {
     "build": "parcel build",
-    "deploy": "cp -r dist/* ../js/",
     "clean": "rm -rfd .parcel-cache dist/*"
   },
   "author": "",

@@ -456,7 +456,7 @@ function onRoutes(array $argv) {
       _exit("Error fetching routes: " . $req->getLastError());
     } else {
       $routes = $req->getResult()["routes"];
-      $head = ["id", "request", "action", "target", "extra", "active", "exact"];
+      $head = ["id", "pattern", "type", "target", "extra", "active", "exact"];
 
       // strict boolean
       foreach ($routes as &$route) {
@@ -467,14 +467,15 @@ function onRoutes(array $argv) {
       printTable($head, $routes);
     }
   } else if ($action === "add") {
-    if (count($argv) < 6) {
-      _exit("Usage: cli.php routes add <request> <action> <target> [extra]");
+    if (count($argv) < 7) {
+      _exit("Usage: cli.php routes add <pattern> <type> <target> <exact> [extra]");
     }
 
     $params = array(
-      "request" => $argv[3],
-      "action" => $argv[4],
+      "pattern" => $argv[3],
+      "type" => $argv[4],
       "target" => $argv[5],
+      "exact" => $argv[6],
       "extra" => $argv[7] ?? "",
     );
 
@@ -486,23 +487,23 @@ function onRoutes(array $argv) {
       _exit("Route added successfully");
     }
   } else if (in_array($action, ["remove","modify","enable","disable"])) {
-    $uid = $argv[3] ?? null;
-    if ($uid === null || ($action === "modify" && count($argv) < 7)) {
+    $routeId = $argv[3] ?? null;
+    if ($routeId === null || ($action === "modify" && count($argv) < 8)) {
       if ($action === "modify") {
-        _exit("Usage: cli.php routes $action <id> <request> <action> <target> [extra]");
+        _exit("Usage: cli.php routes $action <id> <pattern> <type> <target> <exact> [extra]");
       } else {
         _exit("Usage: cli.php routes $action <id>");
       }
     }
 
-    $params = ["id" => $uid];
+    $params = ["id" => $routeId];
     if ($action === "remove") {
       $input = null;
       do {
         if ($input === "n") {
           die();
         }
-        echo "Remove route #$uid? (y|n): ";
+        echo "Remove route #$routeId? (y|n): ";
       } while(($input = trim(fgets(STDIN))) !== "y");
 
       $req = new \Core\API\Routes\Remove($context);
@@ -512,10 +513,11 @@ function onRoutes(array $argv) {
       $req = new \Core\API\Routes\Disable($context);
     } else if ($action === "modify") {
       $req = new \Core\API\Routes\Update($context);
-      $params["request"] = $argv[4];
-      $params["action"] = $argv[5];
+      $params["pattern"] = $argv[4];
+      $params["type"] = $argv[5];
       $params["target"] = $argv[6];
-      $params["extra"] = $argv[7] ?? "";
+      $params["exact"] = $argv[7];
+      $params["extra"] = $argv[8] ?? "";
     } else {
       _exit("Unsupported action");
     }

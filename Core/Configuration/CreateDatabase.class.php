@@ -44,7 +44,7 @@ class CreateDatabase extends DatabaseScript {
       new DocumentRoute("/login", true, \Core\Documents\Account::class, "account/login.twig"),
       new DocumentRoute("/resendConfirmEmail", true, \Core\Documents\Account::class, "account/resend_confirm_email.twig"),
       new DocumentRoute("/debug", true, \Core\Documents\Info::class),
-      new StaticFileRoute("/static", true, "/static/welcome.html"),
+      new StaticFileRoute("/", true, "/static/welcome.html"),
     ]);
 
     $queries[] = $sql->createTable("Settings")

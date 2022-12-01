@@ -246,6 +246,8 @@ namespace Core\API\Routes {
         "type" => new StringType("type"),
         "target" => new StringType("target", 128),
         "extra" => new StringType("extra", 64, true, ""),
+        "exact" => new Parameter("exact", Parameter::TYPE_BOOLEAN),
+        "active" => new Parameter("active", Parameter::TYPE_BOOLEAN, true, true),
       ));
       $this->isPublic = false;
     }

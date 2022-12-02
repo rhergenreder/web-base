@@ -1,6 +1,7 @@
 <?php
 
 return [
+  "title" => "Administration",
   "dashboard" => "Dashboard",
   "visitor_statistics" => "Visitor Statistics",
   "user_groups" => "User & Groups",

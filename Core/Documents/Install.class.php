@@ -106,6 +106,28 @@ namespace Documents\Install {
       return NULL;
     }
 
+    private function yarnInstall(string $reactDir): array {
+      $fds = [
+        "1" => ["pipe", "w"],
+        "2" => ["pipe", "w"],
+      ];
+      $proc = proc_open("yarn install --frozen-lockfile --non-interactive", $fds, $pipes, $reactDir);
+      $output = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+      $status = proc_close($proc);
+      return [$status, $output];
+    }
+
+    private function yarnBuild(string $reactDir): array {
+      $fds = [
+        "1" => ["pipe", "w"],
+        "2" => ["pipe", "w"],
+      ];
+      $proc = proc_open("yarn run build", $fds, $pipes, $reactDir);
+      $output = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+      $status = proc_close($proc);
+      return [$status, $output];
+    }
+
     private function composerInstall(bool $dryRun = false): array {
       $command = "composer install";
       if ($dryRun) {
@@ -158,6 +180,8 @@ namespace Documents\Install {
           }
         }
       }
+
+      // TODO: check
 
       $context = $this->getDocument()->getContext();
       $config = $context->getConfig();
@@ -248,6 +272,11 @@ namespace Documents\Install {
         $success = false;
       }
 
+      if (!$this->command_exist("yarn")) {
+        $failedRequirements[] = "<b>Yarn</b> is not installed or cannot be found.";
+        $success = false;
+      }
+
       if (!$success) {
         $msg = "The following requirements failed the check:<br>" .
           $this->createUnorderedList($failedRequirements);
@@ -259,6 +288,14 @@ namespace Documents\Install {
 
     private function installDependencies(): array {
       list ($status, $output) = $this->composerInstall();
+      if ($status === 0) {
+        $reactDir = implode(DIRECTORY_SEPARATOR, [WEBROOT, "react"]);
+        list ($status, $output) = $this->yarnInstall($reactDir);
+        if ($status === 0) {
+          list ($status, $output) = $this->yarnBuild($reactDir);
+        }
+      }
+
       return ["success" => $status === 0, "msg" => $output];
     }
 

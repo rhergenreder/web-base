@@ -1,12 +1,12 @@
 {% extends "base.twig" %}
 
 {% block head %}
-    <title>{{ site.name }} - Administration</title>
+    <title>{{ site.name }} - {{ L("admin.admin") }}</title>
     <link rel="stylesheet" href="/css/fontawesome.min.css" nonce="{{ site.csp.nonce }}">
 {% endblock %}
 
 {% block body %}
-    <noscript>You need Javascript enabled to run this app</noscript>
+    <noscript>{{ L("general.noscript") }}</noscript>
     <div type="module" id="admin-panel"></div>
     <script src="/react/dist/admin-panel/index.js" nonce="{{ site.csp.nonce }}"></script>
     <link rel="stylesheet" href="/react/dist/admin-panel/index.css" nonce="{{ site.csp.nonce }}"></link>

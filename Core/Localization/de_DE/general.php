@@ -10,4 +10,5 @@ return [
   "language" => "Sprache",
   "loading" => "Laden",
   "logout" => "Ausloggen",
+  "noscript" => "Sie müssen Javascript aktivieren um diese Anwendung zu benutzen",
 ];

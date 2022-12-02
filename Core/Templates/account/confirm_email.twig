@@ -1,17 +1,21 @@
 {% extends "account/account_base.twig" %}
 
-{% set view_title = 'Confirm Email' %}
+{% set view_title = 'account.confirm_email_title' %}
 {% set view_icon = 'user-check' %}
-{% set view_description = 'Request a password reset, once you got the e-mail address, you can choose a new password' %}
+{% set view_description = 'account.confirm_email_description' %}
 
 {% block view_content %}
     <noscript>
-        <div class="alert alert-danger">Javascript is required</div>
+        <div class="alert alert-danger">{{ L('general.noscript') }}</div>
     </noscript>
     <div class="alert alert-info" id="confirm-status">
-        Confirming email… <i class="fas fa-spinner fa-spin"></i>
+        {{ L('account.confirming_email') }}… <i class="fas fa-spinner fa-spin"></i>
     </div>
-    <a href='/login'><button class='btn btn-primary' style='position: absolute; bottom: 10px' type='button'>Proceed to Login</button></a>
+    <a href='/login'>
+        <button class='btn btn-primary' style='position: absolute; bottom: 30px' type='button'>
+            {{ L("account.proceed_to_login") }}
+        </button>
+    </a>
     <script nonce="{{ site.csp.nonce }}">
         $(document).ready(function() {
             let token = jsCore.getParameter("token");
@@ -21,16 +25,16 @@
                     confirmStatus.removeClass("alert-info");
                     if (!res.success) {
                         confirmStatus.addClass("alert-danger");
-                        confirmStatus.text("Error confirming e-mail address: " + res.msg);
+                        confirmStatus.text("{{ L('account.confirm_error') }}: " + res.msg);
                     } else {
                         confirmStatus.addClass("alert-success");
-                        confirmStatus.text("Your e-mail address was successfully confirmed, you may now log in.");
+                        confirmStatus.text("{{ L('account.confirm_success') }}");
                     }
                 });
             } else {
                 confirmStatus.removeClass("alert-info");
                 confirmStatus.addClass("alert-danger");
-                confirmStatus.text("The link you visited is no longer valid");
+                confirmStatus.text("{{ L('account.invalid_link') }}");
             }
         });
     </script>

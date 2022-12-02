@@ -10,4 +10,5 @@ return [
   "language" => "Language",
   "loading" => "Loading",
   "logout" => "Logout",
+  "noscript" => "You need Javascript enabled to run this app",
 ];

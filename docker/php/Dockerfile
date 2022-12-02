@@ -7,10 +7,11 @@ RUN mkdir -p /application/core/Configuration /var/www/.gnupg && \
 
 # YAML + dev dependencies
 RUN apt-get update -y &&  \
-    apt-get install -y libyaml-dev libzip-dev libgmp-dev libpng-dev gnupg2d && \
+    apt-get install -y libyaml-dev libzip-dev libgmp-dev libpng-dev gnupg2d nodejs npm && \
     apt-get clean && \
     pecl install yaml && docker-php-ext-enable yaml && \
-    docker-php-ext-install gd
+    docker-php-ext-install gd && \
+    npm install --global yarn && ln -s /usr/local/bin/yarn /usr/bin/yarn
 
 # Runkit (no stable release available)
 RUN pecl install runkit7-4.0.0a3 && docker-php-ext-enable runkit7 && \

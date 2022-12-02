@@ -8,7 +8,7 @@
     <script src="/js/bootstrap.bundle.min.js" nonce="{{ site.csp.nonce }}"></script>
     <link rel="stylesheet" href="/css/fontawesome.min.css" nonce="{{ site.csp.nonce }}">
     <link rel="stylesheet" href="/css/account.css" nonce="{{ site.csp.nonce }}">
-    <title>Account - {{ L(view_title) }}</title>
+    <title>{{ L("account.title")}} - {{ L(view_title) }}</title>
     {% if site.recaptcha.enabled %}
         <script src="https://www.google.com/recaptcha/api.js?render={{ site.recaptcha.key }}" nonce="{{ site.csp.nonce }}"></script>
     {% endif %}

@@ -40,7 +40,7 @@ if ($installation) {
 } else {
 
   $router = null;
-  $routerCacheClass = '\Core\Cache\RouterCache';
+  $routerCacheClass = '\Site\Cache\RouterCache';
   $routerCachePath = getClassPath($routerCacheClass);
   if (is_file($routerCachePath)) {
     @include_once $routerCachePath;

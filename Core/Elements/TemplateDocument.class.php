@@ -31,7 +31,7 @@ class TemplateDocument extends Document {
     $this->parameters = $params;
     $this->twigLoader = new FilesystemLoader(self::TEMPLATE_PATH);
     $this->twigEnvironment = new Environment($this->twigLoader, [
-      'cache' => WEBROOT . '/Core/Cache/Templates/',
+      'cache' => WEBROOT . '/Site/Cache/Templates/',
       'auto_reload' => true
     ]);
     $this->twigEnvironment->addExtension(new CustomTwigFunctions());

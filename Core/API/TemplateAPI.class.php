@@ -45,7 +45,7 @@ namespace Core\API\Template {
         return $this->createError("Invalid template file extension. Allowed: " . implode(",", $allowedExtensions));
       }
 
-      $templateCache = WEBROOT . "/Core/Cache/Templates/";
+      $templateCache = WEBROOT . "/Site/Cache/Templates/";
       $baseDirs = ["Site", "Core"];
       $valid = false;
 

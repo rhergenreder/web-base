@@ -13,8 +13,8 @@ RUN apt-get update -y &&  \
     docker-php-ext-install gd && \
     npm install --global yarn && ln -s /usr/local/bin/yarn /usr/bin/yarn
 
-# Runkit (no stable release available)
-RUN pecl install runkit7-4.0.0a3 && docker-php-ext-enable runkit7 && \
+# Runkit for unit testing (no stable release available)
+RUN pecl install runkit7-4.0.0a6  && docker-php-ext-enable runkit7 && \
     echo "runkit.internal_override=1" >> /usr/local/etc/php/conf.d/docker-php-ext-runkit7.ini
 
 # mysqli, zip, gmp

@@ -8,7 +8,7 @@ namespace Core\API {
 
   abstract class RoutesAPI extends Request {
 
-    const ROUTER_CACHE_CLASS = "\\Core\\Cache\\RouterCache";
+    const ROUTER_CACHE_CLASS = "\\Site\\Cache\\RouterCache";
 
     protected string $routerCachePath;
 

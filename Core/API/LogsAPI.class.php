@@ -83,7 +83,7 @@ namespace Core\API\Logs {
       }
 
       // get all log entries from filesystem (if database failed)
-      $logPath = realpath(implode(DIRECTORY_SEPARATOR, [WEBROOT, "Core", "Logs"]));
+      $logPath = realpath(implode(DIRECTORY_SEPARATOR, [WEBROOT, "Site", "Logs"]));
       if ($logPath) {
         $index = 1;
         foreach (scandir($logPath) as $fileName) {

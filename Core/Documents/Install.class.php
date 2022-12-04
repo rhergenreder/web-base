@@ -250,7 +250,7 @@ namespace Documents\Install {
           $username = posix_getpwuid($userId)['name'];
           $failedRequirements[] = sprintf("<b>%s</b> is not owned by current user: $username ($userId). " .
               "Try running <b>chown -R $userId %s</b> or give the required directories write permissions: " .
-              "<b>Site/Configuration</b>, <b>Core/Cache</b>, <b>Core/External</b>",
+              "<b>Site/Configuration</b>, <b>Site/Cache</b>, <b>Site/Logs</b>, <b>Core/External</b>",
             WEBROOT, WEBROOT);
           $success = false;
         }

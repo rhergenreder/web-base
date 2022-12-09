@@ -7,6 +7,7 @@ return [
   "go_back" => "Go Back",
   "submitting" => "Submitting",
   "submit" => "Submit",
+  "request" => "Request",
   "language" => "Language",
   "loading" => "Loading",
   "logout" => "Logout",

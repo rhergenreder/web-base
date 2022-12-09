@@ -1,25 +1,28 @@
 {% extends "account/account_base.twig" %}
 
-{% set view_title = 'Resend Confirm Email' %}
+{% set view_title = 'account.resend_confirm_email_title' %}
 {% set view_icon = 'envelope' %}
-{% set view_description = 'Request a new confirmation email to finalize the account creation' %}
+{% set view_description = 'resend_confirm_email_description' %}
 
 {% block view_content %}
-    <p class='lead'>Enter your E-Mail address, to receive a new e-mail to confirm your registration.</p>
+    <p class='lead'>
+        {{ L("account.resend_confirm_email_form_title") }}
+    </p>
     <form>
         <div class="input-group">
             <div class="input-group-append">
                 <span class="input-group-text"><i class="fas fa-at"></i></span>
             </div>
-            <input id="email" autocomplete='email' name="email" placeholder="E-Mail address" class="form-control" type="email" maxlength="64" />
+            <input id="email" autocomplete='email' name="email" placeholder="{{ L('account.email') }}"
+                   class="form-control" type="email" maxlength="64" />
         </div>
         <div class="input-group mt-2" style='position: absolute;bottom: 15px'>
             <button id='btnResendConfirmEmail' class='btn btn-primary'>
-                Request
+                {{ L('general.request') }}
             </button>
             <a href='/login' style='margin-left: 10px'>
                 <button class='btn btn-secondary' type='button'>
-                    Back to Login
+                    {{ L('account.back_to_login') }}
                 </button>
             </a>
         </div>

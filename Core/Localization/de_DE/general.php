@@ -7,6 +7,7 @@ return [
   "Go back" => "Zurück",
   "submitting" => "Übermittle",
   "submit" => "Absenden",
+  "request" => "Anfordern",
   "language" => "Sprache",
   "loading" => "Laden",
   "logout" => "Ausloggen",

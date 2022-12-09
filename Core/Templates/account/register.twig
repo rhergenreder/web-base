@@ -1,46 +1,52 @@
 {% extends "account/account_base.twig" %}
 
-{% set view_title = 'Registration' %}
+{% set view_title = 'account.registration_title' %}
 {% set view_icon = 'user-plus' %}
-{% set view_description = 'Create a new account' %}
+{% set view_description = 'account.registration_description' %}
 
 {% block view_content %}
 
     {% if not view.success %}
         <div class="alert alert-danger" role="alert">{{ view.message }}</div>
-        <a href='/login' class='btn btn-primary'>Go back</a>
+        <a href='/login' class='btn btn-primary'>{{ L("general.go_back") }}</a>
     {% else %}
-        <h4 class="pb-4">Please fill with your details</h4>
+        <h4 class="pb-4">{{ L("account.form_title") }}</h4>
         <form>
             <div class="input-group">
                 <div class="input-group-append">
                     <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
                 </div>
-                <input id="username" autocomplete='username' name="username" placeholder="Username" class="form-control" type="text" maxlength="32">
+                <input id="username" autocomplete='username' name="username"
+                       placeholder="{{ L('account.username') }}" class="form-control" type="text" maxlength="32">
             </div>
             <div class="input-group mt-3">
             <div class="input-group-append">
                 <span class="input-group-text"><i class="fas fa-at"></i></span>
             </div>
-                <input type="email" autocomplete='email' name='email' id='email' class="form-control" placeholder="Email" maxlength="64">
+                <input type="email" autocomplete='email' name='email' id='email'
+                       class="form-control" placeholder="{{ L('account.email') }}" maxlength="64">
             </div>
             <div class="input-group mt-3">
             <div class="input-group-append">
                 <span class="input-group-text"><i class="fas fa-key"></i></span>
             </div>
-                <input type="password" autocomplete='new-password' name='password' id='password' class="form-control" placeholder="Password">
+                <input type="password" autocomplete='new-password' name='password' id='password'
+                       class="form-control" placeholder="{{ L('account.password') }}">
             </div>
             <div class="input-group mt-3">
             <div class="input-group-append">
                 <span class="input-group-text"><i class="fas fa-key"></i></span>
             </div>
-                <input type="password" autocomplete='new-password' name='confirmPassword' id='confirmPassword' class="form-control" placeholder="Confirm Password">
+                <input type="password" autocomplete='new-password' name='confirmPassword'
+                       id='confirmPassword' class="form-control" placeholder="{{ L('account.password_confirm') }}">
             </div>
             <div class="input-group mt-3">
-            <button type="button" class="btn btn-primary" id='btnRegister'>Submit</button>
+            <button type="button" class="btn btn-primary" id='btnRegister'>
+                {{ L('general.submit') }}
+            </button>
             <a href='/login' style='margin-left: 10px'>
                 <button class='btn btn-secondary' type='button'>
-                    Back to Login
+                    {{ L('account.back_to_login') }}
                 </button>
             </a>
             </div>

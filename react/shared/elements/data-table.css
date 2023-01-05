@@ -1,0 +1,20 @@
+.data-table {
+    padding: 0;
+}
+
+.data-table td, .data-table th {
+    padding: 2px;
+    vertical-align: middle;
+}
+
+.data-table th {
+    background-color: #bbb;
+}
+
+.sortable {
+    cursor: pointer;
+}
+
+.center {
+    text-align: center;
+}

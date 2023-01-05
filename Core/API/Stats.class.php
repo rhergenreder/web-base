@@ -2,6 +2,8 @@
 
 namespace Core\API;
 
+use Core\Driver\SQL\Expression\Count;
+use Core\Driver\SQL\Expression\Distinct;
 use DateTime;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondBool;
@@ -16,24 +18,24 @@ class Stats extends Request {
     parent::__construct($context, $externalCall, array());
   }
 
-  private function getUserCount() {
+  private function getUserCount(): int {
     $sql = $this->context->getSQL();
-    $res = $sql->select($sql->count())->from("User")->execute();
+    $res = $sql->select(new Count())->from("User")->execute();
     $this->success = $this->success && ($res !== FALSE);
     $this->lastError = $sql->getLastError();
 
-    return ($this->success ? $res[0]["count"] : 0);
+    return ($this->success ? intval($res[0]["count"]) : 0);
   }
 
-  private function getPageCount() {
+  private function getPageCount(): int {
     $sql = $this->context->getSQL();
-    $res = $sql->select($sql->count())->from("Route")
+    $res = $sql->select(new Count())->from("Route")
       ->where(new CondBool("active"))
       ->execute();
     $this->success = $this->success && ($res !== FALSE);
     $this->lastError = $sql->getLastError();
 
-    return ($this->success ? $res[0]["count"] : 0);
+    return ($this->success ? intval($res[0]["count"]) : 0);
   }
 
   private function checkSettings(): bool {
@@ -55,7 +57,7 @@ class Stats extends Request {
     $date = new DateTime();
     $monthStart = $date->format("Ym00");
     $monthEnd = $date->modify("+1 month")->format("Ym00");
-    $res = $sql->select($sql->count($sql->distinct("cookie")))
+    $res = $sql->select(new Count(new Distinct("cookie")))
       ->from("Visitor")
       ->where(new Compare("day", $monthStart, ">="))
       ->where(new Compare("day", $monthEnd, "<"))
@@ -92,19 +94,22 @@ class Stats extends Request {
       return false;
     }
 
-    $this->result["userCount"] = $userCount;
-    $this->result["pageCount"] = $pageCount;
-    $this->result["visitors"] = $visitorStatistics;
-    $this->result["visitorsTotal"] = $visitorCount;
-    $this->result["server"] = array(
-      "version" => WEBBASE_VERSION,
-      "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",
-      "memory_usage" => memory_get_usage(),
-      "load_avg" => $loadAvg,
-      "database" => $this->context->getSQL()->getStatus(),
-      "mail" => $this->mailConfigured,
-      "reCaptcha" => $this->recaptchaConfigured
-    );
+    $this->result["data"] = [
+      "userCount" => $userCount,
+      "pageCount" => $pageCount,
+      "visitors" => $visitorStatistics,
+      "visitorsTotal" => $visitorCount,
+      "server" => [
+        "version" => WEBBASE_VERSION,
+        "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",
+        "memory_usage" => memory_get_usage(),
+        "load_avg" => $loadAvg,
+        "database" => $this->context->getSQL()->getStatus(),
+        "mail" => $this->mailConfigured,
+        "reCaptcha" => $this->recaptchaConfigured
+      ],
+    ];
+    
     return $this->success;
   }
 

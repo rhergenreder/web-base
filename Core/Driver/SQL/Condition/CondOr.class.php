@@ -2,6 +2,8 @@
 
 namespace Core\Driver\SQL\Condition;
 
+use Core\Driver\SQL\SQL;
+
 class CondOr extends Condition {
 
   private array $conditions;
@@ -11,4 +13,12 @@ class CondOr extends Condition {
   }
 
   public function getConditions(): array { return $this->conditions; }
+
+  function getExpression(SQL $sql, array &$params): string {
+    $conditions = array();
+    foreach($this->getConditions() as $cond) {
+      $conditions[] = $sql->addValue($cond, $params);
+    }
+    return "(" . implode(" OR ", $conditions) . ")";
+  }
 }

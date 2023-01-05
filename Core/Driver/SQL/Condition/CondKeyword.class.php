@@ -2,6 +2,8 @@
 
 namespace Core\Driver\SQL\Condition;
 
+use Core\Driver\SQL\SQL;
+
 abstract class CondKeyword extends Condition {
 
   private $leftExpression;
@@ -17,4 +19,11 @@ abstract class CondKeyword extends Condition {
   public function getLeftExp() { return $this->leftExpression; }
   public function getRightExp() { return $this->rightExpression; }
   public function getKeyword(): string { return $this->keyword; }
+
+  function getExpression(SQL $sql, array &$params): string {
+    $keyword = $this->getKeyword();
+    $left = $sql->addValue($this->getLeftExp(), $params);
+    $right = $sql->addValue($this->getRightExp(), $params);
+    return "$left $keyword $right";
+  }
 }

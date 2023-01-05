@@ -16,6 +16,7 @@ namespace Core\API\Visitors {
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\API\VisitorsAPI;
+  use Core\Driver\SQL\Expression\Count;
   use DateTime;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Expression\Add;
@@ -82,7 +83,7 @@ namespace Core\API\Visitors {
       $type = $this->getParam("type");
 
       $sql = $this->context->getSQL();
-      $query = $sql->select($sql->count(), "day")
+      $query = $sql->select(new Count(), "day")
         ->from("Visitor")
         ->whereGt("count", 1)
         ->groupBy("day")

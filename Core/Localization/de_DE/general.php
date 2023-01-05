@@ -12,4 +12,7 @@ return [
   "loading" => "Laden",
   "logout" => "Ausloggen",
   "noscript" => "Sie müssen Javascript aktivieren um diese Anwendung zu benutzen",
+
+  # data table
+  "showing_x_of_y_entries" => "Zeige %d von %d Einträgen",
 ];

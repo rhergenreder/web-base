@@ -1,8 +1,32 @@
 import * as React from "react";
 import {Link} from "react-router-dom";
 import {format, getDaysInMonth} from "date-fns";
+import {Collapse} from "react-collapse";
+import {Bar} from "react-chartjs-2";
+import {CircularProgress, Icon} from "@material-ui/core";
+import {useCallback, useEffect, useState} from "react";
 
 export default function Overview(props) {
+
+    const [fetchStats, setFetchStats] = useState(true);
+    const [stats, setStats] = useState(null);
+
+    const onFetchStats = useCallback((force = false) => {
+        if (force || fetchStats) {
+            setFetchStats(false);
+            props.api.getStats().then((res) => {
+                if (res.success) {
+                    setStats(res.data);
+                } else {
+                    props.showDialog("Error fetching stats: " + res.msg, "Error fetching stats");
+                }
+            });
+        }
+    }, [fetchStats]);
+
+    useEffect(() => {
+        onFetchStats();
+    }, []);
 
     const today = new Date();
     const numDays = getDaysInMonth(today);
@@ -46,6 +70,8 @@ export default function Overview(props) {
     }
      */
 
+    console.log(stats);
+
     return <>
         <div className={"content-header"}>
             <div className={"container-fluid"}>
@@ -63,57 +89,28 @@ export default function Overview(props) {
             </div>
         </div>
         <section className={"content"}>
+            <div className={"container-fluid"}>
+                <div className={"row"}>
+                    <div className={"col-lg-3 col-6"}>
+                        <div className="small-box bg-info">
+                            <div className={"inner"}>
+                                {stats ?
+                                    <>
+                                        <h3>{stats.userCount}</h3>
+                                        <p>Users registered</p>
+                                    </> : <CircularProgress variant={"determinate"} />
+                                }
+                            </div>
+                            <div className="icon">
+                                <Icon icon={"users"} />
+                            </div>
+                            <Link to={"/admin/users"} className="small-box-footer">
+                                More info <Icon icon={"arrow-circle-right"}/>
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
     </>
 }
-
-/*
-export default class Overview extends React.Component {
-
-    constructor(props) {
-        super(props);
-
-        this.state = {
-            chartVisible : true,
-            statusVisible : true,
-            userCount: 0,
-            notificationCount: 0,
-            visitorsTotal: 0,
-            visitors: { },
-            server: { load_avg: ["Unknown"] },
-            errors: []
-        }
-    }
-
-    removeError(i) {
-        if (i >= 0 && i < this.state.errors.length) {
-            let errors = this.state.errors.slice();
-            errors.splice(i, 1);
-            this.setState({...this.state, errors: errors});
-        }
-    }
-
-    componentDidMount() {
-        this.parent.api.getStats().then((res) => {
-            if(!res.success) {
-                let errors = this.state.errors.slice();
-                errors.push({ message: res.msg, title: "Error fetching Stats" });
-                this.setState({ ...this.state, errors: errors });
-            } else {
-                this.setState({
-                    ...this.state,
-                    userCount: res.userCount,
-                    pageCount: res.pageCount,
-                    visitors: res.visitors,
-                    visitorsTotal: res.visitorsTotal,
-                    server: res.server
-                });
-            }
-        });
-    }
-
-    render() {
-
-
-    }
-}*/

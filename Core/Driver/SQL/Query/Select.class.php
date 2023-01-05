@@ -3,6 +3,7 @@
 namespace Core\Driver\SQL\Query;
 
 use Core\Driver\SQL\Condition\CondOr;
+use Core\Driver\SQL\Expression\Expression;
 use Core\Driver\SQL\Expression\JsonArrayAgg;
 use Core\Driver\SQL\Join\InnerJoin;
 use Core\Driver\SQL\Join\Join;
@@ -38,8 +39,13 @@ class Select extends ConditionalQuery {
     $this->fetchType = SQL::FETCH_ALL;
   }
 
-  public function addColumn(string $columnName): Select {
-    $this->selectValues[] = $columnName;
+  public function select(...$selectValues): Select {
+    $this->selectValues = (!empty($selectValues) && is_array($selectValues[0])) ? $selectValues[0] : $selectValues;
+    return $this;
+  }
+
+  public function addSelectValue(...$selectValues): Select {
+    $this->selectValues = array_merge($this->selectValues, $selectValues);
     return $this;
   }
 
@@ -142,25 +148,6 @@ class Select extends ConditionalQuery {
     foreach ($this->selectValues as $value) {
       if (is_string($value)) {
         $selectValues[] = $this->sql->columnName($value);
-      } else if ($value instanceof Select) {
-        $subSelect = $value->build($params);
-        if (count($value->getSelectValues()) !== 1) {
-          $selectValues[] = "($subSelect)";
-        } else {
-          $columnAlias = null;
-          $subSelectColumn = $value->getSelectValues()[0];
-          if (is_string($subSelectColumn) && ($index = stripos($subSelectColumn, " as ")) !== FALSE) {
-            $columnAlias = substr($subSelectColumn, $index + 4);
-          } else if ($subSelectColumn instanceof JsonArrayAgg) {
-            $columnAlias = $subSelectColumn->getAlias();
-          }
-
-          if ($columnAlias) {
-            $selectValues[] = "($subSelect) as $columnAlias";
-          } else {
-            $selectValues[] = "($subSelect)";
-          }
-        }
       } else {
         $selectValues[] = $this->sql->addValue($value, $params);
       }

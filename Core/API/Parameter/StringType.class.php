@@ -5,9 +5,9 @@ namespace Core\API\Parameter;
 class StringType extends Parameter {
 
   public int $maxLength;
-  public function __construct(string $name, int $maxLength = -1, bool $optional = FALSE, ?string $defaultValue = NULL) {
+  public function __construct(string $name, int $maxLength = -1, bool $optional = FALSE, ?string $defaultValue = NULL, ?array $choices = NULL) {
     $this->maxLength = $maxLength;
-    parent::__construct($name, Parameter::TYPE_STRING, $optional, $defaultValue);
+    parent::__construct($name, Parameter::TYPE_STRING, $optional, $defaultValue, $choices);
   }
 
   public function parseParam($value): bool {

@@ -2,8 +2,11 @@
 
 namespace Core\Objects\DatabaseEntity;
 
+use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntityHandler;
+use Core\Objects\DatabaseEntity\Controller\NMRelation;
 
 class Group extends DatabaseEntity {
 
@@ -32,5 +35,12 @@ class Group extends DatabaseEntity {
       "name" => $this->name,
       "color" => $this->color
     ];
+  }
+
+  public function getMembers(SQL $sql): array {
+    $nmTable = NMRelation::buildTableName(User::class, Group::class);
+    return User::findBy(User::createBuilder($sql, false)
+      ->innerJoin($nmTable, "user_id", "User.id")
+      ->whereEq("group_id", $this->id));
   }
 }

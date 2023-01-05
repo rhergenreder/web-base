@@ -26,4 +26,8 @@ abstract class Query extends Expression {
   }
 
   public abstract function build(array &$params): ?string;
+
+  public function getExpression(SQL $sql, array &$params): string {
+    return "(" . $this->build($params) . ")";
+  }
 }

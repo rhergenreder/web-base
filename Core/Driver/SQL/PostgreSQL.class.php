@@ -17,10 +17,7 @@ use Core\Driver\SQL\Column\JsonColumn;
 use Core\Driver\SQL\Condition\CondRegex;
 use Core\Driver\SQL\Expression\Add;
 use Core\Driver\SQL\Expression\CurrentTimeStamp;
-use Core\Driver\SQL\Expression\DateAdd;
-use Core\Driver\SQL\Expression\DateSub;
 use Core\Driver\SQL\Expression\Expression;
-use Core\Driver\SQL\Expression\JsonArrayAgg;
 use Core\Driver\SQL\Query\CreateProcedure;
 use Core\Driver\SQL\Query\CreateTrigger;
 use Core\Driver\SQL\Query\Insert;
@@ -301,16 +298,13 @@ class PostgreSQL extends SQL {
   }
 
   public function addValue($val, &$params = NULL, bool $unsafe = false) {
-    if ($val instanceof Keyword) {
-      return $val->getValue();
-    } else if ($val instanceof CurrentTable) {
+    // I don't remember we need this here?
+    /*if ($val instanceof CurrentTable) {
       return "TG_TABLE_NAME";
     } else if ($val instanceof CurrentColumn) {
       return "NEW." . $this->columnName($val->getName());
-    } else if ($val instanceof Column) {
-      return $this->columnName($val->getName());
-    } else if ($val instanceof Expression) {
-      return $this->createExpression($val, $params);
+    } else */if ($val instanceof Expression) {
+      return $val->getExpression($this, $params);
     } else {
       if ($unsafe) {
         return $this->getUnsafeValue($val);
@@ -449,31 +443,6 @@ class PostgreSQL extends SQL {
     }
 
     return $query;
-  }
-
-  protected function createExpression(Expression $exp, array &$params): ?string {
-    if ($exp instanceof DateAdd || $exp instanceof DateSub) {
-      $lhs = $this->addValue($exp->getLHS(), $params);
-      $rhs = $this->addValue($exp->getRHS(), $params);
-      $unit = $exp->getUnit();
-
-      if ($exp->getRHS() instanceof Column) {
-        $rhs = "$rhs * INTERVAL '1 $unit'";
-      } else {
-        $rhs = "$rhs $unit";
-      }
-
-      $operator = ($exp instanceof DateAdd ? "+" : "-");
-      return "$lhs $operator $rhs";
-    } else if ($exp instanceof CurrentTimeStamp) {
-      return "CURRENT_TIMESTAMP";
-    } else if ($exp instanceof JsonArrayAgg) {
-      $value = $this->addValue($exp->getValue(), $params);
-      $alias = $this->columnName($exp->getAlias());
-      return "JSON_AGG($value) as $alias";
-    } else {
-      return parent::createExpression($exp, $params);
-    }
   }
 }
 

@@ -19,7 +19,7 @@ export default class API {
 
         let res = await response.json();
         if (!res.success && res.msg === "You are not logged in.") {
-            document.location.reload();
+            this.loggedIn = false;
         }
 
         return res;
@@ -69,12 +69,16 @@ export default class API {
         return this.apiCall("user/delete", { id: id });
     }
 
-    async fetchUsers(pageNum = 1, count = 20) {
-        return this.apiCall("user/fetch", { page: pageNum, count: count });
+    async fetchUsers(pageNum = 1, count = 20, orderBy = 'id', sortOrder = 'asc') {
+        return this.apiCall("user/fetch", { page: pageNum, count: count, orderBy: orderBy, sortOrder: sortOrder });
     }
 
-    async fetchGroups(pageNum = 1, count = 20) {
-        return this.apiCall("groups/fetch", { page: pageNum, count: count });
+    async fetchGroups(pageNum = 1, count = 20, orderBy = 'id', sortOrder = 'asc') {
+        return this.apiCall("groups/fetch", { page: pageNum, count: count, orderBy: orderBy, sortOrder: sortOrder });
+    }
+
+    async getGroup(id) {
+        return this.apiCall("groups/get", { id: id });
     }
 
     async inviteUser(username, email) {

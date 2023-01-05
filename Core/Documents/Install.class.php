@@ -19,6 +19,7 @@ namespace Documents\Install {
 
   use Core\Configuration\Configuration;
   use Core\Configuration\CreateDatabase;
+  use Core\Driver\SQL\Expression\Count;
   use Core\Driver\SQL\Query\Commit;
   use Core\Driver\SQL\Query\StartTransaction;
   use Core\Driver\SQL\SQL;
@@ -196,8 +197,7 @@ namespace Documents\Install {
         return self::DATABASE_CONFIGURATION;
       }
 
-      $countKeyword = $sql->count();
-      $res = $sql->select($countKeyword)->from("User")->execute();
+      $res = $sql->select(new Count())->from("User")->execute();
       if ($res === FALSE) {
         return self::DATABASE_CONFIGURATION;
       } else {

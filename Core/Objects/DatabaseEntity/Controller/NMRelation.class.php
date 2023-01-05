@@ -104,6 +104,8 @@ class NMRelation implements Persistable {
   }
 
   public static function buildTableName(string ...$tables): string {
+    // in case of class passed here
+    $tables = array_map(function ($t) { return isClass($t) ? getClassName($t) : $t; }, $tables);
     sort($tables);
     return "NM_" . implode("_", $tables);
   }

@@ -269,7 +269,7 @@ class DatabaseEntityHandler implements Persistable {
     return $rel_row;
   }
 
-  private function getValueFromRow(array $row, string $propertyName, mixed &$value): bool {
+  private function getValueFromRow(array $row, string $propertyName, mixed &$value, bool $initEntities = false): bool {
     $column = $this->columns[$propertyName] ?? null;
     if (!$column) {
       return false;
@@ -290,8 +290,12 @@ class DatabaseEntityHandler implements Persistable {
       if (array_key_exists($relColumnPrefix . "id", $row)) {
         $relId = $row[$relColumnPrefix . "id"];
         if ($relId !== null) {
-          $relationHandler = $this->relations[$propertyName];
-          $value = $relationHandler->entityFromRow(self::getPrefixedRow($row, $relColumnPrefix));
+          if ($initEntities) {
+            $relationHandler = $this->relations[$propertyName];
+            $value = $relationHandler->entityFromRow(self::getPrefixedRow($row, $relColumnPrefix), [], true);
+          } else {
+            return false;
+          }
         } else if (!$column->notNull()) {
           $value = null;
         } else {
@@ -305,7 +309,7 @@ class DatabaseEntityHandler implements Persistable {
     return true;
   }
 
-  public function entityFromRow(array $row): ?DatabaseEntity {
+  public function entityFromRow(array $row, array $additionalColumns = [], bool $initEntities = false): ?DatabaseEntity {
     try {
 
       $constructorClass = $this->entityClass;
@@ -324,9 +328,15 @@ class DatabaseEntityHandler implements Persistable {
       }
 
       foreach ($this->properties as $property) {
-        if ($this->getValueFromRow($row, $property->getName(), $value)) {
+        if ($this->getValueFromRow($row, $property->getName(), $value, $initEntities)) {
           $property->setAccessible(true);
           $property->setValue($entity, $value);
+        }
+      }
+
+      foreach ($additionalColumns as $column) {
+        if (!in_array($column, $this->columns) && !isset($this->properties[$column])) {
+          $entity[$column] = $row[$column];
         }
       }
 
@@ -453,9 +463,12 @@ class DatabaseEntityHandler implements Persistable {
     if ($recursive) {
       foreach ($entities as $entity) {
         foreach ($this->relations as $propertyName => $relHandler) {
-          $relEntity = $this->properties[$propertyName]->getValue($entity);
-          if ($relEntity) {
-            $relHandler->fetchNMRelations([$relEntity->getId() => $relEntity], true);
+          $property = $this->properties[$propertyName];
+          if ($property->isInitialized($entity) || true) {
+            $relEntity = $this->properties[$propertyName]->getValue($entity);
+            if ($relEntity) {
+              $relHandler->fetchNMRelations([$relEntity->getId() => $relEntity], true);
+            }
           }
         }
       }
@@ -483,10 +496,10 @@ class DatabaseEntityHandler implements Persistable {
         ->addJoin(new InnerJoin($nmTable, "$nmTable.$refIdColumn", "$refTableName.id"))
         ->where(new CondIn(new Column($thisIdColumn), $entityIds));
 
-      $relEntityQuery->addColumn($thisIdColumn);
+      $relEntityQuery->addSelectValue(new Column($thisIdColumn));
       foreach ($dataColumns as $tableDataColumns) {
         foreach ($tableDataColumns as $columnName) {
-          $relEntityQuery->addColumn($columnName);
+          $relEntityQuery->addSelectValue(new Column($columnName));
         }
       }
 
@@ -500,7 +513,7 @@ class DatabaseEntityHandler implements Persistable {
       foreach ($rows as $row) {
         $relId = $row["id"];
         if (!isset($relEntities[$relId])) {
-          $relEntity = $otherHandler->entityFromRow($row);
+          $relEntity = $otherHandler->entityFromRow($row, [], $recursive);
           $relEntities[$relId] = $relEntity;
         }
 

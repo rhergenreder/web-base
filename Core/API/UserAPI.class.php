@@ -132,11 +132,12 @@ namespace Core\API\User {
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\API\Template\Render;
+  use Core\API\Traits\Pagination;
   use Core\API\UserAPI;
   use Core\API\VerifyCaptcha;
   use Core\Driver\SQL\Condition\CondBool;
-  use Core\Driver\SQL\Condition\CondNot;
   use Core\Driver\SQL\Condition\CondOr;
+  use Core\Driver\SQL\Expression\Alias;
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\UserToken;
   use Core\Driver\SQL\Column\Column;
@@ -209,96 +210,65 @@ namespace Core\API\User {
 
   class Fetch extends UserAPI {
 
+    use Pagination;
+
     public function __construct(Context $context, $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
-        'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
-        'count' => new Parameter('count', Parameter::TYPE_INT, true, 20)
-      ));
-    }
-
-    private function selectIds($page, $count): array|bool {
-      $sql = $this->context->getSQL();
-      $res = $sql->select("User.id")
-        ->from("User")
-        ->limit($count)
-        ->offset(($page - 1) * $count)
-        ->orderBy("User.id")
-        ->ascending()
-        ->execute();
-
-      $this->success = ($res !== NULL);
-      $this->lastError = $sql->getLastError();
-
-      if ($this->success && is_array($res)) {
-        return array_map(function ($row) {
-          return intval($row["id"]);
-        }, $res);
-      }
-
-      return false;
+      parent::__construct($context, $externalCall,
+        self::getPaginationParameters(['id', 'name', 'email', 'groups', 'registeredAt'])
+      );
     }
 
     public function _execute(): bool {
 
-      $page = $this->getParam("page");
-      if ($page < 1) {
-        return $this->createError("Invalid page count");
-      }
-
-      $count = $this->getParam("count");
-      if ($count < 1 || $count > 50) {
-        return $this->createError("Invalid fetch count");
-      }
-
-      $condition = null;
       $currentUser = $this->context->getUser();
       $fullInfo = ($currentUser->hasGroup(Group::ADMIN) ||
-                   $currentUser->hasGroup(Group::SUPPORT));
+        $currentUser->hasGroup(Group::SUPPORT));
+
+      $orderBy = $this->getParam("orderBy");
+      $publicAttributes = ["id", "name", "fullName", "profilePicture", "email"]; // TODO: , "groupNames"];
+
+      $condition = null;
       if (!$fullInfo) {
         $condition = new CondOr(
           new Compare("User.id", $currentUser->getId()),
           new CondBool("User.confirmed")
         );
+
+        if ($orderBy && !in_array($orderBy, $publicAttributes)) {
+          return $this->createError("Insufficient permissions for sorting by field '$orderBy'");
+        }
       }
 
       $sql = $this->context->getSQL();
-      $userCount = User::count($sql, $condition);
-      if ($userCount === false) {
-        return $this->createError("Error fetching user count: " . $sql->getLastError());
+      if (!$this->initPagination($sql, User::class, $condition)) {
+        return false;
       }
 
-      $userQuery = User::createBuilder($sql, false)
-        ->orderBy("id")
-        ->ascending()
-        ->limit($count)
-        ->offset(($page - 1) * $count)
-        ->fetchEntities();
+      $groupNames = new Alias(
+        $sql->select(new JsonArrayAgg("name"))->from("Group")
+          ->leftJoin("NM_Group_User", "NM_Group_User.group_id", "Group.id")
+          ->whereEq("NM_Group_User.user_id", new Column("User.id")),
+        "groups"
+      );
 
-      if ($condition) {
-        $userQuery->where($condition);
-      }
-
+      $userQuery = $this->createPaginationQuery($sql, [$groupNames]);
       $users = User::findBy($userQuery);
-      if ($users !== false) {
+      if ($users !== false && $users !== null) {
         $this->result["users"] = [];
 
         foreach ($users as $userId => $user) {
           $serialized = $user->jsonSerialize();
 
           if (!$fullInfo && $userId !== $currentUser->getId()) {
-            $publicAttributes = ["id", "name", "fullName", "profilePicture", "email", "groups"];
             foreach (array_keys($serialized) as $attr) {
               if (!in_array($attr, $publicAttributes)) {
-                unset($serialized[$attr]);
+                unset ($serialized[$attr]);
               }
             }
           }
 
-          $this->result["users"][$userId] = $serialized;
+          $this->result["users"][] = $serialized;
         }
-
-        $this->result["pageCount"] = intval(ceil($userCount / $count));
-        $this->result["totalCount"] = $userCount;
       } else {
         return $this->createError("Error fetching users: " . $sql->getLastError());
       }

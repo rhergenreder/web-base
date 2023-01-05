@@ -1,11 +1,36 @@
-import React from 'react';
+import React, {useReducer} from 'react';
 import {createContext, useCallback, useState} from "react";
 
 const LocaleContext = createContext(null);
 
+function reducer(entries, action) {
+    let _entries = entries;
+
+    switch (action.type) {
+        case 'loadModule':
+            if (!_entries.hasOwnProperty(action.code)) {
+                _entries[action.code] = {};
+            }
+            if (_entries[action.code].hasOwnProperty(action.module)) {
+                _entries[action.code][action.module] = {..._entries[action.code][action.module], ...action.newEntries};
+            } else {
+                _entries[action.code][action.module] = action.newEntries;
+            }
+            break;
+        case 'loadModules':
+            _entries = {...entries, [action.code]: { ...entries[action.code], ...action.modules }};
+            break;
+        default:
+            throw new Error();
+    }
+
+    return _entries;
+}
+
 function LocaleProvider(props) {
 
-    const [entries, setEntries] = useState(window.languageEntries || {});
+    // const [entries, setEntries] = useState(window.languageEntries || {});
+    const [entries, dispatch] = useReducer(reducer, window.languageEntries || {});
     const [currentLocale, setCurrentLocale] = useState(window.languageCode || "en_US");
 
     const translate = useCallback((key) => {
@@ -23,23 +48,6 @@ function LocaleProvider(props) {
 
         return "[" + key + "]";
     }, [currentLocale, entries]);
-
-    const loadModule = useCallback((code, module, newEntries) => {
-        let _entries = {...entries};
-        if (!_entries.hasOwnProperty(code)) {
-            _entries[code] = {};
-        }
-        if (_entries[code].hasOwnProperty(module)) {
-            _entries[code][module] = {..._entries[code][module], ...newEntries};
-        } else {
-            _entries[code][module] = newEntries;
-        }
-        setEntries(_entries);
-    }, [entries]);
-
-    const loadModules = useCallback((code, modules) => {
-        setEntries({...entries, [code]: { ...entries[code], ...modules }});
-    }, [entries]);
 
     const hasModule = useCallback((code, module) => {
         return entries.hasOwnProperty(code) && !!entries[code][module];
@@ -104,7 +112,7 @@ function LocaleProvider(props) {
             if (useCache) {
                 if (data && data.success) {
                     // insert into cache
-                    loadModules(code, data.entries);
+                    dispatch({type: "loadModules", code: code, modules: data.entries});
                     data.entries = {...data.entries, ...languageEntries};
                     data.cached = false;
                 }
@@ -114,7 +122,7 @@ function LocaleProvider(props) {
         } else {
             return { success: true, msg: "", entries: languageEntries, code: code, cached: true };
         }
-    }, [currentLocale, getModule, loadModules]);
+    }, [currentLocale, getModule, dispatch]);
 
     const ctx = {
         currentLocale: currentLocale,

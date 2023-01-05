@@ -8,7 +8,7 @@ use Core\Driver\SQL\Column\Column;
 
 class CurrentColumn extends Column {
 
-  public function __construct(string $string) {
-    parent::__construct($string);
+  public function __construct(string $name) {
+    parent::__construct($name);
   }
 }

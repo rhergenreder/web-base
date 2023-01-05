@@ -85,8 +85,6 @@ export default function App() {
 
      */
 
-    console.log(loaded, user, api.loggedIn);
-
     if (!loaded) {
         if (error) {
             return <Alert severity={"error"} title={L("general.error_occurred")}>

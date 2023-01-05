@@ -227,7 +227,7 @@ function getClassPath($class, string $suffix = ".class"): string {
   if ($pathCount >= 3) {
     if (strcasecmp($pathParts[$pathCount - 3], "API") === 0) {
       $group = $pathParts[$pathCount - 2];
-      if (strcasecmp($group, "Parameter") !== 0) {
+      if (strcasecmp($group, "Parameter") !== 0 && strcasecmp($group, "Traits") !== 0) {
         $pathParts = array_slice($pathParts, 0, $pathCount - 2);
         $pathParts[] = "${group}API";
       }

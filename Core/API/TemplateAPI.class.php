@@ -72,7 +72,7 @@ namespace Core\API\Template {
 
       try {
         $this->result["html"] = $twigEnvironment->render($templateFile, $parameters);
-      } catch (LoaderError | RuntimeError | SyntaxError $e) {
+      } catch (LoaderError | RuntimeError | SyntaxError | \RuntimeException $e) {
         return $this->createError("Error rendering twig template: " . $e->getMessage());
       }
 

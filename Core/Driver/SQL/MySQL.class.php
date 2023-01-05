@@ -17,10 +17,7 @@ use Core\Driver\SQL\Column\JsonColumn;
 
 use Core\Driver\SQL\Expression\Add;
 use Core\Driver\SQL\Expression\CurrentTimeStamp;
-use Core\Driver\SQL\Expression\DateAdd;
-use Core\Driver\SQL\Expression\DateSub;
 use Core\Driver\SQL\Expression\Expression;
-use Core\Driver\SQL\Expression\JsonArrayAgg;
 use Core\Driver\SQL\Query\CreateProcedure;
 use Core\Driver\SQL\Query\CreateTrigger;
 use Core\Driver\SQL\Query\Query;
@@ -337,14 +334,8 @@ class MySQL extends SQL {
   }
 
   public function addValue($val, &$params = NULL, bool $unsafe = false) {
-    if ($val instanceof Keyword) {
-      return $val->getValue();
-    } else if ($val instanceof CurrentColumn) {
-      return $val->getName();
-    } else if ($val instanceof Column) {
-      return $this->columnName($val->getName());
-    } else if ($val instanceof Expression) {
-      return $this->createExpression($val, $params);
+    if ($val instanceof Expression) {
+      return $val->getExpression($this, $params);
     } else {
       if ($unsafe) {
         return $this->getUnsafeValue($val);
@@ -459,24 +450,6 @@ class MySQL extends SQL {
     }
 
     return $query;
-  }
-
-  protected function createExpression(Expression $exp, array &$params): ?string {
-    if ($exp instanceof DateAdd || $exp instanceof DateSub) {
-      $lhs = $this->addValue($exp->getLHS(), $params);
-      $rhs = $this->addValue($exp->getRHS(), $params);
-      $unit = $exp->getUnit();
-      $dateFunction = ($exp instanceof DateAdd ? "DATE_ADD" : "DATE_SUB");
-      return "$dateFunction($lhs, INTERVAL $rhs $unit)";
-    } else if ($exp instanceof CurrentTimeStamp) {
-      return "NOW()";
-    } else if ($exp instanceof JsonArrayAgg) {
-      $value = $this->addValue($exp->getValue(), $params);
-      $alias = $this->columnName($exp->getAlias());
-      return "JSON_ARRAYAGG($value) as $alias";
-    } else {
-      return parent::createExpression($exp, $params);
-    }
   }
 }
 

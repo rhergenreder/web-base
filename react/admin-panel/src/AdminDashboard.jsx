@@ -11,7 +11,11 @@ import {LocaleContext} from "shared/locale";
 import './res/adminlte.min.css';
 
 // views
+import View404 from "./views/404";
 const Overview = lazy(() => import('./views/overview'));
+const UserListView = lazy(() => import('./views/user-list'));
+const GroupListView = lazy(() => import('./views/group-list'));
+const EditGroupView = lazy(() => import('./views/group-edit'));
 
 
 export default function AdminDashboard(props) {
@@ -22,12 +26,19 @@ export default function AdminDashboard(props) {
 
     const {currentLocale, requestModules, translate: L} = useContext(LocaleContext);
 
-    const showDialog = useCallback((message, title, options=["Close"], onOption = null) => {
-        setDialog({ show: true, message: message, title: title, options: options, onOption: onOption });
-    }, []);
-
     const hideDialog = useCallback(() => {
         setDialog({show: false});
+    }, []);
+
+    const showDialog = useCallback((message, title, options=["Close"], onOption = null) => {
+        setDialog({
+            show: true, message:
+            message,
+            title: title,
+            options: options,
+            onOption: onOption,
+            onClose: hideDialog
+        });
     }, []);
 
     useEffect(() => {
@@ -52,7 +63,12 @@ export default function AdminDashboard(props) {
                 <section className={"content"}>
                     <Suspense fallback={<div>{L("general.loading")}... </div>}>
                         <Routes>
+                            <Route path={"/admin"} element={<Overview {...controlObj} />}/>
                             <Route path={"/admin/dashboard"} element={<Overview {...controlObj} />}/>
+                            <Route path={"/admin/users"} element={<UserListView {...controlObj} />}/>
+                            <Route path={"/admin/groups"} element={<GroupListView {...controlObj} />}/>
+                            <Route path={"/admin/group/:groupId"} element={<EditGroupView {...controlObj} />}/>
+                            <Route path={"*"} element={<View404 />} />
                         </Routes>
                     </Suspense>
                     {/*<Route exact={true} path={"/admin/users"}><UserOverview {...this.controlObj} /></Route>

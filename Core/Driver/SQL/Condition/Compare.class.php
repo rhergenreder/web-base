@@ -2,6 +2,8 @@
 
 namespace Core\Driver\SQL\Condition;
 
+use Core\Driver\SQL\SQL;
+
 class Compare extends Condition {
 
   private string $operator;
@@ -18,4 +20,16 @@ class Compare extends Condition {
   public function getValue() { return $this->value; }
   public function getOperator(): string { return $this->operator; }
 
+  function getExpression(SQL $sql, array &$params): string {
+
+    if ($this->value === null) {
+      if ($this->operator === "=") {
+        return $sql->columnName($this->column) . " IS NULL";
+      } else if ($this->operator === "!=") {
+        return $sql->columnName($this->column) . " IS NOT NULL";
+      }
+    }
+
+    return $sql->columnName($this->column) . $this->operator . $sql->addValue($this->value, $params);
+  }
 }

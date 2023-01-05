@@ -12,4 +12,7 @@ return [
   "loading" => "Loading",
   "logout" => "Logout",
   "noscript" => "You need Javascript enabled to run this app",
+
+  # data table
+  "showing_x_of_y_entries" => "Showing %d of %d entries",
 ];

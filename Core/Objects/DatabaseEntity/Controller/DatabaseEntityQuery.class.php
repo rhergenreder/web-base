@@ -3,8 +3,11 @@
 namespace Core\Objects\DatabaseEntity\Controller;
 
 use Core\Driver\Logger\Logger;
+use Core\Driver\SQL\Column\Column;
+use Core\Driver\SQL\Expression\Alias;
 use Core\Driver\SQL\Query\Select;
 use Core\Driver\SQL\SQL;
+use Core\External\PHPMailer\Exception;
 
 /**
  * this class is similar to \Driver\SQL\Query\Select but with reduced functionality
@@ -20,6 +23,7 @@ class DatabaseEntityQuery extends Select {
   private DatabaseEntityHandler $handler;
   private int $resultType;
   private bool $logVerbose;
+  private array $additionalColumns;
 
   private int $fetchSubEntities;
 
@@ -29,12 +33,33 @@ class DatabaseEntityQuery extends Select {
     $this->logger = new Logger("DB-EntityQuery", $handler->getSQL());
     $this->resultType = $resultType;
     $this->logVerbose = false;
+    $this->additionalColumns = [];
 
     $this->from($handler->getTableName());
     $this->fetchSubEntities = self::FETCH_NONE;
     if ($this->resultType === SQL::FETCH_ONE) {
       $this->first();
     }
+  }
+
+  public function addCustomValue(mixed $selectValue): Select {
+    if (is_string($selectValue)) {
+      $this->additionalColumns[] = $selectValue;
+    } else if ($selectValue instanceof Alias) {
+      $this->additionalColumns[] = $selectValue->getAlias();
+    } else if ($selectValue instanceof Column) {
+      $this->additionalColumns[] = $selectValue->getName();
+    } else {
+      $this->logger->debug("Cannot get selected column name from custom value of type: " . get_class($selectValue));
+      return $this;
+    }
+
+    $this->addSelectValue($selectValue);
+    return $this;
+  }
+
+  public function getHandler(): DatabaseEntityHandler {
+    return $this->handler;
   }
 
   public function debug(): DatabaseEntityQuery {
@@ -112,7 +137,7 @@ class DatabaseEntityQuery extends Select {
     if ($this->resultType === SQL::FETCH_ALL) {
       $entities = [];
       foreach ($res as $row) {
-        $entity = $this->handler->entityFromRow($row);
+        $entity = $this->handler->entityFromRow($row, $this->additionalColumns, $this->fetchSubEntities !== self::FETCH_NONE);
         if ($entity) {
           $entities[$entity->getId()] = $entity;
         }
@@ -124,7 +149,7 @@ class DatabaseEntityQuery extends Select {
 
       return $entities;
     } else if ($this->resultType === SQL::FETCH_ONE) {
-      $entity = $this->handler->entityFromRow($res);
+      $entity = $this->handler->entityFromRow($res, $this->additionalColumns, $this->fetchSubEntities !== self::FETCH_NONE);
       if ($entity instanceof DatabaseEntity && $this->fetchSubEntities !== self::FETCH_NONE) {
         $this->handler->fetchNMRelations([$entity->getId() => $entity], $this->fetchSubEntities === self::FETCH_RECURSIVE);
       }

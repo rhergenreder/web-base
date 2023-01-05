@@ -2,6 +2,7 @@
 
 namespace Core\API {
 
+  use Core\Driver\SQL\Expression\Count;
   use Core\Objects\Context;
 
   abstract class GroupsAPI extends Request {
@@ -12,7 +13,7 @@ namespace Core\API {
 
     protected function groupExists($name): bool {
       $sql = $this->context->getSQL();
-      $res = $sql->select($sql->count())
+      $res = $sql->select(new Count())
         ->from("Group")
         ->whereEq("name", $name)
         ->execute();
@@ -29,73 +30,78 @@ namespace Core\API\Groups {
   use Core\API\GroupsAPI;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
+  use Core\API\Traits\Pagination;
+  use Core\Driver\SQL\Column\Column;
+  use Core\Driver\SQL\Expression\Alias;
+  use Core\Driver\SQL\Expression\Count;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Controller\NMRelation;
   use Core\Objects\DatabaseEntity\Group;
 
   class Fetch extends GroupsAPI {
 
+    use Pagination;
+
     private int $groupCount;
 
     public function __construct(Context $context, $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
-        'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
-        'count' => new Parameter('count', Parameter::TYPE_INT, true, 20)
-      ));
+      parent::__construct($context, $externalCall,
+        self::getPaginationParameters(['id', 'name', 'member_count'])
+      );
 
       $this->groupCount = 0;
     }
 
     public function _execute(): bool {
-      $page = $this->getParam("page");
-      if($page < 1) {
-        return $this->createError("Invalid page count");
-      }
-
-      $count = $this->getParam("count");
-      if($count < 1 || $count > 50) {
-        return $this->createError("Invalid fetch count");
-      }
 
       $sql = $this->context->getSQL();
-      $groupCount = Group::count($sql);
-      if ($groupCount === false) {
-        return $this->createError("Error fetching group count: " . $sql->getLastError());
+      if (!$this->initPagination($sql, Group::class)) {
+        return false;
       }
 
-      $groups = Group::findBy(Group::createBuilder($sql, false)
-        ->orderBy("id")
-        ->ascending()
-        ->limit($count)
-        ->offset(($page - 1) * $count));
+      $memberCount = new Alias($sql->select(new Count())
+        ->from(NMRelation::buildTableName("User", "Group"))
+        ->whereEq("group_id", new Column("Group.id")), "memberCount");
 
-      if ($groups !== false) {
+      $groupsQuery = $this->createPaginationQuery($sql, [$memberCount]);
+      $groups = $groupsQuery->execute();
+      if ($groups !== false && $groups !== null) {
         $this->result["groups"] = [];
-        $this->result["pageCount"] = intval(ceil($this->groupCount / $count));
-        $this->result["totalCount"] = $this->groupCount;
 
-        foreach ($groups as $groupId => $group) {
-          $this->result["groups"][$groupId] = $group->jsonSerialize();
-          $this->result["groups"][$groupId]["memberCount"] = 0;
+        foreach ($groups as $group) {
+          $groupData = $group->jsonSerialize();
+          $groupData["memberCount"] = $group["memberCount"];
+          $this->result["groups"][] = $groupData;
         }
-
-        $nmTable = NMRelation::buildTableName("User", "Group");
-        $res = $sql->select("group_id", $sql->count("user_id"))
-          ->from($nmTable)
-          ->groupBy("group_id")
-          ->execute();
-
-        if (is_array($res)) {
-          foreach ($res as $row) {
-            list ($groupId, $memberCount) = [$row["group_id"], $row["user_id_count"]];
-            if (isset($this->result["groups"][$groupId])) {
-              $this->result["groups"][$groupId]["memberCount"] = $memberCount;
-            }
-          }
-        }
+      } else {
+        return $this->createError("Error fetching groups: " . $sql->getLastError());
       }
 
       return $this->success;
+    }
+  }
+
+  class Get extends GroupsAPI {
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        "id" => new Parameter("id", Parameter::TYPE_INT)
+      ]);
+    }
+
+    protected function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $groupId = $this->getParam("id");
+      $group = Group::find($sql, $groupId);
+      if ($group === false) {
+        return $this->createError("Error fetching group: " . $sql->getLastError());
+      } else if ($group === null) {
+        return $this->createError("Group not found");
+      } else {
+        $this->result["group"] = $group->jsonSerialize();
+        $this->result["group"]["members"] = $group->getMembers($sql);
+      }
+
+      return true;
     }
   }
 

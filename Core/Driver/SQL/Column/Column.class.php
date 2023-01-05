@@ -3,6 +3,7 @@
 namespace Core\Driver\SQL\Column;
 
 use Core\Driver\SQL\Expression\Expression;
+use Core\Driver\SQL\SQL;
 
 class Column extends Expression {
 
@@ -20,4 +21,7 @@ class Column extends Expression {
   public function notNull(): bool { return !$this->nullable; }
   public function getDefaultValue() { return $this->defaultValue; }
 
+  function getExpression(SQL $sql, array &$params): string {
+    return $sql->columnName($this->name);
+  }
 }

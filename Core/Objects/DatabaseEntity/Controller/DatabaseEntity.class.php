@@ -2,10 +2,14 @@
 
 namespace Core\Objects\DatabaseEntity\Controller;
 
+use ArrayAccess;
 use Core\Driver\SQL\Condition\Condition;
+use Core\Driver\SQL\Expression\Count;
 use Core\Driver\SQL\SQL;
+use Core\Objects\DatabaseEntity\Attribute\Transient;
+use JsonSerializable;
 
-abstract class DatabaseEntity {
+abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
 
   protected static array $entityLogConfig = [
     "insert" => false,
@@ -16,9 +20,36 @@ abstract class DatabaseEntity {
 
   private static array $handlers = [];
   protected ?int $id;
+  #[Transient] protected array $customData = [];
 
   public function __construct(?int $id = null) {
     $this->id = $id;
+  }
+
+  public function offsetExists(mixed $offset): bool {
+    return property_exists($this, $offset) || array_key_exists($offset, $this->customData);
+  }
+
+  public function offsetGet(mixed $offset): mixed {
+    if (property_exists($this, $offset)) {
+      return $this->{$offset};
+    } else {
+      return $this->customData[$offset];
+    }
+  }
+
+  public function offsetSet(mixed $offset, mixed $value): void {
+    if (property_exists($this, $offset)) {
+      $this->{$offset} = $value;
+    } else {
+      $this->customData[$offset] = $value;
+    }
+  }
+
+  public function offsetUnset(mixed $offset): void {
+    if (array_key_exists($offset, $this->customData)) {
+      unset($this->customData[$offset]);
+    }
   }
 
   public abstract function jsonSerialize(): array;
@@ -49,7 +80,7 @@ abstract class DatabaseEntity {
 
   public static function exists(SQL $sql, int $id): bool {
     $handler = self::getHandler($sql);
-    $res = $sql->select($sql->count())
+    $res = $sql->select(new Count())
       ->from($handler->getTableName())
       ->whereEq($handler->getTableName() . ".id", $id)
       ->execute();
@@ -148,7 +179,7 @@ abstract class DatabaseEntity {
 
   public static function count(SQL $sql, ?Condition $condition = null): int|bool {
     $handler = self::getHandler($sql);
-    $query = $sql->select($sql->count())
+    $query = $sql->select(new Count())
       ->from($handler->getTableName());
 
     if ($condition) {

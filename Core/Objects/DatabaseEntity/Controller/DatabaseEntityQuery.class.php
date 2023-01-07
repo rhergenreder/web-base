@@ -42,7 +42,18 @@ class DatabaseEntityQuery extends Select {
     }
   }
 
-  public function addCustomValue(mixed $selectValue): Select {
+  public function only(array $fields): DatabaseEntityQuery {
+    if (!in_array("id", $fields)) {
+      $fields[] = "id";
+    }
+
+    $this->select(array_map(function ($field) {
+      return $this->handler->getColumnName($field);
+    }, $fields));
+    return $this;
+  }
+
+  public function addCustomValue(mixed $selectValue): DatabaseEntityQuery {
     if (is_string($selectValue)) {
       $this->additionalColumns[] = $selectValue;
     } else if ($selectValue instanceof Alias) {
@@ -108,7 +119,7 @@ class DatabaseEntityQuery extends Select {
       $this->innerJoin($referencedTable, "$tableName.$foreignColumnName", "$alias.id", $alias);
     }
 
-    $relationColumnPrefix .= DatabaseEntityHandler::getColumnName($propertyName) . "_";
+    $relationColumnPrefix .= DatabaseEntityHandler::buildColumnName($propertyName) . "_";
     $recursiveRelations = $relationHandler->getRelations();
     foreach ($relationHandler->getColumns() as $relPropertyName => $relColumn) {
       $relColumnName = $relColumn->getName();

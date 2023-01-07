@@ -206,18 +206,6 @@ abstract class Route extends DatabaseEntity {
     return $parameterNames;
   }
 
-  public function jsonSerialize(): array {
-    return [
-      "id" => $this->getId(),
-      "pattern" => $this->pattern,
-      "type" => $this->type,
-      "target" => $this->target,
-      "extra" => $this->extra,
-      "exact" => $this->exact,
-      "active" => $this->active,
-    ];
-  }
-
   public function setActive(bool $active) {
     $this->active = $active;
   }

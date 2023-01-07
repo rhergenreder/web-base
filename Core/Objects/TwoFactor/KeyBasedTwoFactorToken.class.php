@@ -58,18 +58,18 @@ class KeyBasedTwoFactorToken extends TwoFactorToken {
     return $this->credentialId;
   }
 
-  public function jsonSerialize(): array {
-    $json = parent::jsonSerialize();
+  public function jsonSerialize(?array $propertyNames = null): array {
+    $jsonData = parent::jsonSerialize();
 
-    if (!empty($this->challenge) && !$this->isAuthenticated()) {
-      $json["challenge"] = base64_encode($this->challenge);
+    if (!empty($this->challenge) && !$this->isAuthenticated() && in_array("challenge", $propertyNames)) {
+      $jsonData["challenge"] = base64_encode($this->challenge);
     }
 
-    if (!empty($this->credentialId)) {
-      $json["credentialID"] = base64_encode($this->credentialId);
+    if (!empty($this->credentialId) && in_array("credentialID", $propertyNames)) {
+      $jsonData["credentialID"] = base64_encode($this->credentialId);
     }
 
-    return $json;
+    return $jsonData;
   }
 
   // TODO: algorithms, hardcoded values, ...

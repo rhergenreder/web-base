@@ -1,16 +1,17 @@
 export default class API {
     constructor() {
         this.loggedIn = false;
-        this.user = { };
+        this.user = null;
+        this.session = null;
     }
 
     csrfToken() {
-        return this.loggedIn ? this.user.session.csrf_token : null;
+        return this.loggedIn ? this.session.csrfToken : null;
     }
 
     async apiCall(method, params) {
         params = params || { };
-        params.csrf_token = this.csrfToken();
+        params.csrfToken = this.csrfToken();
         let response = await fetch("/api/" + method, {
             method: 'post',
             headers: {'Content-Type': 'application/json'},
@@ -39,8 +40,14 @@ export default class API {
         let response = await fetch("/api/user/info");
         let data = await response.json();
         if (data) {
-            this.user = data["user"];
             this.loggedIn = data["loggedIn"];
+            if (this.loggedIn) {
+                this.session = data["session"];
+                this.user = data["user"];
+            } else {
+                this.session = null;
+                this.user = null;
+            }
         }
         return data;
     }

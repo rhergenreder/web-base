@@ -213,8 +213,8 @@ abstract class Request {
       // CSRF Token
       if ($this->csrfTokenRequired && $session) {
         // csrf token required + external call
-        // if it's not a call with API_KEY, check for csrf_token
-        $csrfToken = $values["csrf_token"] ?? $_SERVER["HTTP_XSRF_TOKEN"] ?? null;
+        // if it's not a call with API_KEY, check for csrfToken
+        $csrfToken = $values["csrfToken"] ?? $_SERVER["HTTP_XSRF_TOKEN"] ?? null;
         if (!$csrfToken || strcmp($csrfToken, $session->getCsrfToken()) !== 0) {
           $this->lastError = "CSRF-Token mismatch";
           http_response_code(403);

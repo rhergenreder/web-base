@@ -34,7 +34,7 @@ function getDatabaseConfig(): ConnectionData {
   return new $configClass();
 }
 
-$context = new \Core\Objects\Context();
+$context = \Core\Objects\Context::instance();
 if (!$context->isCLI()) {
   _exit("Can only be executed via CLI");
 }

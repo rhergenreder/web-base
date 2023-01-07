@@ -83,7 +83,7 @@ class DatabaseEntityHandler implements Persistable {
       }
 
       $propertyType = $property->getType();
-      $columnName = self::getColumnName($propertyName);
+      $columnName = self::buildColumnName($propertyName);
       if (!($propertyType instanceof \ReflectionNamedType)) {
         $this->raiseError("Cannot persist class '$className': Property '$propertyName' has no valid type");
       }
@@ -206,13 +206,13 @@ class DatabaseEntityHandler implements Persistable {
     }
   }
 
-  private static function getAttribute(\ReflectionProperty $property, string $attributeClass): ?object {
+  public static function getAttribute(\ReflectionProperty $property, string $attributeClass): ?object {
     $attributes = $property->getAttributes($attributeClass);
     $attribute = array_shift($attributes);
     return $attribute?->newInstance();
   }
 
-  public static function getColumnName(string $propertyName): string {
+  public static function buildColumnName(string $propertyName): string {
     // abcTestLOL => abc_test_lol
     return strtolower(preg_replace_callback("/([a-z])([A-Z]+)/", function ($m) {
       return $m[1] . "_" . strtolower($m[2]);
@@ -239,10 +239,18 @@ class DatabaseEntityHandler implements Persistable {
     return $this->nmRelations;
   }
 
+  public function getColumnName(string $property): string {
+    if ($property === "id") {
+      return "$this->tableName.id";
+    } else {
+      return $this->tableName . "." . $this->columns[$property]->getName();
+    }
+  }
+
   public function getColumnNames(): array {
     $columns = ["$this->tableName.id"];
-    foreach ($this->columns as $column) {
-      $columns[] = $this->tableName . "." . $column->getName();
+    foreach (array_keys($this->columns) as $property) {
+      $columns[] = $this->getColumnName($property);
     }
 
     return $columns;
@@ -286,7 +294,7 @@ class DatabaseEntityHandler implements Persistable {
     } else if ($column instanceof JsonColumn) {
       $value = json_decode($value);
     } else if (isset($this->relations[$propertyName])) {
-      $relColumnPrefix = self::getColumnName($propertyName) . "_";
+      $relColumnPrefix = self::buildColumnName($propertyName) . "_";
       if (array_key_exists($relColumnPrefix . "id", $row)) {
         $relId = $row[$relColumnPrefix . "id"];
         if ($relId !== null) {

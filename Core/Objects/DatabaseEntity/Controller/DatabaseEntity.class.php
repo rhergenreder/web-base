@@ -6,7 +6,9 @@ use ArrayAccess;
 use Core\Driver\SQL\Condition\Condition;
 use Core\Driver\SQL\Expression\Count;
 use Core\Driver\SQL\SQL;
+use Core\Objects\Context;
 use Core\Objects\DatabaseEntity\Attribute\Transient;
+use Core\Objects\DatabaseEntity\Attribute\Visibility;
 use JsonSerializable;
 
 abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
@@ -52,7 +54,61 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
     }
   }
 
-  public abstract function jsonSerialize(): array;
+  public function jsonSerialize(?array $propertyNames = null): array {
+    $properties = (new \ReflectionClass(get_called_class()))->getProperties();
+    $ignoredProperties = ["entityLogConfig", "customData"];
+
+    $jsonArray = [];
+    foreach ($properties as $property) {
+      $property->setAccessible(true);
+      $propertyName = $property->getName();
+      if (in_array($propertyName, $ignoredProperties)) {
+        continue;
+      }
+
+      if (!empty($property->getAttributes(Transient::class))) {
+        continue;
+      }
+
+      $visibility = DatabaseEntityHandler::getAttribute($property, Visibility::class);
+      if ($visibility) {
+        $visibilityType = $visibility->getType();
+        if ($visibilityType === Visibility::NONE) {
+          continue;
+        } else if ($visibilityType === Visibility::BY_GROUP) {
+          $currentUser = Context::instance()->getUser();
+          $groups = $visibility->getGroups();
+          if (!empty($groups)) {
+            if (!$currentUser || empty(array_intersect(array_keys($currentUser->getGroups()), $groups))) {
+              continue;
+            }
+          }
+        }
+      }
+
+      if ($propertyNames === null || isset($propertyNames[$propertyName]) || in_array($propertyName, $propertyNames)) {
+        if ($property->isInitialized($this)) {
+          $value = $property->getValue($this);
+          if ($value instanceof \DateTime) {
+            $value = $value->getTimestamp();
+          } else if ($value instanceof DatabaseEntity) {
+            $subPropertyNames = $propertyNames[$propertyName] ?? null;
+            $value = $value->jsonSerialize($subPropertyNames);
+          }
+
+          $jsonArray[$property->getName()] = $value;
+        }
+      }
+    }
+
+    return $jsonArray;
+  }
+
+  public static function toJsonArray(array $entities, ?array $properties = null): array {
+    return array_map(function ($entity) use ($properties) {
+        return $entity->jsonSerialize($properties);
+      }, $entities);
+  }
 
   public function preInsert(array &$row) { }
   public function postFetch(SQL $sql, array $row) { }

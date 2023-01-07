@@ -109,16 +109,4 @@ class TestEntity extends DatabaseEntity {
   public float $d;
   public \DateTime $e;
   public ?int $f;
-
-  public function jsonSerialize(): array {
-    return [
-      "id" => $this->getId(),
-      "a" => $this->a,
-      "b" => $this->b,
-      "c" => $this->c,
-      "d" => $this->d,
-      "e" => $this->e,
-      "f" => $this->f,
-    ];
-  }
 }

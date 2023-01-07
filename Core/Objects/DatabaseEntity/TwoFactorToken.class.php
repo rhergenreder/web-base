@@ -30,15 +30,6 @@ abstract class TwoFactorToken extends DatabaseEntity {
     $this->data = null;
   }
 
-  public function jsonSerialize(): array {
-    return [
-      "id" => $this->getId(),
-      "type" => $this->type,
-      "confirmed" => $this->confirmed,
-      "authenticated" => $this->authenticated,
-    ];
-  }
-
   public abstract function getData(): string;
   protected abstract function readData(string $data);
 

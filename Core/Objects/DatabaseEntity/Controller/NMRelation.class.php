@@ -34,7 +34,7 @@ class NMRelation implements Persistable {
   }
 
   public function getIdColumn(DatabaseEntityHandler $handler): string {
-    return DatabaseEntityHandler::getColumnName($handler->getTableName()) . "_id";
+    return DatabaseEntityHandler::buildColumnName($handler->getTableName()) . "_id";
   }
 
   public function getDataColumns(): array {
@@ -56,8 +56,8 @@ class NMRelation implements Persistable {
       foreach ($this->properties as $tableName => $properties) {
         $columns[$tableName] = [];
         foreach ($properties as $property) {
-          $columnName = DatabaseEntityHandler::getColumnName($tableName) . "_" .
-            DatabaseEntityHandler::getColumnName($property->getName());
+          $columnName = DatabaseEntityHandler::buildColumnName($tableName) . "_" .
+            DatabaseEntityHandler::buildColumnName($property->getName());
           $columns[$tableName][$property->getName()] = $columnName;
         }
       }

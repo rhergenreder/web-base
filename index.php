@@ -13,6 +13,7 @@ if (is_file("MAINTENANCE") && !in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '
 }
 
 use Core\Configuration\Configuration;
+use Core\Objects\Context;
 use Core\Objects\Router\Router;
 
 if (!is_readable(getClassPath(Configuration::class))) {
@@ -20,7 +21,7 @@ if (!is_readable(getClassPath(Configuration::class))) {
   die(json_encode([ "success" => false, "msg" => "Configuration class is not readable, check permissions before proceeding." ]));
 }
 
-$context = new \Core\Objects\Context();
+$context = Context::instance();
 $sql = $context->initSQL();
 $settings = $context->getSettings();
 $context->parseCookies();

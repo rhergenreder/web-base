@@ -70,25 +70,6 @@ class MailQueueItem extends DatabaseEntity {
     $this->status = self::STATUS_WAITING;
   }
 
-  public function jsonSerialize(): array {
-    return [
-      "id" => $this->getId(),
-      "from" => $this->from,
-      "to" => $this->to,
-      "gpgFingerprint" => $this->gpgFingerprint,
-      "subject" => $this->subject,
-      "message" => $this->body,
-      "status" => $this->status,
-      "reply" => [
-        "to" => $this->replyTo,
-        "name" => $this->replyName,
-      ],
-      "retryCount" => $this->retryCount,
-      "nextTry" => $this->nextTry->getTimestamp(),
-      "errorMessage" => $this->errorMessage,
-    ];
-  }
-
   public function send(Context $context): bool {
 
     $args = [

@@ -93,19 +93,6 @@ class Session extends DatabaseEntity {
     return ($this->stayLoggedIn ? $this->expires->getTimestamp() - time() : -1);
   }
 
-  public function jsonSerialize(): array {
-    return array(
-      'id' => $this->getId(),
-      'active' => $this->active,
-      'expires' => $this->expires->getTimestamp(),
-      'ipAddress' => $this->ipAddress,
-      'os' => $this->os,
-      'browser' => $this->browser,
-      'csrf_token' => $this->csrfToken,
-      'data' => $this->data,
-    );
-  }
-
   public function destroy(): bool {
     session_destroy();
     $this->active = false;

@@ -18,15 +18,6 @@ class ApiKey extends DatabaseEntity {
     $this->active = true;
   }
 
-  public function jsonSerialize(): array {
-    return [
-      "id" => $this->getId(),
-      "active" => $this->active,
-      "apiKey" => $this->apiKey,
-      "validUntil" => $this->validUntil->getTimestamp()
-    ];
-  }
-
   public function getValidUntil(): \DateTime {
     return $this->validUntil;
   }

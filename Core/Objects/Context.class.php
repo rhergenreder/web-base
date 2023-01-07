@@ -17,6 +17,8 @@ use Core\Objects\Router\Router;
 
 class Context {
 
+  private static Context $instance;
+
   private ?SQL $sql;
   private ?Session $session;
   private ?User $user;
@@ -24,7 +26,7 @@ class Context {
   private Language $language;
   public ?Router $router;
 
-  public function __construct() {
+  private function __construct() {
 
     $this->sql = null;
     $this->session = null;
@@ -36,6 +38,13 @@ class Context {
     if (!$this->isCLI()) {
       @session_start();
     }
+  }
+
+  public static function instance(): self {
+    if (!isset(self::$instance)) {
+      self::$instance = new Context();
+    }
+    return self::$instance;
   }
 
   public function __destruct() {
@@ -93,12 +102,9 @@ class Context {
   private function loadSession(int $userId, int $sessionId): void {
     $this->session = Session::init($this, $userId, $sessionId);
     $this->user = $this->session?->getUser();
-    if ($this->user) {
-      $this->user->session = $this->session;
-    }
   }
 
-  public function parseCookies() {
+  public function parseCookies(): void {
     if (isset($_COOKIE['session']) && is_string($_COOKIE['session']) && !empty($_COOKIE['session'])) {
       try {
         $token = $_COOKIE['session'];
@@ -194,7 +200,6 @@ class Context {
     $this->session = new Session($this, $this->user);
     $this->session->stayLoggedIn = $stayLoggedIn;
     if ($this->session->update()) {
-      $user->session = $this->session;
       return $this->session;
     } else {
       $this->user = null;

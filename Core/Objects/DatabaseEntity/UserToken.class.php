@@ -6,6 +6,7 @@ use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\EnumArr;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
+use Core\Objects\DatabaseEntity\Attribute\Visibility;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
 class UserToken extends DatabaseEntity {
@@ -21,6 +22,7 @@ class UserToken extends DatabaseEntity {
   ];
 
   #[MaxLength(36)]
+  #[Visibility(Visibility::NONE)]
   private string $token;
 
   #[EnumArr(self::TOKEN_TYPES)]
@@ -39,14 +41,6 @@ class UserToken extends DatabaseEntity {
     $this->tokenType = $type;
     $this->validUntil = (new \DateTime())->modify("+$validHours HOUR");
     $this->used = false;
-  }
-
-  public function jsonSerialize(): array {
-    return [
-      "id" => $this->getId(),
-      "token" => $this->token,
-      "tokenType" => $this->tokenType
-    ];
   }
 
   public function getType(): string {

@@ -225,7 +225,6 @@ namespace Core\API\User {
         $currentUser->hasGroup(Group::SUPPORT));
 
       $orderBy = $this->getParam("orderBy");
-      $publicAttributes = ["id", "name", "fullName", "profilePicture", "email"]; // TODO: , "groupNames"];
 
       $condition = null;
       if (!$fullInfo) {
@@ -234,7 +233,7 @@ namespace Core\API\User {
           new CondBool("User.confirmed")
         );
 
-        if ($orderBy && !in_array($orderBy, $publicAttributes)) {
+        if ($orderBy && !$currentUser->canAccess(User::class, $orderBy)) {
           return $this->createError("Insufficient permissions for sorting by field '$orderBy'");
         }
       }
@@ -255,19 +254,8 @@ namespace Core\API\User {
       $users = User::findBy($userQuery);
       if ($users !== false && $users !== null) {
         $this->result["users"] = [];
-
-        foreach ($users as $userId => $user) {
-          $serialized = $user->jsonSerialize();
-
-          if (!$fullInfo && $userId !== $currentUser->getId()) {
-            foreach (array_keys($serialized) as $attr) {
-              if (!in_array($attr, $publicAttributes)) {
-                unset ($serialized[$attr]);
-              }
-            }
-          }
-
-          $this->result["users"][] = $serialized;
+        foreach ($users as $user) {
+          $this->result["users"][] = $user->jsonSerialize();
         }
       } else {
         return $this->createError("Error fetching users: " . $sql->getLastError());
@@ -305,20 +293,10 @@ namespace Core\API\User {
           $currentUser->hasGroup(Group::ADMIN) ||
           $currentUser->hasGroup(Group::SUPPORT));
 
-        if (!$fullInfo) {
-          if (!$queriedUser["confirmed"]) {
-            return $this->createError("No permissions to access this user");
-          }
-
-          $publicAttributes = ["id", "name", "fullName", "profilePicture", "email", "groups"];
-          foreach (array_keys($queriedUser) as $attr) {
-            if (!in_array($attr, $publicAttributes)) {
-              unset($queriedUser[$attr]);
-            }
-          }
+        if (!$fullInfo && !$queriedUser["confirmed"]) {
+          return $this->createError("No permissions to access this user");
         }
 
-        unset($queriedUser["session"]); // strip session information
         $this->result["user"] = $queriedUser;
       }
 
@@ -358,6 +336,7 @@ namespace Core\API\User {
 
         $this->result["permissions"] = $permissions;
         $this->result["user"] = $currentUser->jsonSerialize();
+        $this->result["session"] = $this->context->getSession()->jsonSerialize();
       }
 
       return $this->success;
@@ -575,7 +554,7 @@ namespace Core\API\User {
               $tfaToken = $user->getTwoFactorToken();
               $this->result["loggedIn"] = true;
               $this->result["logoutIn"] = $session->getExpiresSeconds();
-              $this->result["csrf_token"] = $session->getCsrfToken();
+              $this->result["csrfToken"] = $session->getCsrfToken();
               if ($tfaToken && $tfaToken->isConfirmed()) {
                 $this->result["2fa"] = ["type" => $tfaToken->getType()];
                 if ($tfaToken instanceof KeyBasedTwoFactorToken) {

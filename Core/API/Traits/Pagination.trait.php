@@ -85,7 +85,7 @@ trait Pagination {
     if ($orderBy) {
       $handler = $baseQuery->getHandler();
       $baseTable = $handler->getTableName();
-      $sortColumn = DatabaseEntityHandler::getColumnName($orderBy);
+      $sortColumn = DatabaseEntityHandler::buildColumnName($orderBy);
       $fullyQualifiedColumn = "$baseTable.$sortColumn";
       $selectedColumns = $baseQuery->getSelectValues();
 

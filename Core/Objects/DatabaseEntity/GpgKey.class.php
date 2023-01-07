@@ -123,17 +123,6 @@ class GpgKey extends DatabaseEntity {
     return $this->fingerprint;
   }
 
-  public function jsonSerialize(): array {
-    return [
-      "id" => $this->getId(),
-      "fingerprint" => $this->fingerprint,
-      "algorithm" => $this->algorithm,
-      "expires" => $this->expires->getTimestamp(),
-      "added" => $this->added->getTimestamp(),
-      "confirmed" => $this->confirmed
-    ];
-  }
-
   public function confirm(SQL $sql): bool {
     $this->confirmed = true;
     return $this->save($sql, ["confirmed"]);

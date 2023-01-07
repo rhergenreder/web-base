@@ -92,9 +92,9 @@ export default function Sidebar(props) {
                         <div className={"os-content"} style={{padding: "0px 0px", height: "100%", width: "100%"}}>
                             <div className="user-panel mt-3 pb-3 mb-3 d-flex">
                                 <div className="info">
-                                    <a href="#" className="d-block">{L("account.logged_in_as")}:&nbsp;
+                                    <span className={"d-block"}>{L("account.logged_in_as")}:&nbsp;
                                         <Link to={"/admin/user/" + api.user.id}>{api.user.name}</Link>
-                                    </a>
+                                    </span>
                                 </div>
                             </div>
                             <nav className={"mt-2"}>

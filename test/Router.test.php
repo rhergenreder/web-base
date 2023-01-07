@@ -10,7 +10,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase {
   private static Context $CONTEXT;
 
   public static function setUpBeforeClass(): void {
-    RouterTest::$CONTEXT = new Context();
+    RouterTest::$CONTEXT = Context::instance();
     RouterTest::$ROUTER = new Router(RouterTest::$CONTEXT);
   }
 

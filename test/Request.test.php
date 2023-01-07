@@ -42,7 +42,7 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
 
   public static function setUpBeforeClass(): void {
 
-    RequestTest::$CONTEXT = new Context();
+    RequestTest::$CONTEXT = Context::instance();
     if (!RequestTest::$CONTEXT->initSQL()) {
       throw new Exception("Could not establish database connection");
     }

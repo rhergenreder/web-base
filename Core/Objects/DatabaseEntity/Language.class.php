@@ -42,13 +42,14 @@ namespace Core\Objects\DatabaseEntity {
       setcookie('lang', $this->code, 0, "/", $domain, false, false);
     }
 
-    public function jsonSerialize(): array {
-      return array(
-        'id' => $this->getId(),
-        'code' => $this->code,
-        'shortCode' => explode("_", $this->code)[0],
-        'name' => $this->name,
-      );
+    public function jsonSerialize(?array $propertyNames = null): array {
+      $jsonData = parent::jsonSerialize($propertyNames);
+
+      if ($propertyNames === null || in_array("shortCode", $propertyNames)) {
+        $jsonData["shortCode"] = explode("_", $this->code)[0];
+      }
+
+      return $jsonData;
     }
 
     public function activate() {

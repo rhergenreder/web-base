@@ -19,7 +19,7 @@ export function DataTable(props) {
 
     const {currentLocale, requestModules, translate: L} = useContext(LocaleContext);
 
-    const [doFetchData, setFetchData] = useState(true);
+    const [doFetchData, setFetchData] = useState(false);
     const [data, setData] = useState(null);
     const [sortAscending, setSortAscending] = useState(["asc","ascending"].includes(defaultSortOrder?.toLowerCase));
     const [sortColumn, setSortColumn] = useState(defaultSortColumn || null);

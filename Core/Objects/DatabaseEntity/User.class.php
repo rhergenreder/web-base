@@ -8,20 +8,45 @@ use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Attribute\Multiple;
 use Core\Objects\DatabaseEntity\Attribute\Unique;
+use Core\Objects\DatabaseEntity\Attribute\Visibility;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntityHandler;
 
 class User extends DatabaseEntity {
 
   #[MaxLength(32)] #[Unique] public string $name;
-  #[MaxLength(128)] public string $password;
-  #[MaxLength(64)] public string $fullName;
-  #[MaxLength(64)] #[Unique] public ?string $email;
-  #[MaxLength(64)] public ?string $profilePicture;
+
+  #[MaxLength(128)]
+  #[Visibility(Visibility::NONE)]
+  public string $password;
+
+  #[MaxLength(64)]
+  public string $fullName;
+
+  #[MaxLength(64)]
+  #[Unique]
+  public ?string $email;
+
+  #[MaxLength(64)]
+  public ?string $profilePicture;
+
+  #[Visibility(Visibility::BY_GROUP, Group::ADMIN, Group::SUPPORT)]
   private ?\DateTime $lastOnline;
-  #[DefaultValue(CurrentTimeStamp::class)] public \DateTime $registeredAt;
-  #[DefaultValue(false)] public bool $confirmed;
+
+  #[Visibility(Visibility::BY_GROUP, Group::ADMIN, Group::SUPPORT)]
+  #[DefaultValue(CurrentTimeStamp::class)]
+  public \DateTime $registeredAt;
+
+  #[Visibility(Visibility::BY_GROUP, Group::ADMIN, Group::SUPPORT)]
+  #[DefaultValue(false)]
+  public bool $confirmed;
+
   #[DefaultValue(Language::AMERICAN_ENGLISH)] public Language $language;
+
+  #[Visibility(Visibility::BY_GROUP, Group::ADMIN, Group::SUPPORT)]
   public ?GpgKey $gpgKey;
+
+  #[Visibility(Visibility::BY_GROUP, Group::ADMIN, Group::SUPPORT)]
   private ?TwoFactorToken $twoFactorToken;
 
   #[Multiple(Group::class)]
@@ -71,24 +96,6 @@ class User extends DatabaseEntity {
     ];
   }
 
-  public function jsonSerialize(): array {
-    return [
-      'id' => $this->getId(),
-      'name' => $this->name,
-      'fullName' => $this->fullName,
-      'profilePicture' => $this->profilePicture,
-      'email' => $this->email,
-      'groups' => $this->groups ?? null,
-      'language' => (isset($this->language) ? $this->language->jsonSerialize() : null),
-      'session' => (isset($this->session) ? $this->session->jsonSerialize() : null),
-      "gpg" => (isset($this->gpgKey) ? $this->gpgKey->jsonSerialize() : null),
-      "2fa" => (isset($this->twoFactorToken) ? $this->twoFactorToken->jsonSerialize() : null),
-      "reqisteredAt" => $this->registeredAt->getTimestamp(),
-      "lastOnline" => $this->lastOnline->getTimestamp(),
-      "confirmed" => $this->confirmed
-    ];
-  }
-
   public function update(SQL $sql): bool {
     $this->lastOnline = new \DateTime();
     return $this->save($sql, ["last_online", "language_id"]);
@@ -96,5 +103,38 @@ class User extends DatabaseEntity {
 
   public function setTwoFactorToken(TwoFactorToken $twoFactorToken) {
     $this->twoFactorToken = $twoFactorToken;
+  }
+
+  public function canAccess(\ReflectionClass|DatabaseEntity|string $entityOrClass, string $propertyName): bool {
+    try {
+      $reflectionClass = ($entityOrClass instanceof \ReflectionClass
+        ? $entityOrClass
+        : new \ReflectionClass($entityOrClass));
+
+      $property = $reflectionClass->getProperty($propertyName);
+      $visibility = DatabaseEntityHandler::getAttribute($property, Visibility::class);
+      if ($visibility === null) {
+        return true;
+      }
+
+      $visibilityType = $visibility->getType();
+      if ($visibilityType === Visibility::NONE) {
+        return false;
+      } else if ($visibilityType === Visibility::BY_GROUP) {
+        // allow access to own entity
+        if ($entityOrClass instanceof User && $entityOrClass->getId() === $this->id) {
+          return true;
+        }
+
+        // missing required group
+        if (empty(array_intersect(array_keys($this->groups), $visibility->getGroups()))) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (\Exception $exception) {
+      return false;
+    }
   }
 }

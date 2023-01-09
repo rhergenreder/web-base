@@ -14,7 +14,7 @@ namespace Core\API {
 
     public function __construct(Context $context, bool $externalCall, array $params) {
       parent::__construct($context, $externalCall, $params);
-      $this->routerCachePath = getClassPath(self::ROUTER_CACHE_CLASS);
+      $this->routerCachePath = WEBROOT . DIRECTORY_SEPARATOR . getClassPath(self::ROUTER_CACHE_CLASS);
     }
 
     protected function toggleRoute(int $id, bool $active): bool {

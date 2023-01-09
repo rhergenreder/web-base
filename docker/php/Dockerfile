@@ -7,11 +7,15 @@ RUN mkdir -p /application/core/Configuration /var/www/.gnupg && \
 
 # YAML + dev dependencies
 RUN apt-get update -y &&  \
-    apt-get install -y libyaml-dev libzip-dev libgmp-dev libpng-dev gnupg2d nodejs npm && \
-    apt-get clean && \
+    apt-get install -y libyaml-dev libzip-dev libgmp-dev libpng-dev gnupg2 && \
     pecl install yaml && docker-php-ext-enable yaml && \
-    docker-php-ext-install gd && \
-    npm install --global yarn && ln -s /usr/local/bin/yarn /usr/bin/yarn
+    docker-php-ext-install gd
+
+# NodeJS
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
+    apt-get update && \
+    apt-get -y install nodejs && \
+    npm install --global yarn
 
 # Runkit for unit testing (no stable release available)
 RUN pecl install runkit7-4.0.0a6  && docker-php-ext-enable runkit7 && \
@@ -19,6 +23,9 @@ RUN pecl install runkit7-4.0.0a6  && docker-php-ext-enable runkit7 && \
 
 # mysqli, zip, gmp
 RUN docker-php-ext-install mysqli zip gmp
+
+# clean cache
+RUN apt-get clean
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 USER www-data

@@ -419,9 +419,11 @@ class MySQL extends SQL {
     $returns = $procedure->getReturns();
     $paramDefs = [];
 
-    foreach ($procedure->getParameters() as $param) {
-      if ($param instanceof Column) {
-        $paramDefs[] = $this->getParameterDefinition($param);
+    foreach ($procedure->getParameters() as $parameter) {
+      if ($parameter instanceof Column) {
+        $paramDefs[] = $this->getParameterDefinition($parameter);
+      } else if ($parameter instanceof CurrentTable) {
+        $paramDefs[] = $this->getParameterDefinition($parameter->toColumn());
       } else {
         $this->lastError = $this->logger->error("PROCEDURE parameter type " . gettype($returns) . "  is not implemented yet");
         return null;

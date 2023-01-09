@@ -4,6 +4,7 @@
 namespace Core\Driver\SQL\Query;
 
 use Core\Driver\SQL\Column\Column;
+use Core\Driver\SQL\Expression\Expression;
 use Core\Driver\SQL\SQL;
 
 class CreateProcedure extends Query {
@@ -21,7 +22,7 @@ class CreateProcedure extends Query {
     $this->returns = NULL;
   }
 
-  public function param(Column $parameter): CreateProcedure {
+  public function param(Expression $parameter): CreateProcedure {
     $this->parameters[] = $parameter;
     return $this;
   }

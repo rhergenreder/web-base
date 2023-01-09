@@ -461,7 +461,7 @@ class DatabaseEntityHandler implements Persistable {
 
       $doInsert = false;
       foreach ($nmRelation->getProperties($this) as $property) {
-        if ($properties !== null || !in_array($property->getName(), $properties)) {
+        if ($properties !== null && !in_array($property->getName(), $properties)) {
           continue;
         }
 

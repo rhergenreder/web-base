@@ -124,6 +124,14 @@ class RouterCache extends Router {
 }
 ";
 
+    $directory = dirname($file);
+    if (!is_dir($directory)) {
+      if (!mkdir($directory, 775, true)) {
+        $this->logger->severe("Could not create directory: $directory");
+        return false;
+      }
+    }
+
     if (@file_put_contents($file, $code) === false) {
       $this->logger->severe("Could not write Router cache file: $file");
       return false;

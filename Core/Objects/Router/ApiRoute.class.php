@@ -24,7 +24,8 @@ class ApiRoute extends Route {
       header("Content-Type: text/html");
       $document = new TemplateDocument($router, "swagger.twig");
       return $document->load();
-    } else if (!preg_match("/[a-zA-Z]+/", $params["endpoint"])) {
+    } else if (!preg_match("/[a-zA-Z]+/", $params["endpoint"]) ||
+               !preg_match("/[a-zA-Z]*/", $params["method"])) {
       http_response_code(400);
       $response = createError("Invalid Method");
     } else {

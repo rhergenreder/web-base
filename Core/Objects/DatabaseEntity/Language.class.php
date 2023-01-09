@@ -2,6 +2,7 @@
 
 namespace Core\Objects\DatabaseEntity {
 
+  use Core\Driver\SQL\SQL;
   use Core\Objects\DatabaseEntity\Attribute\MaxLength;
   use Core\Objects\DatabaseEntity\Attribute\Transient;
   use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
@@ -138,6 +139,13 @@ namespace Core\Objects\DatabaseEntity {
 
     public function hasModule(string $module): bool {
       return array_key_exists($module, $this->entries);
+    }
+
+    public static function getPredefinedValues(SQL $sql): array {
+      return [
+        new Language(Language::AMERICAN_ENGLISH, "en_US", 'American English'),
+        new Language(Language::GERMAN_STANDARD, "de_DE", 'Deutsch Standard'),
+      ];
     }
   }
 }

@@ -468,7 +468,8 @@ class DatabaseEntityHandler implements Persistable {
         $property->setAccessible(true);
         $relEntities = $property->getValue($entity);
         foreach ($relEntities as $relEntity) {
-          $nmRow = [$entity->getId(), $relEntity->getId()];
+          $relEntityId = (is_int($relEntity) ? $relEntity : $relEntity->getId());
+          $nmRow = [$entity->getId(), $relEntityId];
           if (!empty($dataColumns)) {
             foreach (array_keys($dataColumns[$thisTableName]) as $propertyName) {
               $nmRow[] = $property->getName() === $propertyName;
@@ -621,9 +622,20 @@ class DatabaseEntityHandler implements Persistable {
   public function getCreateQueries(SQL $sql): array {
 
     $queries = [];
+    $table = $this->getTableName();
+
+    // Create Table
     $queries[] = $this->getTableQuery($sql);
 
-    $table = $this->getTableName();
+    // pre defined values
+    $getPredefinedValues = $this->entityClass->getMethod("getPredefinedValues");
+    $getPredefinedValues->setAccessible(true);
+    $predefinedValues = $getPredefinedValues->invoke(null, $sql);
+    if ($predefinedValues) {
+      $queries[] = $this->getInsertQuery($predefinedValues);
+    }
+
+    // Entity Log
     $entityLogConfig = $this->entityClass->getProperty("entityLogConfig");
     $entityLogConfig->setAccessible(true);
     $entityLogConfig = $entityLogConfig->getValue();

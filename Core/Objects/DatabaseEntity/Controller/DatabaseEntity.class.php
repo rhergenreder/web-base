@@ -112,6 +112,7 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
 
   public function preInsert(array &$row) { }
   public function postFetch(SQL $sql, array $row) { }
+  public static function getPredefinedValues(SQL $sql): array { return []; }
 
   public static function fromRow(SQL $sql, array $row): static {
     $handler = self::getHandler($sql);
@@ -201,7 +202,7 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
     return false;
   }
 
-  public static function getHandler(SQL $sql, $obj_or_class = null): DatabaseEntityHandler {
+  public static function getHandler(SQL $sql, $obj_or_class = null, $allowOverride = false): DatabaseEntityHandler {
 
     if (!$obj_or_class) {
       $obj_or_class = get_called_class();
@@ -213,14 +214,16 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
       $class = $obj_or_class;
     }
 
-    // if we are in an extending context, get the database handler for the root entity,
-    // as we do not persist attributes of the inheriting class
-    while ($class->getParentClass()->getName() !== DatabaseEntity::class) {
-      $class = $class->getParentClass();
+    if (!$allowOverride) {
+      // if we are in an extending context, get the database handler for the root entity,
+      // as we do not persist attributes of the inheriting class
+      while ($class->getParentClass()->getName() !== DatabaseEntity::class) {
+        $class = $class->getParentClass();
+      }
     }
 
     $handler = self::$handlers[$class->getShortName()] ?? null;
-    if (!$handler) {
+    if (!$handler || $allowOverride) {
       $handler = new DatabaseEntityHandler($sql, $class);
       self::$handlers[$class->getShortName()] = $handler;
     }

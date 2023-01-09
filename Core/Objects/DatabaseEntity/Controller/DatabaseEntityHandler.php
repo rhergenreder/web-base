@@ -146,32 +146,38 @@ class DatabaseEntityHandler implements Persistable {
       } else if ($propertyTypeName === 'DateTime') {
         $this->columns[$propertyName] = new DateTimeColumn($columnName, $nullable, $defaultValue);
       } else if ($propertyTypeName === "array") {
-        $multiple = self::getAttribute($property, Multiple::class);
-        if (!$multiple) {
-          $this->raiseError("Cannot persist class '$className': Property '$propertyName' has non persist-able type: $propertyTypeName. " .
-                            "Is the 'Multiple' attribute missing?");
-        }
+        $json = self::getAttribute($property, Json::class);
+        if ($json) {
+          $this->columns[$propertyName] = new JsonColumn($columnName, $nullable, $defaultValue);
+        } else {
 
-        try {
-          $refClass = $multiple->getClassName();
-          $requestedClass = new \ReflectionClass($refClass);
-          if ($requestedClass->isSubclassOf(DatabaseEntity::class)) {
-            $nmTableName = NMRelation::buildTableName($this->getTableName(), $requestedClass->getShortName());
-            $nmRelation = $this->nmRelations[$nmTableName] ?? null;
-            if (!$nmRelation) {
-              $otherHandler = DatabaseEntity::getHandler($this->sql, $requestedClass);
-              $otherNM = $otherHandler->getNMRelations();
-              $nmRelation = $otherNM[$nmTableName] ?? (new NMRelation($this, $otherHandler));
-              $this->nmRelations[$nmTableName] = $nmRelation;
-            }
-
-            $this->nmRelations[$nmTableName]->addProperty($this, $property);
-          } else {
-            $this->raiseError("Cannot persist class '$className': Property '$propertyName' of type multiple can " .
-                              "only reference DatabaseEntity types, but got: $refClass");
+          $multiple = self::getAttribute($property, Multiple::class);
+          if (!$multiple) {
+            $this->raiseError("Cannot persist class '$className': Property '$propertyName' has non persist-able type: $propertyTypeName. " .
+              "Is the 'Multiple' attribute missing?");
           }
-        } catch (\Exception $ex) {
-          $this->raiseError("Cannot persist class '$className' property '$propertyTypeName': " . $ex->getMessage());
+
+          try {
+            $refClass = $multiple->getClassName();
+            $requestedClass = new \ReflectionClass($refClass);
+            if ($requestedClass->isSubclassOf(DatabaseEntity::class)) {
+              $nmTableName = NMRelation::buildTableName($this->getTableName(), $requestedClass->getShortName());
+              $nmRelation = $this->nmRelations[$nmTableName] ?? null;
+              if (!$nmRelation) {
+                $otherHandler = DatabaseEntity::getHandler($this->sql, $requestedClass);
+                $otherNM = $otherHandler->getNMRelations();
+                $nmRelation = $otherNM[$nmTableName] ?? (new NMRelation($this, $otherHandler));
+                $this->nmRelations[$nmTableName] = $nmRelation;
+              }
+
+              $this->nmRelations[$nmTableName]->addProperty($this, $property);
+            } else {
+              $this->raiseError("Cannot persist class '$className': Property '$propertyName' of type multiple can " .
+                "only reference DatabaseEntity types, but got: $refClass");
+            }
+          } catch (\Exception $ex) {
+            $this->raiseError("Cannot persist class '$className' property '$propertyTypeName': " . $ex->getMessage());
+          }
         }
       } else if ($propertyTypeName !== "mixed") {
         try {
@@ -630,7 +636,7 @@ class DatabaseEntityHandler implements Persistable {
     // pre defined values
     $getPredefinedValues = $this->entityClass->getMethod("getPredefinedValues");
     $getPredefinedValues->setAccessible(true);
-    $predefinedValues = $getPredefinedValues->invoke(null, $sql);
+    $predefinedValues = $getPredefinedValues->invoke(null);
     if ($predefinedValues) {
       $queries[] = $this->getInsertQuery($predefinedValues);
     }

@@ -4,6 +4,9 @@ namespace Core\Driver\SQL;
 
 use Core\API\Parameter\Parameter;
 
+use Core\Driver\SQL\Condition\Compare;
+use Core\Driver\SQL\Condition\CondLike;
+use Core\Driver\SQL\Expression\Count;
 use DateTime;
 use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Column\IntColumn;
@@ -452,6 +455,18 @@ class MySQL extends SQL {
     }
 
     return $query;
+  }
+
+  public function tableExists(string $tableName): bool {
+    $tableSchema = $this->connectionData->getProperty("database");
+    $res = $this->select(new Count())
+      ->from("information_schema.TABLES")
+      ->where(new Compare("TABLE_NAME", $tableName, "=", true))
+      ->where(new Compare("TABLE_SCHEMA", $tableSchema, "=", true))
+      ->where(new CondLike(new Column("TABLE_TYPE"), "BASE TABLE"))
+      ->execute();
+
+    return $res && $res[0]["count"] > 0;
   }
 }
 

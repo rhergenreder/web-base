@@ -37,7 +37,7 @@ class Group extends DatabaseEntity {
     return User::toJsonArray($users, ["id", "name", "fullName", "profilePicture"]);
   }
 
-  public static function getPredefinedValues(SQL $sql): array {
+  public static function getPredefinedValues(): array {
     return [
       new Group(Group::ADMIN, Group::GROUPS[Group::ADMIN], "#dc3545"),
       new Group(Group::MODERATOR, Group::GROUPS[Group::MODERATOR], "#28a745"),

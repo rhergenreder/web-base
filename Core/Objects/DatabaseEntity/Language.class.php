@@ -141,7 +141,7 @@ namespace Core\Objects\DatabaseEntity {
       return array_key_exists($module, $this->entries);
     }
 
-    public static function getPredefinedValues(SQL $sql): array {
+    public static function getPredefinedValues(): array {
       return [
         new Language(Language::AMERICAN_ENGLISH, "en_US", 'American English'),
         new Language(Language::GERMAN_STANDARD, "de_DE", 'Deutsch Standard'),

@@ -14,8 +14,11 @@ use Core\Driver\SQL\Column\DateTimeColumn;
 use Core\Driver\SQL\Column\BoolColumn;
 use Core\Driver\SQL\Column\JsonColumn;
 
+use Core\Driver\SQL\Condition\Compare;
+use Core\Driver\SQL\Condition\CondLike;
 use Core\Driver\SQL\Condition\CondRegex;
 use Core\Driver\SQL\Expression\Add;
+use Core\Driver\SQL\Expression\Count;
 use Core\Driver\SQL\Expression\CurrentTimeStamp;
 use Core\Driver\SQL\Expression\Expression;
 use Core\Driver\SQL\Query\CreateProcedure;
@@ -443,6 +446,17 @@ class PostgreSQL extends SQL {
     }
 
     return $query;
+  }
+
+  public function tableExists(string $tableName): bool {
+    $tableSchema = $this->connectionData->getProperty("database");
+    $res = $this->select(new Count())
+      ->from("pg_tables")
+      ->whereEq("tablename", $tableName)
+      ->whereEq("schemaname", $tableSchema)
+      ->execute();
+
+    return $res && $res[0]["count"] > 0;
   }
 }
 

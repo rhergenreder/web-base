@@ -127,6 +127,9 @@ abstract class SQL {
   public abstract function connect();
   public abstract function disconnect();
 
+  // Schema
+  public abstract function tableExists(string $tableName): bool;
+
   /**
    * @param Query $query
    * @param int $fetchType

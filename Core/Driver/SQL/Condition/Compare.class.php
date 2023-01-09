@@ -2,18 +2,21 @@
 
 namespace Core\Driver\SQL\Condition;
 
+use Core\Driver\SQL\MySQL;
 use Core\Driver\SQL\SQL;
 
 class Compare extends Condition {
 
   private string $operator;
   private string $column;
-  private $value;
+  private mixed $value;
+  private bool $binary;
 
-  public function __construct(string $col, $val, string $operator = '=') {
+  public function __construct(string $col, $val, string $operator = '=', bool $binary = false) {
     $this->operator = $operator;
     $this->column = $col;
     $this->value = $val;
+    $this->binary = $binary;
   }
 
   public function getColumn(): string { return $this->column; }
@@ -30,6 +33,11 @@ class Compare extends Condition {
       }
     }
 
-    return $sql->columnName($this->column) . $this->operator . $sql->addValue($this->value, $params);
+    $condition = $sql->columnName($this->column) . $this->operator . $sql->addValue($this->value, $params);
+    if ($this->binary && $sql instanceof MySQL) {
+      $condition = "BINARY $condition";
+    }
+
+    return $condition;
   }
 }

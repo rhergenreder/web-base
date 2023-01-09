@@ -4,6 +4,7 @@ namespace Core\Configuration;
 
 use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
+use Core\Objects\DatabaseEntity\Controller\DatabaseEntityHandler;
 use Core\Objects\DatabaseEntity\Group;
 use Core\Objects\DatabaseEntity\Language;
 use Core\Objects\DatabaseEntity\Route;
@@ -17,17 +18,6 @@ class CreateDatabase extends DatabaseScript {
     $queries = array();
 
     self::loadEntities($queries, $sql);
-
-    $queries[] = Language::getHandler($sql)->getInsertQuery([
-      new Language(Language::AMERICAN_ENGLISH, "en_US", 'American English'),
-      new Language(Language::GERMAN_STANDARD, "de_DE", 'Deutsch Standard'),
-    ]);
-
-    $queries[] = Group::getHandler($sql)->getInsertQuery([
-      new Group(Group::ADMIN, Group::GROUPS[Group::ADMIN], "#dc3545"),
-      new Group(Group::MODERATOR, Group::GROUPS[Group::MODERATOR], "#28a745"),
-      new Group(Group::SUPPORT, Group::GROUPS[Group::SUPPORT], "#007bff"),
-    ]);
 
     $queries[] = $sql->createTable("Visitor")
       ->addInt("day")
@@ -122,7 +112,6 @@ class CreateDatabase extends DatabaseScript {
     $persistables = [];
     $baseDirs = ["Core", "Site"];
     foreach ($baseDirs as $baseDir) {
-
       $entityDirectory = "./$baseDir/Objects/DatabaseEntity/";
       if (file_exists($entityDirectory) && is_dir($entityDirectory)) {
         $scan_arr = scandir($entityDirectory);
@@ -133,9 +122,9 @@ class CreateDatabase extends DatabaseScript {
             $className = substr($file, 0, strlen($file) - strlen($suffix));
             $className = "\\$baseDir\\Objects\\DatabaseEntity\\$className";
             $reflectionClass = new \ReflectionClass($className);
-            if ($reflectionClass->getParentClass()?->getName() === DatabaseEntity::class) {
+            if ($reflectionClass->isSubclassOf(DatabaseEntity::class)) {
               $method = "$className::getHandler";
-              $handler = call_user_func($method, $sql);
+              $handler = call_user_func($method, $sql, null, true);
               $persistables[$handler->getTableName()] = $handler;
 
               foreach ($handler->getNMRelations() as $nmTableName => $nmRelation) {
@@ -145,30 +134,30 @@ class CreateDatabase extends DatabaseScript {
           }
         }
       }
+    }
+
+    $tableCount = count($persistables);
+    $createdTables = [];
+    while (!empty($persistables)) {
+      $prevCount = $tableCount;
+      $unmetDependenciesTotal = [];
+
+      foreach ($persistables as $tableName => $persistable) {
+        $dependsOn = $persistable->dependsOn();
+        $unmetDependencies = array_diff($dependsOn, $createdTables);
+        if (empty($unmetDependencies)) {
+          $queries = array_merge($queries, $persistable->getCreateQueries($sql));
+          $createdTables[] = $tableName;
+          unset($persistables[$tableName]);
+        } else {
+          $unmetDependenciesTotal = array_merge($unmetDependenciesTotal, $unmetDependencies);
+        }
+      }
 
       $tableCount = count($persistables);
-      $createdTables = [];
-      while (!empty($persistables)) {
-        $prevCount = $tableCount;
-        $unmetDependenciesTotal = [];
-
-        foreach ($persistables as $tableName => $persistable) {
-          $dependsOn = $persistable->dependsOn();
-          $unmetDependencies = array_diff($dependsOn, $createdTables);
-          if (empty($unmetDependencies)) {
-            $queries = array_merge($queries, $persistable->getCreateQueries($sql));
-            $createdTables[] = $tableName;
-            unset($persistables[$tableName]);
-          } else {
-            $unmetDependenciesTotal = array_merge($unmetDependenciesTotal, $unmetDependencies);
-          }
-        }
-
-        $tableCount = count($persistables);
-        if ($tableCount === $prevCount) {
-          throw new Exception("Circular or unmet table dependency detected. Unmet dependencies: "
-            . implode(", ", $unmetDependenciesTotal));
-        }
+      if ($tableCount === $prevCount) {
+        throw new Exception("Circular or unmet table dependency detected. Unmet dependencies: "
+          . implode(", ", $unmetDependenciesTotal));
       }
     }
   }

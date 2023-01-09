@@ -24,7 +24,7 @@ class ApiKey extends DatabaseEntity {
 
   public function refresh(SQL $sql, int $days): bool {
     $this->validUntil = (new \DateTime())->modify("+$days days");
-    return $this->save($sql, ["valid_until"]);
+    return $this->save($sql, ["validUntil"]);
   }
 
   public function revoke(SQL $sql): bool {

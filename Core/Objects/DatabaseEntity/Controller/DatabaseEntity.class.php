@@ -161,10 +161,9 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
     }
   }
 
-  // TODO: rather take property names here instead of $columns? and translate then using DatabaseEntityHandler::columns[$propertyName]
-  public function save(SQL $sql, ?array $columns = null, bool $saveNM = false): bool {
+  public function save(SQL $sql, ?array $properties = null, bool $saveNM = false): bool {
     $handler = self::getHandler($sql);
-    $res = $handler->insertOrUpdate($this, $columns, $saveNM);
+    $res = $handler->insertOrUpdate($this, $properties, $saveNM);
     if ($res === false) {
       return false;
     } else if ($this->id === null) {
@@ -233,13 +232,19 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
     return $this->id;
   }
 
-  public static function count(SQL $sql, ?Condition $condition = null): int|bool {
+  public static function count(SQL $sql, ?Condition $condition = null, ?array $joins = []): int|bool {
     $handler = self::getHandler($sql);
     $query = $sql->select(new Count())
       ->from($handler->getTableName());
 
     if ($condition) {
       $query->where($condition);
+    }
+
+    if ($joins) {
+      foreach ($joins as $join) {
+        $query->addJoin($join);
+      }
     }
 
     $res = $query->execute();

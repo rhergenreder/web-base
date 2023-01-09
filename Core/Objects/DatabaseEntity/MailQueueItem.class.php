@@ -99,7 +99,7 @@ class MailQueueItem extends DatabaseEntity {
       $this->status = self::STATUS_SUCCESS;
     }
 
-    $this->save($context->getSQL(), ["status", "retry_count", "next_try", "error_message"]);
+    $this->save($context->getSQL(), ["status", "retryCount", "nextTry", "errorMessage"]);
     return $success;
   }
 }

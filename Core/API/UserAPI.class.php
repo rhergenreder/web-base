@@ -1236,7 +1236,7 @@ namespace Core\API\User {
 
       if ($this->success) {
         $currentUser->gpgKey = $gpgKey;
-        if ($currentUser->save($sql, ["gpg_key_id"])) {
+        if ($currentUser->save($sql, ["gpgKey"])) {
           $this->result["gpg"] = $gpgKey->jsonSerialize();
         } else {
           return $this->createError("Error updating user details: " . $sql->getLastError());
@@ -1490,7 +1490,7 @@ namespace Core\API\User {
 
       $sql = $this->context->getSQL();
       $currentUser->profilePicture = $fileName;
-      if ($currentUser->save($sql, ["profile_picture"])) {
+      if ($currentUser->save($sql, ["profilePicture"])) {
         $this->result["profilePicture"] = $fileName;
       } else {
         return $this->createError("Error updating user details: " . $sql->getLastError());
@@ -1517,7 +1517,7 @@ namespace Core\API\User {
       }
 
       $currentUser->profilePicture = null;
-      if (!$currentUser->save($sql, ["profile_picture"])) {
+      if (!$currentUser->save($sql, ["profilePicture"])) {
         return $this->createError("Error updating user details: " . $sql->getLastError());
       }
 

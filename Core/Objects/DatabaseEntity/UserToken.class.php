@@ -58,7 +58,7 @@ class UserToken extends DatabaseEntity {
 
   public function updateDurability(SQL $sql, int $validHours): bool {
     $this->validUntil = (new \DateTime())->modify("+$validHours HOURS");
-    return $this->save($sql, ["valid_until"]);
+    return $this->save($sql, ["validUntil"]);
   }
 
   public function getToken(): string {

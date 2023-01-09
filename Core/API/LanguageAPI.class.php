@@ -92,7 +92,7 @@ namespace Core\API\Language {
       $sql = $this->context->getSQL();
       $currentUser = $this->context->getUser();
       $currentUser->language = $this->language;
-      $this->success = $currentUser->save($sql, ["language_id"]);
+      $this->success = $currentUser->save($sql, ["language"]);
       $this->lastError = $sql->getLastError();
       return $this->success;
     }

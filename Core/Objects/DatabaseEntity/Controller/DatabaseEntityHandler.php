@@ -366,7 +366,7 @@ class DatabaseEntityHandler implements Persistable {
     }
   }
 
-  public function updateNM(DatabaseEntity $entity): bool {
+  public function updateNM(DatabaseEntity $entity, ?array $properties = null): bool {
     if (empty($this->nmRelations)) {
       return true;
     }
@@ -381,12 +381,18 @@ class DatabaseEntityHandler implements Persistable {
 
 
       // delete from n:m table if no longer exists
+      $doDelete = true;
       $deleteStatement = $this->sql->delete($nmTable)
-        ->whereEq($thisIdColumn, $entity->getId());
+        ->whereEq($thisIdColumn, $entity->getId());  // this condition is important
 
       if (!empty($dataColumns)) {
         $conditions = [];
+        $doDelete = false;
         foreach ($dataColumns[$thisTableName] as $propertyName => $columnName) {
+          if ($properties !== null && !in_array($propertyName, $properties)) {
+            continue;
+          }
+
           $property = $this->properties[$propertyName];
           $entityIds = array_keys($property->getValue($entity));
           if (!empty($entityIds)) {
@@ -399,24 +405,31 @@ class DatabaseEntityHandler implements Persistable {
 
         if (!empty($conditions)) {
           $deleteStatement->where(new CondOr(...$conditions));
+          $doDelete = true;
         }
       } else {
         $property = next($nmRelation->getProperties($this));
-        $entityIds = array_keys($property->getValue($entity));
-        if (!empty($entityIds)) {
-          $deleteStatement->where(
-            new CondNot(new CondIn(new Column($refIdColumn), $entityIds))
-          );
+        if ($properties !== null && !in_array($property->getName(), $properties)) {
+          $doDelete = false;
+        } else {
+          $entityIds = array_keys($property->getValue($entity));
+          if (!empty($entityIds)) {
+            $deleteStatement->where(
+              new CondNot(new CondIn(new Column($refIdColumn), $entityIds))
+            );
+          }
         }
       }
 
-      $deleteStatement->execute();
+      if ($doDelete) {
+        $deleteStatement->execute();
+      }
     }
 
-    return $this->insertNM($entity, true);
+    return $this->insertNM($entity, true, $properties);
   }
 
-  public function insertNM(DatabaseEntity $entity, bool $ignoreExisting = true): bool {
+  public function insertNM(DatabaseEntity $entity, bool $ignoreExisting = true, ?array $properties = null): bool {
 
     if (empty($this->nmRelations)) {
       return true;
@@ -446,7 +459,12 @@ class DatabaseEntityHandler implements Persistable {
         ]));
       }
 
+      $doInsert = false;
       foreach ($nmRelation->getProperties($this) as $property) {
+        if ($properties !== null || !in_array($property->getName(), $properties)) {
+          continue;
+        }
+
         $property->setAccessible(true);
         $relEntities = $property->getValue($entity);
         foreach ($relEntities as $relEntity) {
@@ -457,10 +475,13 @@ class DatabaseEntityHandler implements Persistable {
             }
           }
           $statement->addRow(...$nmRow);
+          $doInsert = true;
         }
       }
 
-      $success = $statement->execute() && $success;
+      if ($doInsert) {
+        $success = $statement->execute() && $success;
+      }
     }
 
     return $success;
@@ -656,10 +677,10 @@ class DatabaseEntityHandler implements Persistable {
     return $query;
   }
 
-  private function prepareRow(DatabaseEntity $entity, string $action, ?array $columns = null): bool|array {
+  private function prepareRow(DatabaseEntity $entity, string $action, ?array $properties = null): bool|array {
     $row = [];
     foreach ($this->columns as $propertyName => $column) {
-      if ($columns && !in_array($column->getName(), $columns)) {
+      if ($properties !== null && !in_array($propertyName, $properties)) {
         continue;
       }
 
@@ -690,8 +711,8 @@ class DatabaseEntityHandler implements Persistable {
     return $row;
   }
 
-  public function update(DatabaseEntity $entity, ?array $columns = null, bool $saveNM = false) {
-    $row = $this->prepareRow($entity, "update", $columns);
+  public function update(DatabaseEntity $entity, ?array $properties = null, bool $saveNM = false) {
+    $row = $this->prepareRow($entity, "update", $properties);
     if ($row === false) {
       return false;
     }
@@ -704,9 +725,9 @@ class DatabaseEntityHandler implements Persistable {
       $query->set($columnName, $value);
     }
 
-    $res = $query->execute();
+    $res = empty($row) ? true : $query->execute();
     if ($res && $saveNM) {
-      $res = $this->updateNM($entity);
+      $res = $this->updateNM($entity, $properties);
     }
 
     return $res;
@@ -742,12 +763,12 @@ class DatabaseEntityHandler implements Persistable {
     }
   }
 
-  public function insertOrUpdate(DatabaseEntity $entity, ?array $columns = null, bool $saveNM = false) {
+  public function insertOrUpdate(DatabaseEntity $entity, ?array $properties = null, bool $saveNM = false) {
     $id = $entity->getId();
     if ($id === null) {
       return $this->insert($entity);
     } else {
-      return $this->update($entity, $columns, $saveNM);
+      return $this->update($entity, $properties, $saveNM);
     }
   }
 

@@ -21,14 +21,14 @@ trait Pagination {
     ];
   }
 
-  function initPagination(SQL $sql, string $class, ?Condition $condition = null, int $maxPageSize = 100): bool {
+  function initPagination(SQL $sql, string $class, ?Condition $condition = null, int $maxPageSize = 100, ?array $joins = null): bool {
     $this->paginationClass = $class;
     $this->paginationCondition = $condition;
     if (!$this->validateParameters($maxPageSize)) {
       return false;
     }
 
-    $this->entityCount = call_user_func("$this->paginationClass::count", $sql, $condition);
+    $this->entityCount = call_user_func("$this->paginationClass::count", $sql, $condition, $joins);
     if ($this->entityCount === false) {
       return $this->createError("Error fetching $this->paginationClass::count: " . $sql->getLastError());
     }
@@ -60,7 +60,7 @@ trait Pagination {
     return true;
   }
 
-  function createPaginationQuery(SQL $sql, array $additionalValues = []): DatabaseEntityQuery {
+  function createPaginationQuery(SQL $sql, ?array $additionalValues = null, ?array $joins = null): DatabaseEntityQuery {
     $page = $this->getParam("page");
     $count = $this->getParam("count");
     $orderBy = $this->getParam("orderBy");
@@ -76,9 +76,15 @@ trait Pagination {
       $entityQuery->where($this->paginationCondition);
     }
 
-    if (!empty($additionalValues)) {
+    if ($additionalValues) {
       foreach ($additionalValues as $additionalValue) {
         $entityQuery->addCustomValue($additionalValue);
+      }
+    }
+
+    if ($joins) {
+      foreach ($joins as $join) {
+        $entityQuery->addJoin($join);
       }
     }
 

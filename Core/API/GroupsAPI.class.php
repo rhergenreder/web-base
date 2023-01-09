@@ -32,11 +32,14 @@ namespace Core\API\Groups {
   use Core\API\Parameter\StringType;
   use Core\API\Traits\Pagination;
   use Core\Driver\SQL\Column\Column;
+  use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Expression\Alias;
   use Core\Driver\SQL\Expression\Count;
+  use Core\Driver\SQL\Join\InnerJoin;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Controller\NMRelation;
   use Core\Objects\DatabaseEntity\Group;
+  use Core\Objects\DatabaseEntity\User;
 
   class Fetch extends GroupsAPI {
 
@@ -98,11 +101,46 @@ namespace Core\API\Groups {
         return $this->createError("Group not found");
       } else {
         $this->result["group"] = $group->jsonSerialize();
-        $this->result["group"]["members"] = $group->getMembers($sql);
       }
 
       return true;
     }
+  }
+
+  class GetMembers extends GroupsAPI {
+
+    use Pagination;
+
+    public function __construct(Context $context, bool $externalCall = false) {
+      $paginationParams = self::getPaginationParameters(["id", "name", "fullName"]);
+      $paginationParams["id"] = new Parameter("id", Parameter::TYPE_INT);
+      parent::__construct($context, $externalCall, $paginationParams);
+    }
+
+    protected function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $nmTable = NMRelation::buildTableName(User::class, Group::class);
+      $condition = new Compare("group_id", $this->getParam("id"));
+      $nmJoin = new InnerJoin($nmTable, "$nmTable.user_id", "User.id");
+      if (!$this->initPagination($sql, User::class, $condition, 100, [$nmJoin])) {
+        return false;
+      }
+
+      $userQuery = $this->createPaginationQuery($sql, null, [$nmJoin]);
+      $users = $userQuery->execute();
+      if ($users !== false && $users !== null) {
+        $this->result["members"] = [];
+
+        foreach ($users as $user) {
+          $this->result["users"][] = $user->jsonSerialize(["id", "name", "fullName", "profilePicture"]);
+        }
+      } else {
+        return $this->createError("Error fetching group members: " . $sql->getLastError());
+      }
+
+      return true;
+    }
+
   }
 
   class Create extends GroupsAPI {
@@ -160,17 +198,92 @@ namespace Core\API\Groups {
 
       $sql = $this->context->getSQL();
       $group = Group::find($sql, $id);
+      if ($group === false) {
+        return $this->createError("Error fetching group: " . $sql->getLastError());
+      } else if ($group === null) {
+        return $this->createError("This group does not exist.");
+      } else {
+        $this->success = ($group->delete($sql) !== FALSE);
+        $this->lastError = $sql->getLastError();
+        return $this->success;
+      }
+    }
+  }
 
-      $this->success = ($group !== FALSE);
-      $this->lastError = $sql->getLastError();
+  class AddMember extends GroupsAPI {
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        new Parameter("id", Parameter::TYPE_INT),
+        new Parameter("userId", Parameter::TYPE_INT)
+      ]);
+    }
 
-      if ($this->success && $group === null) {
+    protected function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $groupId = $this->getParam("id");
+      $userId = $this->getParam("userId");
+      $group = Group::find($sql, $groupId);
+      if ($group === false) {
+        return $this->createError("Error fetching group: " . $sql->getLastError());
+      } else if ($group === null) {
         return $this->createError("This group does not exist.");
       }
 
-      $this->success = ($group->delete($sql) !== FALSE);
-      $this->lastError = $sql->getLastError();
-      return $this->success;
+      $user = User::find($sql, $userId, true);
+      if ($user === false) {
+        return $this->createError("Error fetching user: " . $sql->getLastError());
+      } else if ($user === null) {
+        return $this->createError("This user does not exist.");
+      } else if (isset($user->getGroups()[$groupId])) {
+        return $this->createError("This user is already member of this group.");
+      }
+
+      $user->groups[$groupId] = $group;
+      $this->success = $user->save($sql, ["groups"], true);
+      if (!$this->success) {
+        return $this->createError("Error saving user: " . $sql->getLastError());
+      } else {
+        return true;
+      }
     }
   }
+
+  class RemoveMember extends GroupsAPI {
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        new Parameter("id", Parameter::TYPE_INT),
+        new Parameter("userId", Parameter::TYPE_INT)
+      ]);
+    }
+
+    protected function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $groupId = $this->getParam("id");
+      $userId = $this->getParam("userId");
+      $group = Group::find($sql, $groupId);
+      if ($group === false) {
+        return $this->createError("Error fetching group: " . $sql->getLastError());
+      } else if ($group === null) {
+        return $this->createError("This group does not exist.");
+      }
+
+      $user = User::find($sql, $userId, true);
+      if ($user === false) {
+        return $this->createError("Error fetching user: " . $sql->getLastError());
+      } else if ($user === null) {
+        return $this->createError("This user does not exist.");
+      } else if (!isset($user->getGroups()[$groupId])) {
+        return $this->createError("This user is not member of this group.");
+      }
+
+      unset($user->groups[$groupId]);
+      $this->success = $user->save($sql, ["groups"], true);
+      if (!$this->success) {
+        return $this->createError("Error saving user: " . $sql->getLastError());
+      } else {
+        return true;
+      }
+    }
+  }
+
 }

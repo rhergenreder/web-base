@@ -148,7 +148,7 @@ namespace Core\API\TFA {
         $this->lastError = $sql->getLastError();
         if ($this->success) {
           $currentUser->setTwoFactorToken($twoFactorToken);
-          $this->success = $currentUser->save($sql, ["two_factor_token_id"]);
+          $this->success = $currentUser->save($sql, ["twoFactorToken"]);
           $this->lastError = $sql->getLastError();
         }
 

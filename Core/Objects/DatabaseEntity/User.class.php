@@ -98,7 +98,7 @@ class User extends DatabaseEntity {
 
   public function update(SQL $sql): bool {
     $this->lastOnline = new \DateTime();
-    return $this->save($sql, ["last_online", "language_id"]);
+    return $this->save($sql, ["lastOnline", "language"]);
   }
 
   public function setTwoFactorToken(TwoFactorToken $twoFactorToken) {

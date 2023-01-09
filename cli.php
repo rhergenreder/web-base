@@ -42,7 +42,9 @@ if (!$context->isCLI()) {
 $database = $context->getConfig()->getDatabase();
 if ($database !== null && $database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
   if (count($argv) < 3 || $argv[1] !== "db" || !in_array($argv[2], ["shell", "import", "export"])) {
-    $command = array_merge(["docker", "exec", "-it", "php", "php"], $argv);
+    $dockerYaml = yaml_parse(file_get_contents("./docker-compose.yml"));
+    $containerName = $dockerYaml["services"]["php"]["container_name"];
+    $command = array_merge(["docker", "exec", "-it", $containerName, "php"], $argv);
     $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes, "/application");
     exit(proc_close($proc));
   }
@@ -172,7 +174,9 @@ function handleDatabase(array $argv) {
 
     $command = array_merge([$command_bin], $command_args);
     if ($config->getProperty("isDocker", false)) {
-      $command = array_merge(["docker", "exec", "-it", $config->getHost()], $command);
+      $dockerYaml = yaml_parse(file_get_contents("./docker-compose.yml"));
+      $containerName = $dockerYaml["services"]["db"]["container_name"];
+      $command = array_merge(["docker", "exec", "-it", $containerName], $command);
     }
 
     $process = proc_open($command, $descriptorSpec, $pipes, null, $env);

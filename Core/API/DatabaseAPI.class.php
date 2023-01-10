@@ -13,6 +13,7 @@ namespace Core\API\Database {
   use Core\API\DatabaseAPI;
   use Core\API\Parameter\StringType;
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
   class Status extends DatabaseAPI {
 
@@ -48,6 +49,10 @@ namespace Core\API\Database {
         $classPath = "\\$baseDir\\Objects\\DatabaseEntity\\$className";
         if (isClass($classPath)) {
           $class = new \ReflectionClass($classPath);
+          if (!$class->isSubclassOf(DatabaseEntity::class)) {
+            $class = null;
+            continue;
+          }
           break;
         }
       }

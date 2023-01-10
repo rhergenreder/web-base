@@ -30,7 +30,7 @@ class CondIn extends Condition {
       $values = implode(",", $values);
       $values = "($values)";
     } else if($haystack instanceof Select) {
-      $values = $haystack->build($params);
+      $values = $haystack->getExpression($sql, $params);
     } else {
       $sql->getLogger()->error("Unsupported in-expression value: " . get_class($haystack));
       return false;

@@ -92,7 +92,7 @@ class User extends DatabaseEntity {
     return [
       'id' => $this->getId(),
       'username' => $this->name,
-      'language' => $this->language->getName(),
+      'language' => isset($this->language) ? $this->language->getName() : null,
     ];
   }
 

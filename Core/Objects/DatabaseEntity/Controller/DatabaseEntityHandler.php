@@ -3,6 +3,7 @@
 namespace Core\Objects\DatabaseEntity\Controller;
 
 use Core\Driver\Logger\Logger;
+use Core\Driver\SQL\Column\BigIntColumn;
 use Core\Driver\SQL\Column\BoolColumn;
 use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Column\DateTimeColumn;
@@ -10,14 +11,11 @@ use Core\Driver\SQL\Column\EnumColumn;
 use Core\Driver\SQL\Column\IntColumn;
 use Core\Driver\SQL\Column\JsonColumn;
 use Core\Driver\SQL\Column\StringColumn;
-use Core\Driver\SQL\Condition\CondAnd;
-use Core\Driver\SQL\Condition\CondBool;
 use Core\Driver\SQL\Condition\CondIn;
 use Core\Driver\SQL\Condition\Condition;
 use Core\Driver\SQL\Column\DoubleColumn;
 use Core\Driver\SQL\Column\FloatColumn;
 use Core\Driver\SQL\Condition\CondNot;
-use Core\Driver\SQL\Condition\CondOr;
 use Core\Driver\SQL\Constraint\ForeignKey;
 use Core\Driver\SQL\Join\InnerJoin;
 use Core\Driver\SQL\Query\CreateProcedure;
@@ -30,12 +28,14 @@ use Core\Driver\SQL\Strategy\SetNullStrategy;
 use Core\Driver\SQL\Strategy\UpdateStrategy;
 use Core\Driver\SQL\Type\CurrentColumn;
 use Core\Driver\SQL\Type\CurrentTable;
+use Core\Objects\DatabaseEntity\Attribute\BigInt;
 use Core\Objects\DatabaseEntity\Attribute\Enum;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\ExtendingEnum;
 use Core\Objects\DatabaseEntity\Attribute\Json;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Attribute\Multiple;
+use Core\Objects\DatabaseEntity\Attribute\MultipleReference;
 use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Core\Objects\DatabaseEntity\Attribute\Unique;
 
@@ -56,6 +56,7 @@ class DatabaseEntityHandler implements Persistable {
   public function __construct(SQL $sql, \ReflectionClass $entityClass) {
     $this->sql = $sql;
     $className = $entityClass->getName();
+
     $this->logger = new Logger($entityClass->getShortName(), $sql);
     $this->entityClass = $entityClass;
     if (!$this->entityClass->isSubclassOf(DatabaseEntity::class)) {
@@ -70,6 +71,13 @@ class DatabaseEntityHandler implements Persistable {
     $this->nmRelations = []; // table name => NMRelation
     $this->extendingClasses = [];  // enum value => \ReflectionClass
     $this->extendingProperty = null;  // only one attribute can hold the type of the extending class
+  }
+
+  public function init() {
+    $uniqueColumns = self::getAttribute($this->entityClass, Unique::class);
+    if ($uniqueColumns) {
+      $this->constraints[] = new \Core\Driver\SQL\Constraint\Unique($uniqueColumns->getColumns());
+    }
 
     foreach ($this->entityClass->getProperties() as $property) {
       $propertyName = $property->getName();
@@ -132,8 +140,13 @@ class DatabaseEntityHandler implements Persistable {
         if ($enum) {
           $this->columns[$propertyName] = new EnumColumn($columnName, $enum->getValues(), $nullable, $defaultValue);
         } else {
-          $maxLength = self::getAttribute($property, MaxLength::class);
-          $this->columns[$propertyName] = new StringColumn($columnName, $maxLength?->getValue(), $nullable, $defaultValue);
+          $bigInt = self::getAttribute($property, BigInt::class);
+          if ($bigInt) {
+            $this->columns[$propertyName] = new BigIntColumn($columnName, $nullable, $defaultValue, $bigInt->isUnsigned());
+          } else {
+            $maxLength = self::getAttribute($property, MaxLength::class);
+            $this->columns[$propertyName] = new StringColumn($columnName, $maxLength?->getValue(), $nullable, $defaultValue);
+          }
         }
       } else if ($propertyTypeName === 'int') {
         $this->columns[$propertyName] = new IntColumn($columnName, $nullable, $defaultValue);
@@ -152,25 +165,26 @@ class DatabaseEntityHandler implements Persistable {
         } else {
 
           $multiple = self::getAttribute($property, Multiple::class);
-          if (!$multiple) {
+          $multipleReference = self::getAttribute($property, MultipleReference::class);
+          if (!$multiple && !$multipleReference) {
             $this->raiseError("Cannot persist class '$className': Property '$propertyName' has non persist-able type: $propertyTypeName. " .
-              "Is the 'Multiple' attribute missing?");
+              "Is the 'Multiple' or 'MultipleReference' attribute missing?");
           }
 
           try {
-            $refClass = $multiple->getClassName();
+            $refClass = $multiple ? $multiple->getClassName() : $multipleReference->getClassName();
             $requestedClass = new \ReflectionClass($refClass);
             if ($requestedClass->isSubclassOf(DatabaseEntity::class)) {
-              $nmTableName = NMRelation::buildTableName($this->getTableName(), $requestedClass->getShortName());
-              $nmRelation = $this->nmRelations[$nmTableName] ?? null;
-              if (!$nmRelation) {
-                $otherHandler = DatabaseEntity::getHandler($this->sql, $requestedClass);
-                $otherNM = $otherHandler->getNMRelations();
-                $nmRelation = $otherNM[$nmTableName] ?? (new NMRelation($this, $otherHandler));
-                $this->nmRelations[$nmTableName] = $nmRelation;
+              $otherHandler = DatabaseEntity::getHandler($this->sql, $requestedClass);
+              if ($multiple) {
+                $nmRelation = new NMRelation($this, $property, $otherHandler);
+                $this->nmRelations[$propertyName] = $nmRelation;
+              } else {
+                $thisProperty = $multipleReference->getThisProperty();
+                $relProperty = $multipleReference->getRelProperty();
+                $nmRelationReference = new NMRelationReference($otherHandler, $thisProperty, $relProperty);
+                $this->nmRelations[$propertyName] = $nmRelationReference;
               }
-
-              $this->nmRelations[$nmTableName]->addProperty($this, $property);
             } else {
               $this->raiseError("Cannot persist class '$className': Property '$propertyName' of type multiple can " .
                 "only reference DatabaseEntity types, but got: $refClass");
@@ -212,7 +226,11 @@ class DatabaseEntityHandler implements Persistable {
     }
   }
 
-  public static function getAttribute(\ReflectionProperty $property, string $attributeClass): ?object {
+  public function getNMRelations(): array {
+    return $this->nmRelations;
+  }
+
+  public static function getAttribute(\ReflectionProperty|\ReflectionClass $property, string $attributeClass): ?object {
     $attributes = $property->getAttributes($attributeClass);
     $attribute = array_shift($attributes);
     return $attribute?->newInstance();
@@ -241,10 +259,6 @@ class DatabaseEntityHandler implements Persistable {
     return $this->relations;
   }
 
-  public function getNMRelations(): array {
-    return $this->nmRelations;
-  }
-
   public function getColumnName(string $property): string {
     if ($property === "id") {
       return "$this->tableName.id";
@@ -267,10 +281,18 @@ class DatabaseEntityHandler implements Persistable {
   }
 
   public function dependsOn(): array {
-    $foreignTables = array_map(function (DatabaseEntityHandler $relationHandler) {
-      return $relationHandler->getTableName();
-    }, $this->relations);
+    $foreignTables = array_filter(array_map(
+      function (DatabaseEntityHandler $relationHandler) {
+        return $relationHandler->getTableName();
+      }, $this->relations),
+      function ($tableName) {
+        return $tableName !== $this->getTableName();
+      });
     return array_unique($foreignTables);
+  }
+
+  public function getNMRelation(string $property): Persistable {
+    return $this->nmRelations[$property];
   }
 
   public static function getPrefixedRow(array $row, string $prefix): array {
@@ -355,11 +377,10 @@ class DatabaseEntityHandler implements Persistable {
       }
 
       // init n:m / 1:n properties with empty arrays
-      foreach ($this->nmRelations as $nmRelation) {
-        foreach ($nmRelation->getProperties($this) as $property) {
-          $property->setAccessible(true);
-          $property->setValue($entity, []);
-        }
+      foreach ($this->nmRelations as $propertyName => $nmRelation) {
+        $property = $this->properties[$propertyName];
+        $property->setAccessible(true);
+        $property->setValue($entity, []);
       }
 
       $this->properties["id"]->setAccessible(true);
@@ -377,57 +398,32 @@ class DatabaseEntityHandler implements Persistable {
       return true;
     }
 
-    foreach ($this->nmRelations as $nmTable => $nmRelation) {
+    foreach ($this->nmRelations as $nmProperty => $nmRelation) {
+      $property = $this->properties[$nmProperty];
+      $nmTable = $nmRelation->getTableName();
 
-      $thisIdColumn = $nmRelation->getIdColumn($this);
-      $thisTableName = $this->getTableName();
-      $dataColumns = $nmRelation->getDataColumns();
-      $otherHandler = $nmRelation->getOtherHandler($this);
-      $refIdColumn = $nmRelation->getIdColumn($otherHandler);
-
+      if ($nmRelation instanceof NMRelation) {
+        $thisIdColumn = $nmRelation->getIdColumn($this);
+        $otherHandler = $nmRelation->getOtherHandler($this);
+        $refIdColumn = $nmRelation->getIdColumn($otherHandler);
+      } else if ($nmRelation instanceof NMRelationReference) {
+        $thisIdColumn = self::buildColumnName($nmRelation->getThisProperty());
+        $refIdColumn = self::buildColumnName($nmRelation->getRefProperty());
+      } else {
+        throw new \Exception("updateNM not implemented for type: " . get_class($nmRelation));
+      }
 
       // delete from n:m table if no longer exists
-      $doDelete = true;
       $deleteStatement = $this->sql->delete($nmTable)
         ->whereEq($thisIdColumn, $entity->getId());  // this condition is important
 
-      if (!empty($dataColumns)) {
-        $conditions = [];
-        $doDelete = false;
-        foreach ($dataColumns[$thisTableName] as $propertyName => $columnName) {
-          if ($properties !== null && !in_array($propertyName, $properties)) {
-            continue;
-          }
-
-          $property = $this->properties[$propertyName];
-          $entityIds = array_keys($property->getValue($entity));
-          if (!empty($entityIds)) {
-            $conditions[] = new CondAnd(
-              new CondBool($columnName),
-              new CondNot(new CondIn(new Column($refIdColumn), $entityIds)),
-            );
-          }
+      if ($properties === null || in_array($nmProperty, $properties)) {
+        $entityIds = array_keys($property->getValue($entity));
+        if (!empty($entityIds)) {
+          $deleteStatement->where(
+            new CondNot(new CondIn(new Column($refIdColumn), $entityIds))
+          );
         }
-
-        if (!empty($conditions)) {
-          $deleteStatement->where(new CondOr(...$conditions));
-          $doDelete = true;
-        }
-      } else {
-        $property = next($nmRelation->getProperties($this));
-        if ($properties !== null && !in_array($property->getName(), $properties)) {
-          $doDelete = false;
-        } else {
-          $entityIds = array_keys($property->getValue($entity));
-          if (!empty($entityIds)) {
-            $deleteStatement->where(
-              new CondNot(new CondIn(new Column($refIdColumn), $entityIds))
-            );
-          }
-        }
-      }
-
-      if ($doDelete) {
         $deleteStatement->execute();
       }
     }
@@ -442,52 +438,52 @@ class DatabaseEntityHandler implements Persistable {
     }
 
     $success = true;
-    foreach ($this->nmRelations as $nmTable => $nmRelation) {
-      $otherHandler = $nmRelation->getOtherHandler($this);
-      $thisIdColumn = $nmRelation->getIdColumn($this);
-      $thisTableName = $this->getTableName();
-      $refIdColumn = $nmRelation->getIdColumn($otherHandler);
-      $dataColumns = $nmRelation->getDataColumns();
+    foreach ($this->nmRelations as $nmProperty => $nmRelation) {
 
-      $columns = [
-        $thisIdColumn,
-        $refIdColumn,
-      ];
-
-      if (!empty($dataColumns)) {
-        $columns = array_merge($columns, array_values($dataColumns[$thisTableName]));
+      if ($properties !== null && !in_array($nmProperty, $properties)) {
+        continue;
       }
 
-      $statement = $this->sql->insert($nmTable, $columns);
-      if ($ignoreExisting) {
-        $statement->onDuplicateKeyStrategy(new UpdateStrategy($nmRelation->getAllColumns(), [
-          $thisIdColumn => $entity->getId()
-        ]));
+      if ($nmRelation instanceof NMRelation) {
+        $otherHandler = $nmRelation->getOtherHandler($this);
+        $thisIdColumn = $nmRelation->getIdColumn($this);
+        $refIdColumn = $nmRelation->getIdColumn($otherHandler);
+      } else if ($nmRelation instanceof NMRelationReference) {
+        $thisIdColumn = self::buildColumnName($nmRelation->getThisProperty());
+        $refIdColumn = self::buildColumnName($nmRelation->getRefProperty());
+      } else {
+        throw new \Exception("insertNM not implemented for type: " . get_class($nmRelation));
       }
 
-      $doInsert = false;
-      foreach ($nmRelation->getProperties($this) as $property) {
-        if ($properties !== null && !in_array($property->getName(), $properties)) {
-          continue;
-        }
-
-        $property->setAccessible(true);
-        $relEntities = $property->getValue($entity);
-        foreach ($relEntities as $relEntity) {
-          $relEntityId = (is_int($relEntity) ? $relEntity : $relEntity->getId());
-          $nmRow = [$entity->getId(), $relEntityId];
-          if (!empty($dataColumns)) {
-            foreach (array_keys($dataColumns[$thisTableName]) as $propertyName) {
-              $nmRow[] = $property->getName() === $propertyName;
-            }
+      $property = $this->properties[$nmProperty];
+      $property->setAccessible(true);
+      $relEntities = $property->getValue($entity);
+      if (!empty($relEntities)) {
+        if ($nmRelation instanceof NMRelation) {
+          $columns = [$thisIdColumn, $refIdColumn];
+          $nmTable = $nmRelation->getTableName();
+          $statement = $this->sql->insert($nmTable, $columns);
+          if ($ignoreExisting) {
+            $statement->onDuplicateKeyStrategy(new UpdateStrategy($columns, [
+              $thisIdColumn => $entity->getId()
+            ]));
           }
-          $statement->addRow(...$nmRow);
-          $doInsert = true;
-        }
-      }
+          foreach ($relEntities as $relEntity) {
+            $relEntityId = (is_int($relEntity) ? $relEntity : $relEntity->getId());
+            $statement->addRow($entity->getId(), $relEntityId);
+          }
+          $success = $statement->execute() && $success;
+        } else if ($nmRelation instanceof NMRelationReference) {
+          $otherHandler = $nmRelation->getRelHandler();
+          $thisIdProperty = $otherHandler->properties[$nmRelation->getThisProperty()];
+          $thisIdProperty->setAccessible(true);
 
-      if ($doInsert) {
-        $success = $statement->execute() && $success;
+          foreach ($relEntities as $relEntity) {
+            $thisIdProperty->setValue($relEntity, $entity);
+          }
+
+          $success = $otherHandler->getInsertQuery($relEntities)->execute() && $success;
+        }
       }
     }
 
@@ -500,7 +496,7 @@ class DatabaseEntityHandler implements Persistable {
       foreach ($entities as $entity) {
         foreach ($this->relations as $propertyName => $relHandler) {
           $property = $this->properties[$propertyName];
-          if ($property->isInitialized($entity) || true) {
+          if ($property->isInitialized($entity)) {
             $relEntity = $this->properties[$propertyName]->getValue($entity);
             if ($relEntity) {
               $relHandler->fetchNMRelations([$relEntity->getId() => $relEntity], true);
@@ -515,66 +511,66 @@ class DatabaseEntityHandler implements Persistable {
     }
 
     $entityIds = array_keys($entities);
-    foreach ($this->nmRelations as $nmTable => $nmRelation) {
-      $otherHandler = $nmRelation->getOtherHandler($this);
+    foreach ($this->nmRelations as $nmProperty => $nmRelation) {
+      $nmTable = $nmRelation->getTableName();
+      $property = $this->properties[$nmProperty];
+      $property->setAccessible(true);
 
-      $thisIdColumn = $nmRelation->getIdColumn($this);
-      $thisProperties = $nmRelation->getProperties($this);
-      $thisTableName = $this->getTableName();
+      if ($nmRelation instanceof NMRelation) {
+        $thisIdColumn = $nmRelation->getIdColumn($this);
+        $otherHandler = $nmRelation->getOtherHandler($this);
+        $refIdColumn = $nmRelation->getIdColumn($otherHandler);
+        $refTableName = $otherHandler->getTableName();
 
-      $refIdColumn = $nmRelation->getIdColumn($otherHandler);
-      $refProperties = $nmRelation->getProperties($otherHandler);
-      $refTableName = $otherHandler->getTableName();
+        $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
+          ->addJoin(new InnerJoin($nmTable, "$nmTable.$refIdColumn", "$refTableName.id"))
+          ->addSelectValue(new Column($thisIdColumn))
+          ->where(new CondIn(new Column($thisIdColumn), $entityIds));
 
-      $dataColumns = $nmRelation->getDataColumns();
-
-      $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
-        ->addJoin(new InnerJoin($nmTable, "$nmTable.$refIdColumn", "$refTableName.id"))
-        ->where(new CondIn(new Column($thisIdColumn), $entityIds));
-
-      $relEntityQuery->addSelectValue(new Column($thisIdColumn));
-      foreach ($dataColumns as $tableDataColumns) {
-        foreach ($tableDataColumns as $columnName) {
-          $relEntityQuery->addSelectValue(new Column($columnName));
-        }
-      }
-
-      $rows = $relEntityQuery->executeSQL();
-      if (!is_array($rows)) {
-        $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
-        return;
-      }
-
-      $relEntities = [];
-      foreach ($rows as $row) {
-        $relId = $row["id"];
-        if (!isset($relEntities[$relId])) {
-          $relEntity = $otherHandler->entityFromRow($row, [], $recursive);
-          $relEntities[$relId] = $relEntity;
+        $rows = $relEntityQuery->executeSQL();
+        if (!is_array($rows)) {
+          $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
+          return;
         }
 
-        $thisEntity = $entities[$row[$thisIdColumn]];
-        $relEntity = $relEntities[$relId];
-        $mappings = [
-          [$refProperties, $refTableName, $relEntity, $thisEntity],
-          [$thisProperties, $thisTableName, $thisEntity, $relEntity],
-        ];
-
-        foreach ($mappings as $mapping) {
-          list($properties, $tableName, $targetEntity, $entityToAdd) = $mapping;
-          foreach ($properties as $propertyName => $property) {
-            $addToProperty = empty($dataColumns);
-            if (!$addToProperty) {
-              $columnName = $dataColumns[$tableName][$propertyName] ?? null;
-              $addToProperty = ($columnName && $this->sql->parseBool($row[$columnName]));
-            }
-
-            if ($addToProperty) {
-              $targetArray = $property->getValue($targetEntity);
-              $targetArray[$entityToAdd->getId()] = $entityToAdd;
-              $property->setValue($targetEntity, $targetArray);
-            }
+        $relEntities = [];
+        foreach ($rows as $row) {
+          $relId = $row["id"];
+          if (!isset($relEntities[$relId])) {
+            $relEntity = $otherHandler->entityFromRow($row, [], $recursive);
+            $relEntities[$relId] = $relEntity;
           }
+
+          $thisEntity = $entities[$row[$thisIdColumn]];
+          $relEntity = $relEntities[$relId];
+
+          $targetArray = $property->getValue($thisEntity);
+          $targetArray[$relEntity->getId()] = $relEntity;
+          $property->setValue($thisEntity, $targetArray);
+        }
+      } else if ($nmRelation instanceof NMRelationReference) {
+        $otherHandler = $nmRelation->getRelHandler();
+        $thisIdColumn = self::buildColumnName($nmRelation->getThisProperty());
+        $relIdColumn  = self::buildColumnName($nmRelation->getRefProperty());
+
+        $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
+          ->where(new CondIn(new Column($thisIdColumn), $entityIds));
+        $rows = $relEntityQuery->executeSQL();
+        if (!is_array($rows)) {
+          $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
+          return;
+        }
+
+        $thisIdProperty = $otherHandler->properties[$nmRelation->getThisProperty()];
+        $thisIdProperty->setAccessible(true);
+
+        foreach ($rows as $row) {
+          $relEntity = $otherHandler->entityFromRow($row, [], $recursive);
+          $thisEntity = $entities[$row[$thisIdColumn]];
+          $thisIdProperty->setValue($relEntity, $thisEntity);
+          $targetArray = $property->getValue($thisEntity);
+          $targetArray[$row[$relIdColumn]] = $relEntity;
+          $property->setValue($thisEntity, $targetArray);
         }
       }
     }

@@ -226,6 +226,7 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
     if (!$handler || $allowOverride) {
       $handler = new DatabaseEntityHandler($sql, $class);
       self::$handlers[$class->getShortName()] = $handler;
+      $handler->init();
     }
 
     return $handler;

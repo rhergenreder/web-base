@@ -14,5 +14,4 @@ class Multiple {
   public function getClassName(): string {
     return $this->className;
   }
-
 }

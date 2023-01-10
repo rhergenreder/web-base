@@ -62,8 +62,9 @@ namespace Core\API\Groups {
         return false;
       }
 
+      $nmTable = User::getHandler($sql)->getNMRelation("groups")->getTableName();
       $memberCount = new Alias($sql->select(new Count())
-        ->from(NMRelation::buildTableName("User", "Group"))
+        ->from($nmTable)
         ->whereEq("group_id", new Column("Group.id")), "memberCount");
 
       $groupsQuery = $this->createPaginationQuery($sql, [$memberCount]);
@@ -119,7 +120,7 @@ namespace Core\API\Groups {
 
     protected function _execute(): bool {
       $sql = $this->context->getSQL();
-      $nmTable = NMRelation::buildTableName(User::class, Group::class);
+      $nmTable = User::getHandler($sql)->getNMRelation("groups")->getTableName();
       $condition = new Compare("group_id", $this->getParam("id"));
       $nmJoin = new InnerJoin($nmTable, "$nmTable.user_id", "User.id");
       if (!$this->initPagination($sql, User::class, $condition, 100, [$nmJoin])) {

@@ -29,7 +29,7 @@ class Group extends DatabaseEntity {
   }
 
   public function getMembers(SQL $sql): array {
-    $nmTable = NMRelation::buildTableName(User::class, Group::class);
+    $nmTable = User::getHandler($sql)->getNMRelation("groups")->getTableName();
     $users = User::findBy(User::createBuilder($sql, false)
       ->innerJoin($nmTable, "user_id", "User.id")
       ->whereEq("group_id", $this->id));

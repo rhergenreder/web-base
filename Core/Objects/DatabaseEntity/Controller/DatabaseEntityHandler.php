@@ -546,6 +546,10 @@ class DatabaseEntityHandler implements Persistable {
           ->addSelectValue(new Column($thisIdColumn))
           ->where(new CondIn(new Column($thisIdColumn), $entityIds));
 
+        if ($recursive) {
+          $relEntityQuery->fetchEntities(true);
+        }
+
         $rows = $relEntityQuery->executeSQL();
         if (!is_array($rows)) {
           $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
@@ -574,6 +578,11 @@ class DatabaseEntityHandler implements Persistable {
 
         $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
           ->where(new CondIn(new Column($thisIdColumn), $entityIds));
+
+        if ($recursive) {
+          $relEntityQuery->fetchEntities(true);
+        }
+
         $rows = $relEntityQuery->executeSQL();
         if (!is_array($rows)) {
           $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
@@ -590,6 +599,16 @@ class DatabaseEntityHandler implements Persistable {
           $targetArray = $property->getValue($thisEntity);
           $targetArray[$row[$relIdColumn]] = $relEntity;
           $property->setValue($thisEntity, $targetArray);
+        }
+      } else {
+        $this->logger->error("fetchNMRelations for type '" . get_class($nmRelation) . "' is not implemented");
+        continue;
+      }
+
+      if ($recursive) {
+        foreach ($entities as $entity) {
+          $relEntities = $property->getValue($entity);
+          $otherHandler->fetchNMRelations($relEntities);
         }
       }
     }

@@ -94,6 +94,14 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
           } else if ($value instanceof DatabaseEntity) {
             $subPropertyNames = $propertyNames[$propertyName] ?? null;
             $value = $value->jsonSerialize($subPropertyNames);
+          } else if (is_array($value)) {
+            $subPropertyNames = $propertyNames[$propertyName] ?? null;
+            $value = array_map(function ($item) use ($subPropertyNames) {
+              if ($item instanceof DatabaseEntity) {
+                $item = $item->jsonSerialize($subPropertyNames);
+              }
+              return $item;
+            }, $value);
           }
 
           $jsonArray[$property->getName()] = $value;

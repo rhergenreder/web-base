@@ -137,4 +137,8 @@ class User extends DatabaseEntity {
       return false;
     }
   }
+
+  public function getDisplayName(): string {
+    return !empty($this->fullName) ? $this->fullName : $this->name;
+  }
 }

@@ -12,7 +12,7 @@ class MultipleReference {
   private string $thisProperty;
   private string $relProperty;
 
-  public function __construct(string $className, string $thisProperty, string $relProperty) {
+  public function __construct(string $className, string $thisProperty, string $relProperty = "id") {
     $this->className = $className;
     $this->thisProperty = $thisProperty;
     $this->relProperty = $relProperty;

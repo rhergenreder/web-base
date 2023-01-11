@@ -58,9 +58,9 @@ class NMRelation implements Persistable {
 
   public function getOtherHandler(DatabaseEntityHandler $handler): DatabaseEntityHandler {
     if ($handler === $this->thisHandler) {
-      return $this->thisHandler;
-    } else {
       return $this->otherHandler;
+    } else {
+      return $this->thisHandler;
     }
   }
 }

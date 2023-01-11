@@ -74,6 +74,9 @@ class DatabaseEntityHandler implements Persistable {
   }
 
   public function init() {
+    $className = $this->entityClass->getName();
+
+
     $uniqueColumns = self::getAttribute($this->entityClass, Unique::class);
     if ($uniqueColumns) {
       $this->constraints[] = new \Core\Driver\SQL\Constraint\Unique($uniqueColumns->getColumns());

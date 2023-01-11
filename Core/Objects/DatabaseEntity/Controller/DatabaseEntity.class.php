@@ -109,7 +109,7 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
       }
     }
 
-    if ($propertyNames === null) {
+    if ($propertyNames === null && !empty($this->customData)) {
       $jsonArray = array_merge($jsonArray, $this->customData);
     }
 

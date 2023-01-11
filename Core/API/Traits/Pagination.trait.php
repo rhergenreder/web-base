@@ -12,7 +12,8 @@ use Core\Objects\DatabaseEntity\User;
 
 trait Pagination {
 
-  static function getPaginationParameters(array $orderColumns, string $defaultOrderBy = "id", string $defaultSortOrder = "asc"): array {
+  function getPaginationParameters(array $orderColumns, string $defaultOrderBy = "id", string $defaultSortOrder = "asc"): array {
+    $this->paginationOrderColumns = $orderColumns;
     return [
       'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
       'count' => new Parameter('count', Parameter::TYPE_INT, true, 20),

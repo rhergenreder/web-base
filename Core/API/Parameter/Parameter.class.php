@@ -77,7 +77,12 @@ class Parameter {
   public function getTypeName(): string {
     $typeName = Parameter::names[$this->type] ?? "INVALID";
     if ($this->choices) {
-      $typeName .= ", choices: " . json_encode($this->choices);
+      $typeName .= ", choices=" . json_encode($this->choices);
+    }
+
+    $format = $this->getSwaggerFormat();
+    if ($format && $this->type !== self::TYPE_EMAIL) {
+      $typeName .= ", format='$format'";
     }
 
     return $typeName;

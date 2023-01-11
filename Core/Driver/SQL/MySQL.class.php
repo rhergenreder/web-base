@@ -201,7 +201,10 @@ class MySQL extends SQL {
         }
       }
     } catch (\mysqli_sql_exception $exception) {
-      $this->lastError = $this->logger->error("MySQL::execute failed: $stmt->error ($stmt->errno)");
+      $this->lastError = $this->logger->error("MySQL::execute failed: " .
+      ($stmt !== null
+        ? "$stmt->error ($stmt->errno)"
+        : $exception->getMessage()));
     } finally {
 
       if ($res !== null && !is_bool($res) && $fetchType !== self::FETCH_ITERATIVE) {

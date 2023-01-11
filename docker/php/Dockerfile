@@ -1,13 +1,17 @@
 FROM composer:latest AS composer
-FROM php:8.0-fpm
+FROM php:8.1-fpm
 WORKDIR "/application"
+
+ARG ADDITIONAL_PACKAGES
+ARG ADDITIONAL_SCRIPT
+
 RUN mkdir -p /application/core/Configuration /var/www/.gnupg && \
     chown -R www-data:www-data /application /var/www/ && \
     chmod 700 /var/www/.gnupg
 
-# YAML + dev dependencies
+# YAML + dev dependencies + additional packages
 RUN apt-get update -y &&  \
-    apt-get install -y libyaml-dev libzip-dev libgmp-dev libpng-dev gnupg2 && \
+    apt-get install -y libyaml-dev libzip-dev libgmp-dev libpng-dev gnupg2 $ADDITIONAL_PACKAGES && \
     pecl install yaml && docker-php-ext-enable yaml && \
     docker-php-ext-install gd
 
@@ -26,6 +30,9 @@ RUN docker-php-ext-install mysqli zip gmp
 
 # clean cache
 RUN apt-get clean
+
+# run additional scripts
+RUN if [[ ! -z "$ADDITIONAL_SCRIPT" ]]; then $ADDITIONAL_SCRIPT; fi
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 USER www-data

@@ -37,28 +37,11 @@ namespace Core\API\Settings {
        $key = $this->getParam("key");
        $sql = $this->context->getSQL();
 
-       $query = $sql->select("name", "value") ->from("Settings");
-
-       if (!is_null($key)) {
-         $query->where(new CondRegex(new Column("name"), $key));
-       }
-
-       // filter sensitive values, if called from outside
-       if ($this->isExternalCall()) {
-         $query->where(new CondNot("private"));
-       }
-
-       $res = $query->execute();
-
-       $this->success = ($res !== FALSE);
-       $this->lastError = $sql->getLastError();
-
-       if ($this->success) {
-         $settings = array();
-         foreach($res as $row) {
-           $settings[$row["name"]] = $row["value"];
-         }
+       $settings = Settings::getAll($sql, $key);
+       if ($settings !== null) {
          $this->result["settings"] = $settings;
+       } else {
+         return $this->createError("Error fetching settings: " . $sql->getLastError());
        }
 
        return $this->success;
@@ -151,7 +134,7 @@ namespace Core\API\Settings {
       return null;
     }
 
-    private function deleteKeys(array $keys) {
+    private function deleteKeys(array $keys): bool {
       $sql = $this->context->getSQL();
       $res = $sql->delete("Settings")
         ->where(new CondIn(new Column("name"), $keys))

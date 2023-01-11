@@ -7,7 +7,11 @@
 namespace Core\Configuration;
 
 use Core\Driver\Logger\Logger;
+use Core\Driver\SQL\Column\Column;
+use Core\Driver\SQL\Condition\CondNot;
+use Core\Driver\SQL\Condition\CondRegex;
 use Core\Driver\SQL\Query\Insert;
+use Core\Driver\SQL\SQL;
 use Core\Objects\Context;
 
 class Settings {
@@ -43,6 +47,41 @@ class Settings {
 
   public function __construct() {
     $this->logger = new Logger("Settings");
+  }
+
+  public static function getAll(?SQL $sql, ?string $pattern = null, bool $external = false): ?array {
+    $query = $sql->select("name", "value") ->from("Settings");
+
+    if ($pattern) {
+      $query->where(new CondRegex(new Column("name"), $pattern));
+    }
+
+    if ($external) {
+      $query->where(new CondNot("private"));
+    }
+
+    $res = $query->execute();
+    if ($res !== false && $res !== null) {
+      $settings = array();
+      foreach($res as $row) {
+        $settings[$row["name"]] = $row["value"];
+      }
+      return $settings;
+    } else {
+      return null;
+    }
+  }
+
+  public static function get(?SQL $sql, string $key, mixed $defaultValue): mixed {
+    $res = $sql->select("value") ->from("Settings")
+      ->whereEq("name", $key)
+      ->execute();
+
+    if ($res === false || $res === null) {
+      return null;
+    } else {
+      return (empty($res)) ? $defaultValue : $res[0]["value"];
+    }
   }
 
   public function getJwtPublicKey(bool $allowPrivate = true): ?\Firebase\JWT\Key {

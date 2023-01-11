@@ -12,12 +12,12 @@ use Core\Objects\DatabaseEntity\User;
 
 trait Pagination {
 
-  static function getPaginationParameters(array $orderColumns): array {
+  static function getPaginationParameters(array $orderColumns, string $defaultOrderBy = "id", string $defaultSortOrder = "asc"): array {
     return [
       'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
       'count' => new Parameter('count', Parameter::TYPE_INT, true, 20),
-      'orderBy' => new StringType('orderBy', -1, true, "id", $orderColumns),
-      'sortOrder' => new StringType('sortOrder', -1, true, 'asc', ['asc', 'desc']),
+      'orderBy' => new StringType('orderBy', -1, true, $defaultOrderBy, $orderColumns),
+      'sortOrder' => new StringType('sortOrder', -1, true, $defaultSortOrder, ['asc', 'desc']),
     ];
   }
 

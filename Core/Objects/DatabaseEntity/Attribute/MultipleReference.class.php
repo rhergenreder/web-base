@@ -2,8 +2,8 @@
 
 namespace Core\Objects\DatabaseEntity\Attribute;
 
-
-namespace Core\Objects\DatabaseEntity\Attribute;
+// Managed NM table, e.g. #[MultipleReference(Y::class, "x", "z")] in X::class will use
+// the table of Y::class and lookup values by column "x_id" and create an array with keys of "z_id" holding a reference of Y
 
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
 class MultipleReference {

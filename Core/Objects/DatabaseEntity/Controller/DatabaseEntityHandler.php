@@ -149,7 +149,12 @@ class DatabaseEntityHandler implements Persistable {
           }
         }
       } else if ($propertyTypeName === 'int') {
-        $this->columns[$propertyName] = new IntColumn($columnName, $nullable, $defaultValue);
+        $bigInt = self::getAttribute($property, BigInt::class);
+        if ($bigInt) {
+          $this->columns[$propertyName] = new BigIntColumn($columnName, $nullable, $defaultValue, $bigInt->isUnsigned());
+        } else {
+          $this->columns[$propertyName] = new IntColumn($columnName, $nullable, $defaultValue);
+        }
       } else if ($propertyTypeName === 'float') {
         $this->columns[$propertyName] = new FloatColumn($columnName, $nullable, $defaultValue);
       } else if ($propertyTypeName === 'double') {
@@ -259,11 +264,19 @@ class DatabaseEntityHandler implements Persistable {
     return $this->relations;
   }
 
-  public function getColumnName(string $property): string {
-    if ($property === "id") {
-      return "$this->tableName.id";
+  public function getColumnName(string $property, bool $withTableName = true): string {
+    if ($withTableName) {
+      if ($property === "id") {
+        return "$this->tableName.id";
+      } else {
+        return $this->tableName . "." . $this->columns[$property]->getName();
+      }
     } else {
-      return $this->tableName . "." . $this->columns[$property]->getName();
+      if ($property === "id") {
+        return "id";
+      } else {
+        return $this->columns[$property]->getName();
+      }
     }
   }
 
@@ -293,6 +306,10 @@ class DatabaseEntityHandler implements Persistable {
 
   public function getNMRelation(string $property): Persistable {
     return $this->nmRelations[$property];
+  }
+
+  public function getProperty(string $property): \ReflectionProperty {
+    return $this->properties[$property];
   }
 
   public static function getPrefixedRow(array $row, string $prefix): array {
@@ -407,8 +424,9 @@ class DatabaseEntityHandler implements Persistable {
         $otherHandler = $nmRelation->getOtherHandler($this);
         $refIdColumn = $nmRelation->getIdColumn($otherHandler);
       } else if ($nmRelation instanceof NMRelationReference) {
-        $thisIdColumn = self::buildColumnName($nmRelation->getThisProperty());
-        $refIdColumn = self::buildColumnName($nmRelation->getRefProperty());
+        $otherHandler = $nmRelation->getRelHandler();
+        $thisIdColumn = $otherHandler->getColumnName($nmRelation->getThisProperty(), false);
+        $refIdColumn = $otherHandler->getColumnName($nmRelation->getRefProperty(), false);
       } else {
         throw new \Exception("updateNM not implemented for type: " . get_class($nmRelation));
       }
@@ -449,8 +467,9 @@ class DatabaseEntityHandler implements Persistable {
         $thisIdColumn = $nmRelation->getIdColumn($this);
         $refIdColumn = $nmRelation->getIdColumn($otherHandler);
       } else if ($nmRelation instanceof NMRelationReference) {
-        $thisIdColumn = self::buildColumnName($nmRelation->getThisProperty());
-        $refIdColumn = self::buildColumnName($nmRelation->getRefProperty());
+        $otherHandler = $nmRelation->getRelHandler();
+        $thisIdColumn = $otherHandler->getColumnName($nmRelation->getThisProperty(), false);
+        $refIdColumn = $otherHandler->getColumnName($nmRelation->getRefProperty(), false);
       } else {
         throw new \Exception("insertNM not implemented for type: " . get_class($nmRelation));
       }
@@ -550,8 +569,8 @@ class DatabaseEntityHandler implements Persistable {
         }
       } else if ($nmRelation instanceof NMRelationReference) {
         $otherHandler = $nmRelation->getRelHandler();
-        $thisIdColumn = self::buildColumnName($nmRelation->getThisProperty());
-        $relIdColumn  = self::buildColumnName($nmRelation->getRefProperty());
+        $thisIdColumn = $otherHandler->getColumnName($nmRelation->getThisProperty(), false);
+        $relIdColumn  = $otherHandler->getColumnName($nmRelation->getRefProperty(), false);
 
         $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
           ->where(new CondIn(new Column($thisIdColumn), $entityIds));

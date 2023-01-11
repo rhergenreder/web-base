@@ -22,7 +22,7 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
 
   private static array $handlers = [];
   protected ?int $id;
-  #[Transient] protected array $customData = [];
+  #[Transient] public array $customData = [];
 
   public function __construct(?int $id = null) {
     $this->id = $id;
@@ -99,6 +99,10 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
           $jsonArray[$property->getName()] = $value;
         }
       }
+    }
+
+    if ($propertyNames === null) {
+      $jsonArray = array_merge($jsonArray, $this->customData);
     }
 
     return $jsonArray;

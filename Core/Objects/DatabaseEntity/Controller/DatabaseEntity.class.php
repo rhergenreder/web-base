@@ -124,6 +124,7 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
 
   public function preInsert(array &$row) { }
   public function postFetch(SQL $sql, array $row) { }
+  public function postUpdate() { }
   public static function getPredefinedValues(): array { return []; }
   public function postDelete() { }
 

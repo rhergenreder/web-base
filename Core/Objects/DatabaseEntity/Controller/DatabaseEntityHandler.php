@@ -578,30 +578,31 @@ class DatabaseEntityHandler implements Persistable {
         $otherHandler = $nmRelation->getRelHandler();
         $thisIdColumn = $otherHandler->getColumnName($nmRelation->getThisProperty(), false);
         $relIdColumn  = $otherHandler->getColumnName($nmRelation->getRefProperty(), false);
+        if (!empty($entityIds)) {
+          $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
+            ->where(new CondIn(new Column($thisIdColumn), $entityIds));
 
-        $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
-          ->where(new CondIn(new Column($thisIdColumn), $entityIds));
+          if ($recursive) {
+            $relEntityQuery->fetchEntities(true);
+          }
 
-        if ($recursive) {
-          $relEntityQuery->fetchEntities(true);
-        }
+          $rows = $relEntityQuery->executeSQL();
+          if (!is_array($rows)) {
+            $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
+            return;
+          }
 
-        $rows = $relEntityQuery->executeSQL();
-        if (!is_array($rows)) {
-          $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
-          return;
-        }
+          $thisIdProperty = $otherHandler->properties[$nmRelation->getThisProperty()];
+          $thisIdProperty->setAccessible(true);
 
-        $thisIdProperty = $otherHandler->properties[$nmRelation->getThisProperty()];
-        $thisIdProperty->setAccessible(true);
-
-        foreach ($rows as $row) {
-          $relEntity = $otherHandler->entityFromRow($row, [], $recursive);
-          $thisEntity = $entities[$row[$thisIdColumn]];
-          $thisIdProperty->setValue($relEntity, $thisEntity);
-          $targetArray = $property->getValue($thisEntity);
-          $targetArray[$row[$relIdColumn]] = $relEntity;
-          $property->setValue($thisEntity, $targetArray);
+          foreach ($rows as $row) {
+            $relEntity = $otherHandler->entityFromRow($row, [], $recursive);
+            $thisEntity = $entities[$row[$thisIdColumn]];
+            $thisIdProperty->setValue($relEntity, $thisEntity);
+            $targetArray = $property->getValue($thisEntity);
+            $targetArray[$row[$relIdColumn]] = $relEntity;
+            $property->setValue($thisEntity, $targetArray);
+          }
         }
       } else {
         $this->logger->error("fetchNMRelations for type '" . get_class($nmRelation) . "' is not implemented");
@@ -785,6 +786,7 @@ class DatabaseEntityHandler implements Persistable {
       $res = $this->updateNM($entity, $properties);
     }
 
+    $entity->postUpdate();
     return $res;
   }
 

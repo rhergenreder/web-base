@@ -103,6 +103,11 @@ class DatabaseEntityQuery extends Select {
   private function fetchRelation(string $propertyName, string $tableName, DatabaseEntityHandler $src, DatabaseEntityHandler $relationHandler,
                                  int &$relIndex = 1, bool $recursive = false, string $relationColumnPrefix = "") {
 
+    // TODO: fix recursion here...
+    if ($src === $relationHandler && $recursive) {
+      return;
+    }
+
     $columns = $src->getColumns();
 
     $foreignColumn = $columns[$propertyName];

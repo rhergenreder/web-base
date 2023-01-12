@@ -125,6 +125,7 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
   public function preInsert(array &$row) { }
   public function postFetch(SQL $sql, array $row) { }
   public static function getPredefinedValues(): array { return []; }
+  public function postDelete() { }
 
   public static function fromRow(SQL $sql, array $row): static {
     $handler = self::getHandler($sql);
@@ -207,6 +208,7 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
     }
 
     if ($handler->delete($this->id)) {
+      $this->postDelete();
       $this->id = null;
       return true;
     }

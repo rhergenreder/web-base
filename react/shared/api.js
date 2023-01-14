@@ -1,4 +1,5 @@
 import {USER_GROUP_ADMIN} from "./constants";
+import {isInt} from "./util";
 
 export default class API {
     constructor() {
@@ -14,13 +15,22 @@ export default class API {
 
     async apiCall(method, params) {
         params = params || { };
-        params.csrfToken = this.csrfToken();
-        let response = await fetch("/api/" + method, {
-            method: 'post',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(params)
-        });
+        const csrfToken = this.csrfToken();
+        const config = {method: 'post'};
+        if (params instanceof FormData) {
+            if (csrfToken) {
+                params.append("csrfToken", csrfToken);
+            }
+            config.body = params;
+        } else {
+            if (csrfToken) {
+                params.csrfToken = csrfToken;
+            }
+            config.headers = {'Content-Type': 'application/json'};
+            config.body = JSON.stringify(params);
+        }
 
+        let response = await fetch("/api/" + method, config);
         let res = await response.json();
         if (!res.success && res.msg === "You are not logged in.") {
             this.loggedIn = false;
@@ -35,7 +45,7 @@ export default class API {
         }
 
         for (const permission of this.permissions) {
-            if (method.endsWith("*") && permission.toLowerCase().startsWith(method.toLowerCase().substr(0, method.length - 1))) {
+            if (method.endsWith("*") && permission.toLowerCase().startsWith(method.toLowerCase().substring(0, method.length - 1))) {
                 return true;
             } else if (method.toLowerCase() === permission.toLowerCase()) {
                 return true;
@@ -48,7 +58,7 @@ export default class API {
 
     hasGroup(groupIdOrName) {
         if (this.loggedIn && this.user?.groups) {
-            if (!isNaN(groupIdOrName) && (typeof groupIdOrName === 'string' && groupIdOrName.match(/^\d+$/))) {
+            if (isInt(groupIdOrName)) {
                 return this.user.groups.hasOwnProperty(groupIdOrName);
             } else {
                 let userGroups = Object.values(this.user.groups);

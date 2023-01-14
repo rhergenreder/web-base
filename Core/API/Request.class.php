@@ -144,7 +144,7 @@ abstract class Request {
 
     if ($this->externalCall) {
       $values = $_REQUEST;
-      if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER["CONTENT_TYPE"]) && in_array("application/json", explode(";", $_SERVER["CONTENT_TYPE"]))) {
+      if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array("application/json", explode(";", $_SERVER["CONTENT_TYPE"] ?? ""))) {
         $jsonData = json_decode(file_get_contents('php://input'), true);
         if ($jsonData !== null) {
           $values = array_merge($values, $jsonData);
@@ -430,6 +430,44 @@ abstract class Request {
       return [$fileName, $imageName];
     } catch (\ImagickException $ex) {
       return $this->createError("Error processing image: " . $ex->getMessage());
+    }
+  }
+
+  protected function getFileUpload(string $name, bool $allowMultiple = false, ?array $extensions = null): false|array {
+    if (!isset($_FILES[$name]) || (is_array($_FILES[$name]["name"]) && empty($_FILES[$name]["name"])) || empty($_FILES[$name]["name"])) {
+      return $this->createError("Missing form-field '$name'");
+    }
+
+    $files = [];
+    if (is_array($_FILES[$name]["name"])) {
+      $numFiles = count($_FILES[$name]["name"]);
+      if (!$allowMultiple && $numFiles > 1) {
+        return $this->createError("Only one file allowed for form-field '$name'");
+      } else {
+        for ($i = 0; $i < $numFiles; $i++) {
+          $fileName = $_FILES[$name]["name"][$i];
+          $filePath = $_FILES[$name]["tmp_name"][$i];
+          $files[$fileName] = $filePath;
+
+          if (!empty($extensions) && !in_array(pathinfo($fileName, PATHINFO_EXTENSION), $extensions)) {
+            return $this->createError("File '$fileName' has forbidden extension, allowed: " . implode(",", $extensions));
+          }
+        }
+      }
+    } else {
+      $fileName = $_FILES[$name]["name"];
+      $filePath = $_FILES[$name]["tmp_name"];
+      $files[$fileName] = $filePath;
+      if (!empty($extensions) && !in_array(pathinfo($fileName, PATHINFO_EXTENSION), $extensions)) {
+        return $this->createError("File '$fileName' has forbidden extension, allowed: " . implode(",", $extensions));
+      }
+    }
+
+    if ($allowMultiple) {
+      return $files;
+    } else {
+      $fileName = key($files);
+      return [$fileName, $files[$fileName]];
     }
   }
 }

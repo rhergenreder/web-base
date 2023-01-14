@@ -160,6 +160,9 @@ class Parameter {
         if ($value instanceof DateTime) {
           $this->value = $value;
           $valid = true;
+        } else if (is_int($value) || (is_string($value) && preg_match("/^\d+$/", $value))) {
+          $this->value = (new \DateTime())->setTimestamp(intval($value));
+          $valid = true;
         } else {
           $format = $this->getFormat();
           $d = DateTime::createFromFormat($format, $value);

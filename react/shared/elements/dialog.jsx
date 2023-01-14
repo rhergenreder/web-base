@@ -1,14 +1,16 @@
 import React from "react";
 import clsx from "clsx";
+import {Box, Modal} from "@mui/material";
+import {Button, Typography} from "@material-ui/core";
+import "./dialog.css";
 
 export default function Dialog(props) {
 
     const show = props.show;
-    const classes = ["modal", "fade"];
-    const style = { paddingRight: "12px", display: (show ? "block" : "none") };
     const onClose = props.onClose || function() { };
     const onOption = props.onOption || function() { };
     const options = props.options || ["Close"];
+    const type = props.type || "default";
 
     let buttons = [];
     for (let name of options) {
@@ -17,31 +19,27 @@ export default function Dialog(props) {
         else if(name === "No") type = "danger";
 
         buttons.push(
-            <button type="button" key={"button-" + name} className={"btn btn-" + type}
+            <Button variant={"outlined"} size={"small"} type="button" key={"button-" + name}
                     data-dismiss={"modal"} onClick={() => { onClose(); onOption(name); }}>
                 {name}
-            </button>
+            </Button>
         )
     }
 
-    return (
-        <div className={clsx(classes, show && "show")} style={style} aria-modal={"true"} onClick={() => onClose()}>
-            <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h4 className="modal-title">{props.title}</h4>
-                        <button type="button" className="close" data-dismiss="modal" aria-label="Close" onClick={() => onClose()}>
-                            <span aria-hidden="true">×</span>
-                        </button>
-                    </div>
-                    <div className="modal-body">
-                        <p>{props.message}</p>
-                    </div>
-                    <div className="modal-footer">
-                        { buttons }
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+    return <Modal
+        open={show}
+        onClose={onClose}
+        aria-labelledby="modal-title"
+        aria-describedby="modal-description"
+    >
+        <Box className={clsx("modal-dialog", props.className)}>
+            <Typography id="modal-title" variant="h6" component="h2">
+                {props.title}
+            </Typography>
+            <Typography id="modal-description" sx={{ mt: 2 }}>
+                {props.message}
+            </Typography>
+            { buttons }
+        </Box>
+    </Modal>
 }

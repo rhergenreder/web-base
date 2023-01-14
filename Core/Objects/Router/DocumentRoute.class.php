@@ -26,7 +26,7 @@ class DocumentRoute extends Route {
 
   protected function readExtra() {
     parent::readExtra();
-    $this->args = json_decode($this->extra);
+    $this->args = json_decode($this->extra) ?? [];
   }
 
   public function preInsert(array &$row) {

@@ -13,11 +13,15 @@ class StringType extends Parameter {
   }
 
   public function parseParam($value): bool {
-    if(!is_string($value)) {
+    if (!parent::parseParam($value)) {
       return false;
     }
 
-    if($this->maxLength > 0 && strlen($value) > $this->maxLength) {
+    if (!is_string($value)) {
+      return false;
+    }
+
+    if ($this->maxLength > 0 && strlen($value) > $this->maxLength) {
       return false;
     }
 

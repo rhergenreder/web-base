@@ -94,7 +94,9 @@ class DatabaseEntityQuery extends Select {
 
     $relIndex = 1;
     foreach ($this->handler->getRelations() as $propertyName => $relationHandler) {
-      $this->fetchRelation($propertyName, $this->handler->getTableName(), $this->handler, $relationHandler, $relIndex, $recursive);
+      if ($this->handler !== $relationHandler) {
+        $this->fetchRelation($propertyName, $this->handler->getTableName(), $this->handler, $relationHandler, $relIndex, $recursive);
+      }
     }
 
     return $this;
@@ -116,7 +118,6 @@ class DatabaseEntityQuery extends Select {
     $isNullable = !$foreignColumn->notNull();
     $alias = "t$relIndex"; // t1, t2, t3, ...
     $relIndex++;
-
 
     if ($isNullable) {
       $this->leftJoin($referencedTable, "$tableName.$foreignColumnName", "$alias.id", $alias);
@@ -153,21 +154,21 @@ class DatabaseEntityQuery extends Select {
     if ($this->resultType === SQL::FETCH_ALL) {
       $entities = [];
       foreach ($res as $row) {
-        $entity = $this->handler->entityFromRow($row, $this->additionalColumns, $this->fetchSubEntities !== self::FETCH_NONE);
+        $entity = $this->handler->entityFromRow($row, $this->additionalColumns, $this->fetchSubEntities);
         if ($entity) {
           $entities[$entity->getId()] = $entity;
         }
       }
 
       if ($this->fetchSubEntities !== self::FETCH_NONE) {
-        $this->handler->fetchNMRelations($entities, $this->fetchSubEntities === self::FETCH_RECURSIVE);
+        $this->handler->fetchNMRelations($entities, $this->fetchSubEntities);
       }
 
       return $entities;
     } else if ($this->resultType === SQL::FETCH_ONE) {
-      $entity = $this->handler->entityFromRow($res, $this->additionalColumns, $this->fetchSubEntities !== self::FETCH_NONE);
+      $entity = $this->handler->entityFromRow($res, $this->additionalColumns, $this->fetchSubEntities);
       if ($entity instanceof DatabaseEntity && $this->fetchSubEntities !== self::FETCH_NONE) {
-        $this->handler->fetchNMRelations([$entity->getId() => $entity], $this->fetchSubEntities === self::FETCH_RECURSIVE);
+        $this->handler->fetchNMRelations([$entity->getId() => $entity], $this->fetchSubEntities);
       }
 
       return $entity;

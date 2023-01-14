@@ -17,7 +17,7 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
 
   public static function setUpBeforeClass(): void {
     parent::setUpBeforeClass();
-    self::$CONTEXT = new Context();
+    self::$CONTEXT = Context::instance();
     if (!self::$CONTEXT->initSQL()) {
       throw new Exception("Could not establish database connection");
     }

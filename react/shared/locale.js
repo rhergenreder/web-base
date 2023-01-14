@@ -1,5 +1,6 @@
 import React, {useReducer} from 'react';
 import {createContext, useCallback, useState} from "react";
+import { enUS as dateFnsEN, de as dateFnsDE } from 'date-fns/locale';
 
 const LocaleContext = createContext(null);
 
@@ -29,11 +30,11 @@ function reducer(entries, action) {
 
 function LocaleProvider(props) {
 
-    // const [entries, setEntries] = useState(window.languageEntries || {});
     const [entries, dispatch] = useReducer(reducer, window.languageEntries || {});
     const [currentLocale, setCurrentLocale] = useState(window.languageCode || "en_US");
 
     const translate = useCallback((key, defaultTranslation = null) => {
+
         if (currentLocale) {
             if (entries.hasOwnProperty(currentLocale)) {
                 let [module, variable] = key.split(".");
@@ -46,7 +47,7 @@ function LocaleProvider(props) {
             }
         }
 
-        return defaultTranslation || "[" + key + "]";
+        return key ? defaultTranslation || "[" + key + "]" : "";
     }, [currentLocale, entries]);
 
     const hasModule = useCallback((code, module) => {
@@ -60,6 +61,16 @@ function LocaleProvider(props) {
             return null;
         }
     }, [entries]);
+
+    const toDateFns = () => {
+        switch (currentLocale) {
+            case 'de_DE':
+                return dateFnsDE;
+            case 'en_US':
+            default:
+                return dateFnsEN;
+        }
+    }
 
     /** API HOOKS **/
     const setLanguage = useCallback(async (api, params) => {

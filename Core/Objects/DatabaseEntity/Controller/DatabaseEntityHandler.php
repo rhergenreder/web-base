@@ -315,6 +315,10 @@ class DatabaseEntityHandler implements Persistable {
     return $this->properties[$property];
   }
 
+  public function hasProperty(string $propertyName): bool {
+    return isset($this->properties[$propertyName]);
+  }
+
   public static function getPrefixedRow(array $row, string $prefix): array {
     $rel_row = [];
     foreach ($row as $relKey => $relValue) {
@@ -325,7 +329,7 @@ class DatabaseEntityHandler implements Persistable {
     return $rel_row;
   }
 
-  private function getValueFromRow(array $row, string $propertyName, mixed &$value, bool $initEntities = false): bool {
+  private function getValueFromRow(array $row, string $propertyName, mixed &$value, int $fetchEntities = DatabaseEntityQuery::FETCH_NONE): bool {
     $column = $this->columns[$propertyName] ?? null;
     if (!$column) {
       return false;
@@ -340,15 +344,22 @@ class DatabaseEntityHandler implements Persistable {
     if ($column instanceof DateTimeColumn) {
       $value = new \DateTime($value);
     } else if ($column instanceof JsonColumn) {
-      $value = json_decode($value);
+      $value = json_decode($value, true);
     } else if (isset($this->relations[$propertyName])) {
+      $relationHandler = $this->relations[$propertyName];
       $relColumnPrefix = self::buildColumnName($propertyName) . "_";
       if (array_key_exists($relColumnPrefix . "id", $row)) {
         $relId = $row[$relColumnPrefix . "id"];
         if ($relId !== null) {
-          if ($initEntities) {
-            $relationHandler = $this->relations[$propertyName];
-            $value = $relationHandler->entityFromRow(self::getPrefixedRow($row, $relColumnPrefix), [], true);
+          if ($fetchEntities !== DatabaseEntityQuery::FETCH_NONE) {
+            if ($this === $relationHandler) {
+              $value = DatabaseEntityQuery::fetchOne($this)
+                ->fetchEntities($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE)
+                ->whereEq($this->getColumnName("id"), $relId)
+                ->execute();
+            } else {
+              $value = $relationHandler->entityFromRow(self::getPrefixedRow($row, $relColumnPrefix), [], true);
+            }
           } else {
             return false;
           }
@@ -362,10 +373,17 @@ class DatabaseEntityHandler implements Persistable {
       }
     }
 
+    if ($value === null) {
+      $defaultValue = self::getAttribute($this->properties[$propertyName], DefaultValue::class);
+      if ($defaultValue) {
+        $value = $defaultValue->getValue();
+      }
+    }
+
     return true;
   }
 
-  public function entityFromRow(array $row, array $additionalColumns = [], bool $initEntities = false): ?DatabaseEntity {
+  public function entityFromRow(array $row, array $additionalColumns = [], int $fetchEntities = DatabaseEntityQuery::FETCH_NONE): ?DatabaseEntity {
     try {
 
       $constructorClass = $this->entityClass;
@@ -384,7 +402,8 @@ class DatabaseEntityHandler implements Persistable {
       }
 
       foreach ($this->properties as $property) {
-        if ($this->getValueFromRow($row, $property->getName(), $value, $initEntities)) {
+        $propertyName = $property->getName();
+        if ($this->getValueFromRow($row, $propertyName, $value, $fetchEntities)) {
           $property->setAccessible(true);
           $property->setValue($entity, $value);
         }
@@ -405,6 +424,7 @@ class DatabaseEntityHandler implements Persistable {
 
       $this->properties["id"]->setAccessible(true);
       $this->properties["id"]->setValue($entity, $row["id"]);
+
       $entity->postFetch($this->sql, $row);
       return $entity;
     } catch (\Exception $exception) {
@@ -512,9 +532,13 @@ class DatabaseEntityHandler implements Persistable {
     return $success;
   }
 
-  public function fetchNMRelations(array $entities, bool $recursive = false) {
+  public function fetchNMRelations(array $entities, int $fetchEntities = DatabaseEntityQuery::FETCH_DIRECT) {
 
-    if ($recursive) {
+    if ($fetchEntities === DatabaseEntityQuery::FETCH_NONE) {
+      return;
+    }
+
+    if ($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE) {
       foreach ($entities as $entity) {
         foreach ($this->relations as $propertyName => $relHandler) {
           $property = $this->properties[$propertyName];
@@ -549,10 +573,7 @@ class DatabaseEntityHandler implements Persistable {
           ->addSelectValue(new Column($thisIdColumn))
           ->where(new CondIn(new Column($thisIdColumn), $entityIds));
 
-        if ($recursive) {
-          $relEntityQuery->fetchEntities(true);
-        }
-
+        $relEntityQuery->fetchEntities($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE);
         $rows = $relEntityQuery->executeSQL();
         if (!is_array($rows)) {
           $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
@@ -563,7 +584,7 @@ class DatabaseEntityHandler implements Persistable {
         foreach ($rows as $row) {
           $relId = $row["id"];
           if (!isset($relEntities[$relId])) {
-            $relEntity = $otherHandler->entityFromRow($row, [], $recursive);
+            $relEntity = $otherHandler->entityFromRow($row, [], $fetchEntities);
             $relEntities[$relId] = $relEntity;
           }
 
@@ -575,6 +596,7 @@ class DatabaseEntityHandler implements Persistable {
           $property->setValue($thisEntity, $targetArray);
         }
       } else if ($nmRelation instanceof NMRelationReference) {
+
         $otherHandler = $nmRelation->getRelHandler();
         $thisIdColumn = $otherHandler->getColumnName($nmRelation->getThisProperty(), false);
         $relIdColumn  = $otherHandler->getColumnName($nmRelation->getRefProperty(), false);
@@ -582,10 +604,7 @@ class DatabaseEntityHandler implements Persistable {
           $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
             ->where(new CondIn(new Column($thisIdColumn), $entityIds));
 
-          if ($recursive) {
-            $relEntityQuery->fetchEntities(true);
-          }
-
+          $relEntityQuery->fetchEntities($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE);
           $rows = $relEntityQuery->executeSQL();
           if (!is_array($rows)) {
             $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
@@ -596,7 +615,7 @@ class DatabaseEntityHandler implements Persistable {
           $thisIdProperty->setAccessible(true);
 
           foreach ($rows as $row) {
-            $relEntity = $otherHandler->entityFromRow($row, [], $recursive);
+            $relEntity = $otherHandler->entityFromRow($row, [], $fetchEntities);
             $thisEntity = $entities[$row[$thisIdColumn]];
             $thisIdProperty->setValue($relEntity, $thisEntity);
             $targetArray = $property->getValue($thisEntity);
@@ -609,10 +628,11 @@ class DatabaseEntityHandler implements Persistable {
         continue;
       }
 
-      if ($recursive) {
+      // TODO whats that here lol
+      if ($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE) {
         foreach ($entities as $entity) {
           $relEntities = $property->getValue($entity);
-          $otherHandler->fetchNMRelations($relEntities);
+          // $otherHandler->fetchNMRelations($relEntities, $fetchEntities);
         }
       }
     }

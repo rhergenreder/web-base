@@ -50,25 +50,25 @@ const getBaseUrl = () => {
 const formatDate = (L, apiDate) => {
     if (!(apiDate instanceof Date)) {
         if (!isNaN(apiDate)) {
-            apiDate = new Date(apiDate);
+            apiDate = new Date(apiDate * 1000);
         } else {
             apiDate = parse(apiDate, API_DATE_FORMAT, new Date());
         }
     }
 
-    return format(apiDate, L("general.date_format", "YYY/MM/dd"));
+    return format(apiDate, L("general.datefns_date_format", "YYY/MM/dd"));
 }
 
 const formatDateTime = (L, apiDate) => {
     if (!(apiDate instanceof Date)) {
         if (!isNaN(apiDate)) {
-            apiDate = new Date(apiDate);
+            apiDate = new Date(apiDate * 1000);
         } else {
             apiDate = parse(apiDate, API_DATETIME_FORMAT, new Date());
         }
     }
 
-    return format(apiDate, L("general.date_time_format", "YYY/MM/dd HH:mm:ss"));
+    return format(apiDate, L("general.datefns_date_time_format", "YYY/MM/dd HH:mm:ss"));
 }
 
 const upperFirstChars = (str) => {
@@ -77,5 +77,11 @@ const upperFirstChars = (str) => {
         .join(" ");
 }
 
+const isInt = (value) => {
+    return !isNaN(value) &&
+        parseInt(Number(value)) === value &&
+        !isNaN(parseInt(value, 10));
+}
+
 export { humanReadableSize, removeParameter, getParameter, encodeText, decodeText, getBaseUrl,
-    formatDate, formatDateTime, upperFirstChars };
+    formatDate, formatDateTime, upperFirstChars, isInt };

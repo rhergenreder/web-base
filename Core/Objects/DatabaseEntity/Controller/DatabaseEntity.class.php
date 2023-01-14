@@ -55,18 +55,20 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
   }
 
   public function jsonSerialize(?array $propertyNames = null): array {
-    $properties = (new \ReflectionClass(get_called_class()))->getProperties();
+    $reflectionClass = (new \ReflectionClass(get_called_class()));
+    $properties = $reflectionClass->getProperties();
     $ignoredProperties = ["entityLogConfig", "customData"];
 
     $jsonArray = [];
     foreach ($properties as $property) {
       $property->setAccessible(true);
       $propertyName = $property->getName();
+
       if (in_array($propertyName, $ignoredProperties)) {
         continue;
       }
 
-      if (!empty($property->getAttributes(Transient::class))) {
+      if (DatabaseEntityHandler::getAttribute($property, Transient::class)) {
         continue;
       }
 
@@ -93,6 +95,10 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
             $value = $value->getTimestamp();
           } else if ($value instanceof DatabaseEntity) {
             $subPropertyNames = $propertyNames[$propertyName] ?? null;
+            if ($subPropertyNames === null && $value instanceof $this) {
+              $subPropertyNames = $propertyNames;
+            }
+
             $value = $value->jsonSerialize($subPropertyNames);
           } else if (is_array($value)) {
             $subPropertyNames = $propertyNames[$propertyName] ?? null;
@@ -104,7 +110,7 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
             }, $value);
           }
 
-          $jsonArray[$property->getName()] = $value;
+          $jsonArray[$propertyName] = $value;
         }
       }
     }

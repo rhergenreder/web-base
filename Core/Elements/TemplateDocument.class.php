@@ -16,20 +16,35 @@ use Twig\Loader\FilesystemLoader;
 
 class TemplateDocument extends Document {
 
-  const TEMPLATE_PATH = WEBROOT . '/Core/Templates';
-
   private string $templateName;
   protected array $parameters;
   private Environment $twigEnvironment;
   private FilesystemLoader $twigLoader;
   protected string $title;
 
+  private static function getTemplatePaths(): array {
+    return [
+      implode(DIRECTORY_SEPARATOR, [WEBROOT, 'Site', 'Templates']),
+      implode(DIRECTORY_SEPARATOR, [WEBROOT, 'Core', 'Templates']),
+    ];
+  }
+
+  private static function getTemplatePath(string $templateName): ?string {
+    foreach (self::getTemplatePaths() as $path) {
+      $filePath = implode(DIRECTORY_SEPARATOR, [$path, $templateName]);
+      if (is_file($filePath)) {
+        return $filePath;
+      }
+    }
+    return null;
+  }
+
   public function __construct(Router $router, string $templateName, array $params = []) {
     parent::__construct($router);
     $this->title = "Untitled Document";
     $this->templateName = $templateName;
     $this->parameters = $params;
-    $this->twigLoader = new FilesystemLoader(self::TEMPLATE_PATH);
+    $this->twigLoader = new FilesystemLoader(self::getTemplatePaths());
     $this->twigEnvironment = new Environment($this->twigLoader, [
       'cache' => WEBROOT . '/Site/Cache/Templates/',
       'auto_reload' => true
@@ -84,7 +99,7 @@ class TemplateDocument extends Document {
             "query" => $urlParts["query"] ?? "",
             "fragment" => $urlParts["fragment"] ?? ""
           ],
-          "lastModified" => date(L('Y-m-d H:i:s'), @filemtime(implode(DIRECTORY_SEPARATOR, [self::TEMPLATE_PATH, $name]))),
+          "lastModified" => date(L('Y-m-d H:i:s'), @filemtime(self::getTemplatePath($name))),
           "registrationEnabled" => $settings->isRegistrationAllowed(),
           "title" => $this->title,
           "recaptcha" => [

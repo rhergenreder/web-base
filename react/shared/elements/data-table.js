@@ -8,6 +8,7 @@ import "./data-table.css";
 import {LocaleContext} from "../locale";
 import clsx from "clsx";
 import {Box} from "@mui/material";
+import {formatDate} from "../util";
 
 
 export function DataTable(props) {
@@ -86,7 +87,7 @@ export function DataTable(props) {
         for (const [key, entry] of Object.entries(data)) {
             let row = [];
             for (const [index, column] of columns.entries()) {
-                row.push(<TableCell key={"col-" + index}>{column.renderData(entry)}</TableCell>);
+                row.push(<TableCell key={"col-" + index}>{column.renderData(L, entry)}</TableCell>);
             }
 
             rows.push(<TableRow key={"row-" + key}>{ row }</TableRow>);
@@ -269,7 +270,7 @@ export class DataColumn {
         throw new Error("Not implemented: compare");
     }
 
-    renderData(entry) {
+    renderData(L, entry) {
         return entry[this.field]
     }
 
@@ -319,5 +320,9 @@ export class DateTimeColumn extends DataColumn {
         }
 
         return a - b;
+    }
+
+    renderData(L, entry) {
+        return formatDate(L, super.renderData(L, entry));
     }
 }

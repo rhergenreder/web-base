@@ -32,7 +32,7 @@ export default function GroupListView(props) {
 
     const actionColumn = (() => {
         let column = new DataColumn(L("general.actions"), null, false);
-        column.renderData = (entry) => <>
+        column.renderData = (L, entry) => <>
             <IconButton size={"small"} title={L("general.edit")} onClick={() => navigate("/admin/group/" + entry.id)}>
                 <EditIcon />
             </IconButton>

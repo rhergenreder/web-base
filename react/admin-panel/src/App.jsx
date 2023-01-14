@@ -1,15 +1,16 @@
 import React, {useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import API from "shared/api";
 import Icon from "shared/elements/icon";
-import LoginForm from "./views/login";
+import LoginForm from "shared/views/login";
 import {Alert} from "@material-ui/lab";
 import {Button} from "@material-ui/core";
-import { LocaleContext } from "shared/locale";
+import {LocaleContext} from "shared/locale";
 import AdminDashboard from "./AdminDashboard";
 
 export default function App() {
 
     const api = useMemo(() => new API(), []);
+
     const [user, setUser] = useState(null);
     const [loaded, setLoaded] = useState(false);
     const [info, setInfo] = useState({});

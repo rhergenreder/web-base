@@ -1,8 +1,11 @@
+import {USER_GROUP_ADMIN} from "./constants";
+
 export default class API {
     constructor() {
         this.loggedIn = false;
         this.user = null;
         this.session = null;
+        this.permissions = [];
     }
 
     csrfToken() {
@@ -26,6 +29,40 @@ export default class API {
         return res;
     }
 
+    hasPermission(method) {
+        if (!this.permissions) {
+            return false;
+        }
+
+        for (const permission of this.permissions) {
+            if (method.endsWith("*") && permission.toLowerCase().startsWith(method.toLowerCase().substr(0, method.length - 1))) {
+                return true;
+            } else if (method.toLowerCase() === permission.toLowerCase()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+    hasGroup(groupIdOrName) {
+        if (this.loggedIn && this.user?.groups) {
+            if (!isNaN(groupIdOrName) && (typeof groupIdOrName === 'string' && groupIdOrName.match(/^\d+$/))) {
+                return this.user.groups.hasOwnProperty(groupIdOrName);
+            } else {
+                let userGroups = Object.values(this.user.groups);
+                return userGroups.includes(groupIdOrName);
+            }
+        } else {
+            return false;
+        }
+    }
+
+    isAdmin() {
+        return this.hasGroup(USER_GROUP_ADMIN);
+    }
+
     /** Info **/
     async info() {
         return this.apiCall("info");
@@ -41,6 +78,7 @@ export default class API {
         let data = await response.json();
         if (data) {
             this.loggedIn = data["loggedIn"];
+            this.permissions = data["permissions"] ? data["permissions"].map(s => s.toLowerCase()) : [];
             if (this.loggedIn) {
                 this.session = data["session"];
                 this.user = data["user"];
@@ -63,6 +101,9 @@ export default class API {
         const res = await this.apiCall("user/logout");
         if (res.success) {
             this.loggedIn = false;
+            this.permissions = [];
+            this.session = null;
+            this.user = null;
         }
 
         return res;
@@ -164,7 +205,17 @@ export default class API {
         return this.apiCall("language/getEntries", {code: code, modules: modules});
     }
 
-        /*
+    /** ApiKeyAPI **/
+    // API-Key API
+    async getApiKeys(showActiveOnly = false) {
+        return this.apiCall("apiKey/fetch", { showActiveOnly: showActiveOnly });
+    }
 
-    } */
+    async createApiKey() {
+        return this.apiCall("apiKey/create");
+    }
+
+    async revokeKey(id) {
+        return this.apiCall("apiKey/revoke", { id: id });
+    }
 };

@@ -1,8 +1,6 @@
 import * as React from "react";
 import {Link} from "react-router-dom";
 import {format, getDaysInMonth} from "date-fns";
-import {Collapse} from "react-collapse";
-import {Bar} from "react-chartjs-2";
 import {CircularProgress, Icon} from "@material-ui/core";
 import {useCallback, useEffect, useState} from "react";
 

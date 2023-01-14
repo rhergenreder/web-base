@@ -33,7 +33,7 @@ export default function UserListView(props) {
 
     const groupColumn = (() => {
        let column = new DataColumn(L("account.groups"), "groups");
-       column.renderData = (entry) => {
+       column.renderData = (L, entry) => {
            return Object.values(entry.groups).map(group => <Chip key={"group-" + group.id} label={group.name}/>)
        }
        return column;
@@ -41,7 +41,7 @@ export default function UserListView(props) {
 
     const actionColumn = (() => {
         let column = new DataColumn(L("general.actions"), null, false);
-        column.renderData = (entry) => <>
+        column.renderData = (L, entry) => <>
             <IconButton size={"small"} title={L("general.edit")} onClick={() => navigate("/admin/user/" + entry.id)}>
                 <EditIcon />
             </IconButton>

@@ -33,7 +33,7 @@ function LocaleProvider(props) {
     const [entries, dispatch] = useReducer(reducer, window.languageEntries || {});
     const [currentLocale, setCurrentLocale] = useState(window.languageCode || "en_US");
 
-    const translate = useCallback((key) => {
+    const translate = useCallback((key, defaultTranslation = null) => {
         if (currentLocale) {
             if (entries.hasOwnProperty(currentLocale)) {
                 let [module, variable] = key.split(".");
@@ -46,7 +46,7 @@ function LocaleProvider(props) {
             }
         }
 
-        return "[" + key + "]";
+        return defaultTranslation || "[" + key + "]";
     }, [currentLocale, entries]);
 
     const hasModule = useCallback((code, module) => {

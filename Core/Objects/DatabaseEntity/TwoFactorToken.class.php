@@ -69,7 +69,7 @@ abstract class TwoFactorToken extends DatabaseEntity {
 
   public function confirm(SQL $sql): bool {
     $this->confirmed = true;
-    return $this->save($sql) !== false;
+    return $this->save($sql, ["confirmed"]) !== false;
   }
 
   public function jsonSerialize(?array $propertyNames = null): array {

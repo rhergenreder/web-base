@@ -217,8 +217,6 @@ namespace Core\API\TFA {
         return $this->createError("Invalid 2FA-token endpoint");
       }
 
-      $this->result["time"] = time();
-      $this->result["time_zone"] = $this->context->getSettings()->getTimeZone();
       $code = $this->getParam("code");
       if (!$twoFactorToken->verify($code)) {
         return $this->createError("Code does not match");

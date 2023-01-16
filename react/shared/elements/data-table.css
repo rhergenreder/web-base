@@ -3,7 +3,7 @@
 }
 
 .data-table td, .data-table th {
-    padding: 2px;
+    padding: 5px;
     vertical-align: middle;
 }
 
@@ -11,10 +11,17 @@
     background-color: #bbb;
 }
 
-.sortable {
-    cursor: pointer;
+.data-table th > svg {
+    vertical-align: middle;
+    width: 18px;
+    height: 18px;
+    margin-right: 5px;
 }
 
 .center {
     text-align: center;
+}
+
+.data-table-clickable {
+    cursor: pointer;
 }

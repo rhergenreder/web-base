@@ -69,8 +69,10 @@ namespace Core\API\Routes {
   use Core\API\RoutesAPI;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Condition\CondBool;
+  use Core\Driver\SQL\Query\Insert;
   use Core\Driver\SQL\Query\StartTransaction;
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\Route;
   use Core\Objects\Router\DocumentRoute;
   use Core\Objects\Router\RedirectPermanentlyRoute;
@@ -100,6 +102,10 @@ namespace Core\API\Routes {
       }
 
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch site routing");
     }
   }
 
@@ -202,6 +208,10 @@ namespace Core\API\Routes {
 
       return true;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to save the site routing");
+    }
   }
 
   class Add extends RoutesAPI {
@@ -235,6 +245,10 @@ namespace Core\API\Routes {
       $this->success = $route->save($sql) !== false;
       $this->lastError = $sql->getLastError();
       return $this->success && $this->regenerateCache();
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to add new routes");
     }
   }
 
@@ -270,9 +284,13 @@ namespace Core\API\Routes {
       $exact = $this->getParam("exact");
       $active = $this->getParam("active");
       if ($route->getType() !== $type) {
-        $route = $this->createRoute($type, $pattern, $target, $extra, $exact, $active);
-        if ($route === null) {
+        if (!$route->delete($sql)) {
           return false;
+        } else {
+          $route = $this->createRoute($type, $pattern, $target, $extra, $exact, $active);
+          if ($route === null) {
+            return false;
+          }
         }
       } else {
         $route->setPattern($pattern);
@@ -285,6 +303,10 @@ namespace Core\API\Routes {
       $this->success = $route->save($sql) !== false;
       $this->lastError = $sql->getLastError();
       return $this->success && $this->regenerateCache();
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to update existing routes");
     }
   }
 
@@ -311,6 +333,10 @@ namespace Core\API\Routes {
       $this->lastError = $sql->getLastError();
       return $this->success && $this->regenerateCache();
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to remove routes");
+    }
   }
 
   class Enable extends RoutesAPI {
@@ -325,6 +351,10 @@ namespace Core\API\Routes {
       $id = $this->getParam("id");
       return $this->toggleRoute($id, true);
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to enable a route");
+    }
   }
 
   class Disable extends RoutesAPI {
@@ -338,6 +368,10 @@ namespace Core\API\Routes {
     public function _execute(): bool {
       $id = $this->getParam("id");
       return $this->toggleRoute($id, false);
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to disable a route");
     }
   }
 
@@ -379,6 +413,10 @@ namespace Core\API\Routes {
 
     public function getRouter(): ?Router {
       return $this->router;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to regenerate the routing cache");
     }
   }
 }

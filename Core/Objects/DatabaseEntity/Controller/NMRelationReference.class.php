@@ -36,6 +36,13 @@ class NMRelationReference implements Persistable {
     return $this->refProperty;
   }
 
+  public function getRefColumns(): array {
+    return [
+      $this->handler->getColumnName($this->getThisProperty(), false),
+      $this->handler->getColumnName($this->getRefProperty(), false),
+    ];
+  }
+
   public function getRelHandler(): DatabaseEntityHandler {
     return $this->handler;
   }

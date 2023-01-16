@@ -40,9 +40,16 @@ if (!$context->isCLI()) {
 }
 
 $database = $context->getConfig()->getDatabase();
-if ($database !== null && $database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
-  if (count($argv) < 3 || $argv[1] !== "db" || !in_array($argv[2], ["shell", "import", "export"])) {
+if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
+  if (function_exists("yaml_parse")) {
     $dockerYaml = yaml_parse(file_get_contents("./docker-compose.yml"));
+  } else {
+    _exit("yaml_parse not found but required for docker file parsing.");
+  }
+}
+
+if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
+  if (count($argv) < 3 || $argv[1] !== "db" || !in_array($argv[2], ["shell", "import", "export"])) {
     $containerName = $dockerYaml["services"]["php"]["container_name"];
     $command = array_merge(["docker", "exec", "-it", $containerName, "php"], $argv);
     $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes, "/application");
@@ -93,6 +100,7 @@ function applyPatch(\Core\Driver\SQL\SQL $sql, string $patchName): bool {
 }
 
 function handleDatabase(array $argv) {
+  global $dockerYaml;
   $action = $argv[2] ?? "";
 
   if ($action === "migrate") {
@@ -174,7 +182,6 @@ function handleDatabase(array $argv) {
 
     $command = array_merge([$command_bin], $command_args);
     if ($config->getProperty("isDocker", false)) {
-      $dockerYaml = yaml_parse(file_get_contents("./docker-compose.yml"));
       $containerName = $dockerYaml["services"]["db"]["container_name"];
       $command = array_merge(["docker", "exec", "-it", $containerName], $command);
     }
@@ -454,21 +461,24 @@ function onRoutes(array $argv) {
   $action = $argv[2] ?? "list";
 
   if ($action === "list") {
-    $req = new \Core\API\Routes\Fetch($context);
-    $success = $req->execute();
-    if (!$success) {
-      _exit("Error fetching routes: " . $req->getLastError());
+    $sql = $context->getSQL();
+    $routes = \Core\Objects\DatabaseEntity\Route::findAll($sql);
+    if ($routes === false || $routes === null) {
+      _exit("Error fetching routes: " . $sql->getLastError());
     } else {
-      $routes = $req->getResult()["routes"];
       $head = ["id", "pattern", "type", "target", "extra", "active", "exact"];
 
       // strict boolean
-      foreach ($routes as &$route) {
-        $route["active"] = $route["active"] ? "true" : "false";
-        $route["exact"] = $route["exact"] ? "true" : "false";
+      $tableRows = [];
+      foreach ($routes as $route) {
+        $jsonData = $route->jsonSerialize(["id", "pattern", "type", "target", "extra", "active", "exact"]);
+        // strict bool conversion
+        $jsonData["active"] = $jsonData["active"] ? "true" : "false";
+        $jsonData["exact"] = $jsonData["exact"] ? "true" : "false";
+        $tableRows[] = $jsonData;
       }
 
-      printTable($head, $routes);
+      printTable($head, $tableRows);
     }
   } else if ($action === "add") {
     if (count($argv) < 7) {

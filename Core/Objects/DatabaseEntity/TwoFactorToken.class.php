@@ -5,6 +5,8 @@ namespace Core\Objects\DatabaseEntity;
 use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Attribute\ExtendingEnum;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
+use Core\Objects\DatabaseEntity\Attribute\Transient;
+use Core\Objects\DatabaseEntity\Attribute\Visibility;
 use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
 use Core\Objects\TwoFactor\TimeBasedTwoFactorToken;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
@@ -18,8 +20,13 @@ abstract class TwoFactorToken extends DatabaseEntity {
 
   #[ExtendingEnum(self::TWO_FACTOR_TOKEN_TYPES)] private string $type;
   private bool $confirmed;
+
+  #[Transient]
   private bool $authenticated;
-  #[MaxLength(512)] private ?string $data;
+
+  #[MaxLength(512)]
+  #[Visibility(Visibility::NONE)]
+  private ?string $data;
 
   public function __construct(string $type, ?int $id = null, bool $confirmed = false) {
     parent::__construct($id);
@@ -39,6 +46,7 @@ abstract class TwoFactorToken extends DatabaseEntity {
 
   public function postFetch(SQL $sql, array $row) {
     parent::postFetch($sql, $row);
+    $this->authenticated = $_SESSION["2faAuthenticated"] ?? false;
     $this->readData($row["data"]);
   }
 
@@ -62,5 +70,15 @@ abstract class TwoFactorToken extends DatabaseEntity {
   public function confirm(SQL $sql): bool {
     $this->confirmed = true;
     return $this->save($sql) !== false;
+  }
+
+  public function jsonSerialize(?array $propertyNames = null): array {
+    $jsonData = parent::jsonSerialize($propertyNames);
+
+    if ($propertyNames === null || in_array("authenticated", $propertyNames)) {
+      $jsonData["authenticated"] = $this->authenticated;
+    }
+
+    return $jsonData;
   }
 }

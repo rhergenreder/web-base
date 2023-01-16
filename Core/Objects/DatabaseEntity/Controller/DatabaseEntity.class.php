@@ -57,6 +57,12 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
   public function jsonSerialize(?array $propertyNames = null): array {
     $reflectionClass = (new \ReflectionClass(get_called_class()));
     $properties = $reflectionClass->getProperties();
+
+    while ($reflectionClass->getParentClass()->getName() !== DatabaseEntity::class) {
+      $reflectionClass = $reflectionClass->getParentClass();
+      $properties = array_merge($reflectionClass->getProperties(), $properties);
+    }
+
     $ignoredProperties = ["entityLogConfig", "customData"];
 
     $jsonArray = [];

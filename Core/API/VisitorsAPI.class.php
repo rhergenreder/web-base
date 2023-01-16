@@ -17,6 +17,8 @@ namespace Core\API\Visitors {
   use Core\API\Parameter\StringType;
   use Core\API\VisitorsAPI;
   use Core\Driver\SQL\Expression\Count;
+  use Core\Driver\SQL\Query\Insert;
+  use Core\Objects\DatabaseEntity\Group;
   use DateTime;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Expression\Add;
@@ -111,6 +113,10 @@ namespace Core\API\Visitors {
       }
 
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to view visitor statistics");
     }
   }
 }

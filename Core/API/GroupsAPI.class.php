@@ -36,8 +36,8 @@ namespace Core\API\Groups {
   use Core\Driver\SQL\Expression\Alias;
   use Core\Driver\SQL\Expression\Count;
   use Core\Driver\SQL\Join\InnerJoin;
+  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
-  use Core\Objects\DatabaseEntity\Controller\NMRelation;
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\User;
 
@@ -83,6 +83,10 @@ namespace Core\API\Groups {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch available groups");
+    }
   }
 
   class Get extends GroupsAPI {
@@ -105,6 +109,10 @@ namespace Core\API\Groups {
       }
 
       return true;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to get details about a group");
     }
   }
 
@@ -142,6 +150,9 @@ namespace Core\API\Groups {
       return true;
     }
 
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch members of a group");
+    }
   }
 
   class Create extends GroupsAPI {
@@ -182,6 +193,10 @@ namespace Core\API\Groups {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to create a new group");
+    }
   }
 
   class Delete extends GroupsAPI {
@@ -208,6 +223,10 @@ namespace Core\API\Groups {
         $this->lastError = $sql->getLastError();
         return $this->success;
       }
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to delete a group");
     }
   }
 
@@ -247,6 +266,10 @@ namespace Core\API\Groups {
         return true;
       }
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to add members to a group");
+    }
   }
 
   class RemoveMember extends GroupsAPI {
@@ -285,6 +308,9 @@ namespace Core\API\Groups {
         return true;
       }
     }
-  }
 
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to remove members from a group");
+    }
+  }
 }

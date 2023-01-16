@@ -94,7 +94,7 @@ class DatabaseEntityQuery extends Select {
 
     $relIndex = 1;
     foreach ($this->handler->getRelations() as $propertyName => $relationHandler) {
-      if ($this->handler !== $relationHandler) {
+      if ($this->handler !== $relationHandler || !$recursive) {
         $this->fetchRelation($propertyName, $this->handler->getTableName(), $this->handler, $relationHandler, $relIndex, $recursive);
       }
     }

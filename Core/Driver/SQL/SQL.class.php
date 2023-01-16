@@ -149,7 +149,12 @@ abstract class SQL {
       return false;
     }
 
-    $res = $this->execute($queryStr, $parameters, $fetchType);
+    $logLevel = Logger::LOG_LEVEL_DEBUG;
+    if ($query instanceof Insert && $query->getTableName() === "SystemLog") {
+      $logLevel = Logger::LOG_LEVEL_NONE;
+    }
+
+    $res = $this->execute($queryStr, $parameters, $fetchType, $logLevel);
     $success = ($res !== FALSE);
 
     // fetch generated serial ids for Insert statements
@@ -273,7 +278,7 @@ abstract class SQL {
   /**
    * @return mixed
    */
-  protected abstract function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE);
+  protected abstract function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE, int $logLevel = Logger::LOG_LEVEL_ERROR);
 
   public function buildCondition(Condition|array $condition, &$params): string {
 

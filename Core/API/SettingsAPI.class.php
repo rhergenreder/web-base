@@ -22,8 +22,10 @@ namespace Core\API\Settings {
   use Core\Driver\SQL\Condition\CondIn;
   use Core\Driver\SQL\Condition\CondNot;
   use Core\Driver\SQL\Condition\CondRegex;
+  use Core\Driver\SQL\Query\Insert;
   use Core\Driver\SQL\Strategy\UpdateStrategy;
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\Group;
 
   class Get extends SettingsAPI {
 
@@ -45,6 +47,10 @@ namespace Core\API\Settings {
        }
 
        return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch site settings");
     }
   }
 
@@ -144,6 +150,10 @@ namespace Core\API\Settings {
       $this->lastError = $sql->getLastError();
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to modify site settings");
+    }
   }
 
   class GenerateJWT extends SettingsAPI {
@@ -172,6 +182,10 @@ namespace Core\API\Settings {
 
       $this->result["jwt_public_key"] = $settings->getJwtPublicKey(false)?->getKeyMaterial();
       return true;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to regenerate the JWT key. This invalidates all sessions");
     }
   }
 }

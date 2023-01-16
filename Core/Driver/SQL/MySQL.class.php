@@ -4,6 +4,7 @@ namespace Core\Driver\SQL;
 
 use Core\API\Parameter\Parameter;
 
+use Core\Driver\Logger\Logger;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondLike;
 use Core\Driver\SQL\Expression\Count;
@@ -138,13 +139,17 @@ class MySQL extends SQL {
   /**
    * @return mixed
    */
-  protected function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE) {
+  protected function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE, int $logLevel = Logger::LOG_LEVEL_ERROR) {
 
     $result = null;
     $this->lastError = "";
     $stmt = null;
     $res = null;
     $success = false;
+
+    if ($logLevel === Logger::LOG_LEVEL_DEBUG) {
+      $this->logger->debug("query: " . $query . ", args: " . json_encode($values), false);
+    }
 
     try {
       if (empty($values)) {
@@ -167,7 +172,6 @@ class MySQL extends SQL {
           }
         }
       } else if ($stmt = $this->connection->prepare($query)) {
-
         $sqlParams = $this->getPreparedParams($values);
         if ($stmt->bind_param(...$sqlParams)) {
           if ($stmt->execute()) {
@@ -201,10 +205,12 @@ class MySQL extends SQL {
         }
       }
     } catch (\mysqli_sql_exception $exception) {
-      $this->lastError = $this->logger->error("MySQL::execute failed: " .
-      ($stmt !== null
-        ? "$stmt->error ($stmt->errno)"
-        : $exception->getMessage()));
+      if ($logLevel >= Logger::LOG_LEVEL_ERROR) {
+        $this->lastError = $this->logger->error("MySQL::execute failed: " .
+          ($stmt !== null
+            ? "$stmt->error ($stmt->errno)"
+            : $exception->getMessage()));
+      }
     } finally {
 
       if ($res !== null && !is_bool($res) && $fetchType !== self::FETCH_ITERATIVE) {

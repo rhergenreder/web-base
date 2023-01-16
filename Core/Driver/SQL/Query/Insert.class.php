@@ -40,6 +40,7 @@ class Insert extends Query {
   public function getTableName(): string { return $this->tableName; }
   public function getColumns(): array { return $this->columns; }
   public function getRows(): array { return $this->rows; }
+  public function hasRows(): bool { return !empty($this->rows); }
   public function onDuplicateKey(): ?Strategy { return $this->onDuplicateKey; }
   public function getReturning(): ?string { return $this->returning; }
 

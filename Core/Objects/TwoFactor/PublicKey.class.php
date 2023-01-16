@@ -6,7 +6,7 @@ use Core\Objects\ApiObject;
 
 class PublicKey extends ApiObject {
 
-  use Core\Objects\TwoFactor\CBORDecoder;
+  use CBORDecoder;
 
   private int $keyType;
   private int $usedAlgorithm;

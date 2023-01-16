@@ -19,60 +19,11 @@ class Swagger extends Request {
     die($this->getDocumentation());
   }
 
-  private function getApiEndpoints(): array {
-
-    // first load all direct classes
-    $classes = [];
-    $apiDirs = ["Core", "Site"];
-    foreach ($apiDirs as $apiDir) {
-      $basePath = realpath(WEBROOT . "/$apiDir/API/");
-      if (!$basePath) {
-        continue;
-      }
-
-      foreach (scandir($basePath) as $fileName) {
-        $fullPath = $basePath . "/" . $fileName;
-        if (is_file($fullPath) && endsWith($fileName, ".class.php")) {
-          require_once $fullPath;
-          $apiName = explode(".", $fileName)[0];
-          $className = "\\$apiDir\\API\\$apiName";
-          if (!class_exists($className)) {
-            var_dump("Class not exist: $className");
-            continue;
-          }
-
-          $reflection = new \ReflectionClass($className);
-          if (!$reflection->isSubclassOf(Request::class) || $reflection->isAbstract()) {
-            continue;
-          }
-
-          $endpoint = "/" . strtolower($apiName);
-          $classes[$endpoint] = $reflection;
-        }
-      }
-    }
-
-    // then load all inheriting classes
-    foreach (get_declared_classes() as $declaredClass) {
-      $reflectionClass = new \ReflectionClass($declaredClass);
-      if (!$reflectionClass->isAbstract() && $reflectionClass->isSubclassOf(Request::class)) {
-        $inheritingClass = $reflectionClass->getParentClass();
-        if ($inheritingClass->isAbstract() && endsWith($inheritingClass->getShortName(), "API")) {
-          $endpoint = strtolower(substr($inheritingClass->getShortName(), 0, -3));
-          $endpoint = "/$endpoint/" . lcfirst($reflectionClass->getShortName());
-          $classes[$endpoint] = $reflectionClass;
-        }
-      }
-    }
-
-    return $classes;
-  }
-
   private function fetchPermissions(): array {
-    $req = new Permission\Fetch($this->context);
+    $req = new \Core\API\Permission\Fetch($this->context);
     $this->success = $req->execute();
     $permissions = [];
-    foreach( $req->getResult()["permissions"] as $permission) {
+    foreach ($req->getResult()["permissions"] as $permission) {
       $permissions["/" . strtolower($permission["method"])] = $permission["groups"];
     }
 
@@ -85,12 +36,13 @@ class Swagger extends Request {
     }
 
     $currentUser = $this->context->getUser();
-    if (($request->loginRequired() || !empty($requiredGroups)) && !$currentUser) {
+    $isLoggedIn = $currentUser !== null;
+    if (($request->loginRequired() || !empty($requiredGroups)) && !$isLoggedIn) {
       return false;
     }
 
     // special case: hardcoded permission
-    if ($request instanceof Permission\Save && (!$currentUser || !$currentUser->hasGroup(Group::ADMIN))) {
+    if ($request instanceof \Core\API\Permission\Save && (!$isLoggedIn || !$currentUser->hasGroup(Group::ADMIN))) {
       return false;
     }
 

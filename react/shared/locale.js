@@ -62,16 +62,6 @@ function LocaleProvider(props) {
         }
     }, [entries]);
 
-    const toDateFns = () => {
-        switch (currentLocale) {
-            case 'de_DE':
-                return dateFnsDE;
-            case 'en_US':
-            default:
-                return dateFnsEN;
-        }
-    }
-
     /** API HOOKS **/
     const setLanguage = useCallback(async (api, params) => {
         let res = await api.setLanguage(params);
@@ -96,8 +86,8 @@ function LocaleProvider(props) {
 
         if (code === null) {
             code = currentLocale;
-            if (code === null && api.loggedIn) {
-                code = api.user.language.code;
+            if (code === null && api.language) {
+                code = api.language.code;
             }
         }
 
@@ -135,11 +125,23 @@ function LocaleProvider(props) {
         }
     }, [currentLocale, getModule, dispatch]);
 
+    const toDateFns = useCallback(() => {
+        switch (currentLocale) {
+            case 'de_DE':
+                return dateFnsDE;
+            case 'en_US':
+            default:
+                return dateFnsEN;
+        }
+    }, [currentLocale]);
+
     const ctx = {
         currentLocale: currentLocale,
         translate: translate,
         requestModules: requestModules,
         setLanguageByCode: setLanguageByCode,
+        toDateFns: toDateFns,
+        setCurrentLocale: setCurrentLocale,
     };
 
     return (

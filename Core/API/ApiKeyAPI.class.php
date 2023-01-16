@@ -18,6 +18,7 @@ namespace Core\API\ApiKey {
   use Core\API\Parameter\Parameter;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Condition\CondAnd;
+  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\ApiKey;
 
@@ -45,6 +46,10 @@ namespace Core\API\ApiKey {
       }
 
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to create new API-Keys");
     }
   }
 
@@ -82,6 +87,10 @@ namespace Core\API\ApiKey {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to fetch new API-Key");
+    }
   }
 
   class Refresh extends ApiKeyAPI {
@@ -112,6 +121,10 @@ namespace Core\API\ApiKey {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to refresh API-Key");
+    }
   }
 
   class Revoke extends ApiKeyAPI {
@@ -137,6 +150,10 @@ namespace Core\API\ApiKey {
       $this->lastError = $sql->getLastError();
 
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to revoke API-Key");
     }
   }
 }

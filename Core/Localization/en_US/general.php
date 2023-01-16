@@ -12,10 +12,10 @@ return [
   "name" => "Name",
   "type" => "Type",
   "size" => "Size",
-  "last_modified" => "Last Modified",
 
   # dialog / actions
   "action" => "Action",
+  "actions" => "Actions",
   "title" => "Title",
   "message" => "Message",
   "edit" => "Edit",
@@ -24,12 +24,19 @@ return [
   "request" => "Request",
   "cancel" => "Cancel",
   "confirm" => "Confirm",
+  "remove" => "Remove",
+  "change" => "Change",
+  "reset" => "Reset",
   "retry" => "Retry",
   "go_back" => "Go Back",
   "save" => "Save",
   "saving" => "Saving",
   "delete" => "Delete",
   "info" => "Info",
+  "reload" => "Reload",
+
+  # file
+  "choose_file" => "Choose File",
   "download" => "Download",
   "download_all" => "Download All",
   "upload" => "Upload",
@@ -37,7 +44,7 @@ return [
   "rename" => "Rename",
   "move" => "Move",
   "overwrite" => "Overwrite",
-  "reload" => "Reload",
+
 
   # data table
   "showing_x_of_y_entries" => "Showing %d of %d entries",
@@ -47,6 +54,8 @@ return [
   "date" => "Date",
   "start_date" => "Start Date",
   "end_date" => "End Date",
+  "last_modified" => "Last Modified",
+  "timestamp" => "Timestamp",
   "date_format" => "m/d/Y",
   "date_time_format" => "m/d/Y G:i A",
   "date_time_format_precise" => "m/d/Y G:i:s A",

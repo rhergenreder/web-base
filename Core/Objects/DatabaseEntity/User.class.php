@@ -2,7 +2,11 @@
 
 namespace Core\Objects\DatabaseEntity;
 
+use Core\Driver\SQL\Column\Column;
+use Core\Driver\SQL\Expression\Alias;
+use Core\Driver\SQL\Expression\Coalesce;
 use Core\Driver\SQL\Expression\CurrentTimeStamp;
+use Core\Driver\SQL\Expression\NullIf;
 use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
@@ -140,5 +144,14 @@ class User extends DatabaseEntity {
 
   public function getDisplayName(): string {
     return !empty($this->fullName) ? $this->fullName : $this->name;
+  }
+
+  public static function buildSQLDisplayName(SQL $sql, string $joinColumn): Alias {
+    return new Alias(
+      $sql->select(new Coalesce(
+            new NullIf(new Column("User.full_name"), ""),
+            new NullIf(new Column("User.name"), ""))
+        )->from("User")->whereEq("User.id", new Column($joinColumn)),
+      "user");
   }
 }

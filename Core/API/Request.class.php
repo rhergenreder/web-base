@@ -3,14 +3,9 @@
 namespace Core\API;
 
 use Core\Driver\Logger\Logger;
+use Core\Driver\SQL\Query\Insert;
 use Core\Objects\Context;
 use PhpMqtt\Client\MqttClient;
-
-/**
- * TODO: we need following features, probably as abstract/generic class/method:
- * - easy way for pagination (select with limit/offset)
- * - CRUD Endpoints/Objects (Create, Update, Delete)
- */
 
 abstract class Request {
 
@@ -62,7 +57,7 @@ abstract class Request {
     }
   }
 
-  protected function forbidMethod($method) {
+  protected function forbidMethod($method): void {
     if (($key = array_search($method, $this->allowedMethods)) !== false) {
       unset($this->allowedMethods[$key]);
     }
@@ -76,7 +71,7 @@ abstract class Request {
     return $this->isDisabled;
   }
 
-  protected function allowMethod($method) {
+  protected function allowMethod($method): void {
     $availableMethods = ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "TRACE", "CONNECT"];
     if (in_array($method, $availableMethods) && !in_array($method, $this->allowedMethods)) {
       $this->allowedMethods[] = $method;
@@ -113,7 +108,7 @@ abstract class Request {
     return true;
   }
 
-  public function parseVariableParams($values) {
+  public function parseVariableParams($values): void {
     foreach ($values as $name => $value) {
       if (isset($this->params[$name])) continue;
       $type = Parameter\Parameter::parseType($value);
@@ -129,6 +124,7 @@ abstract class Request {
   }
 
   protected abstract function _execute(): bool;
+  public static function getDefaultACL(Insert $insert): void { }
 
   public final function execute($values = array()): bool {
 
@@ -203,9 +199,11 @@ abstract class Request {
         } else if ($session) {
           $tfaToken = $session->getUser()->getTwoFactorToken();
           if ($tfaToken && $tfaToken->isConfirmed() && !$tfaToken->isAuthenticated()) {
-            $this->lastError = '2FA-Authorization is required';
-            http_response_code(401);
-            return false;
+            if (!($this instanceof \Core\API\Tfa\VerifyTotp) && !($this instanceof \Core\API\Tfa\VerifyKey)) {
+              $this->lastError = '2FA-Authorization is required';
+              http_response_code(401);
+              return false;
+            }
           }
         }
       }
@@ -225,7 +223,7 @@ abstract class Request {
       // Check for permission
       if (!($this instanceof \Core\API\Permission\Save)) {
         $req = new \Core\API\Permission\Check($this->context);
-        $this->success = $req->execute(array("method" => $this->getMethod()));
+        $this->success = $req->execute(array("method" => self::getEndpoint()));
         $this->lastError = $req->getLastError();
         if (!$this->success) {
           return false;
@@ -266,11 +264,11 @@ abstract class Request {
   }
 
   protected function getParam($name, $obj = NULL): mixed {
-    // I don't know why phpstorm
     if ($obj === NULL) {
       $obj = $this->params;
     }
 
+    // I don't know why phpstorm
     return (isset($obj[$name]) ? $obj[$name]->value : NULL);
   }
 
@@ -302,10 +300,30 @@ abstract class Request {
     return $this->externalCall;
   }
 
-  private function getMethod() {
-    $class = str_replace("\\", "/", get_class($this));
-    $class = substr($class, strlen("api/"));
-    return $class;
+  public static function getEndpoint(string $prefix = ""): ?string {
+    $reflectionClass = new \ReflectionClass(get_called_class());
+    if ($reflectionClass->isAbstract()) {
+      return null;
+    }
+
+    $isNestedAPI = $reflectionClass->getParentClass()->getName() !== Request::class;
+    if (!$isNestedAPI) {
+      # e.g. /api/stats or /api/info
+      $methodName = $reflectionClass->getShortName();
+      return $prefix . lcfirst($methodName);
+    } else {
+      # e.g. /api/user/login
+      $methodClass = $reflectionClass;
+      $nestedClass = $reflectionClass->getParentClass();
+      while (!endsWith($nestedClass->getName(), "API")) {
+        $methodClass = $nestedClass;
+        $nestedClass = $nestedClass->getParentClass();
+      }
+
+      $nestedAPI = substr(lcfirst($nestedClass->getShortName()), 0, -3);
+      $methodName = lcfirst($methodClass->getShortName());
+      return $prefix . $nestedAPI . "/" . $methodName;
+    }
   }
 
   public function getJsonResult(): string {
@@ -314,7 +332,7 @@ abstract class Request {
     return json_encode($this->result);
   }
 
-  protected function disableOutputBuffer() {
+  protected function disableOutputBuffer(): void {
     ob_implicit_flush(true);
     $levels = ob_get_level();
     for ( $i = 0; $i < $levels; $i ++ ) {
@@ -323,7 +341,7 @@ abstract class Request {
     flush();
   }
 
-  protected function disableCache() {
+  protected function disableCache(): void {
     header("Last-Modified: " . (new \DateTime())->format("D, d M Y H:i:s T"));
     header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
     header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
@@ -331,7 +349,7 @@ abstract class Request {
     header("Pragma: no-cache");
   }
 
-  protected function setupSSE() {
+  protected function setupSSE(): void {
     $this->context->sendCookies();
     $this->context->getSQL()?->close();
     set_time_limit(0);
@@ -348,7 +366,7 @@ abstract class Request {
    * @throws \PhpMqtt\Client\Exceptions\DataTransferException
    * @throws \PhpMqtt\Client\Exceptions\MqttClientException
    */
-  protected function startMqttSSE(MqttClient $mqtt, callable $onPing) {
+  protected function startMqttSSE(MqttClient $mqtt, callable $onPing): void {
     $lastPing = 0;
     $mqtt->registerLoopEventHandler(function(MqttClient $mqtt, $elapsed) use (&$lastPing, $onPing) {
       if ($elapsed - $lastPing >= 5) {
@@ -366,7 +384,7 @@ abstract class Request {
     $mqtt->disconnect();
   }
 
-  protected function processImageUpload(string $uploadDir, array $allowedExtensions = ["jpg","jpeg","png","gif"], $transformCallback = null) {
+  protected function processImageUpload(string $uploadDir, array $allowedExtensions = ["jpg","jpeg","png","gif"], $transformCallback = null): bool|array {
     if (empty($_FILES)) {
       return $this->createError("You need to upload an image.");
     } else if (count($_FILES) > 1) {
@@ -469,5 +487,50 @@ abstract class Request {
       $fileName = key($files);
       return [$fileName, $files[$fileName]];
     }
+  }
+
+  public static function getApiEndpoints(): array {
+
+    // first load all direct classes
+    $classes = [];
+    $apiDirs = ["Core", "Site"];
+    foreach ($apiDirs as $apiDir) {
+      $basePath = realpath(WEBROOT . "/$apiDir/API/");
+      if (!$basePath) {
+        continue;
+      }
+
+      foreach (scandir($basePath) as $fileName) {
+        $fullPath = $basePath . "/" . $fileName;
+        if (is_file($fullPath) && endsWith($fileName, ".class.php")) {
+          require_once $fullPath;
+          $apiName = explode(".", $fileName)[0];
+          $className = "\\$apiDir\\API\\$apiName";
+          if (!class_exists($className)) {
+            continue;
+          }
+
+          $reflectionClass = new \ReflectionClass($className);
+          if (!$reflectionClass->isSubclassOf(Request::class) || $reflectionClass->isAbstract()) {
+            continue;
+          }
+
+          $endpoint = "$className::getEndpoint"();
+          $classes[$endpoint] = $reflectionClass;
+        }
+      }
+    }
+
+    // then load all inheriting classes
+    foreach (get_declared_classes() as $declaredClass) {
+      $reflectionClass = new \ReflectionClass($declaredClass);
+      if (!$reflectionClass->isAbstract() && $reflectionClass->isSubclassOf(Request::class)) {
+        $className = $reflectionClass->getName();
+        $endpoint = "$className::getEndpoint"();
+        $classes[$endpoint] = $reflectionClass;
+      }
+    }
+
+    return $classes;
   }
 }

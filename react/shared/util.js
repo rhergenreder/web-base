@@ -59,7 +59,7 @@ const formatDate = (L, apiDate) => {
     return format(apiDate, L("general.datefns_date_format", "YYY/MM/dd"));
 }
 
-const formatDateTime = (L, apiDate) => {
+const formatDateTime = (L, apiDate, precise=false) => {
     if (!(apiDate instanceof Date)) {
         if (!isNaN(apiDate)) {
             apiDate = new Date(apiDate * 1000);
@@ -68,7 +68,10 @@ const formatDateTime = (L, apiDate) => {
         }
     }
 
-    return format(apiDate, L("general.datefns_date_time_format", "YYY/MM/dd HH:mm:ss"));
+    let dateFormat = precise ?
+        L("general.datefns_date_time_format_precise", "YYY/MM/dd HH:mm:ss") :
+        L("general.datefns_date_time_format", "YYY/MM/dd HH:mm");
+    return format(apiDate, dateFormat);
 }
 
 const upperFirstChars = (str) => {

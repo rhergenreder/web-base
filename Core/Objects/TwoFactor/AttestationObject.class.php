@@ -6,7 +6,7 @@ use Core\Objects\ApiObject;
 
 class AttestationObject extends ApiObject {
 
-  use Core\Objects\TwoFactor\CBORDecoder;
+  use CBORDecoder;
 
   private string $format;
   private array $statement;

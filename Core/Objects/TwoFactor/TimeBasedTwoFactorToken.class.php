@@ -7,11 +7,14 @@ use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Core\Driver\SQL\SQL;
 use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\Attribute\Visibility;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
 
 class TimeBasedTwoFactorToken extends TwoFactorToken {
 
   const TYPE = "totp";
+
+  #[Visibility(Visibility::NONE)]
   private string $secret;
 
   public function __construct(string $secret) {

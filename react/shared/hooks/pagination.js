@@ -25,6 +25,10 @@ class Pagination {
         this.setData({...this.data, pageSize: pageSize});
     }
 
+    setTotal(count) {
+        this.setData({...this.data, total: count});
+    }
+
     reset() {
         this.setData({current: 1, pageSize: 25, total: 0});
     }
@@ -35,6 +39,10 @@ class Pagination {
         } else {
             return 1;
         }
+    }
+
+    getParams() {
+        return [this.data.current, this.data.pageSize];
     }
 
     getTotal() {

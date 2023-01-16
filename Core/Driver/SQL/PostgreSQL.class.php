@@ -4,6 +4,7 @@ namespace Core\Driver\SQL;
 
 use Core\API\Parameter\Parameter;
 
+use Core\Driver\Logger\Logger;
 use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Column\IntColumn;
 use Core\Driver\SQL\Column\NumericColumn;
@@ -96,11 +97,15 @@ class PostgreSQL extends SQL {
   /**
    * @return mixed
    */
-  protected function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE) {
+  protected function execute($query, $values = NULL, int $fetchType = self::FETCH_NONE, int $logLevel = Logger::LOG_LEVEL_ERROR) {
 
     $this->lastError = "";
     $stmt_name = uniqid();
     $pgParams = array();
+
+    if ($logLevel === Logger::LOG_LEVEL_DEBUG) {
+      $this->logger->debug("query: " . $query . ", args: " . json_encode($values), false);
+    }
 
     if (!is_null($values)) {
       foreach ($values as $value) {

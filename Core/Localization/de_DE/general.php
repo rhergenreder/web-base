@@ -22,22 +22,28 @@ return [
   "name" => "Name",
   "type" => "Typ",
   "size" => "Größe",
-  "last_modified" => "Zuletzt geändert",
 
   # dialog / actions
   "action" => "Aktion",
+  "actions" => "Aktionen",
   "title" => "Titel",
   "message" => "Nachricht",
   "rename" => "Umbenennen",
+  "remove" => "Entfernen",
+  "change" => "Bearbeiten",
+  "reset" => "Zurücksetzen",
   "move" => "Verschieben",
   "delete" => "Löschen",
   "info" => "Info",
+  "reload" => "Aktualisieren",
+
+  # file
+  "choose_file" => "Datei auswählen",
   "download" => "Herunterladen",
   "download_all" => "Alles Herunterladen",
   "upload" => "Hochladen",
   "uploading" => "Lade hoch",
   "overwrite" => "Überschreiben",
-  "reload" => "Aktualisieren",
 
   # data table
   "showing_x_of_y_entries" => "Zeige %d von %d Einträgen",
@@ -47,6 +53,8 @@ return [
   "date" => "Datum",
   "start_date" => "Startdatum",
   "end_date" => "Enddatum",
+  "last_modified" => "Zuletzt geändert",
+  "timestamp" => "Zeitpunkt",
   "date_format" => "d.m.Y",
   "date_time_format" => "d.m.Y H:i",
   "date_time_format_precise" => "d.m.Y H:i:s",

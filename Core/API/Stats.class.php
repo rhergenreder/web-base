@@ -4,6 +4,8 @@ namespace Core\API;
 
 use Core\Driver\SQL\Expression\Count;
 use Core\Driver\SQL\Expression\Distinct;
+use Core\Driver\SQL\Query\Insert;
+use Core\Objects\DatabaseEntity\Group;
 use DateTime;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondBool;
@@ -113,4 +115,7 @@ class Stats extends Request {
     return $this->success;
   }
 
+  public static function getDefaultACL(Insert $insert): void {
+    $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to view site statistics");
+  }
 }

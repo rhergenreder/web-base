@@ -3,70 +3,92 @@
 namespace Core\Objects\TwoFactor;
 
 use Core\Driver\SQL\SQL;
+use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Cose\Algorithm\Signature\ECDSA\ECSignature;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
+use Cose\Key\Key;
 
 class KeyBasedTwoFactorToken extends TwoFactorToken {
 
   const TYPE = "fido";
 
+  #[Transient]
   private ?string $challenge;
-  private ?string $credentialId;
+
+  #[Transient]
+  private ?string $credentialID;
+
+  #[Transient]
   private ?PublicKey $publicKey;
 
-  public function __construct(string $challenge) {
+  private function __construct() {
     parent::__construct(self::TYPE);
-    $this->challenge = $challenge;
+  }
+
+  public function generateChallenge(int $length = 32) {
+    $this->challenge = base64_encode(generateRandomString($length, "raw"));
+    $_SESSION["challenge"] = $this->challenge;
+  }
+
+  public static function create(int $challengeLength = 32): KeyBasedTwoFactorToken {
+    $token = new KeyBasedTwoFactorToken();
+    $token->generateChallenge($challengeLength);
+    return $token;
+  }
+
+  public function getChallenge(): string {
+    return $this->challenge;
   }
 
   protected function readData(string $data) {
     if (!$this->isConfirmed()) {
-      $this->challenge = base64_decode($data);
-      $this->credentialId = null;
+      $this->challenge = $data;
+      $this->credentialID = null;
       $this->publicKey = null;
     } else {
       $jsonData = json_decode($data, true);
-      $this->challenge = base64_decode($_SESSION["challenge"] ?? "");
-      $this->credentialId = base64_decode($jsonData["credentialID"]);
+      $this->challenge = $_SESSION["challenge"] ?? "";
+      $this->credentialID = base64_decode($jsonData["credentialID"]);
       $this->publicKey = PublicKey::fromJson($jsonData["publicKey"]);
     }
   }
 
   public function getData(): string {
-    if ($this->isConfirmed()) {
-      return base64_encode($this->challenge);
+    if (!$this->isConfirmed()) {
+      return $this->challenge;
     } else {
       return json_encode([
-        "credentialId" => $this->credentialId,
+        "credentialID" => $this->credentialID,
         "publicKey" => $this->publicKey->jsonSerialize()
       ]);
     }
   }
 
-  public function confirmKeyBased(SQL $sql, string $credentialId, PublicKey $publicKey): bool {
-    $this->credentialId = $credentialId;
+  public function confirmKeyBased(SQL $sql, string $credentialID, PublicKey $publicKey): bool {
+    $this->credentialID = $credentialID;
     $this->publicKey = $publicKey;
     return parent::confirm($sql);
   }
-
 
   public function getPublicKey(): ?PublicKey {
     return $this->publicKey;
   }
 
   public function getCredentialId(): ?string {
-    return $this->credentialId;
+    return $this->credentialID;
   }
 
   public function jsonSerialize(?array $propertyNames = null): array {
     $jsonData = parent::jsonSerialize();
 
-    if (!empty($this->challenge) && !$this->isAuthenticated() && in_array("challenge", $propertyNames)) {
-      $jsonData["challenge"] = base64_encode($this->challenge);
-    }
+    if (!$this->isAuthenticated()) {
+      if (!empty($this->challenge) && ($propertyNames === null || in_array("challenge", $propertyNames))) {
+        $jsonData["challenge"] = $this->challenge;
+      }
 
-    if (!empty($this->credentialId) && in_array("credentialID", $propertyNames)) {
-      $jsonData["credentialID"] = base64_encode($this->credentialId);
+      if (!empty($this->credentialID) && ($propertyNames === null || in_array("credentialID", $propertyNames))) {
+        $jsonData["credentialID"] = base64_encode($this->credentialID);
+      }
     }
 
     return $jsonData;

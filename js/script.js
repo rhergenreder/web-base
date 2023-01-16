@@ -159,7 +159,7 @@ let Core = function () {
 
 let jsCore = new Core();
 
-function L(key) {
+function L(key, defaultTranslation=null) {
 
   let entries = window.languageEntries || {};
   let [module, variable] = key.split(".");
@@ -170,5 +170,5 @@ function L(key) {
     }
   }
 
-  return "[" + key + "]";
+  return defaultTranslation || "[" + key + "]";
 }

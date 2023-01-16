@@ -7,8 +7,8 @@ use Core\Driver\SQL\SQL;
 
 class CondIn extends Condition {
 
-  private $needle;
-  private $haystack;
+  private mixed $needle;
+  private mixed $haystack;
 
   public function __construct($needle, $haystack) {
     $this->needle = $needle;
@@ -20,22 +20,28 @@ class CondIn extends Condition {
 
   function getExpression(SQL $sql, array &$params): string {
 
-    $haystack = $this->getHaystack();
-    if (is_array($haystack)) {
-      $values = array();
-      foreach ($haystack as $value) {
-        $values[] = $sql->addValue($value, $params);
-      }
+    $needle = $sql->addValue($this->needle, $params);
 
-      $values = implode(",", $values);
-      $values = "($values)";
-    } else if($haystack instanceof Select) {
-      $values = $haystack->getExpression($sql, $params);
+    if (is_array($this->haystack)) {
+      if (!empty($this->haystack)) {
+        $values = array();
+        foreach ($this->haystack as $value) {
+          $values[] = $sql->addValue($value, $params);
+        }
+
+        $values = implode(",", $values);
+        $values = "($values)";
+      } else {
+        $sql->getLogger()->error("Empty haystack for in-expression with needle: " . $needle);
+        return false;
+      }
+    } else if ($this->haystack instanceof Select) {
+      $values = $this->haystack->getExpression($sql, $params);
     } else {
-      $sql->getLogger()->error("Unsupported in-expression value: " . get_class($haystack));
+      $sql->getLogger()->error("Unsupported in-expression value: " . get_class($this->haystack));
       return false;
     }
 
-    return $sql->addValue($this->needle, $params) . " IN $values";
+    return "$needle IN $values";
   }
 }

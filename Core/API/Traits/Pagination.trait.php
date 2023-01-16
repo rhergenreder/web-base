@@ -8,15 +8,16 @@ use Core\Driver\SQL\Condition\Condition;
 use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntityHandler;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntityQuery;
-use Core\Objects\DatabaseEntity\User;
 
 trait Pagination {
 
-  function getPaginationParameters(array $orderColumns, string $defaultOrderBy = "id", string $defaultSortOrder = "asc"): array {
+  function getPaginationParameters(array $orderColumns, string $defaultOrderBy = null, string $defaultSortOrder = "asc"): array {
     $this->paginationOrderColumns = $orderColumns;
+    $defaultOrderBy = $defaultOrderBy ?? current($orderColumns);
+
     return [
       'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
-      'count' => new Parameter('count', Parameter::TYPE_INT, true, 20),
+      'count' => new Parameter('count', Parameter::TYPE_INT, true, 25),
       'orderBy' => new StringType('orderBy', -1, true, $defaultOrderBy, $orderColumns),
       'sortOrder' => new StringType('sortOrder', -1, true, $defaultSortOrder, ['asc', 'desc']),
     ];

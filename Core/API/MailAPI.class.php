@@ -46,6 +46,8 @@ namespace Core\API\Mail {
   use Core\API\MailAPI;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
+  use Core\Driver\SQL\Query\Insert;
+  use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\MailQueueItem;
   use DateTimeInterface;
   use Core\Driver\SQL\Condition\Compare;
@@ -77,6 +79,10 @@ namespace Core\API\Mail {
 
       $this->lastError = $req->getLastError();
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to send a test email to verify configuration");
     }
   }
 

@@ -2,11 +2,10 @@
 
 namespace Core\Configuration;
 
+use Core\API\Request;
 use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
-use Core\Objects\DatabaseEntity\Controller\DatabaseEntityHandler;
 use Core\Objects\DatabaseEntity\Group;
-use Core\Objects\DatabaseEntity\Language;
 use Core\Objects\DatabaseEntity\Route;
 use Core\Objects\Router\DocumentRoute;
 use Core\Objects\Router\StaticFileRoute;
@@ -53,35 +52,7 @@ class CreateDatabase extends DatabaseScript {
       ->addString("description", 128, false, "")
       ->primaryKey("method");
 
-    $queries[] = $sql->insert("ApiPermission", array("method", "groups", "description"))
-      ->addRow("ApiKey/create", array(), "Allows users to create API-Keys for themselves")
-      ->addRow("ApiKey/fetch", array(), "Allows users to list their API-Keys")
-      ->addRow("ApiKey/refresh", array(), "Allows users to refresh their API-Keys")
-      ->addRow("ApiKey/revoke", array(), "Allows users to revoke their API-Keys")
-      ->addRow("Groups/fetch", array(Group::SUPPORT, Group::ADMIN), "Allows users to list all available groups")
-      ->addRow("Groups/create", array(Group::ADMIN), "Allows users to create a new groups")
-      ->addRow("Groups/delete", array(Group::ADMIN), "Allows users to delete a group")
-      ->addRow("Routes/fetch", array(Group::ADMIN), "Allows users to list all configured routes")
-      ->addRow("Routes/save", array(Group::ADMIN), "Allows users to create, delete and modify routes")
-      ->addRow("Mail/test", array(Group::SUPPORT, Group::ADMIN), "Allows users to send a test email to a given address")
-      ->addRow("Mail/Sync", array(Group::SUPPORT, Group::ADMIN), "Allows users to synchronize mails with the database")
-      ->addRow("Settings/get", array(Group::ADMIN), "Allows users to fetch server settings")
-      ->addRow("Settings/set", array(Group::ADMIN), "Allows users create, delete or modify server settings")
-      ->addRow("Settings/generateJWT", array(Group::ADMIN), "Allows users generate a new jwt key")
-      ->addRow("Stats", array(Group::ADMIN, Group::SUPPORT), "Allows users to fetch server stats")
-      ->addRow("User/create", array(Group::ADMIN), "Allows users to create a new user, email address does not need to be confirmed")
-      ->addRow("User/fetch", array(Group::ADMIN, Group::SUPPORT), "Allows users to list all registered users")
-      ->addRow("User/get", array(Group::ADMIN, Group::SUPPORT), "Allows users to get information about a single user")
-      ->addRow("User/invite", array(Group::ADMIN), "Allows users to create a new user and send them an invitation link")
-      ->addRow("User/edit", array(Group::ADMIN), "Allows users to edit details and group memberships of any user")
-      ->addRow("User/delete", array(Group::ADMIN), "Allows users to delete any other user")
-      ->addRow("Permission/fetch", array(Group::ADMIN), "Allows users to list all API permissions")
-      ->addRow("Visitors/stats", array(Group::ADMIN, Group::SUPPORT), "Allows users to see visitor statistics")
-      ->addRow("Contact/respond", array(Group::ADMIN, Group::SUPPORT), "Allows users to respond to contact requests")
-      ->addRow("Contact/fetch", array(Group::ADMIN, Group::SUPPORT), "Allows users to fetch all contact requests")
-      ->addRow("Contact/get", array(Group::ADMIN, Group::SUPPORT), "Allows users to see messages within a contact request")
-      ->addRow("Logs/get", [Group::ADMIN], "Allows users to fetch system logs");
-
+    self::loadDefaultACL($queries, $sql);
     self::loadPatches($queries, $sql);
 
     return $queries;
@@ -108,7 +79,7 @@ class CreateDatabase extends DatabaseScript {
     }
   }
 
-  public static function loadEntities(&$queries, $sql) {
+  private static function loadEntities(&$queries, $sql) {
     $persistables = [];
     $baseDirs = ["Core", "Site"];
     foreach ($baseDirs as $baseDir) {
@@ -159,6 +130,19 @@ class CreateDatabase extends DatabaseScript {
         throw new Exception("Circular or unmet table dependency detected. Unmet dependencies: "
           . implode(", ", $unmetDependenciesTotal));
       }
+    }
+  }
+
+  public static function loadDefaultACL(array &$queries, SQL $sql) {
+    $query = $sql->insert("ApiPermission", ["method", "groups", "description"]);
+
+    foreach (Request::getApiEndpoints() as $reflectionClass) {
+      $method = $reflectionClass->getName() . "::getDefaultACL";
+      $method($query);
+    }
+
+    if ($query->hasRows()) {
+      $queries[] = $query;
     }
   }
 }

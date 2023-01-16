@@ -7,6 +7,7 @@ use Core\Driver\SQL\SQL;
 class Logger {
 
   public const LOG_FILE_DATE_FORMAT = "Y-m-d_H-i-s_v";
+  public const LOG_LEVEL_NONE = -1;
   public const LOG_LEVEL_DEBUG = 0;
   public const LOG_LEVEL_INFO = 1;
   public const LOG_LEVEL_WARNING = 2;

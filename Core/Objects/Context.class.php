@@ -139,7 +139,7 @@ class Context {
         ->where(new CondOr(
             new CondLike("name", "%$lang%"), // english
             new Compare("code", $lang), // de_DE
-            new CondLike("code", "${lang}_%") // de -> de_%
+            new CondLike("code", "{$lang}_%") // de -> de_%
         ))
       );
       if ($language) {

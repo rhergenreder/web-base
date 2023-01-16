@@ -6,6 +6,7 @@ export default class API {
         this.loggedIn = false;
         this.user = null;
         this.session = null;
+        this.language = { id: 1, code: "en_US", shortCode: "en", name: "American English" };
         this.permissions = [];
     }
 
@@ -80,24 +81,31 @@ export default class API {
 
     /** UserAPI **/
     async login(username, password, rememberMe=false) {
-        return this.apiCall("user/login", { username: username, password: password, stayLoggedIn: rememberMe })
+        let res = await this.apiCall("user/login", { username: username, password: password, stayLoggedIn: rememberMe });
+        if (res.success) {
+            this.loggedIn = true;
+            this.session = res.session;
+            this.user = res.user;
+        }
+
+        return res;
     }
 
     async fetchUser() {
-        let response = await fetch("/api/user/info");
-        let data = await response.json();
-        if (data) {
-            this.loggedIn = data["loggedIn"];
-            this.permissions = data["permissions"] ? data["permissions"].map(s => s.toLowerCase()) : [];
+        let res = await this.apiCall("user/info");
+        if (res.success) {
+            this.loggedIn = res.loggedIn;
+            this.language = res.language;
+            this.permissions = (res.permissions || []).map(s => s.toLowerCase());
             if (this.loggedIn) {
-                this.session = data["session"];
-                this.user = data["user"];
+                this.session = res.session;
+                this.user = res.user;
             } else {
                 this.session = null;
                 this.user = null;
             }
         }
-        return data;
+        return res;
     }
 
     async editUser(id, username, email, password, groups, confirmed) {
@@ -145,6 +153,11 @@ export default class API {
 
     async createUser(username, email, password, confirmPassword) {
         return this.apiCall("user/create", { username: username, email: email, password: password, confirmPassword: confirmPassword });
+    }
+
+    async updateProfile(username=null, fullName=null, password=null, confirmPassword = null, oldPassword = null) {
+        return this.apiCall("user/updateProfile", { username: username, fullName: fullName,
+            password: password, confirmPassword: confirmPassword, oldPassword: oldPassword });
     }
 
     /** Stats **/
@@ -204,7 +217,12 @@ export default class API {
     }
 
     async setLanguage(params) {
-        return await this.apiCall("language/set", params);
+        let res = await this.apiCall("language/set", params);
+        if (res.success) {
+            this.language = res.language;
+        }
+
+        return res;
     }
 
     async getLanguageEntries(modules, code=null, useCache=false) {
@@ -216,7 +234,6 @@ export default class API {
     }
 
     /** ApiKeyAPI **/
-    // API-Key API
     async getApiKeys(showActiveOnly = false) {
         return this.apiCall("apiKey/fetch", { showActiveOnly: showActiveOnly });
     }
@@ -227,5 +244,43 @@ export default class API {
 
     async revokeKey(id) {
         return this.apiCall("apiKey/revoke", { id: id });
+    }
+
+    /** 2FA API **/
+    async confirmTOTP(code) {
+        return this.apiCall("tfa/confirmTotp", { code: code });
+    }
+
+    async remove2FA(password) {
+        return this.apiCall("tfa/remove", { password: password });
+    }
+
+    async verifyTotp2FA(code) {
+        return this.apiCall("tfa/verifyTotp", { code: code });
+    }
+
+    async verifyKey2FA(credentialID, clientDataJSON, authData, signature) {
+        return this.apiCall("tfa/verifyKey", { credentialID: credentialID, clientDataJSON: clientDataJSON, authData: authData, signature: signature })
+    }
+
+    async register2FA(clientDataJSON = null, attestationObject = null) {
+        return this.apiCall("tfa/registerKey", { clientDataJSON: clientDataJSON, attestationObject: attestationObject });
+    }
+
+    /** GPG API **/
+    async uploadGPG(pubkey) {
+        return this.apiCall("user/importGPG", { pubkey: pubkey });
+    }
+
+    async confirmGpgToken(token) {
+        return this.apiCall("user/confirmGPG", { token: token });
+    }
+
+    async removeGPG(password) {
+        return this.apiCall("user/removeGPG", { password: password });
+    }
+
+    async downloadGPG(userId) {
+        return this.apiCall("user/downloadGPG", { id: userId }, true);
     }
 };

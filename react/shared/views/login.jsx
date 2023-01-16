@@ -71,15 +71,24 @@ export default function LoginForm(props) {
 
     const api = props.api;
     const classes = useStyles();
+
+    // inputs
     let [username, setUsername] = useState("");
     let [password, setPassword] = useState("");
     let [rememberMe, setRememberMe] = useState(true);
-    let [isLoggingIn, setLoggingIn] = useState(false);
     let [emailConfirmed, setEmailConfirmed] = useState(null);
     let [tfaCode, set2FACode] = useState("");
-    let [tfaState, set2FAState] = useState(0); // 0: not sent, 1: sent, 2: retry
-    let [tfaError, set2FAError] = useState("");
+
+    // 2fa
+    // 0: not sent, 1: sent, 2: retry
+    let [tfaToken, set2FAToken] = useState(api.user?.twoFactorToken || { authenticated: false, type: null, step: 0 });
     let [error, setError] = useState("");
+
+    const abortController = new AbortController();
+    const abortSignal = abortController.signal;
+
+    // state
+    let [isLoggingIn, setLoggingIn] = useState(false);
     let [loaded, setLoaded] = useState(false);
 
     const {translate: L, currentLocale, requestModules} = useContext(LocaleContext);
@@ -103,13 +112,14 @@ export default function LoginForm(props) {
             setLoggingIn(true);
             removeParameter("success");
             api.login(username, password, rememberMe).then((res) => {
-                set2FAState(0);
+                let twoFactorToken = res.twoFactorToken || { };
+                set2FAToken({ ...twoFactorToken, authenticated: false, step: 0, error: "" });
                 setLoggingIn(false);
                 setPassword("");
                 if (!res.success) {
                     setEmailConfirmed(res.emailConfirmed);
                     setError(res.msg);
-                } else {
+                } else if (!twoFactorToken.type) {
                     props.onLogin();
                 }
             });
@@ -118,111 +128,149 @@ export default function LoginForm(props) {
 
     const onSubmit2FA = useCallback(() => {
         setLoggingIn(true);
-        props.onTotp2FA(tfaCode, (res) => {
+        api.verifyTotp2FA(tfaCode).then((res) => {
             setLoggingIn(false);
+            if (res.success) {
+                set2FAToken({ ...tfaToken, authenticated: true });
+                props.onLogin();
+            } else {
+                set2FAToken({ ...tfaToken, step: 2, error: res.msg });
+            }
         });
-    }, [tfaCode, props]);
+    }, [tfaCode, tfaToken, props]);
 
     const onCancel2FA = useCallback(() => {
+        abortController.abort();
         props.onLogout();
-    }, [props]);
+        set2FAToken({authenticated: false, step: 0, error: ""});
+    }, [props, abortController]);
 
     useEffect(() => {
-        if (!api.loggedIn || !api.user) {
+        if (!api.loggedIn) {
             return;
         }
 
-        let twoFactor = api.user["2fa"];
-        if (!twoFactor || !twoFactor.confirmed ||
-            twoFactor.authenticated || twoFactor.type !== "fido") {
+        if (!tfaToken || !tfaToken.confirmed || tfaToken.authenticated || tfaToken.type !== "fido") {
             return;
         }
 
-        if (tfaState === 0) {
-            set2FAState(1);
-            set2FAError("");
-            navigator.credentials.get({
-                publicKey: {
-                    challenge: encodeText(window.atob(twoFactor.challenge)),
-                    allowCredentials: [{
-                        id: encodeText(window.atob(twoFactor.credentialID)),
-                        type: "public-key",
-                    }],
-                    userVerification: "discouraged",
-                },
-            }).then((res) => {
-                let credentialID = res.id;
-                let clientDataJson = decodeText(res.response.clientDataJSON);
-                let authData = window.btoa(decodeText(res.response.authenticatorData));
-                let signature = window.btoa(decodeText(res.response.signature));
-                props.onKey2FA(credentialID, clientDataJson, authData, signature, res => {
-                    if (!res.success) {
-                        set2FAState(2);
-                    }
-                });
-            }).catch(e => {
-                set2FAState(2);
-                set2FAError(e.toString());
+        let step = tfaToken.step || 0;
+        if (step !== 0) {
+            return;
+        }
+
+        set2FAToken({ ...tfaToken, step: 1, error: "" });
+        navigator.credentials.get({
+            publicKey: {
+                challenge: encodeText(window.atob(tfaToken.challenge)),
+                allowCredentials: [{
+                    id: encodeText(window.atob(tfaToken.credentialID)),
+                    type: "public-key",
+                }],
+                userVerification: "discouraged",
+            },
+            signal: abortSignal
+        }).then((res) => {
+            let credentialID = res.id;
+            let clientDataJson = decodeText(res.response.clientDataJSON);
+            let authData = window.btoa(decodeText(res.response.authenticatorData));
+            let signature = window.btoa(decodeText(res.response.signature));
+            api.verifyKey2FA(credentialID, clientDataJson, authData, signature).then((res) => {
+                if (!res.success) {
+                    set2FAToken({ ...tfaToken, step: 2, error: res.msg });
+                } else {
+                    props.onLogin();
+                }
             });
-        }
-    }, [api.loggedIn, api.user, tfaState, props]);
+        }).catch(e => {
+            set2FAToken({ ...tfaToken, step: 2, error: e.toString() });
+        });
+    }, [api.loggedIn, tfaToken, props.onLogin, props.onKey2FA, abortSignal]);
 
     const createForm = () => {
 
         // 2FA
-        if (api.loggedIn && api.user["2fa"]) {
-            return <>
-                <div>{L("account.2fa_title")}: {api.user["2fa"].type}</div>
-                { api.user["2fa"].type === "totp" ?
+        if (api.loggedIn && tfaToken.type) {
+
+            if (tfaToken.type === "totp") {
+                return <>
+                    <div>{L("account.2fa_title")}:</div>
                     <TextField
-                        variant="outlined" margin="normal"
-                        id="code" label={L("account.6_digit_code")} name="code"
-                        autoComplete="code"
+                        variant={"outlined"} margin={"normal"}
+                        id={"code"} label={L("account.6_digit_code")} name={"code"}
+                        autoComplete={"code"}
                         required fullWidth autoFocus
                         value={tfaCode} onChange={(e) => set2FACode(e.target.value)}
-                    /> : <>
-                        {L("account.2fa_text")}
-                        <Box mt={2} textAlign={"center"}>
-                            {tfaState !== 2
-                                ? <CircularProgress/>
-                                : <div className={classes.error2FA}>
-                                    <div>{L("general.something_went_wrong")}:<br />{tfaError}</div>
-                                    <Button onClick={() => set2FAState(0)}
-                                            variant={"outlined"} color={"secondary"} size={"small"}>
-                                        <ReplayIcon />&nbsp;{L("general.retry")}
-                                    </Button>
-                                </div>
-                            }
-                        </Box>
-                    </>
-                }
-                {
-                    error ? <Alert severity="error">{error}</Alert> : <></>
-                }
-                <Grid container spacing={2} className={classes.buttons2FA}>
-                    <Grid item xs={6}>
-                        <Button
-                            fullWidth variant="contained"
-                            color="inherit" size={"medium"}
-                            disabled={isLoggingIn}
-                            onClick={onCancel2FA}>
-                            {L("general.go_back")}
-                        </Button>
+                    />
+                    {
+                        tfaToken.error ? <Alert severity="error">{tfaToken.error}</Alert> : <></>
+                    }
+                    <Grid container spacing={2} className={classes.buttons2FA}>
+                        <Grid item xs={6}>
+                            <Button
+                                fullWidth variant={"contained"}
+                                color={"inherit"} size={"medium"}
+                                disabled={isLoggingIn}
+                                onClick={onCancel2FA}>
+                                {L("general.go_back")}
+                            </Button>
+                        </Grid>
+                        <Grid item xs={6}>
+                            <Button
+                                type="submit" fullWidth variant="contained"
+                                color="primary" size={"medium"}
+                                disabled={isLoggingIn || tfaToken.type !== "totp"}
+                                onClick={onSubmit2FA}>
+                                {isLoggingIn ?
+                                    <>{L("general.submitting")}… <CircularProgress size={15}/></> :
+                                    L("general.submit")
+                                }
+                            </Button>
+                        </Grid>
                     </Grid>
-                    <Grid item xs={6}>
-                        <Button
-                            type="submit" fullWidth variant="contained"
-                            color="primary" size={"medium"}
-                            disabled={isLoggingIn || api.user["2fa"].type !== "totp"}
-                            onClick={onSubmit2FA}>
-                            {isLoggingIn ?
-                                <>{L("general.submitting")}… <CircularProgress size={15}/></> :
-                                L("general.submit")
-                            }
-                        </Button>
+                </>
+            } else if (tfaToken.type === "fido") {
+                return <>
+                    <div>{L("account.2fa_title")}:</div>
+                    <br />
+                    {L("account.2fa_text")}
+                    <Box mt={2} textAlign={"center"}>
+                        {tfaToken.step !== 2
+                            ? <CircularProgress/>
+                            : <div className={classes.error2FA}>
+                                <div><b>{L("general.something_went_wrong")}:</b><br />{tfaToken.error}</div>
+                                <Button onClick={() => set2FAToken({ ...tfaToken, step: 0, error: "" })}
+                                        variant={"outlined"} color={"secondary"} size={"small"}>
+                                    <ReplayIcon />&nbsp;{L("general.retry")}
+                                </Button>
+                            </div>
+                        }
+                    </Box>
+                    <Grid container spacing={2} className={classes.buttons2FA}>
+                        <Grid item xs={6}>
+                            <Button
+                                fullWidth variant={"contained"}
+                                color={"inherit"} size={"medium"}
+                                disabled={isLoggingIn}
+                                onClick={onCancel2FA}>
+                                {L("general.go_back")}
+                            </Button>
+                        </Grid>
+                        <Grid item xs={6}>
+                            <Button
+                                type="submit" fullWidth variant="contained"
+                                color="primary" size={"medium"}
+                                disabled={isLoggingIn || tfaToken.type !== "totp"}
+                                onClick={onSubmit2FA}>
+                                {isLoggingIn ?
+                                    <>{L("general.submitting")}… <CircularProgress size={15}/></> :
+                                    L("general.submit")
+                                }
+                            </Button>
+                        </Grid>
                     </Grid>
-                </Grid>
-            </>
+                </>
+            }
         }
 
         return <>

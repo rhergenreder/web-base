@@ -31,6 +31,7 @@ namespace Core\API\Permission {
   use Core\Driver\SQL\Condition\CondIn;
   use Core\Driver\SQL\Condition\CondLike;
   use Core\Driver\SQL\Condition\CondNot;
+  use Core\Driver\SQL\Query\Insert;
   use Core\Driver\SQL\Strategy\UpdateStrategy;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
@@ -72,6 +73,16 @@ namespace Core\API\Permission {
         if (empty($userGroups) || empty(array_intersect($groups, array_keys($userGroups)))) {
           http_response_code(401);
           return $this->createError("Permission denied.");
+        }
+
+        // user would have required groups, check for 2fa-state
+        if ($currentUser) {
+          $tfaToken = $currentUser->getTwoFactorToken();
+          if ($tfaToken && $tfaToken->isConfirmed() && !$tfaToken->isAuthenticated()) {
+            $this->lastError = '2FA-Authorization is required';
+            http_response_code(401);
+            return false;
+          }
         }
       }
 
@@ -126,6 +137,10 @@ namespace Core\API\Permission {
       }
 
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch API permissions");
     }
   }
 
@@ -191,6 +206,11 @@ namespace Core\API\Permission {
       }
 
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN],
+        "Allows users to modify API permissions. This is restricted to the administrator and cannot be changed");
     }
   }
 }

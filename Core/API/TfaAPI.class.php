@@ -36,17 +36,20 @@ namespace Core\API {
       return true;
     }
 
-    protected function verifyClientDataJSON($jsonData, KeyBasedTwoFactorToken $token): bool {
+    protected function verifyClientDataJSON(array $jsonData, KeyBasedTwoFactorToken $token): bool {
       $settings = $this->context->getSettings();
       $expectedType = $token->isConfirmed() ? "webauthn.get" : "webauthn.create";
       $type = $jsonData["type"] ?? "null";
       if ($type !== $expectedType) {
         return $this->createError("Invalid client data json type. Expected: '$expectedType', Got: '$type'");
-      } else if ($token->getData() !== base64url_decode($jsonData["challenge"] ?? "")) {
+      } else if (base64url_decode($token->getChallenge()) !== base64url_decode($jsonData["challenge"] ?? "")) {
         return $this->createError("Challenge does not match");
-      } else if (($jsonData["origin"] ?? null) !== $settings->getBaseURL()) {
+      }
+
+      $origin = $jsonData["origin"] ?? null;
+      if ($origin !== $settings->getBaseURL()) {
         $baseUrl = $settings->getBaseURL();
-        return $this->createError("Origin does not match. Expected: '$baseUrl', Got: '${$jsonData["origin"]}'");
+       // return $this->createError("Origin does not match. Expected: '$baseUrl', Got: '$origin'");
       }
 
       return true;
@@ -96,31 +99,34 @@ namespace Core\API\TFA {
 
       if ($this->success && $token->isConfirmed()) {
         // send an email
-        $settings = $this->context->getSettings();
-        $req = new \Core\API\Template\Render($this->context);
-        $this->success = $req->execute([
-          "file" => "mail/2fa_remove.twig",
-          "parameters" => [
-            "username" => $currentUser->getFullName() ?? $currentUser->getUsername(),
-            "site_name" => $settings->getSiteName(),
-            "sender_mail" => $settings->getMailSender()
-          ]
-        ]);
-
-        if ($this->success) {
-          $body = $req->getResult()["html"];
-          $gpg = $currentUser->getGPG();
-          $siteName = $settings->getSiteName();
-          $req = new \Core\API\Mail\Send($this->context);
+        $email = $currentUser->getEmail();
+        if ($email) {
+          $settings = $this->context->getSettings();
+          $req = new \Core\API\Template\Render($this->context);
           $this->success = $req->execute([
-            "to" => $currentUser->getEmail(),
-            "subject" => "[$siteName] 2FA-Authentication removed",
-            "body" => $body,
-            "gpgFingerprint" => $gpg?->getFingerprint()
+            "file" => "mail/2fa_remove.twig",
+            "parameters" => [
+              "username" => $currentUser->getFullName() ?? $currentUser->getUsername(),
+              "site_name" => $settings->getSiteName(),
+              "sender_mail" => $settings->getMailSender()
+            ]
           ]);
-        }
 
-        $this->lastError = $req->getLastError();
+          if ($this->success) {
+            $body = $req->getResult()["html"];
+            $gpg = $currentUser->getGPG();
+            $siteName = $settings->getSiteName();
+            $req = new \Core\API\Mail\Send($this->context);
+            $this->success = $req->execute([
+              "to" => $email,
+              "subject" => "[$siteName] 2FA-Authentication removed",
+              "body" => $body,
+              "gpgFingerprint" => $gpg?->getFingerprint()
+            ]);
+          }
+
+          $this->lastError = $req->getLastError();
+        }
       }
 
       return $this->success;
@@ -211,6 +217,8 @@ namespace Core\API\TFA {
         return $this->createError("Invalid 2FA-token endpoint");
       }
 
+      $this->result["time"] = time();
+      $this->result["time_zone"] = $this->context->getSettings()->getTimeZone();
       $code = $this->getParam("code");
       if (!$twoFactorToken->verify($code)) {
         return $this->createError("Code does not match");
@@ -250,11 +258,11 @@ namespace Core\API\TFA {
           if (!($twoFactorToken instanceof KeyBasedTwoFactorToken) || $twoFactorToken->isConfirmed()) {
             return $this->createError("You already added a two factor token");
           } else {
-            $challenge = base64_encode($twoFactorToken->getData());
+            $challenge = $twoFactorToken->getChallenge();
           }
         } else {
-          $challenge = base64_encode(generateRandomString(32, "raw"));
-          $twoFactorToken = new KeyBasedTwoFactorToken($challenge);
+          $twoFactorToken = KeyBasedTwoFactorToken::create();
+          $challenge = $twoFactorToken->getChallenge();
           $this->success = ($twoFactorToken->save($sql) !== false);
           $this->lastError = $sql->getLastError();
           if (!$this->success) {
@@ -262,7 +270,7 @@ namespace Core\API\TFA {
           }
 
           $currentUser->setTwoFactorToken($twoFactorToken);
-          $this->success = $currentUser->save($sql) !== false;
+          $this->success = $currentUser->save($sql, ["twoFactorToken"]) !== false;
           $this->lastError = $sql->getLastError();
           if (!$this->success) {
             return false;

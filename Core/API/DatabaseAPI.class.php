@@ -12,8 +12,10 @@ namespace Core\API\Database {
 
   use Core\API\DatabaseAPI;
   use Core\API\Parameter\StringType;
+  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
+  use Core\Objects\DatabaseEntity\Group;
 
   class Status extends DatabaseAPI {
 
@@ -28,6 +30,10 @@ namespace Core\API\Database {
       $this->result["status"] = $status;
 
       return true;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to view the database status");
     }
   }
 
@@ -97,6 +103,10 @@ namespace Core\API\Database {
       }
 
       return true;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to migrate the database structure");
     }
   }
 }

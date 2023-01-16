@@ -138,6 +138,7 @@ namespace Core\API\User {
   use Core\Driver\SQL\Condition\CondBool;
   use Core\Driver\SQL\Condition\CondOr;
   use Core\Driver\SQL\Expression\Alias;
+  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\UserToken;
   use Core\Driver\SQL\Column\Column;
@@ -182,6 +183,9 @@ namespace Core\API\User {
 
       $groups = [];
       $sql = $this->context->getSQL();
+
+      // TODO: Currently low-privileged users can request any groups here, so a simple privilege escalation is possible. \
+      // what do? limit access to user/create to admins only?
       $requestedGroups = array_unique($this->getParam("groups"));
       if (!empty($requestedGroups)) {
         $groups = Group::findAll($sql, new CondIn(new Column("id"), $requestedGroups));
@@ -205,6 +209,10 @@ namespace Core\API\User {
 
     public function getUser(): User {
       return $this->user;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to create new users");
     }
   }
 
@@ -263,6 +271,10 @@ namespace Core\API\User {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch all users");
+    }
   }
 
   class Get extends UserAPI {
@@ -302,6 +314,10 @@ namespace Core\API\User {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to get details about a user");
+    }
   }
 
   class Info extends UserAPI {
@@ -314,29 +330,33 @@ namespace Core\API\User {
     public function _execute(): bool {
 
       $currentUser = $this->context->getUser();
+      $language = $this->context->getLanguage();
+      $this->result["language"] = $language->jsonSerialize();
+
       if (!$currentUser) {
         $this->result["loggedIn"] = false;
+        $userGroups = [];
       } else {
         $this->result["loggedIn"] = true;
         $userGroups = array_keys($currentUser->getGroups());
-        $sql = $this->context->getSQL();
-        $res = $sql->select("method", "groups")
-          ->from("ApiPermission")
-          ->execute();
-
-        $permissions = [];
-        if (is_array($res)) {
-          foreach ($res as $row) {
-            $requiredGroups = json_decode($row["groups"], true);
-            if (empty($requiredGroups) || !empty(array_intersect($requiredGroups, $userGroups))) {
-              $permissions[] = $row["method"];
-            }
-          }
-        }
-
-        $this->result["permissions"] = $permissions;
         $this->result["user"] = $currentUser->jsonSerialize();
         $this->result["session"] = $this->context->getSession()->jsonSerialize();
+      }
+
+
+      $sql = $this->context->getSQL();
+      $res = $sql->select("method", "groups")
+        ->from("ApiPermission")
+        ->execute();
+
+      $this->result["permissions"] = [];
+      if (is_array($res)) {
+        foreach ($res as $row) {
+          $requiredGroups = json_decode($row["groups"], true);
+          if (empty($requiredGroups) || !empty(array_intersect($requiredGroups, $userGroups))) {
+            $this->result["permissions"][] = $row["method"];
+          }
+        }
       }
 
       return $this->success;
@@ -414,6 +434,10 @@ namespace Core\API\User {
 
       $this->logger->info("Created new user with id=" . $user->getId());
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to invite new users");
     }
   }
 
@@ -526,6 +550,14 @@ namespace Core\API\User {
       if ($this->context->getUser()) {
         $this->lastError = L('You are already logged in');
         $this->success = true;
+
+        $tfaToken = $this->context->getUser()->getTwoFactorToken();
+        if ($tfaToken && $tfaToken->isConfirmed() && !$tfaToken->isAuthenticated()) {
+          $this->result["twoFactorToken"] = $tfaToken->jsonSerialize([
+            "type", "challenge", "authenticated", "confirmed", "credentialID"
+          ]);
+        }
+
         return true;
       }
 
@@ -552,16 +584,19 @@ namespace Core\API\User {
               return $this->createError("Error creating Session: " . $sql->getLastError());
             } else {
               $tfaToken = $user->getTwoFactorToken();
+
               $this->result["loggedIn"] = true;
+              $this->result["user"] = $user->jsonSerialize();
+              $this->result["session"] = $session->jsonSerialize();
               $this->result["logoutIn"] = $session->getExpiresSeconds();
-              $this->result["csrfToken"] = $session->getCsrfToken();
               if ($tfaToken && $tfaToken->isConfirmed()) {
-                $this->result["2fa"] = ["type" => $tfaToken->getType()];
                 if ($tfaToken instanceof KeyBasedTwoFactorToken) {
-                  $challenge = base64_encode(generateRandomString(32, "raw"));
-                  $this->result["2fa"]["challenge"] = $challenge;
-                  $_SESSION["challenge"] = $challenge;
+                  $tfaToken->generateChallenge();
                 }
+
+                $this->result["twoFactorToken"] = $tfaToken->jsonSerialize([
+                  "type", "challenge", "authenticated", "confirmed", "credentialID"
+                ]);
               }
               $this->success = true;
             }
@@ -823,6 +858,10 @@ namespace Core\API\User {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to modify other user's details");
+    }
   }
 
   class Delete extends UserAPI {
@@ -855,6 +894,10 @@ namespace Core\API\User {
       }
 
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to delete other users");
     }
   }
 

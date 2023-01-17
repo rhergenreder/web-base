@@ -229,4 +229,18 @@ abstract class Route extends DatabaseEntity {
   public function setExact(bool $exact) {
     $this->exact = $exact;
   }
+
+  public static function getPredefinedValues(): array {
+    return [
+      new DocumentRoute("/admin", false, \Core\Documents\Admin::class),
+      new DocumentRoute("/register", true, \Core\Documents\Account::class, "account/register.twig"),
+      new DocumentRoute("/confirmEmail", true, \Core\Documents\Account::class, "account/confirm_email.twig"),
+      new DocumentRoute("/acceptInvite", true, \Core\Documents\Account::class, "account/accept_invite.twig"),
+      new DocumentRoute("/resetPassword", true, \Core\Documents\Account::class, "account/reset_password.twig"),
+      new DocumentRoute("/login", true, \Core\Documents\Account::class, "account/login.twig"),
+      new DocumentRoute("/resendConfirmEmail", true, \Core\Documents\Account::class, "account/resend_confirm_email.twig"),
+      new DocumentRoute("/debug", true, \Core\Documents\Info::class),
+      new StaticFileRoute("/", true, "/static/welcome.html"),
+    ];
+  }
 }

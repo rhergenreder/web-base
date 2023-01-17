@@ -11,6 +11,6 @@ class Admin extends TemplateDocument {
     $this->title = "Administration";
     $this->searchable = false;
     $this->enableCSP();
-    $this->addCSPWhitelist("/js/admin-panel/");
+    $this->addCSPWhitelist("/react/dist/admin-panel/");
   }
 }

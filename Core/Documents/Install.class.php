@@ -244,24 +244,12 @@ namespace Documents\Install {
         $success = false;
       }
 
-      if (function_exists("posix_getuid")) {
-        $userId = posix_getuid();
-        if (fileowner(WEBROOT) !== $userId) {
-          $username = posix_getpwuid($userId)['name'];
-          $failedRequirements[] = sprintf("<b>%s</b> is not owned by current user: $username ($userId). " .
-              "Try running <b>chown -R $userId %s</b> or give the required directories write permissions: " .
-              "<b>Site/Configuration</b>, <b>Site/Cache</b>, <b>Site/Logs</b>, <b>Core/External</b>",
-            WEBROOT, WEBROOT);
-          $success = false;
-        }
-      }
-
       if (!function_exists("yaml_emit")) {
         $failedRequirements[] = "<b>YAML</b> extension is not installed.";
         $success = false;
       }
 
-      $requiredVersion = '8.0';
+      $requiredVersion = '8.1';
       if (version_compare(PHP_VERSION, $requiredVersion, '<')) {
         $failedRequirements[] = "PHP Version <b>>= $requiredVersion</b> is required. Got: <b>" . PHP_VERSION . "</b>";
         $success = false;

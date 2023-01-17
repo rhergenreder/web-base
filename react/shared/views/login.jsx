@@ -185,7 +185,7 @@ export default function LoginForm(props) {
         }).catch(e => {
             set2FAToken({ ...tfaToken, step: 2, error: e.toString() });
         });
-    }, [api.loggedIn, tfaToken, props.onLogin, props.onKey2FA, abortSignal]);
+    }, [api.loggedIn, tfaToken, props.onLogin, abortSignal]);
 
     const createForm = () => {
 

@@ -12,6 +12,9 @@ return [
   "name" => "Name",
   "type" => "Type",
   "size" => "Size",
+  "not_supported" => "Not supported",
+  "yes" => "Yes",
+  "no" => "No",
 
   # dialog / actions
   "action" => "Action",
@@ -24,6 +27,7 @@ return [
   "request" => "Request",
   "cancel" => "Cancel",
   "confirm" => "Confirm",
+  "ok" => "OK",
   "remove" => "Remove",
   "change" => "Change",
   "reset" => "Reset",
@@ -34,6 +38,7 @@ return [
   "delete" => "Delete",
   "info" => "Info",
   "reload" => "Reload",
+  "success" => "Success",
 
   # file
   "choose_file" => "Choose File",
@@ -66,7 +71,4 @@ return [
   "datefns_time_format_precise" => "pp",
   "datefns_datetime_format" => "MM/dd/yyyy p",
   "datefns_datetime_format_precise" => "MM/dd/yyyy pp",
-
-  # API
-  "no_api_key_registered" => "No valid API-Key registered",
 ];

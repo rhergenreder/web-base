@@ -15,6 +15,7 @@ return [
   "request" => "Anfordern",
   "cancel" => "Abbrechen",
   "confirm" => "Bestätigen",
+  "ok" => "OK",
   "language" => "Sprache",
   "loading" => "Laden",
   "logout" => "Ausloggen",
@@ -22,6 +23,9 @@ return [
   "name" => "Name",
   "type" => "Typ",
   "size" => "Größe",
+  "not_supported" => "Nicht unterstützt",
+  "yes" => "Ja",
+  "no" => "Nein",
 
   # dialog / actions
   "action" => "Aktion",
@@ -36,6 +40,7 @@ return [
   "delete" => "Löschen",
   "info" => "Info",
   "reload" => "Aktualisieren",
+  "success" => "Erfolg",
 
   # file
   "choose_file" => "Datei auswählen",
@@ -65,7 +70,4 @@ return [
   "datefns_time_format_precise" => "HH:mm:ss",
   "datefns_datetime_format" => "dd.MM.yyyy HH:mm",
   "datefns_datetime_format_precise" => "dd.MM.yyyy HH:mm:ss",
-
-  # API
-  "no_api_key_registered" => "Kein gültiger API-Schlüssel registriert",
 ];

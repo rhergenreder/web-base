@@ -326,11 +326,21 @@ export default class API {
     }
 
     async confirmGpgToken(token) {
-        return this.apiCall("user/confirmGPG", { token: token });
+        let res = await this.apiCall("user/confirmGPG", { token: token });
+        if (res.success) {
+            this.user.gpgKey.confirmed = true;
+        }
+
+        return res;
     }
 
     async removeGPG(password) {
-        return this.apiCall("user/removeGPG", { password: password });
+        let res = await this.apiCall("user/removeGPG", { password: password });
+        if (res.success) {
+            this.user.gpgKey = null;
+        }
+
+        return res;
     }
 
     async downloadGPG(userId) {

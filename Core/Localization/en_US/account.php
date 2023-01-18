@@ -45,4 +45,5 @@ return [
   "gpg_key" => "GPG Key",
   "2fa_token" => "Two-Factor Authentication (2FA)",
   "profile_picture_of" => "Profile Picture of",
+  "language" => "Language",
 ];

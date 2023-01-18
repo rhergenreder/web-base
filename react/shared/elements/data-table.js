@@ -215,13 +215,13 @@ export class BoolColumn extends DataColumn {
 
     renderData(L, entry, index) {
         let data = super.renderData(L, entry);
-        return L(data ? "general.true" : "general.false");
+        return L(data ? "general.yes" : "general.no");
     }
 }
 
 export class ControlsColumn extends DataColumn {
-    constructor(buttons = [], params = {}) {
-        super("general.controls", null, { align: "center", ...params, sortable: false });
+    constructor(label, buttons = [], params = {}) {
+        super(label, null, { align: "center", ...params, sortable: false });
         this.buttons = buttons;
     }
 

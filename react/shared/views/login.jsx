@@ -185,7 +185,7 @@ export default function LoginForm(props) {
         }).catch(e => {
             set2FAToken({ ...tfaToken, step: 2, error: e.toString() });
         });
-    }, [api.loggedIn, tfaToken, props.onLogin, abortSignal]);
+    }, [api.loggedIn, tfaToken, props.onLogin, props.onKey2FA, abortSignal]);
 
     const createForm = () => {
 
@@ -335,7 +335,10 @@ export default function LoginForm(props) {
     }
 
     if (!loaded) {
-        return <b>{L("general.loading")}… <Icon icon={"spinner"}/></b>
+        return <Box textAlign={"center"} mt={2}>
+            <h2>{L("general.loading", "Loading")}…</h2>
+            <CircularProgress size={"32px"}/>
+        </Box>
     }
 
     let successMessage = getParameter("success");

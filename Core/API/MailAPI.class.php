@@ -20,7 +20,7 @@ namespace Core\API {
         $settings = $req->getResult()["settings"];
 
         if (!isset($settings["mail_enabled"]) || $settings["mail_enabled"] !== "1") {
-          $this->createError("Mail is not configured yet.");
+          $this->createError("Mailing is not configured on this server yet.");
           return null;
         }
 

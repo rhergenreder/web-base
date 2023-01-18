@@ -44,4 +44,5 @@ return [
   "confirm_error" => "Fehler beim Bestätigen der E-Mail Adresse",
   "gpg_key" => "GPG-Schlüssel",
   "2fa_token" => "Zwei-Faktor Authentifizierung (2FA)",
+  "profile_picture_of" => "Profilbild von",
 ];

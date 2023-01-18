@@ -9,17 +9,21 @@ use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 class ApiKey extends DatabaseEntity {
 
   private bool $active;
-  #[MaxLength(64)] public String $apiKey;
+  #[MaxLength(64)] public String $token;
   public \DateTime $validUntil;
   public User $user;
 
-  public function __construct(?int $id = null) {
-    parent::__construct($id);
-    $this->active = true;
-  }
-
   public function getValidUntil(): \DateTime {
     return $this->validUntil;
+  }
+
+  public static function create(User $user, int $days = 30): ApiKey {
+    $apiKey = new ApiKey();
+    $apiKey->user = $user;
+    $apiKey->token = generateRandomString(64);
+    $apiKey->validUntil = (new \DateTime())->modify("+$days days");
+    $apiKey->active = true;
+    return $apiKey;
   }
 
   public function refresh(SQL $sql, int $days): bool {

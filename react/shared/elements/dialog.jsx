@@ -1,7 +1,7 @@
-import React from "react";
-import clsx from "clsx";
-import {Box, Modal} from "@mui/material";
-import {Button, Typography} from "@material-ui/core";
+import React, {useContext} from "react";
+import {Dialog as MuiDialog,  DialogActions, DialogContent, DialogContentText, DialogTitle} from "@mui/material";
+import {Button} from "@material-ui/core";
+import {LocaleContext} from "../locale";
 import "./dialog.css";
 
 export default function Dialog(props) {
@@ -11,6 +11,8 @@ export default function Dialog(props) {
     const onOption = props.onOption || function() { };
     const options = props.options || ["Close"];
     const type = props.type || "default";
+    const {translate: L} = useContext(LocaleContext);
+
 
     let buttons = [];
     for (let name of options) {
@@ -26,20 +28,19 @@ export default function Dialog(props) {
         )
     }
 
-    return <Modal
+    return <MuiDialog
         open={show}
         onClose={onClose}
-        aria-labelledby="modal-title"
-        aria-describedby="modal-description"
-    >
-        <Box className={clsx("modal-dialog", props.className)}>
-            <Typography id="modal-title" variant="h6" component="h2">
-                {props.title}
-            </Typography>
-            <Typography id="modal-description" sx={{ mt: 2 }}>
-                {props.message}
-            </Typography>
-            { buttons }
-        </Box>
-    </Modal>
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description">
+        <DialogTitle>{ props.title }</DialogTitle>
+        <DialogContent>
+            <DialogContentText>
+                { props.message }
+            </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+            {buttons}
+        </DialogActions>
+    </MuiDialog>
 }

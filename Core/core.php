@@ -43,7 +43,7 @@ function uuidv4(): string {
   return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 }
 
-function generateRandomString($length, $type = "ascii"): string {
+function generateRandomString(int $length, $type = "ascii"): string {
   $randomString = '';
 
   $lowercase = "abcdefghijklmnopqrstuvwxyz";

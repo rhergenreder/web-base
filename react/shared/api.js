@@ -156,8 +156,41 @@ export default class API {
     }
 
     async updateProfile(username=null, fullName=null, password=null, confirmPassword = null, oldPassword = null) {
-        return this.apiCall("user/updateProfile", { username: username, fullName: fullName,
+        let res = await this.apiCall("user/updateProfile", { username: username, fullName: fullName,
             password: password, confirmPassword: confirmPassword, oldPassword: oldPassword });
+
+        if (res.success) {
+            if (username !== null) {
+                this.user.name = username;
+            }
+
+            if (fullName !== null) {
+                this.user.fullName = fullName;
+            }
+        }
+
+        return res;
+    }
+
+    async uploadPicture(file, scale=1.0) {
+        const formData = new FormData();
+        formData.append("scale", scale);
+        formData.append("picture", file, file.name);
+        let res = await this.apiCall("user/uploadPicture", formData);
+        if (res.success) {
+            this.user.profilePicture = res.profilePicture;
+        }
+
+        return res;
+    }
+
+    async removePicture() {
+        let res = await this.apiCall("user/removePicture");
+        if (res.success) {
+            this.user.profilePicture = null;
+        }
+
+        return res;
     }
 
     /** Stats **/
@@ -234,8 +267,8 @@ export default class API {
     }
 
     /** ApiKeyAPI **/
-    async getApiKeys(showActiveOnly = false) {
-        return this.apiCall("apiKey/fetch", { showActiveOnly: showActiveOnly });
+    async getApiKeys(showActiveOnly = false, page = 1, count = 25, orderBy = "validUntil", sortOrder = "desc") {
+        return this.apiCall("apiKey/fetch", { showActiveOnly: showActiveOnly, pageNum: page, count: count, orderBy: orderBy, sortOrder: sortOrder });
     }
 
     async createApiKey() {
@@ -248,11 +281,21 @@ export default class API {
 
     /** 2FA API **/
     async confirmTOTP(code) {
-        return this.apiCall("tfa/confirmTotp", { code: code });
+        let res = await this.apiCall("tfa/confirmTotp", { code: code });
+        if (res.success) {
+            this.user.twoFactorToken = { type: "totp", confirmed: true };
+        }
+
+        return res;
     }
 
     async remove2FA(password) {
-        return this.apiCall("tfa/remove", { password: password });
+        let res = await this.apiCall("tfa/remove", { password: password });
+        if (res.success) {
+            this.user.twoFactorToken = null;
+        }
+
+        return res;
     }
 
     async verifyTotp2FA(code) {
@@ -264,12 +307,22 @@ export default class API {
     }
 
     async register2FA(clientDataJSON = null, attestationObject = null) {
-        return this.apiCall("tfa/registerKey", { clientDataJSON: clientDataJSON, attestationObject: attestationObject });
+        let res = await this.apiCall("tfa/registerKey", { clientDataJSON: clientDataJSON, attestationObject: attestationObject });
+        if (res.success && res.twoFactorToken) {
+            this.user.twoFactorToken = res.twoFactorToken;
+        }
+
+        return res;
     }
 
     /** GPG API **/
     async uploadGPG(pubkey) {
-        return this.apiCall("user/importGPG", { pubkey: pubkey });
+        let res = await this.apiCall("user/importGPG", { pubkey: pubkey });
+        if (res.success) {
+            this.user.gpgKey = res.gpgKey;
+        }
+
+        return res;
     }
 
     async confirmGpgToken(token) {

@@ -252,13 +252,18 @@ namespace Core\API\TFA {
       // $domain = "localhost";
 
       if (!$clientDataJSON || !$attestationObjectRaw) {
+        $challenge = null;
         if ($twoFactorToken) {
-          if (!($twoFactorToken instanceof KeyBasedTwoFactorToken) || $twoFactorToken->isConfirmed()) {
+          if ($twoFactorToken->isConfirmed()) {
             return $this->createError("You already added a two factor token");
-          } else {
+          } else if ($twoFactorToken instanceof KeyBasedTwoFactorToken) {
             $challenge = $twoFactorToken->getChallenge();
+          } else {
+            $twoFactorToken->delete($sql);
           }
-        } else {
+        }
+
+        if ($challenge === null) {
           $twoFactorToken = KeyBasedTwoFactorToken::create();
           $challenge = $twoFactorToken->getChallenge();
           $this->success = ($twoFactorToken->save($sql) !== false);
@@ -307,6 +312,10 @@ namespace Core\API\TFA {
 
         $this->success = $twoFactorToken->confirmKeyBased($sql, base64_encode($authData->getCredentialID()), $publicKey) !== false;
         $this->lastError = $sql->getLastError();
+
+        if ($this->success) {
+          $this->result["twoFactorToken"] = $twoFactorToken->jsonSerialize();
+        }
       }
 
       return $this->success;

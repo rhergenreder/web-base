@@ -7,7 +7,6 @@ import {LocaleContext} from "../locale";
 import clsx from "clsx";
 import {Box, IconButton} from "@mui/material";
 import {formatDateTime} from "../util";
-import UserLink from "security-lab/src/elements/user/userlink";
 import CachedIcon from "@material-ui/icons/Cached";
 
 
@@ -137,6 +136,7 @@ export class DataColumn {
         this.field = field;
         this.sortable = !params.hasOwnProperty("sortable") || !!params.sortable;
         this.align = params.align || "left";
+        this.params = params;
     }
 
     renderData(L, entry, index) {
@@ -151,6 +151,16 @@ export class DataColumn {
 export class StringColumn extends DataColumn {
     constructor(label, field = null, params = {}) {
         super(label, field, params);
+    }
+
+    renderData(L, entry, index) {
+        let data = super.renderData(L, entry, index);
+
+        if (this.params.style) {
+            data = <span style={this.params.style}>{data}</span>
+        }
+
+        return data;
     }
 }
 
@@ -198,13 +208,14 @@ export class DateTimeColumn extends DataColumn {
     }
 }
 
-export class UserLinkColumn extends DataColumn {
+export class BoolColumn extends DataColumn {
     constructor(label, field = null, params = {}) {
         super(label, field, params);
     }
 
     renderData(L, entry, index) {
-        return <UserLink user={super.renderData(L, entry)}/>
+        let data = super.renderData(L, entry);
+        return L(data ? "general.true" : "general.false");
     }
 }
 

@@ -1223,6 +1223,8 @@ namespace Core\API\User {
       $gpgKey = $currentUser->getGPG();
       if ($gpgKey) {
         return $this->createError("You already added a GPG key to your account.");
+      } else if (!$currentUser->getEmail()) {
+        return $this->createError("You do not have an e-mail address");
       }
 
       // fix key first, enforce a newline after
@@ -1280,7 +1282,7 @@ namespace Core\API\User {
       if ($this->success) {
         $currentUser->gpgKey = $gpgKey;
         if ($currentUser->save($sql, ["gpgKey"])) {
-          $this->result["gpg"] = $gpgKey->jsonSerialize();
+          $this->result["gpgKey"] = $gpgKey->jsonSerialize();
         } else {
           return $this->createError("Error updating user details: " . $sql->getLastError());
         }

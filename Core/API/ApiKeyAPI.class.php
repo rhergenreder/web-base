@@ -16,6 +16,7 @@ namespace Core\API\ApiKey {
 
   use Core\API\ApiKeyAPI;
   use Core\API\Parameter\Parameter;
+  use Core\API\Traits\Pagination;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Condition\CondAnd;
   use Core\Driver\SQL\Query\Insert;
@@ -32,17 +33,16 @@ namespace Core\API\ApiKey {
 
     public function _execute(): bool {
       $sql = $this->context->getSQL();
+      $currentUser = $this->context->getUser();
 
-      $apiKey = new ApiKey();
-      $apiKey->apiKey = generateRandomString(64);
-      $apiKey->validUntil = (new \DateTime())->modify("+30 DAY");
-      $apiKey->user = $this->context->getUser();
-
+      $apiKey = ApiKey::create($currentUser);
       $this->success = $apiKey->save($sql);
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $this->result["api_key"] = $apiKey->jsonSerialize();
+        $this->result["apiKey"] = $apiKey->jsonSerialize(
+          ["id", "validUntil", "token", "active"]
+        );
       }
 
       return $this->success;
@@ -55,10 +55,13 @@ namespace Core\API\ApiKey {
 
   class Fetch extends ApiKeyAPI {
 
+    use Pagination;
+
     public function __construct(Context $context, $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
-        "showActiveOnly" => new Parameter("showActiveOnly", Parameter::TYPE_BOOLEAN, true, true)
-      ));
+      $params = $this->getPaginationParameters(["token", "validUntil", "active"]);
+      $params["showActiveOnly"] = new Parameter("showActiveOnly", Parameter::TYPE_BOOLEAN, true, true);
+
+      parent::__construct($context, $externalCall, $params);
       $this->loginRequired = true;
     }
 
@@ -74,14 +77,18 @@ namespace Core\API\ApiKey {
         );
       }
 
-      $apiKeys = ApiKey::findAll($sql, $condition);
-      $this->success = ($apiKeys !== FALSE);
+      if (!$this->initPagination($sql, ApiKey::class, $condition)) {
+        return false;
+      }
+
+      $apiKeys = $this->createPaginationQuery($sql)->execute();
+      $this->success = ($apiKeys !== FALSE && $apiKeys !== null);
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $this->result["api_keys"] = array();
+        $this->result["apiKeys"] = [];
         foreach($apiKeys as $apiKey) {
-          $this->result["api_keys"][$apiKey->getId()] = $apiKey->jsonSerialize();
+          $this->result["apiKeys"][] = $apiKey->jsonSerialize();
         }
       }
 

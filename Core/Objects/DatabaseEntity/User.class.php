@@ -146,12 +146,12 @@ class User extends DatabaseEntity {
     return !empty($this->fullName) ? $this->fullName : $this->name;
   }
 
-  public static function buildSQLDisplayName(SQL $sql, string $joinColumn): Alias {
+  public static function buildSQLDisplayName(SQL $sql, string $joinColumn, string $alias = "user"): Alias {
     return new Alias(
       $sql->select(new Coalesce(
             new NullIf(new Column("User.full_name"), ""),
             new NullIf(new Column("User.name"), ""))
         )->from("User")->whereEq("User.id", new Column($joinColumn)),
-      "user");
+      $alias);
   }
 }

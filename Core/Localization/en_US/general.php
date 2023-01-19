@@ -27,6 +27,7 @@ return [
   "request" => "Request",
   "cancel" => "Cancel",
   "confirm" => "Confirm",
+  "close" => "Close",
   "ok" => "OK",
   "remove" => "Remove",
   "change" => "Change",

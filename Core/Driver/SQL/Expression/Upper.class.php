@@ -2,10 +2,10 @@
 
 namespace Core\Driver\SQL\Expression;
 
-class Sum extends AbstractFunction {
+class Upper extends AbstractFunction {
 
   public function __construct(mixed $value) {
-    parent::__construct("SUM", $value);
+    parent::__construct("UPPER", $value);
   }
 
 }

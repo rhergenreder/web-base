@@ -1,6 +1,17 @@
 import {format, parse} from "date-fns";
 import {API_DATE_FORMAT, API_DATETIME_FORMAT} from "./constants";
 
+function createDownload(name, data) {
+    const url = window.URL.createObjectURL(new Blob([data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', name);
+    link.setAttribute("target", "_blank");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+}
+
 function humanReadableSize(bytes, dp = 1) {
     const thresh = 1024;
 
@@ -87,4 +98,4 @@ const isInt = (value) => {
 }
 
 export { humanReadableSize, removeParameter, getParameter, encodeText, decodeText, getBaseUrl,
-    formatDate, formatDateTime, upperFirstChars, isInt };
+    formatDate, formatDateTime, upperFirstChars, isInt, createDownload };

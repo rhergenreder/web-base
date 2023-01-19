@@ -56,17 +56,23 @@ class Pagination {
     renderPagination(L, numEntries, options = null) {
         options = options || [10, 25, 50, 100];
 
-        return <Box>
+        return <Box display={"grid"} gridTemplateColumns={"75px auto"} className={"pagination-controls"}>
             <Select
                 value={this.data.pageSize}
+                className={"pagination-page-size"}
                 label={L("general.entries_per_page")}
                 onChange={(e) => this.setPageSize(parseInt(e.target.value))}
                 size={"small"}
             >
                 {options.map(size => <MenuItem key={"size-" + size} value={size}>{size}</MenuItem>)}
             </Select>
-            <MuiPagination count={this.getPageCount()} onChange={(_, page) => this.setPage(page)} />
-            {sprintf(L("general.showing_x_of_y_entries"), numEntries, this.data.total)}
+            <MuiPagination
+                count={this.getPageCount()}
+                onChange={(_, page) => this.setPage(page)}
+            />
+            <Box gridColumn={"1 / 3"} mt={1}>
+                {sprintf(L("general.showing_x_of_y_entries"), numEntries, this.data.total)}
+            </Box>
         </Box>
     }
 }

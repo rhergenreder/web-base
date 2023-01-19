@@ -85,8 +85,10 @@ export function DataTable(props) {
     }
 
     const numColumns = columns.length;
+    let numRows = 0;
     let rows = [];
     if (data && data?.length) {
+        numRows = data.length;
         for (const [rowIndex, entry] of data.entries()) {
             let row = [];
             for (const [index, column] of columns.entries()) {
@@ -96,14 +98,14 @@ export function DataTable(props) {
             }
 
             rows.push(<TableRow className={clsx({["data-table-clickable"]: typeof onClick === 'function'})}
-                                onClick={() => onRowClick(rowIndex, entry)}
+                                onClick={(e) => ["tr","td"].includes(e.target.tagName.toLowerCase()) && onRowClick(rowIndex, entry)}
                                 key={"row-" + rowIndex}>
                 { row }
             </TableRow>);
         }
     } else if (placeholder) {
         rows.push(<TableRow key={"row-placeholder"}>
-            <TableCell colSpan={numColumns}>
+            <TableCell colSpan={numColumns} align={"center"}>
                 { placeholder }
             </TableCell>
         </TableRow>);
@@ -126,7 +128,7 @@ export function DataTable(props) {
                     { rows }
                 </TableBody>
             </Table>
-        {pagination.renderPagination(L, rows.length)}
+        {pagination.renderPagination(L, numRows)}
     </Box>
 }
 
@@ -140,7 +142,7 @@ export class DataColumn {
     }
 
     renderData(L, entry, index) {
-        return entry[this.field]
+        return typeof this.field === 'function' ? this.field(entry) : entry[this.field];
     }
 
     renderHead() {
@@ -228,14 +230,33 @@ export class ControlsColumn extends DataColumn {
     renderData(L, entry, index) {
         let buttonElements = [];
         for (const [index, button] of this.buttons.entries()) {
-            let element = button.element;
-            let props = {
-                key: "button-" + index,
-                onClick: (() => button.onClick(entry)),
-                className: "data-table-clickable"
+            let element = typeof button.element === 'function'
+                ? button.element(entry, index)
+                : button.element;
+
+            let buttonProps = {};
+            if (typeof button.props === 'function') {
+                buttonProps = button.props(entry, index);
+            } else {
+                buttonProps = button.props;
             }
 
-            if (typeof button.showIf !== 'function' || button.showIf(entry)) {
+            let props = {
+                ...buttonProps,
+                key: "button-" + index,
+                onClick: (e) => { e.stopPropagation(); button.onClick(entry, index); },
+                className: "data-table-clickable",
+            }
+
+            if (button.hasOwnProperty("disabled")) {
+                props.disabled = typeof button.disabled === 'function'
+                    ? button.disabled(entry, index)
+                    : button.disabled;
+            }
+
+            if ((!button.hasOwnProperty("hidden")) ||
+                (typeof button.hidden === 'function' && !button.hidden(entry, index)) ||
+                (!button.hidden)) {
                 buttonElements.push(React.createElement(element, props))
             }
         }

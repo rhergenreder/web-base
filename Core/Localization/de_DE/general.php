@@ -35,6 +35,7 @@ return [
   "rename" => "Umbenennen",
   "remove" => "Entfernen",
   "change" => "Bearbeiten",
+  "close" => "Schließen",
   "reset" => "Zurücksetzen",
   "move" => "Verschieben",
   "delete" => "Löschen",

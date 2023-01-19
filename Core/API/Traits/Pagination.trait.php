@@ -18,7 +18,7 @@ trait Pagination {
     return [
       'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
       'count' => new Parameter('count', Parameter::TYPE_INT, true, 25),
-      'orderBy' => new StringType('orderBy', -1, true, $defaultOrderBy, $orderColumns),
+      'orderBy' => new StringType('orderBy', -1, true, $defaultOrderBy, array_values($orderColumns)),
       'sortOrder' => new StringType('sortOrder', -1, true, $defaultSortOrder, ['asc', 'desc']),
     ];
   }
@@ -36,7 +36,7 @@ trait Pagination {
     }
 
     $pageCount = intval(ceil($this->entityCount / $this->pageSize));
-    $this->page = min($this->page, $pageCount); // number of pages changed due to pageSize / filter
+    $this->page = max(1, min($this->page, $pageCount)); // number of pages changed due to pageSize / filter
 
     $this->result["pagination"] = [
       "current" => $this->page,
@@ -91,18 +91,22 @@ trait Pagination {
     }
 
     if ($orderBy) {
-      $handler = $baseQuery->getHandler();
-      $baseTable = $handler->getTableName();
-      $sortColumn = DatabaseEntityHandler::buildColumnName($orderBy);
-      $fullyQualifiedColumn = "$baseTable.$sortColumn";
-      $selectedColumns = $baseQuery->getSelectValues();
-
-      if (in_array($sortColumn, $selectedColumns)) {
+      $sortColumn = array_search($orderBy, $this->paginationOrderColumns);
+      if (is_string($sortColumn)) {
         $entityQuery->orderBy($sortColumn);
-      } else if (in_array($fullyQualifiedColumn, $selectedColumns)) {
-        $entityQuery->orderBy($fullyQualifiedColumn);
       } else {
-        $entityQuery->orderBy($orderBy);
+        $handler = $baseQuery->getHandler();
+        $baseTable = $handler->getTableName();
+        $sortColumn = DatabaseEntityHandler::buildColumnName($orderBy);
+        $fullyQualifiedColumn = "$baseTable.$sortColumn";
+        $selectedColumns = $baseQuery->getSelectValues();
+        if (in_array($sortColumn, $selectedColumns)) {
+          $entityQuery->orderBy($sortColumn);
+        } else if (in_array($fullyQualifiedColumn, $selectedColumns)) {
+          $entityQuery->orderBy($fullyQualifiedColumn);
+        } else {
+          $entityQuery->orderBy($orderBy);
+        }
       }
     }
 

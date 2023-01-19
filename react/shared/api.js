@@ -1,5 +1,9 @@
 import {USER_GROUP_ADMIN} from "./constants";
-import {isInt} from "./util";
+import {createDownload, isInt} from "./util";
+
+Date.prototype.toJSON = function() {
+    return Math.round(this.getTime() / 1000);
+};
 
 export default class API {
     constructor() {
@@ -14,7 +18,7 @@ export default class API {
         return this.loggedIn ? this.session.csrfToken : null;
     }
 
-    async apiCall(method, params) {
+    async apiCall(method, params, expectBinary=false) {
         params = params || { };
         const csrfToken = this.csrfToken();
         const config = {method: 'post'};
@@ -32,6 +36,16 @@ export default class API {
         }
 
         let response = await fetch("/api/" + method, config);
+        if (response.headers.has("content-disposition")) {
+            let contentDisposition = response.headers.get("content-disposition");
+            if (contentDisposition.toLowerCase().startsWith("attachment;")) {
+                let fileName = /filename="?([^"]*)"?/;
+                let blob = await response.blob();
+                createDownload(fileName.exec(contentDisposition)[1], blob);
+                return { success: true, msg: "" };
+            }
+        }
+
         let res = await response.json();
         if (!res.success && res.msg === "You are not logged in.") {
             this.loggedIn = false;
@@ -55,7 +69,6 @@ export default class API {
 
         return false;
     }
-
 
     hasGroup(groupIdOrName) {
         if (this.loggedIn && this.user?.groups) {

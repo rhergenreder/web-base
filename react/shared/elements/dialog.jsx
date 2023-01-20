@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import {
     Box,
     Button,
@@ -20,11 +20,21 @@ export default function Dialog(props) {
 
     const [inputData, setInputData] = useState({});
 
+    useEffect(() => {
+        if (props.inputs) {
+            let initialData = {};
+            for (const input of props.inputs) {
+                initialData[input.name] = input.value || "";
+            }
+            setInputData(initialData);
+        }
+    }, [props.inputs]);
+
     let buttons = [];
     for (const [index, name] of options.entries()) {
         buttons.push(
             <Button variant={"outlined"} size={"small"} key={"button-" + name}
-                    onClick={() => { onClose(); onOption(index, inputData); }}>
+                    onClick={() => { onClose(); onOption(index, inputData); setInputData({}); }}>
                 {name}
             </Button>
         )
@@ -40,6 +50,7 @@ export default function Dialog(props) {
             case 'text':
                 inputElements.push(<TextField
                     {...inputProps}
+                    sx={{marginTop: 1}}
                     size={"small"} fullWidth={true}
                     key={"input-" + input.name}
                     value={inputData[input.name] || ""}

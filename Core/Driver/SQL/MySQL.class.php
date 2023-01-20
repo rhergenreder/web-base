@@ -91,7 +91,7 @@ class MySQL extends SQL {
   private function getPreparedParams($values): array {
     $sqlParams = array('');
     foreach ($values as $value) {
-      $paramType = Parameter::parseType($value);
+      $paramType = Parameter::parseType($value, true);  // TODO: is strict type checking really correct here?
       switch ($paramType) {
         case Parameter::TYPE_BOOLEAN:
           $value = $value ? 1 : 0;

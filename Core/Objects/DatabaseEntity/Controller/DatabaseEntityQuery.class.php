@@ -138,7 +138,7 @@ class DatabaseEntityQuery extends Select {
     }
   }
 
-  public function execute(): DatabaseEntity|array|null {
+  public function execute(): DatabaseEntity|array|null|false {
 
     if ($this->logVerbose) {
       $params = [];
@@ -148,7 +148,7 @@ class DatabaseEntityQuery extends Select {
 
     $res = parent::execute();
     if ($res === null || $res === false) {
-      return null;
+      return $res;
     }
 
     if ($this->resultType === SQL::FETCH_ALL) {

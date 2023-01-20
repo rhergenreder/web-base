@@ -342,7 +342,9 @@ class DatabaseEntityHandler implements Persistable {
 
     $value = $row[$columnName];
     if ($column instanceof DateTimeColumn) {
-      $value = new \DateTime($value);
+      if ($value !== null) {
+        $value = new \DateTime($value);
+      }
     } else if ($column instanceof JsonColumn) {
       $value = json_decode($value, true);
     } else if (isset($this->relations[$propertyName])) {

@@ -281,7 +281,7 @@ export default class API {
 
     /** ApiKeyAPI **/
     async getApiKeys(showActiveOnly = false, page = 1, count = 25, orderBy = "validUntil", sortOrder = "desc") {
-        return this.apiCall("apiKey/fetch", { showActiveOnly: showActiveOnly, pageNum: page, count: count, orderBy: orderBy, sortOrder: sortOrder });
+        return this.apiCall("apiKey/fetch", { showActiveOnly: showActiveOnly, page: page, count: count, orderBy: orderBy, sortOrder: sortOrder });
     }
 
     async createApiKey() {

@@ -100,14 +100,14 @@ class Parameter {
     return $str;
   }
 
-  public static function parseType($value): int {
+  public static function parseType(mixed $value, bool $strict = false): int {
     if (is_array($value))
       return Parameter::TYPE_ARRAY;
-    else if (is_numeric($value) && intval($value) == $value)
+    else if (is_int($value) || (!$strict && is_numeric($value) && intval($value) == $value))
       return Parameter::TYPE_INT;
-    else if (is_float($value) || (is_numeric($value) && floatval($value) == $value))
+    else if (is_float($value) || (!$strict && is_numeric($value) && floatval($value) == $value))
       return Parameter::TYPE_FLOAT;
-    else if (is_bool($value) || $value == "true" || $value == "false")
+    else if (is_bool($value) || (!$strict && ($value == "true" || $value == "false")))
       return Parameter::TYPE_BOOLEAN;
     else if (is_a($value, 'DateTime'))
       return Parameter::TYPE_DATE_TIME;

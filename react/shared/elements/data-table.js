@@ -6,7 +6,7 @@ import "./data-table.css";
 import {LocaleContext} from "../locale";
 import clsx from "clsx";
 import {Box, IconButton} from "@mui/material";
-import {formatDateTime} from "../util";
+import {formatDate, formatDateTime} from "../util";
 import CachedIcon from "@material-ui/icons/Cached";
 
 
@@ -23,31 +23,35 @@ export function DataTable(props) {
     const [doFetchData, setFetchData] = useState(false);
     const [sortAscending, setSortAscending] = useState(["asc","ascending"].includes(defaultSortOrder?.toLowerCase));
     const [sortColumn, setSortColumn] = useState(defaultSortColumn || null);
-    const sortable = props.hasOwnProperty("sortable") ? !!props.sortable : true;
+    const sortable = !!fetchData && (props.hasOwnProperty("sortable") ? !!props.sortable : true);
     const onRowClick = onClick || (() => {});
 
     const onFetchData = useCallback((force = false) => {
-        if (doFetchData || force) {
-            setFetchData(false);
-            const orderBy = columns[sortColumn]?.field || null;
-            const sortOrder = sortAscending ? "asc" : "desc";
-            fetchData(pagination.getPage(), pagination.getPageSize(), orderBy, sortOrder);
+        if (fetchData) {
+            if (doFetchData || force) {
+                setFetchData(false);
+                const orderBy = columns[sortColumn]?.field || null;
+                const sortOrder = sortAscending ? "asc" : "desc";
+                fetchData(pagination.getPage(), pagination.getPageSize(), orderBy, sortOrder);
+            }
         }
-    }, [doFetchData, columns, sortColumn, sortAscending, pagination]);
+    }, [fetchData, doFetchData, columns, sortColumn, sortAscending, pagination]);
 
     // pagination changed?
     useEffect(() => {
-        let forceFetch = false;
-        if (pagination.getPageSize() < pagination.getTotal()) {
-            // page size is smaller than the total count
-            forceFetch = true;
-        } else if (data?.length && pagination.getPageSize() >= data.length && data.length < pagination.getTotal()) {
-            // page size is greater than the current visible count but there were hidden rows before
-            forceFetch = true;
-        }
+        if (pagination) {
+            let forceFetch = false;
+            if (pagination.getPageSize() < pagination.getTotal()) {
+                // page size is smaller than the total count
+                forceFetch = true;
+            } else if (data?.length && pagination.getPageSize() >= data.length && data.length < pagination.getTotal()) {
+                // page size is greater than the current visible count but there were hidden rows before
+                forceFetch = true;
+            }
 
-        onFetchData(forceFetch);
-    }, [pagination.data.pageSize, pagination.data.current]);
+            onFetchData(forceFetch);
+        }
+    }, [pagination?.data?.pageSize, pagination?.data?.current]);
 
     // sorting changed
     useEffect(() => {
@@ -112,12 +116,17 @@ export function DataTable(props) {
     }
 
     return <Box position={"relative"}>
-            <h3>
-                <IconButton onClick={() => onFetchData(true)}>
-                    <CachedIcon/>
-                </IconButton>
-                {title}
-            </h3>
+            {title ?
+                <h3>
+                    {fetchData ?
+                        <IconButton onClick={() => onFetchData(true)}>
+                            <CachedIcon/>
+                        </IconButton>
+                        : <></>
+                    }
+                    {title}
+                </h3> : <></>
+            }
             <Table className={clsx("data-table", className)} size="small" {...other}>
                 <TableHead>
                     <TableRow>
@@ -128,7 +137,7 @@ export function DataTable(props) {
                     { rows }
                 </TableBody>
             </Table>
-        {pagination.renderPagination(L, numRows)}
+        {pagination && pagination.renderPagination(L, numRows)}
     </Box>
 }
 
@@ -207,6 +216,17 @@ export class DateTimeColumn extends DataColumn {
     renderData(L, entry, index) {
         let date = super.renderData(L, entry);
         return formatDateTime(L, date, this.precise);
+    }
+}
+
+export class DateColumn extends DataColumn {
+    constructor(label, field = null, params = {}) {
+        super(label, field, params);
+    }
+
+    renderData(L, entry, index) {
+        let date = super.renderData(L, entry);
+        return formatDate(L, date);
     }
 }
 

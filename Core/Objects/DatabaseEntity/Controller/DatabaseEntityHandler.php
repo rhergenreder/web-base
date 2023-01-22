@@ -35,6 +35,7 @@ use Core\Objects\DatabaseEntity\Attribute\Json;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Attribute\Multiple;
 use Core\Objects\DatabaseEntity\Attribute\MultipleReference;
+use Core\Objects\DatabaseEntity\Attribute\NoFetch;
 use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Core\Objects\DatabaseEntity\Attribute\Unique;
 
@@ -349,12 +350,13 @@ class DatabaseEntityHandler implements Persistable {
     } else if ($column instanceof JsonColumn) {
       $value = json_decode($value, true);
     } else if (isset($this->relations[$propertyName])) {
+      $property = $this->properties[$propertyName];
       $relationHandler = $this->relations[$propertyName];
       $relColumnPrefix = self::buildColumnName($propertyName) . "_";
       if (array_key_exists($relColumnPrefix . "id", $row)) {
         $relId = $row[$relColumnPrefix . "id"];
         if ($relId !== null) {
-          if ($fetchEntities !== DatabaseEntityQuery::FETCH_NONE) {
+          if ($fetchEntities !== DatabaseEntityQuery::FETCH_NONE && !self::getAttribute($property, NoFetch::class)) {
             if ($this === $relationHandler) {
 
               if ($context) {
@@ -591,6 +593,9 @@ class DatabaseEntityHandler implements Persistable {
         $nmTable = $nmRelation->getTableName();
         $property = $this->properties[$nmProperty];
         $property->setAccessible(true);
+        if (self::getAttribute($property, NoFetch::class)) {
+          continue;
+        }
 
         if ($nmRelation instanceof NMRelation) {
           $thisIdColumn = $nmRelation->getIdColumn($this);

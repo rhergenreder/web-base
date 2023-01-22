@@ -7,6 +7,7 @@ use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Expression\Alias;
 use Core\Driver\SQL\Query\Select;
 use Core\Driver\SQL\SQL;
+use Core\Objects\DatabaseEntity\Attribute\NoFetch;
 
 /**
  * this class is similar to \Driver\SQL\Query\Select but with reduced functionality
@@ -92,7 +93,6 @@ class DatabaseEntityQuery extends Select {
     return new DatabaseEntityQuery($handler, SQL::FETCH_ONE);
   }
 
-  // TODO: clean this up
   public function fetchEntities(bool $recursive = false): DatabaseEntityQuery {
 
     $this->fetchSubEntities = ($recursive ? self::FETCH_RECURSIVE : self::FETCH_DIRECT);
@@ -107,6 +107,12 @@ class DatabaseEntityQuery extends Select {
 
   private function fetchRelation(string $propertyName, string $tableName, DatabaseEntityHandler $src, DatabaseEntityHandler $relationHandler,
                                  bool $recursive = false, string $relationColumnPrefix = "", array &$visited = []) {
+
+
+    $property = $src->getProperty($propertyName);
+    if (DatabaseEntityHandler::getAttribute($property, NoFetch::class)) {
+      return;
+    }
 
     $relIndex = count($visited);
     if (in_array($relationHandler->getTableName(), $visited)) {

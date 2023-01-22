@@ -12,7 +12,6 @@ use Core\Driver\SQL\Column\IntColumn;
 use Core\Driver\SQL\Column\JsonColumn;
 use Core\Driver\SQL\Column\StringColumn;
 use Core\Driver\SQL\Condition\CondIn;
-use Core\Driver\SQL\Condition\Condition;
 use Core\Driver\SQL\Column\DoubleColumn;
 use Core\Driver\SQL\Column\FloatColumn;
 use Core\Driver\SQL\Condition\CondNot;
@@ -329,7 +328,9 @@ class DatabaseEntityHandler implements Persistable {
     return $rel_row;
   }
 
-  private function getValueFromRow(array $row, string $propertyName, mixed &$value, int $fetchEntities = DatabaseEntityQuery::FETCH_NONE): bool {
+  private function getValueFromRow(array $row, string $propertyName, mixed &$value,
+                                   int $fetchEntities = DatabaseEntityQuery::FETCH_NONE,
+                                   ?DatabaseEntityQueryContext $context = null): bool {
     $column = $this->columns[$propertyName] ?? null;
     if (!$column) {
       return false;
@@ -355,12 +356,42 @@ class DatabaseEntityHandler implements Persistable {
         if ($relId !== null) {
           if ($fetchEntities !== DatabaseEntityQuery::FETCH_NONE) {
             if ($this === $relationHandler) {
-              $value = DatabaseEntityQuery::fetchOne($this)
+
+              if ($context) {
+                $value = $context->queryCache($this, $relId);
+                if ($value) {
+                  return true;
+                }
+              }
+
+              $subQuery = DatabaseEntityQuery::fetchOne($this)
                 ->fetchEntities($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE)
-                ->whereEq($this->getColumnName("id"), $relId)
-                ->execute();
+                ->whereEq($this->getColumnName("id"), $relId);
+
+              if ($context) {
+                $subQuery->withContext($context);
+              }
+
+              $value = $subQuery->execute();
+              if ($value !== null && $context !== null) {
+                $context->addCache($this, $value);
+              }
             } else {
-              $value = $relationHandler->entityFromRow(self::getPrefixedRow($row, $relColumnPrefix), [], true);
+              $prefixedRow = self::getPrefixedRow($row, $relColumnPrefix);
+
+              if ($context) {
+                $value = $context->queryCache($relationHandler, $prefixedRow["id"]);
+                if ($value) {
+                  return true;
+                }
+              }
+
+              $subFetchMode = $fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE ? $fetchEntities : DatabaseEntityQuery::FETCH_NONE;
+              $value = $relationHandler->entityFromRow($prefixedRow, [], $subFetchMode, $context);
+
+              if ($context && $value) {
+                $context->addCache($relationHandler, $value);
+              }
             }
           } else {
             return false;
@@ -385,7 +416,9 @@ class DatabaseEntityHandler implements Persistable {
     return true;
   }
 
-  public function entityFromRow(array $row, array $additionalColumns = [], int $fetchEntities = DatabaseEntityQuery::FETCH_NONE): ?DatabaseEntity {
+  public function entityFromRow(array $row, array $additionalColumns = [],
+                                int $fetchEntities = DatabaseEntityQuery::FETCH_NONE,
+                                ?DatabaseEntityQueryContext $context = null): ?DatabaseEntity {
     try {
 
       $constructorClass = $this->entityClass;
@@ -397,7 +430,7 @@ class DatabaseEntityHandler implements Persistable {
         }
       }
 
-      $entity = call_user_func($constructorClass->getName() . "::newInstance", $constructorClass);
+      $entity = call_user_func($constructorClass->getName() . "::newInstance", $constructorClass, $row);
       if (!($entity instanceof DatabaseEntity)) {
         $this->logger->error("Created Object is not of type DatabaseEntity");
         return null;
@@ -405,7 +438,7 @@ class DatabaseEntityHandler implements Persistable {
 
       foreach ($this->properties as $property) {
         $propertyName = $property->getName();
-        if ($this->getValueFromRow($row, $propertyName, $value, $fetchEntities)) {
+        if ($this->getValueFromRow($row, $propertyName, $value, $fetchEntities, $context)) {
           $property->setAccessible(true);
           $property->setValue($entity, $value);
         }
@@ -542,109 +575,119 @@ class DatabaseEntityHandler implements Persistable {
     return $success;
   }
 
-  public function fetchNMRelations(array $entities, int $fetchEntities = DatabaseEntityQuery::FETCH_DIRECT) {
+  public function fetchNMRelations(array $entities, int $fetchEntities = DatabaseEntityQuery::FETCH_DIRECT,
+                                   ?DatabaseEntityQueryContext $context = null) {
 
     if ($fetchEntities === DatabaseEntityQuery::FETCH_NONE) {
       return;
     }
 
+    $entityIds = array_keys($entities);
+
+    // N:M
+    if (!empty($this->nmRelations) && !empty($entityIds)) {
+
+      foreach ($this->nmRelations as $nmProperty => $nmRelation) {
+        $nmTable = $nmRelation->getTableName();
+        $property = $this->properties[$nmProperty];
+        $property->setAccessible(true);
+
+        if ($nmRelation instanceof NMRelation) {
+          $thisIdColumn = $nmRelation->getIdColumn($this);
+          $otherHandler = $nmRelation->getOtherHandler($this);
+          $refIdColumn = $nmRelation->getIdColumn($otherHandler);
+          $refTableName = $otherHandler->getTableName();
+
+          $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
+            ->addJoin(new InnerJoin($nmTable, "$nmTable.$refIdColumn", "$refTableName.id"))
+            ->addSelectValue(new Column($thisIdColumn))
+            ->where(new CondIn(new Column($thisIdColumn), $entityIds));
+
+          $relEntityQuery->fetchEntities($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE);
+          $rows = $relEntityQuery->executeSQL();
+          if (!is_array($rows)) {
+            $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
+            return;
+          }
+
+          $relEntities = [];
+          foreach ($rows as $row) {
+            $relEntity = $context?->queryCache($otherHandler, $row["id"]);
+            if (!$relEntity) {
+              $relEntity = $otherHandler->entityFromRow($row, [], $fetchEntities, $context);
+              $context?->addCache($otherHandler, $relEntity);
+              $relEntities[$relEntity->getId()] = $relEntity;
+            }
+
+            $thisEntity = $entities[$row[$thisIdColumn]];
+            $targetArray = $property->getValue($thisEntity);
+            $targetArray[$relEntity->getId()] = $relEntity;
+            $property->setValue($thisEntity, $targetArray);
+          }
+
+          if ($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE) {
+            $otherHandler->fetchNMRelations($relEntities, $fetchEntities, $context);
+          }
+        } else if ($nmRelation instanceof NMRelationReference) {
+
+          $otherHandler = $nmRelation->getRelHandler();
+          $thisIdColumn = $otherHandler->getColumnName($nmRelation->getThisProperty(), false);
+          $relIdColumn = $otherHandler->getColumnName($nmRelation->getRefProperty(), false);
+
+          $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
+            ->where(new CondIn(new Column($thisIdColumn), $entityIds));
+
+          $relEntityQuery->fetchEntities($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE);
+          $rows = $relEntityQuery->executeSQL();
+          if (!is_array($rows)) {
+            $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
+            return;
+          }
+
+          $thisIdProperty = $otherHandler->properties[$nmRelation->getThisProperty()];
+          $thisIdProperty->setAccessible(true);
+
+          $relEntities = [];
+          foreach ($rows as $row) {
+            $relEntity = $context?->queryCache($otherHandler, $row["id"]);
+            if (!$relEntity) {
+              $relEntity = $otherHandler->entityFromRow($row, [], $fetchEntities, $context);
+              $context?->addCache($otherHandler, $relEntity);
+              $relEntities[$relEntity->getId()] = $relEntity;
+            }
+
+            $thisEntity = $entities[$row[$thisIdColumn]];
+            $thisIdProperty->setValue($relEntity, $thisEntity);
+            $targetArray = $property->getValue($thisEntity);
+            $targetArray[$row[$relIdColumn]] = $relEntity;
+            $property->setValue($thisEntity, $targetArray);
+          }
+
+          if ($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE) {
+            $otherHandler->fetchNMRelations($relEntities, $fetchEntities, $context);
+          }
+        } else {
+          $this->logger->error("fetchNMRelations for type '" . get_class($nmRelation) . "' is not implemented");
+        }
+      }
+    }
+
+    // if fetch mode is recursive, fetch all relations of our fetched relations as well...
     if ($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE) {
       foreach ($entities as $entity) {
         foreach ($this->relations as $propertyName => $relHandler) {
           $property = $this->properties[$propertyName];
           if ($property->isInitialized($entity)) {
-            $relEntity = $this->properties[$propertyName]->getValue($entity);
+            $relEntity = $property->getValue($entity);
             if ($relEntity) {
-              $relHandler->fetchNMRelations([$relEntity->getId() => $relEntity], true);
+              $relEntityId = $relEntity->getId(); // $fetchedEntities
+              $relTableName = $relHandler->getTableName();
+
+              if (!isset($fetchedEntities[$relTableName]) || !isset($fetchedEntities[$relTableName][$relEntityId])) {
+                $relHandler->fetchNMRelations([$relEntityId => $relEntity], DatabaseEntityQuery::FETCH_RECURSIVE, $context);
+              }
             }
           }
-        }
-      }
-    }
-
-    if (empty($this->nmRelations)) {
-      return;
-    }
-
-    $entityIds = array_keys($entities);
-    if (empty($entityIds)) {
-      return;
-    }
-
-    foreach ($this->nmRelations as $nmProperty => $nmRelation) {
-      $nmTable = $nmRelation->getTableName();
-      $property = $this->properties[$nmProperty];
-      $property->setAccessible(true);
-
-      if ($nmRelation instanceof NMRelation) {
-        $thisIdColumn = $nmRelation->getIdColumn($this);
-        $otherHandler = $nmRelation->getOtherHandler($this);
-        $refIdColumn = $nmRelation->getIdColumn($otherHandler);
-        $refTableName = $otherHandler->getTableName();
-
-        $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
-          ->addJoin(new InnerJoin($nmTable, "$nmTable.$refIdColumn", "$refTableName.id"))
-          ->addSelectValue(new Column($thisIdColumn))
-          ->where(new CondIn(new Column($thisIdColumn), $entityIds));
-
-        $relEntityQuery->fetchEntities($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE);
-        $rows = $relEntityQuery->executeSQL();
-        if (!is_array($rows)) {
-          $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
-          return;
-        }
-
-        $relEntities = [];
-        foreach ($rows as $row) {
-          $relId = $row["id"];
-          if (!isset($relEntities[$relId])) {
-            $relEntity = $otherHandler->entityFromRow($row, [], $fetchEntities);
-            $relEntities[$relId] = $relEntity;
-          }
-
-          $thisEntity = $entities[$row[$thisIdColumn]];
-          $relEntity = $relEntities[$relId];
-
-          $targetArray = $property->getValue($thisEntity);
-          $targetArray[$relEntity->getId()] = $relEntity;
-          $property->setValue($thisEntity, $targetArray);
-        }
-      } else if ($nmRelation instanceof NMRelationReference) {
-
-        $otherHandler = $nmRelation->getRelHandler();
-        $thisIdColumn = $otherHandler->getColumnName($nmRelation->getThisProperty(), false);
-        $relIdColumn = $otherHandler->getColumnName($nmRelation->getRefProperty(), false);
-        $relEntityQuery = DatabaseEntityQuery::fetchAll($otherHandler)
-          ->where(new CondIn(new Column($thisIdColumn), $entityIds));
-
-        $relEntityQuery->fetchEntities($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE);
-        $rows = $relEntityQuery->executeSQL();
-        if (!is_array($rows)) {
-          $this->logger->error("Error fetching n:m relations from table: '$nmTable': " . $this->sql->getLastError());
-          return;
-        }
-
-        $thisIdProperty = $otherHandler->properties[$nmRelation->getThisProperty()];
-        $thisIdProperty->setAccessible(true);
-
-        foreach ($rows as $row) {
-          $relEntity = $otherHandler->entityFromRow($row, [], $fetchEntities);
-          $thisEntity = $entities[$row[$thisIdColumn]];
-          $thisIdProperty->setValue($relEntity, $thisEntity);
-          $targetArray = $property->getValue($thisEntity);
-          $targetArray[$row[$relIdColumn]] = $relEntity;
-          $property->setValue($thisEntity, $targetArray);
-        }
-      } else {
-        $this->logger->error("fetchNMRelations for type '" . get_class($nmRelation) . "' is not implemented");
-        continue;
-      }
-
-      // TODO whats that here lol
-      if ($fetchEntities === DatabaseEntityQuery::FETCH_RECURSIVE) {
-        foreach ($entities as $entity) {
-          $relEntities = $property->getValue($entity);
-          // $otherHandler->fetchNMRelations($relEntities, $fetchEntities);
         }
       }
     }
@@ -663,36 +706,9 @@ class DatabaseEntityHandler implements Persistable {
 
     if ($res !== false && $res !== null) {
       $res = $this->entityFromRow($res);
-      if ($res instanceof DatabaseEntity) {
-        $this->fetchNMRelations([$res->getId() => $res]);
-      }
     }
 
     return $res;
-  }
-
-  public function fetchMultiple(?Condition $condition = null): ?array {
-    $query = $this->getSelectQuery();
-
-    if ($condition) {
-      $query->where($condition);
-    }
-
-    $res = $query->execute();
-    if ($res === false) {
-      return null;
-    } else {
-      $entities = [];
-      foreach ($res as $row) {
-        $entity = $this->entityFromRow($row);
-        if ($entity) {
-          $entities[$entity->getId()] = $entity;
-        }
-      }
-
-      $this->fetchNMRelations($entities);
-      return $entities;
-    }
   }
 
   public function getCreateQueries(SQL $sql): array {

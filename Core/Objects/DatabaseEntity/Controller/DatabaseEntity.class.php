@@ -3,6 +3,7 @@
 namespace Core\Objects\DatabaseEntity\Controller;
 
 use ArrayAccess;
+use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\Condition;
 use Core\Driver\SQL\Expression\Count;
 use Core\Driver\SQL\SQL;
@@ -134,25 +135,23 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
       }, $entities);
   }
 
+  // hooks
   public function preInsert(array &$row) { }
   public function postFetch(SQL $sql, array $row) { }
   public function postUpdate() { }
   public static function getPredefinedValues(): array { return []; }
   public function postDelete() { }
 
-  public static function fromRow(SQL $sql, array $row): static {
-    $handler = self::getHandler($sql);
-    return $handler->entityFromRow($row);
-  }
-
-  public static function newInstance(\ReflectionClass $reflectionClass) {
+  public static function newInstance(\ReflectionClass $reflectionClass, array $row) {
     return $reflectionClass->newInstanceWithoutConstructor();
   }
 
   public static function find(SQL $sql, int $id, bool $fetchEntities = false, bool $fetchRecursive = false): static|bool|null {
     $handler = self::getHandler($sql);
     if ($fetchEntities) {
+      $context = new DatabaseEntityQueryContext();
       return DatabaseEntityQuery::fetchOne(self::getHandler($sql))
+        ->withContext($context)
         ->whereEq($handler->getTableName() . ".id", $id)
         ->fetchEntities($fetchRecursive)
         ->execute();
@@ -162,13 +161,8 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
   }
 
   public static function exists(SQL $sql, int $id): bool {
-    $handler = self::getHandler($sql);
-    $res = $sql->select(new Count())
-      ->from($handler->getTableName())
-      ->whereEq($handler->getTableName() . ".id", $id)
-      ->execute();
-
-    return $res !== false && $res[0]["count"] !== 0;
+    $count = self::count($sql, new Compare("id", $id));
+    return $count !== false && $count !== 0;
   }
 
   public static function findBy(DatabaseEntityQuery $dbQuery): static|array|bool|null {
@@ -176,15 +170,22 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
   }
 
   public static function findAll(SQL $sql, ?Condition $condition = null): ?array {
-    $handler = self::getHandler($sql);
-    return $handler->fetchMultiple($condition);
+
+    $query = self::createBuilder($sql, false);
+    if ($condition) {
+      $query->where($condition);
+    }
+
+    return $query->execute();
   }
 
   public static function createBuilder(SQL $sql, bool $one): DatabaseEntityQuery {
+    $context = new DatabaseEntityQueryContext();
+
     if ($one) {
-      return DatabaseEntityQuery::fetchOne(self::getHandler($sql));
+      return DatabaseEntityQuery::fetchOne(self::getHandler($sql))->withContext($context);
     } else {
-      return DatabaseEntityQuery::fetchAll(self::getHandler($sql));
+      return DatabaseEntityQuery::fetchAll(self::getHandler($sql))->withContext($context);
     }
   }
 

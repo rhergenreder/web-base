@@ -150,6 +150,7 @@ abstract class SQL {
     }
 
     $logLevel = Logger::LOG_LEVEL_ERROR;
+    // $logLevel = Logger::LOG_LEVEL_DEBUG;
     if ($query instanceof Insert && $query->getTableName() === "SystemLog") {
       $logLevel = Logger::LOG_LEVEL_NONE;
     }

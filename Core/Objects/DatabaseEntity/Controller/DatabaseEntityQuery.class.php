@@ -7,7 +7,6 @@ use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Expression\Alias;
 use Core\Driver\SQL\Query\Select;
 use Core\Driver\SQL\SQL;
-use Core\External\PHPMailer\Exception;
 
 /**
  * this class is similar to \Driver\SQL\Query\Select but with reduced functionality
@@ -26,6 +25,7 @@ class DatabaseEntityQuery extends Select {
   private array $additionalColumns;
 
   private int $fetchSubEntities;
+  private ?DatabaseEntityQueryContext $context;
 
   private function __construct(DatabaseEntityHandler $handler, int $resultType) {
     parent::__construct($handler->getSQL(), ...$handler->getColumnNames());
@@ -33,6 +33,7 @@ class DatabaseEntityQuery extends Select {
     $this->logger = new Logger("DB-EntityQuery", $handler->getSQL());
     $this->resultType = $resultType;
     $this->logVerbose = false;
+    $this->context = null;
     $this->additionalColumns = [];
 
     $this->from($handler->getTableName());
@@ -50,6 +51,11 @@ class DatabaseEntityQuery extends Select {
     $this->select(array_map(function ($field) {
       return $this->handler->getColumnName($field);
     }, $fields));
+    return $this;
+  }
+
+  public function withContext(DatabaseEntityQueryContext $context): self {
+    $this->context = $context;
     return $this;
   }
 
@@ -89,25 +95,24 @@ class DatabaseEntityQuery extends Select {
   // TODO: clean this up
   public function fetchEntities(bool $recursive = false): DatabaseEntityQuery {
 
-    // $this->selectQuery->dump();
     $this->fetchSubEntities = ($recursive ? self::FETCH_RECURSIVE : self::FETCH_DIRECT);
-
-    $relIndex = 1;
+    $visited = [$this->handler->getTableName()];
     foreach ($this->handler->getRelations() as $propertyName => $relationHandler) {
-      if ($this->handler !== $relationHandler || !$recursive) {
-        $this->fetchRelation($propertyName, $this->handler->getTableName(), $this->handler, $relationHandler, $relIndex, $recursive);
-      }
+      $this->fetchRelation($propertyName, $this->handler->getTableName(), $this->handler, $relationHandler,
+        $recursive, "", $visited);
     }
 
     return $this;
   }
 
   private function fetchRelation(string $propertyName, string $tableName, DatabaseEntityHandler $src, DatabaseEntityHandler $relationHandler,
-                                 int &$relIndex = 1, bool $recursive = false, string $relationColumnPrefix = "") {
+                                 bool $recursive = false, string $relationColumnPrefix = "", array &$visited = []) {
 
-    // TODO: fix recursion here...
-    if ($src === $relationHandler && $recursive) {
+    $relIndex = count($visited);
+    if (in_array($relationHandler->getTableName(), $visited)) {
       return;
+    } else {
+      $visited[] = $relationHandler->getTableName();
     }
 
     $columns = $src->getColumns();
@@ -117,7 +122,6 @@ class DatabaseEntityQuery extends Select {
     $referencedTable = $relationHandler->getTableName();
     $isNullable = !$foreignColumn->notNull();
     $alias = "t$relIndex"; // t1, t2, t3, ...
-    $relIndex++;
 
     if ($isNullable) {
       $this->leftJoin($referencedTable, "$tableName.$foreignColumnName", "$alias.id", $alias);
@@ -132,7 +136,8 @@ class DatabaseEntityQuery extends Select {
       if (!isset($recursiveRelations[$relPropertyName]) || $recursive) {
         $this->addValue("$alias.$relColumnName as $relationColumnPrefix$relColumnName");
         if (isset($recursiveRelations[$relPropertyName]) && $recursive) {
-          $this->fetchRelation($relPropertyName, $alias, $relationHandler, $recursiveRelations[$relPropertyName], $relIndex, $recursive, $relationColumnPrefix);
+          $this->fetchRelation($relPropertyName, $alias, $relationHandler, $recursiveRelations[$relPropertyName],
+            $recursive, $relationColumnPrefix, $visited);
         }
       }
     }
@@ -153,22 +158,51 @@ class DatabaseEntityQuery extends Select {
 
     if ($this->resultType === SQL::FETCH_ALL) {
       $entities = [];
+      $entitiesNM = [];
+
       foreach ($res as $row) {
-        $entity = $this->handler->entityFromRow($row, $this->additionalColumns, $this->fetchSubEntities);
+
+        $cached = false;
+        $entity = null;
+
+        if ($this->context) {
+          $entity = $this->context->queryCache($this->handler, $row["id"]);
+          $cached = $entity !== null;
+        }
+
+        if (!$cached) {
+          $entity = $this->handler->entityFromRow($row, $this->additionalColumns, $this->fetchSubEntities, $this->context);
+          $this->context?->addCache($this->handler, $entity);
+          $entitiesNM[$entity->getId()] = $entity;
+        }
+
         if ($entity) {
           $entities[$entity->getId()] = $entity;
         }
       }
 
-      if ($this->fetchSubEntities !== self::FETCH_NONE) {
-        $this->handler->fetchNMRelations($entities, $this->fetchSubEntities);
+      if (!empty($entitiesNM) && $this->fetchSubEntities !== self::FETCH_NONE) {
+        $this->handler->fetchNMRelations($entitiesNM, $this->fetchSubEntities, $this->context);
       }
 
       return $entities;
     } else if ($this->resultType === SQL::FETCH_ONE) {
-      $entity = $this->handler->entityFromRow($res, $this->additionalColumns, $this->fetchSubEntities);
-      if ($entity instanceof DatabaseEntity && $this->fetchSubEntities !== self::FETCH_NONE) {
-        $this->handler->fetchNMRelations([$entity->getId() => $entity], $this->fetchSubEntities);
+
+      $cached = false;
+      $entity = null;
+
+      if ($this->context) {
+        $entity = $this->context->queryCache($this->handler, $res["id"]);
+        $cached = $entity !== null;
+      }
+
+      if (!$cached) {
+        $entity = $this->handler->entityFromRow($res, $this->additionalColumns, $this->fetchSubEntities, $this->context);
+        if ($entity instanceof DatabaseEntity && $this->fetchSubEntities !== self::FETCH_NONE) {
+          $this->handler->fetchNMRelations([$entity->getId() => $entity], $this->fetchSubEntities, $this->context);
+        }
+
+        $this->context?->addCache($this->handler, $entity);
       }
 
       return $entity;

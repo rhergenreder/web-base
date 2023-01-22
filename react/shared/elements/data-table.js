@@ -5,7 +5,7 @@ import React, {useCallback, useContext, useEffect, useState} from "react";
 import "./data-table.css";
 import {LocaleContext} from "../locale";
 import clsx from "clsx";
-import {Box, IconButton} from "@mui/material";
+import {Box, IconButton, TextField} from "@mui/material";
 import {formatDate, formatDateTime} from "../util";
 import CachedIcon from "@material-ui/icons/Cached";
 
@@ -72,6 +72,8 @@ export function DataTable(props) {
     for (const [index, column] of columns.entries()) {
         if (!(column instanceof DataColumn)) {
             throw new Error("DataTable can only have DataColumn-objects as column definition, got: " + typeof column);
+        } else if (column.hidden) {
+            continue;
         }
 
         if (sortable && column.sortable) {
@@ -147,6 +149,7 @@ export class DataColumn {
         this.field = field;
         this.sortable = !params.hasOwnProperty("sortable") || !!params.sortable;
         this.align = params.align || "left";
+        this.hidden = !!params.hidden;
         this.params = params;
     }
 
@@ -167,8 +170,14 @@ export class StringColumn extends DataColumn {
     renderData(L, entry, index) {
         let data = super.renderData(L, entry, index);
 
+        if (this.params.maxLength && data?.length && data.length > this.params.maxLength) {
+            data = data.substring(0, this.params.maxLength) + "...";
+        }
+
         if (this.params.style) {
-            data = <span style={this.params.style}>{data}</span>
+            let style = (typeof this.params.style === 'function'
+                ? this.params.style(entry) : this.params.style);
+            data = <span style={style}>{data}</span>
         }
 
         return data;
@@ -238,6 +247,25 @@ export class BoolColumn extends DataColumn {
     renderData(L, entry, index) {
         let data = super.renderData(L, entry);
         return L(data ? "general.yes" : "general.no");
+    }
+}
+
+export class InputColumn extends DataColumn {
+    constructor(label, field, type, onChange, params = {}) {
+        super(label, field, { ...params, sortable: false });
+        this.type = type;
+        this.onChange = onChange;
+        this.props = params.props || {};
+    }
+
+    renderData(L, entry, index) {
+        let value = super.renderData(L, entry, index);
+        if (this.type === 'text') {
+            return <TextField {...this.props} size={"small"} fullWidth={true}
+                              value={value} onChange={(e) => this.onChange(entry, index, e.target.value)} />
+        }
+
+        return <>[Invalid type: {this.type}]</>
     }
 }
 

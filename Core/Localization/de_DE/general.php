@@ -15,6 +15,7 @@ return [
   "request" => "Anfordern",
   "cancel" => "Abbrechen",
   "confirm" => "Bestätigen",
+  "add" => "Hinzufügen",
   "ok" => "OK",
   "language" => "Sprache",
   "loading" => "Laden",

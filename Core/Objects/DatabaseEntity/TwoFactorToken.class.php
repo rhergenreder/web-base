@@ -81,4 +81,15 @@ abstract class TwoFactorToken extends DatabaseEntity {
 
     return $jsonData;
   }
+
+  public static function newInstance(\ReflectionClass $reflectionClass, array $row) {
+    $type = $row["type"] ?? null;
+    if ($type === "totp") {
+      return (new \ReflectionClass(TimeBasedTwoFactorToken::class))->newInstanceWithoutConstructor();
+    } else if ($type === "fido") {
+      return (new \ReflectionClass(KeyBasedTwoFactorToken::class))->newInstanceWithoutConstructor();
+    } else {
+      return parent::newInstance($reflectionClass, $row);
+    }
+  }
 }

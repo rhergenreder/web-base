@@ -7,7 +7,7 @@ import {
     DialogContent,
     DialogContentText,
     DialogTitle,
-    Input, TextField
+    Input, List, ListItem, TextField
 } from "@mui/material";
 
 export default function Dialog(props) {
@@ -57,6 +57,18 @@ export default function Dialog(props) {
                     onChange={e => setInputData({ ...inputData, [input.name]: e.target.value })}
                 />)
                 break;
+            case 'list':
+                delete inputProps.items;
+                let listItems = input.items.map((item, index) => <ListItem key={"item-" + index}>{item}</ListItem>);
+                inputElements.push(<Box
+                    {...inputProps}
+                    sx={{marginTop: 1}}
+                    key={"input-" + input.name}
+                >
+                    <List>
+                        {listItems}
+                    </List>
+                </Box>);
         }
     }
 

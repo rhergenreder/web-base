@@ -343,7 +343,6 @@ namespace Core\API\User {
         $this->result["session"] = $this->context->getSession()->jsonSerialize();
       }
 
-
       $sql = $this->context->getSQL();
       $res = $sql->select("method", "groups")
         ->from("ApiPermission")

@@ -9,6 +9,7 @@
 
 .data-table th {
     background-color: #bbb;
+    white-space: nowrap;
 }
 
 .data-table th > svg {
@@ -33,4 +34,14 @@
 .pagination-page-size > div {
     padding-top: 5px;
     padding-bottom: 5px;
+}
+
+.data-table-buttons {
+    white-space: nowrap;
+}
+
+.data-table-buttons > svg {
+    margin-left: 4px;
+    margin-right: 4px;
+    cursor: pointer;
 }

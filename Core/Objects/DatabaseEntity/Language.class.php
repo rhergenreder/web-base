@@ -81,7 +81,7 @@ namespace Core\Objects\DatabaseEntity {
         }
       }
 
-      return new Language(1, "en_US", "American English");
+      return self::getPredefinedValues()[0];
     }
 
     public function getEntries(?string $module = null): ?array {
@@ -101,7 +101,7 @@ namespace Core\Objects\DatabaseEntity {
         }
       }
 
-      return "[$key]";
+      return $key ? "[$key]" : "";
     }
 
     public function addModule(string $module, array $entries) {
@@ -143,8 +143,8 @@ namespace Core\Objects\DatabaseEntity {
 
     public static function getPredefinedValues(): array {
       return [
-        new Language(Language::AMERICAN_ENGLISH, "en_US", 'American English'),
-        new Language(Language::GERMAN_STANDARD, "de_DE", 'Deutsch Standard'),
+        new Language(Language::AMERICAN_ENGLISH, "en_US", 'English (US)'),
+        new Language(Language::GERMAN_STANDARD, "de_DE", 'Deutsch (Standard)'),
       ];
     }
   }
@@ -153,7 +153,7 @@ namespace Core\Objects\DatabaseEntity {
 namespace {
   function L(string $key): string {
     if (!array_key_exists('LANGUAGE', $GLOBALS)) {
-      return "[$key]";
+      return $key ? "[$key]" : "";
     }
 
     global $LANGUAGE;

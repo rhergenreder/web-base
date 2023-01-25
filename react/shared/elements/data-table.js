@@ -293,7 +293,6 @@ export class ControlsColumn extends DataColumn {
                 ...buttonProps,
                 key: "button-" + index,
                 onClick: (e) => { e.stopPropagation(); button.onClick(entry, index); },
-                className: "data-table-clickable",
             }
 
             if (button.hasOwnProperty("disabled")) {
@@ -309,8 +308,8 @@ export class ControlsColumn extends DataColumn {
             }
         }
 
-        return <>
+        return <Box className={"data-table-buttons"}>
             {buttonElements}
-        </>
+        </Box>
     }
 }

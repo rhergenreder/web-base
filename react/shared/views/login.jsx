@@ -15,7 +15,6 @@ import React, {useCallback, useContext, useEffect, useState} from "react";
 import ReplayIcon from '@material-ui/icons/Replay';
 import LanguageSelection from "../elements/language-selection";
 import {decodeText, encodeText, getParameter, removeParameter} from "shared/util";
-import Icon from "shared/elements/icon";
 import {LocaleContext} from "shared/locale";
 
 const useStyles = makeStyles((theme) => ({

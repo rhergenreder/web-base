@@ -101,8 +101,8 @@ let Core = function () {
       var param = split[i];
       var index = param.indexOf('=');
       if (index !== -1) {
-        var key = param.substr(0, index);
-        var val = param.substr(index + 1);
+        var key = param.substring(0, index);
+        var val = param.substring(index + 1);
         this.parameters[key] = val;
       } else
         this.parameters[param] = '';

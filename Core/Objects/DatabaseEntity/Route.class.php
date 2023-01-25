@@ -107,15 +107,23 @@ abstract class Route extends DatabaseEntity {
     return "new $className($args)";
   }
 
+  private static function getParts(string $url): array {
+    if ($url === "/" || $url === "") {
+      return [];
+    } else {
+      return explode("/", $url);
+    }
+  }
+
   public function match(string $url) {
 
     # /test/{abc}/{param:?}/{xyz:int}/{aaa:int?}
-    $patternParts = explode("/", Router::cleanURL($this->pattern, false));
+    $patternParts = self::getParts(Router::cleanURL($this->pattern, false));
     $countPattern = count($patternParts);
     $patternOffset = 0;
 
     # /test/param/optional/123
-    $urlParts = explode("/", Router::cleanURL($url));
+    $urlParts = self::getParts(Router::cleanURL($url));
     $countUrl = count($urlParts);
     $urlOffset = 0;
 
@@ -235,6 +243,7 @@ abstract class Route extends DatabaseEntity {
       new DocumentRoute("/admin", false, \Core\Documents\Admin::class),
       new DocumentRoute("/register", true, \Core\Documents\Account::class, "account/register.twig"),
       new DocumentRoute("/confirmEmail", true, \Core\Documents\Account::class, "account/confirm_email.twig"),
+      new DocumentRoute("/confirmGPG", true, \Core\Documents\Account::class, "account/confirm_gpg.twig"),
       new DocumentRoute("/acceptInvite", true, \Core\Documents\Account::class, "account/accept_invite.twig"),
       new DocumentRoute("/resetPassword", true, \Core\Documents\Account::class, "account/reset_password.twig"),
       new DocumentRoute("/login", true, \Core\Documents\Account::class, "account/login.twig"),

@@ -10,7 +10,7 @@ export default class API {
         this.loggedIn = false;
         this.user = null;
         this.session = null;
-        this.language = { id: 1, code: "en_US", shortCode: "en", name: "American English" };
+        this.language = { id: 1, code: "en_US", shortCode: "en", name: "English (US)" };
         this.permissions = [];
     }
 

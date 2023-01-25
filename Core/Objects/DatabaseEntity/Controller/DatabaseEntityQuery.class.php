@@ -105,6 +105,7 @@ class DatabaseEntityQuery extends Select {
     return $this;
   }
 
+  // TODO: fix cycle detection + rather use deterministic aliases instead of t1, t2, t3...?
   private function fetchRelation(string $propertyName, string $tableName, DatabaseEntityHandler $src, DatabaseEntityHandler $relationHandler,
                                  bool $recursive = false, string $relationColumnPrefix = "", array &$visited = []) {
 

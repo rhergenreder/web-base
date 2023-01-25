@@ -480,6 +480,12 @@ function onRoutes(array $argv) {
 
       printTable($head, $tableRows);
     }
+  } else if ($action === "generate_cache") {
+    $req = new \Core\API\Routes\GenerateCache($context);
+    $success = $req->execute();
+    if (!$success) {
+      _exit("Error generating cache: " . $req->getLastError());
+    }
   } else if ($action === "add") {
     if (count($argv) < 7) {
       _exit("Usage: cli.php routes add <pattern> <type> <target> <exact> [extra]");
@@ -543,7 +549,7 @@ function onRoutes(array $argv) {
       _exit("Route updated successfully");
     }
   } else {
-    _exit("Usage: cli.php routes <list|enable|disable|add|remove|modify> [options...]");
+    _exit("Usage: cli.php routes <list|enable|disable|add|remove|modify|generate_cache> [options...]");
   }
 }
 

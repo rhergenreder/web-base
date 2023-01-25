@@ -1,4 +1,4 @@
-import {format, parse} from "date-fns";
+import {format, parse, formatDistance as formatDistanceDateFns } from "date-fns";
 import {API_DATE_FORMAT, API_DATETIME_FORMAT} from "./constants";
 
 function createDownload(name, data) {
@@ -58,32 +58,35 @@ const getBaseUrl = () => {
     return window.location.protocol + "//" + window.location.host;
 }
 
-const formatDate = (L, apiDate) => {
-    if (!(apiDate instanceof Date)) {
+const toDate = (apiDate, apiFormat = API_DATETIME_FORMAT) => {
+    if (apiDate === null) {
+        return "";
+    } else if (!(apiDate instanceof Date)) {
         if (!isNaN(apiDate)) {
             apiDate = new Date(apiDate * 1000);
         } else {
-            apiDate = parse(apiDate, API_DATE_FORMAT, new Date());
+            apiDate = parse(apiDate, apiFormat, new Date());
         }
     }
 
-    return format(apiDate, L("general.datefns_date_format", "YYY/MM/dd"));
+    return apiDate;
+}
+
+const formatDate = (L, apiDate) => {
+    return format(toDate(apiDate), L("general.datefns_date_format", "YYY/MM/dd"));
 }
 
 const formatDateTime = (L, apiDate, precise=false) => {
-    if (!(apiDate instanceof Date)) {
-        if (!isNaN(apiDate)) {
-            apiDate = new Date(apiDate * 1000);
-        } else {
-            apiDate = parse(apiDate, API_DATETIME_FORMAT, new Date());
-        }
-    }
-
     let dateFormat = precise ?
-        L("general.datefns_date_time_format_precise", "YYY/MM/dd HH:mm:ss") :
-        L("general.datefns_date_time_format", "YYY/MM/dd HH:mm");
-    return format(apiDate, dateFormat);
+        L("general.datefns_datetime_format_precise", "YYY/MM/dd HH:mm:ss") :
+        L("general.datefns_datetime_format", "YYY/MM/dd HH:mm");
+    return format(toDate(apiDate), dateFormat);
 }
+
+function formatDistance(dateFns, apiDate) {
+    return formatDistanceDateFns(toDate(apiDate), new Date(), { addSuffix: true, locale: dateFns });
+}
+
 
 const upperFirstChars = (str) => {
     return str.split(" ")
@@ -97,5 +100,7 @@ const isInt = (value) => {
         !isNaN(parseInt(value, 10));
 }
 
-export { humanReadableSize, removeParameter, getParameter, encodeText, decodeText, getBaseUrl,
-    formatDate, formatDateTime, upperFirstChars, isInt, createDownload };
+export { humanReadableSize, removeParameter, getParameter,
+    encodeText, decodeText, getBaseUrl,
+    formatDate, formatDateTime, formatDistance,
+    upperFirstChars, isInt, createDownload };

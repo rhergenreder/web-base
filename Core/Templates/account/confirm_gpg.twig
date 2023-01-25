@@ -1,0 +1,36 @@
+{% extends "account/account_base.twig" %}
+
+{% set view_title = 'account.confirm_gpg_title' %}
+{% set view_icon = 'user-check' %}
+{% set view_description = '' %}
+
+{% block view_content %}
+    <noscript>
+        <div class="alert alert-danger">{{ L('general.noscript') }}</div>
+    </noscript>
+    <div class="alert alert-info" id="confirm-status">
+        {{ L('account.confirming_gpg') }}… <i class="fas fa-spinner fa-spin"></i>
+    </div>
+    <script nonce="{{ site.csp.nonce }}">
+        $(document).ready(function() {
+            let token = jsCore.getParameter("token");
+            let confirmStatus = $("#confirm-status");
+            if (token) {
+                jsCore.apiCall("/user/confirmGPG", { token: token, csrfToken: '{{ user.session.csrfToken }}' }, (res) => {
+                    confirmStatus.removeClass("alert-info");
+                    if (!res.success) {
+                        confirmStatus.addClass("alert-danger");
+                        confirmStatus.text("{{ L('account.confirm_gpg_error') }}: " + res.msg);
+                    } else {
+                        confirmStatus.addClass("alert-success");
+                        confirmStatus.text("{{ L('account.confirm_gpg_success') }}");
+                    }
+                });
+            } else {
+                confirmStatus.removeClass("alert-info");
+                confirmStatus.addClass("alert-danger");
+                confirmStatus.text("{{ L('account.invalid_link') }}");
+            }
+        });
+    </script>
+{% endblock %}

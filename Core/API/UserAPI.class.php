@@ -1259,7 +1259,7 @@ namespace Core\API\User {
       $settings = $this->context->getSettings();
       $baseUrl = htmlspecialchars($settings->getBaseUrl());
       $token = htmlspecialchars(urlencode($token));
-      $url = "$baseUrl/settings?confirmGPG&token=$token"; // TODO: fix this url
+      $url = "$baseUrl/confirmGPG?token=$token";
       $mailBody = "Hello $name,<br><br>" .
         "you imported a GPG public key for end-to-end encrypted mail communication. " .
         "To confirm the key and verify, you own the corresponding private key, please click on the following link. " .

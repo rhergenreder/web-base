@@ -211,4 +211,16 @@ class Context {
   public function getLanguage(): Language {
     return $this->language;
   }
+
+  public function invalidateSessions(bool $keepCurrent = true): bool {
+    $query = $this->sql->update("Session")
+      ->set("active", false)
+      ->whereEq("user_id", $this->user->getId());
+
+    if (!$keepCurrent && $this->session !== null) {
+      $query->whereNeq("id", $this->session->getId());
+    }
+
+    return $query->execute();
+  }
 }

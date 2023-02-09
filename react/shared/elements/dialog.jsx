@@ -7,7 +7,7 @@ import {
     DialogContent,
     DialogContentText,
     DialogTitle,
-    Input, List, ListItem, TextField
+    Input, List, ListItem, Select, TextField
 } from "@mui/material";
 
 export default function Dialog(props) {

@@ -6,6 +6,8 @@ use Core\Driver\SQL\Expression\Count;
 use Core\Driver\SQL\Expression\Distinct;
 use Core\Driver\SQL\Query\Insert;
 use Core\Objects\DatabaseEntity\Group;
+use Core\Objects\DatabaseEntity\Route;
+use Core\Objects\DatabaseEntity\User;
 use DateTime;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondBool;
@@ -18,26 +20,6 @@ class Stats extends Request {
 
   public function __construct(Context $context, $externalCall = false) {
     parent::__construct($context, $externalCall, array());
-  }
-
-  private function getUserCount(): int {
-    $sql = $this->context->getSQL();
-    $res = $sql->select(new Count())->from("User")->execute();
-    $this->success = $this->success && ($res !== FALSE);
-    $this->lastError = $sql->getLastError();
-
-    return ($this->success ? intval($res[0]["count"]) : 0);
-  }
-
-  private function getPageCount(): int {
-    $sql = $this->context->getSQL();
-    $res = $sql->select(new Count())->from("Route")
-      ->where(new CondBool("active"))
-      ->execute();
-    $this->success = $this->success && ($res !== FALSE);
-    $this->lastError = $sql->getLastError();
-
-    return ($this->success ? intval($res[0]["count"]) : 0);
   }
 
   private function checkSettings(): bool {
@@ -72,8 +54,9 @@ class Stats extends Request {
   }
 
   public function _execute(): bool {
-    $userCount = $this->getUserCount();
-    $pageCount = $this->getPageCount();
+    $sql = $this->context->getSQL();
+    $userCount = User::count($sql);
+    $pageCount = Route::count($sql, new CondBool("active"));
     $req = new \Core\API\Visitors\Stats($this->context);
     $this->success = $req->execute(array("type"=>"monthly"));
     $this->lastError = $req->getLastError();

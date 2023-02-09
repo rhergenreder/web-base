@@ -1,17 +1,22 @@
 import {Link, Navigate, useNavigate} from "react-router-dom";
-import {useCallback, useContext, useEffect} from "react";
+import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
 import {DataColumn, DataTable, NumericColumn, StringColumn} from "shared/elements/data-table";
 import {Button, IconButton} from "@material-ui/core";
 import EditIcon from '@mui/icons-material/Edit';
 import {Chip} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import usePagination from "shared/hooks/pagination";
 
 
 export default function UserListView(props) {
 
+    const api = props.api;
+    const showDialog = props.showDialog;
     const {translate: L, requestModules, currentLocale} = useContext(LocaleContext);
     const navigate = useNavigate();
+    const pagination = usePagination();
+    const [users, setUsers] = useState([]);
 
     useEffect(() => {
         requestModules(props.api, ["general", "account"], currentLocale).then(data => {
@@ -21,15 +26,17 @@ export default function UserListView(props) {
         });
     }, [currentLocale]);
 
-    const onFetchUsers = useCallback(async (page, count, orderBy, sortOrder) => {
-        let res = await props.api.fetchUsers(page, count, orderBy, sortOrder);
-        if (res.success) {
-            return Promise.resolve([res.users, res.pagination]);
-        } else {
-            props.showDialog(res.msg, "Error fetching users");
-            return null;
-        }
-    }, []);
+    const onFetchUsers = useCallback((page, count, orderBy, sortOrder) => {
+        api.fetchUsers(page, count, orderBy, sortOrder).then((res) => {
+            if (res.success) {
+                setUsers(res.users);
+                pagination.update(res.pagination);
+            } else {
+                showDialog(res.msg, "Error fetching users");
+                return null;
+            }
+        });
+    }, [api, showDialog]);
 
     const groupColumn = (() => {
        let column = new DataColumn(L("account.groups"), "groups");
@@ -80,9 +87,13 @@ export default function UserListView(props) {
                             {L("general.create_new")}
                         </Button>
                     </Link>
-                    <DataTable className={"table table-striped"}
-                               fetchData={onFetchUsers}
-                               placeholder={"No users to display"} columns={columnDefinitions} />
+                    <DataTable
+                        data={users}
+                        pagination={pagination}
+                        className={"table table-striped"}
+                        fetchData={onFetchUsers}
+                        placeholder={"No users to display"}
+                        columns={columnDefinitions} />
                 </div>
             </div>
         </div>

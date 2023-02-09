@@ -5,7 +5,7 @@ import React, {useCallback, useContext, useEffect, useState} from "react";
 import "./data-table.css";
 import {LocaleContext} from "../locale";
 import clsx from "clsx";
-import {Box, IconButton, TextField} from "@mui/material";
+import {Box, IconButton, Select, TextField} from "@mui/material";
 import {formatDate, formatDateTime} from "../util";
 import CachedIcon from "@material-ui/icons/Cached";
 
@@ -195,7 +195,7 @@ export class NumericColumn extends DataColumn {
     }
 
     renderData(L, entry, index) {
-        let number = super.renderData(L, entry).toString();
+        let number = super.renderData(L, entry, index).toString();
 
         if (this.decimalDigits !== null) {
             number = number.toFixed(this.decimalDigits);
@@ -223,8 +223,8 @@ export class DateTimeColumn extends DataColumn {
     }
 
     renderData(L, entry, index) {
-        let date = super.renderData(L, entry);
-        return formatDateTime(L, date, this.precise);
+        let date = super.renderData(L, entry, index);
+        return date ? formatDateTime(L, date, this.precise) : "";
     }
 }
 
@@ -234,8 +234,8 @@ export class DateColumn extends DataColumn {
     }
 
     renderData(L, entry, index) {
-        let date = super.renderData(L, entry);
-        return formatDate(L, date);
+        let date = super.renderData(L, entry, index);
+        return date ? formatDate(L, date) : "";
     }
 }
 
@@ -245,7 +245,7 @@ export class BoolColumn extends DataColumn {
     }
 
     renderData(L, entry, index) {
-        let data = super.renderData(L, entry);
+        let data = super.renderData(L, entry, index);
         return L(data ? "general.yes" : "general.no");
     }
 }
@@ -260,9 +260,17 @@ export class InputColumn extends DataColumn {
 
     renderData(L, entry, index) {
         let value = super.renderData(L, entry, index);
+        let inputProps = typeof this.props === 'function' ? this.props(entry, index) : this.props;
         if (this.type === 'text') {
-            return <TextField {...this.props} size={"small"} fullWidth={true}
+            return <TextField {...inputProps} size={"small"} fullWidth={true}
                               value={value} onChange={(e) => this.onChange(entry, index, e.target.value)} />
+        } else if (this.type === "select") {
+            let options = Object.entries(this.params.options || {}).map(([value, label]) =>
+                <option key={"option-" + value} value={value}>{label}</option>);
+            return <Select native {...inputProps} size={"small"} fullWidth={true} value={value}
+                           onChange={(e) => this.onChange(entry, index, e.target.value)}>
+                {options}
+            </Select>
         }
 
         return <>[Invalid type: {this.type}]</>
@@ -292,13 +300,17 @@ export class ControlsColumn extends DataColumn {
             let props = {
                 ...buttonProps,
                 key: "button-" + index,
-                onClick: (e) => { e.stopPropagation(); button.onClick(entry, index); },
             }
 
+            // TODO: icon button!
             if (button.hasOwnProperty("disabled")) {
                 props.disabled = typeof button.disabled === 'function'
                     ? button.disabled(entry, index)
                     : button.disabled;
+            }
+
+            if (!props.disabled) {
+                props.onClick = (e) => { e.stopPropagation(); button.onClick(entry, index); }
             }
 
             if ((!button.hasOwnProperty("hidden")) ||

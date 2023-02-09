@@ -189,6 +189,11 @@ namespace Core\API\TFA {
       $sql = $this->context->getSQL();
       $this->success = $twoFactorToken->confirm($sql) !== false;
       $this->lastError = $sql->getLastError();
+
+      if ($this->success) {
+        $this->context->invalidateSessions(true);
+      }
+
       return $this->success;
     }
   }
@@ -315,6 +320,7 @@ namespace Core\API\TFA {
 
         if ($this->success) {
           $this->result["twoFactorToken"] = $twoFactorToken->jsonSerialize();
+          $this->context->invalidateSessions();
         }
       }
 

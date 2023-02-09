@@ -49,6 +49,7 @@ export default class API {
         let res = await response.json();
         if (!res.success && res.msg === "You are not logged in.") {
             this.loggedIn = false;
+            this.user = null;
         }
 
         return res;

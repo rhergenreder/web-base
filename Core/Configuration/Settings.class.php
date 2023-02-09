@@ -107,7 +107,10 @@ class Settings {
   public static function loadDefaults(): Settings {
     $hostname = $_SERVER["SERVER_NAME"] ?? null;
     if (empty($hostname)) {
-      $hostname = "localhost";
+      $hostname = $_SERVER["HTTP_HOST"];
+      if (empty($hostname)) {
+        $hostname = "localhost";
+      }
     }
 
     $protocol = getProtocol();

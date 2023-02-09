@@ -128,7 +128,6 @@ class CreateDatabase extends DatabaseScript {
       $method = $reflectionClass->getName() . "::getDefaultACL";
       $method($query);
     }
-
     if ($query->hasRows()) {
       $queries[] = $query;
     }

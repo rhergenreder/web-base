@@ -5,6 +5,8 @@ namespace Core\API;
 use Core\Driver\Logger\Logger;
 use Core\Driver\SQL\Query\Insert;
 use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\TwoFactorToken;
+use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
 use PhpMqtt\Client\MqttClient;
 
 abstract class Request {
@@ -126,6 +128,33 @@ abstract class Request {
   protected abstract function _execute(): bool;
   public static function getDefaultACL(Insert $insert): void { }
 
+  protected function check2FA(?TwoFactorToken $tfaToken = null): bool {
+
+    // do not require 2FA for verifying endpoints
+    if ($this instanceof \Core\API\Tfa\VerifyTotp || $this instanceof \Core\API\Tfa\VerifyKey) {
+      return true;
+    }
+
+    if ($tfaToken === null) {
+      $tfaToken = $this->context->getUser()?->getTwoFactorToken();
+    }
+
+    if ($tfaToken && $tfaToken->isConfirmed() && !$tfaToken->isAuthenticated()) {
+
+      if ($tfaToken instanceof KeyBasedTwoFactorToken && !$tfaToken->hasChallenge()) {
+        $tfaToken->generateChallenge();
+      }
+
+      $this->lastError = '2FA-Authorization is required';
+      $this->result["twoFactorToken"] = $tfaToken->jsonSerialize([
+        "type", "challenge", "authenticated", "confirmed", "credentialID"
+      ]);
+      return false;
+    }
+
+    return true;
+  }
+
   public final function execute($values = array()): bool {
 
     $this->params = array_merge([], $this->defaultParams);
@@ -196,15 +225,9 @@ abstract class Request {
           $this->lastError = 'You are not logged in.';
           http_response_code(401);
           return false;
-        } else if ($session) {
-          $tfaToken = $session->getUser()->getTwoFactorToken();
-          if ($tfaToken && $tfaToken->isConfirmed() && !$tfaToken->isAuthenticated()) {
-            if (!($this instanceof \Core\API\Tfa\VerifyTotp) && !($this instanceof \Core\API\Tfa\VerifyKey)) {
-              $this->lastError = '2FA-Authorization is required';
-              http_response_code(401);
-              return false;
-            }
-          }
+        } else if ($session && !$this->check2FA()) {
+          http_response_code(401);
+          return false;
         }
       }
 

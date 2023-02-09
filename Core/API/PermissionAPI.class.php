@@ -76,13 +76,9 @@ namespace Core\API\Permission {
         }
 
         // user would have required groups, check for 2fa-state
-        if ($currentUser) {
-          $tfaToken = $currentUser->getTwoFactorToken();
-          if ($tfaToken && $tfaToken->isConfirmed() && !$tfaToken->isAuthenticated()) {
-            $this->lastError = '2FA-Authorization is required';
-            http_response_code(401);
-            return false;
-          }
+        if ($currentUser && !$this->check2FA()) {
+          http_response_code(401);
+          return false;
         }
       }
 

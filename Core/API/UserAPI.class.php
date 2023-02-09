@@ -222,7 +222,8 @@ namespace Core\API\User {
 
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall,
-        self::getPaginationParameters(['id', 'name', 'email', 'groups', 'registeredAt'])
+        self::getPaginationParameters(['id', 'name', 'email', 'groups', 'registeredAt'],
+          'id', 'asc')
       );
     }
 
@@ -253,8 +254,8 @@ namespace Core\API\User {
 
       $groupNames = new Alias(
         $sql->select(new JsonArrayAgg("name"))->from("Group")
-          ->leftJoin("NM_Group_User", "NM_Group_User.group_id", "Group.id")
-          ->whereEq("NM_Group_User.user_id", new Column("User.id")),
+          ->leftJoin("NM_User_groups", "NM_User_groups.group_id", "Group.id")
+          ->whereEq("NM_User_groups.user_id", new Column("User.id")),
         "groups"
       );
 
@@ -588,15 +589,7 @@ namespace Core\API\User {
               $this->result["user"] = $user->jsonSerialize();
               $this->result["session"] = $session->jsonSerialize();
               $this->result["logoutIn"] = $session->getExpiresSeconds();
-              if ($tfaToken && $tfaToken->isConfirmed()) {
-                if ($tfaToken instanceof KeyBasedTwoFactorToken) {
-                  $tfaToken->generateChallenge();
-                }
-
-                $this->result["twoFactorToken"] = $tfaToken->jsonSerialize([
-                  "type", "challenge", "authenticated", "confirmed", "credentialID"
-                ]);
-              }
+              $this->check2FA($tfaToken);
               $this->success = true;
             }
           } else {
@@ -1116,6 +1109,7 @@ namespace Core\API\User {
         if ($user->save($sql)) {
           $this->logger->info("Issued password reset for user id=" . $user->getId());
           $userToken->invalidate($sql);
+          $this->context->invalidateSessions(false);
           return true;
         } else {
           return $this->createError("Error updating user details: " . $sql->getLastError());
@@ -1152,6 +1146,7 @@ namespace Core\API\User {
       }
 
       $sql = $this->context->getSQL();
+      $updateFields = [];
 
       $currentUser = $this->context->getUser();
       if ($newUsername !== null) {
@@ -1159,11 +1154,13 @@ namespace Core\API\User {
           return false;
         } else {
           $currentUser->name = $newUsername;
+          $updateFields[] = "name";
         }
       }
 
       if ($newFullName !== null) {
         $currentUser->fullName = $newFullName;
+        $updateFields[] = "fullName";
       }
 
       if ($newPassword !== null || $newPasswordConfirm !== null) {
@@ -1175,11 +1172,17 @@ namespace Core\API\User {
           }
 
           $currentUser->password = $this->hashPassword($newPassword);
+          $updateFields[] = "password";
         }
       }
 
-      $this->success = $currentUser->save($sql) !== false;
-      $this->lastError = $sql->getLastError();
+      if (!empty($updateFields)) {
+        $this->success = $currentUser->save($sql, $updateFields) !== false;
+        $this->lastError = $sql->getLastError();
+        if ($this->success && in_array("password", $updateFields)) {
+          $this->context->invalidateSessions(true);
+        }
+      }
       return $this->success;
     }
   }

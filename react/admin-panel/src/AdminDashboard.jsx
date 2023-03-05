@@ -13,7 +13,8 @@ import './res/adminlte.min.css';
 // views
 import View404 from "./views/404";
 const Overview = lazy(() => import('./views/overview'));
-const UserListView = lazy(() => import('./views/user-list'));
+const UserListView = lazy(() => import('./views/user/user-list'));
+const UserEditView = lazy(() => import('./views/user/user-edit'));
 const GroupListView = lazy(() => import('./views/group-list'));
 const EditGroupView = lazy(() => import('./views/group-edit'));
 
@@ -66,6 +67,7 @@ export default function AdminDashboard(props) {
                             <Route path={"/admin"} element={<Overview {...controlObj} />}/>
                             <Route path={"/admin/dashboard"} element={<Overview {...controlObj} />}/>
                             <Route path={"/admin/users"} element={<UserListView {...controlObj} />}/>
+                            <Route path={"/admin/user/:userId"} element={<UserEditView {...controlObj} />}/>
                             <Route path={"/admin/groups"} element={<GroupListView {...controlObj} />}/>
                             <Route path={"/admin/group/:groupId"} element={<EditGroupView {...controlObj} />}/>
                             <Route path={"*"} element={<View404 />} />

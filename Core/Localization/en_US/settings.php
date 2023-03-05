@@ -10,6 +10,7 @@ return [
   "token" => "Token",
   "request_new_key" => "Request new Key",
   "show_only_active_keys" => "Show only active keys",
+  "no_api_key_registered" => "No valid API-Keys registered",
 
   # GPG Key
   "gpg_key_placeholder_text" => "Paste or drag'n'drop your GPG-Key in ASCII format...",

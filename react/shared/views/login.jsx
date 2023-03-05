@@ -297,7 +297,7 @@ export default function LoginForm(props) {
                         ? <Alert severity="error">
                             {error}
                             {emailConfirmed === false
-                                ? <> <Link href={"/resendConfirmation"}>Click here</Link> to resend the confirmation email.</>
+                                ? <> <Link href={"/resendConfirmEmail"}>Click here</Link> to resend the confirmation email.</>
                                 : <></>
                             }
                         </Alert>

@@ -2,6 +2,7 @@
 
 return [
   "title" => "Account",
+  "users" => "Users",
   "login_title" => "Sign In",
   "login_description" => "Sign In into your account",
   "accept_invite_title" => "Invitation",
@@ -32,6 +33,7 @@ return [
   "remember_me" => "Remember Me",
   "signing_in" => "Signing in",
   "sign_in" => "Sign In",
+  "confirmed" => "Confirmed",
   "forgot_password" => "Forgot password?",
   "change_password" => "Change password",
   "register_text" => "Don't have an account? Sign Up",
@@ -57,4 +59,6 @@ return [
   "error_profile_get" => "Error retrieving user profile",
   "registered_at" => "Registered At",
   "last_online" => "Last Online",
+  "groups" => "Groups",
+  "logged_in_as" => "Logged in as",
 ];

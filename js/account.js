@@ -52,7 +52,7 @@ $(document).ready(function () {
                 $("#password").val("");
                 createdDiv.hide();
                 if (res.emailConfirmed === false) {
-                    showAlert("danger", res.msg + ' <a href="/resendConfirmation">Click here</a> to resend the confirmation mail.', true);
+                    showAlert("danger", res.msg + ' <a href="/resendConfirmEmail">Click here</a> to resend the confirmation mail.', true);
                 } else {
                     showAlert("danger", res.msg);
                 }

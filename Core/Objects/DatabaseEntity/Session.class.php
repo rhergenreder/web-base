@@ -44,6 +44,16 @@ class Session extends DatabaseEntity {
       return null;
     }
 
+    if (is_array($session->data)) {
+      foreach ($session->data as $key => $value) {
+        $_SESSION[$key] = $value;
+        if ($key === "2faAuthenticated" && $value === true) {
+          $tfaToken = $session->getUser()->getTwoFactorToken();
+          $tfaToken?->authenticate();
+        }
+      }
+    }
+
     $session->context = $context;
     return $session;
   }
@@ -66,6 +76,7 @@ class Session extends DatabaseEntity {
   }
 
   public function setData(array $data) {
+    $this->data = $data;
     foreach ($data as $key => $value) {
       $_SESSION[$key] = $value;
     }
@@ -107,7 +118,7 @@ class Session extends DatabaseEntity {
 
     $sql = $this->context->getSQL();
     return $this->user->update($sql) &&
-           $this->save($sql, ["expires", "data"]);
+           $this->save($sql, ["expires", "data", "os", "browser"]);
   }
 
   public function getCsrfToken(): string {

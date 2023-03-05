@@ -89,7 +89,7 @@ abstract class Document {
     }
   }
 
-  public function sendHeaders() {
+  public function sendHeaders(): void {
     if ($this->cspEnabled) {
       $cspWhiteList = implode(" ", $this->cspWhitelist);
       $csp = [
@@ -98,7 +98,8 @@ abstract class Document {
         "base-uri 'self'",
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' 'unsafe-inline' data: https:;",
-        "script-src $cspWhiteList 'nonce-$this->cspNonce'"
+        "script-src $cspWhiteList 'nonce-$this->cspNonce'",
+        "frame-ancestors 'self'",
       ];
       if ($this->getSettings()->isRecaptchaEnabled()) {
         $csp[] = "frame-src https://www.google.com/ 'self'";
@@ -106,6 +107,15 @@ abstract class Document {
 
       $compiledCSP = implode("; ", $csp);
       header("Content-Security-Policy: $compiledCSP;");
+    }
+
+    // additional security headers
+    header("X-XSS-Protection: 0"); // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
+    header("X-Content-Type-Options: nosniff");
+
+    if (getProtocol() === "https") {
+      $maxAge = 365 * 24 * 60 * 60; // 1 year in seconds
+      header("Strict-Transport-Security: max-age=$maxAge; includeSubDomains; preload");
     }
   }
 

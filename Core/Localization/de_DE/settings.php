@@ -10,6 +10,7 @@ return [
   "token" => "Token",
   "request_new_key" => "Neuen Schlüssel anfordern",
   "show_only_active_keys" => "Zeige nur aktive Schlüssel",
+  "no_api_key_registered" => "Keine gültigen API-Schlüssel registriert",
 
   # GPG Key
   "gpg_key_placeholder_text" => "GPG-Key im ASCII format reinziehen oder einfügen...",

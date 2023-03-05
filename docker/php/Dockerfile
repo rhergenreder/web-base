@@ -15,6 +15,10 @@ RUN apt-get update -y &&  \
     printf "\n" | pecl install yaml imagick && docker-php-ext-enable yaml imagick && \
     docker-php-ext-install gd
 
+# Browscap
+RUN mkdir -p /usr/local/etc/php/extra/ && \
+    curl -s "https://browscap.org/stream?q=Full_PHP_BrowsCapINI" -o /usr/local/etc/php/extra/browscap.ini
+
 # NodeJS
 RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
     apt-get update && \

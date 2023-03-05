@@ -184,6 +184,60 @@ export class StringColumn extends DataColumn {
     }
 }
 
+export class ArrayColumn extends DataColumn {
+    constructor(label, field = null, params = {}) {
+        super(label, field, params);
+        this.seperator = params.seperator || ", ";
+    }
+
+    renderData(L, entry, index) {
+        let data = super.renderData(L, entry, index);
+
+        if (!Array.isArray(data)) {
+            data = Object.values(data);
+        }
+
+        data = data.join(this.seperator);
+
+        if (this.params.style) {
+            let style = (typeof this.params.style === 'function'
+                ? this.params.style(entry) : this.params.style);
+            data = <span style={style}>{data}</span>
+        }
+
+        return data;
+    }
+}
+
+export class SecretsColumn extends DataColumn {
+    constructor(label, field = null, params = {}) {
+        super(label, field, params);
+        this.asteriskCount = params.asteriskCount || 8;
+        this.character = params.character || "*";
+        this.canCopy = params.hasOwnProperty("canCopy") ? params.canCopy : true;
+    }
+
+    renderData(L, entry, index) {
+        let originalData = super.renderData(L, entry, index);
+        if (!originalData) {
+            return "(None)";
+        }
+
+        let properties = this.params.properties || {};
+        properties.className = clsx(properties.className, "font-monospace");
+
+        if (this.canCopy) {
+            properties.title = L("Click to copy");
+            properties.className = clsx(properties.className, "data-table-clickable");
+            properties.onClick = () => {
+                navigator.clipboard.writeText(originalData);
+            };
+        }
+
+        return <span {...properties}>{this.character.repeat(this.asteriskCount)}</span>
+    }
+}
+
 export class NumericColumn extends DataColumn {
     constructor(label, field = null, params = {}) {
         super(label, field, params);

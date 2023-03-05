@@ -2,6 +2,7 @@
 
 return [
   "title" => "Account",
+  "users" => "Benutzer",
   "login_title" => "Einloggen",
   "login_description" => "Loggen Sie sich in Ihren Account ein",
   "accept_invite_title" => "Einladung",
@@ -32,6 +33,7 @@ return [
   "remember_me" => "Eingeloggt bleiben",
   "signing_in" => "Einloggen",
   "sign_in" => "Einloggen",
+  "confirmed" => "Bestätigt",
   "forgot_password" => "Passwort vergessen?",
   "change_password" => "Passwort ändern",
   "passwords_do_not_match" => "Die Passwörter stimmen nicht überein",
@@ -57,4 +59,6 @@ return [
   "error_profile_get" => "Fehler beim Laden des Benutzerprofils",
   "registered_at" => "Registriert am",
   "last_online" => "Zuletzt online",
+  "groups" => "Gruppen",
+  "logged_in_as" => "Eingeloggt als",
 ];

@@ -249,6 +249,8 @@ abstract class Route extends DatabaseEntity {
       new DocumentRoute("/login", true, \Core\Documents\Account::class, "account/login.twig"),
       new DocumentRoute("/resendConfirmEmail", true, \Core\Documents\Account::class, "account/resend_confirm_email.twig"),
       new DocumentRoute("/debug", true, \Core\Documents\Info::class),
+      new DocumentRoute("/.well-known/security.txt", true, \Core\Documents\Security::class),
+      new DocumentRoute("/.well-known/gpg-key.txt", true, \Core\Documents\Security::class),
       new StaticFileRoute("/", true, "/static/welcome.html"),
     ];
   }

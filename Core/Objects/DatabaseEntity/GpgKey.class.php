@@ -27,9 +27,30 @@ class GpgKey extends DatabaseEntity {
     $this->added = new \DateTime();
   }
 
+  public function _encrypt(string $body): array {
+    return self::encrypt($body, $this->fingerprint);
+  }
+
   public static function encrypt(string $body, string $gpgFingerprint): array {
     $gpgFingerprint = escapeshellarg($gpgFingerprint);
     $cmd = self::GPG2 . " --encrypt --output - --recipient $gpgFingerprint --trust-model always --batch --armor";
+    list($out, $err) = self::proc_exec($cmd, $body, true);
+    if ($out === null) {
+      return createError("Error while communicating with GPG agent");
+    } else if ($err) {
+      return createError($err);
+    } else {
+      return ["success" => true, "data" => $out];
+    }
+  }
+
+  public function _sign(string $body): array {
+    return self::sign($body, $this->fingerprint);
+  }
+
+  public static function sign(string $body, string $gpgFingerprint): array {
+    $gpgFingerprint = escapeshellarg($gpgFingerprint);
+    $cmd = self::GPG2 . " --clearsign --output - --local-user $gpgFingerprint --batch --armor";
     list($out, $err) = self::proc_exec($cmd, $body, true);
     if ($out === null) {
       return createError("Error while communicating with GPG agent");
@@ -101,7 +122,11 @@ class GpgKey extends DatabaseEntity {
     return createError($err);
   }
 
-  public static function export($gpgFingerprint, bool $armored): array {
+  public function _export(bool $armored = true): array {
+    return self::export($this->fingerprint, $armored);
+  }
+
+  public static function export(string $gpgFingerprint, bool $armored): array {
     $cmd = self::GPG2 . " --export ";
     if ($armored) {
       $cmd .= "--armor ";

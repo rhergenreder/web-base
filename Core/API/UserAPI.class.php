@@ -222,7 +222,7 @@ namespace Core\API\User {
 
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall,
-        self::getPaginationParameters(['id', 'name', 'email', 'groups', 'registeredAt'],
+        self::getPaginationParameters(['id', 'name', 'fullName', 'email', 'groups', 'registeredAt', 'confirmed'],
           'id', 'asc')
       );
     }
@@ -341,7 +341,9 @@ namespace Core\API\User {
         $this->result["loggedIn"] = true;
         $userGroups = array_keys($currentUser->getGroups());
         $this->result["user"] = $currentUser->jsonSerialize();
-        $this->result["session"] = $this->context->getSession()->jsonSerialize();
+        $this->result["session"] = $this->context->getSession()->jsonSerialize([
+          "id", "expires", "stayLoggedIn", "data", "csrfToken"
+        ]);
       }
 
       $sql = $this->context->getSQL();
@@ -1022,7 +1024,7 @@ namespace Core\API\User {
 
       $userToken = UserToken::findBy(UserToken::createBuilder($sql, true)
         ->whereFalse("used")
-        ->whereEq("tokenType", UserToken::TYPE_EMAIL_CONFIRM)
+        ->whereEq("token_type", UserToken::TYPE_EMAIL_CONFIRM)
         ->whereEq("user_id", $user->getId()));
 
       $validHours = 48;

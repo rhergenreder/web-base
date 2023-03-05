@@ -2,7 +2,6 @@
 
 namespace Core\Objects\DatabaseEntity {
 
-  use Core\Driver\SQL\SQL;
   use Core\Objects\DatabaseEntity\Attribute\MaxLength;
   use Core\Objects\DatabaseEntity\Attribute\Transient;
   use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;

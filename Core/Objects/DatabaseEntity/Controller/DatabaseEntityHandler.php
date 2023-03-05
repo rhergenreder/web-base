@@ -38,6 +38,7 @@ use Core\Objects\DatabaseEntity\Attribute\MultipleReference;
 use Core\Objects\DatabaseEntity\Attribute\NoFetch;
 use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Core\Objects\DatabaseEntity\Attribute\Unique;
+use Core\Objects\DatabaseEntity\Attribute\UsePropertiesOf;
 
 class DatabaseEntityHandler implements Persistable {
 
@@ -75,14 +76,17 @@ class DatabaseEntityHandler implements Persistable {
 
   public function init() {
     $className = $this->entityClass->getName();
+    $entityClass = $this->entityClass;
+    while ($usePropsOf = self::getAttribute($entityClass, UsePropertiesOf::class)) {
+      $entityClass = new \ReflectionClass($usePropsOf->getClass());
+    }
 
-
-    $uniqueColumns = self::getAttribute($this->entityClass, Unique::class);
+    $uniqueColumns = self::getAttribute($entityClass, Unique::class);
     if ($uniqueColumns) {
       $this->constraints[] = new \Core\Driver\SQL\Constraint\Unique($uniqueColumns->getColumns());
     }
 
-    foreach ($this->entityClass->getProperties() as $property) {
+    foreach ($entityClass->getProperties() as $property) {
       $propertyName = $property->getName();
       if ($propertyName === "id") {
         $this->properties[$propertyName] = $property;
@@ -123,8 +127,8 @@ class DatabaseEntityHandler implements Persistable {
 
             try {
               $requestedClass = new \ReflectionClass($extendingClass);
-              if (!$requestedClass->isSubclassOf($this->entityClass)) {
-                $this->raiseError("Class '$extendingClass' must be an inheriting from '" . $this->entityClass->getName() . "' for an extending enum");
+              if (!$requestedClass->isSubclassOf($entityClass)) {
+                $this->raiseError("Class '$extendingClass' must be an inheriting from '" . $entityClass->getName() . "' for an extending enum");
               } else {
                 $this->extendingClasses[$key] = $requestedClass;
               }

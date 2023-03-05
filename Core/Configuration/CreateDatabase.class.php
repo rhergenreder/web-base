@@ -85,7 +85,6 @@ class CreateDatabase extends DatabaseScript {
               $method = "$className::getHandler";
               $handler = call_user_func($method, $sql, null, true);
               $persistables[$handler->getTableName()] = $handler;
-
               foreach ($handler->getNMRelations() as $nmTableName => $nmRelation) {
                 $persistables[$nmTableName] = $nmRelation;
               }

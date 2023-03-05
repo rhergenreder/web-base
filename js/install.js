@@ -19,7 +19,7 @@ function setState(state) {
 
     case SUCCESSFUL:
       icon  = 'fas fa-check-circle';
-      text  = "Successfull";
+      text  = "Successful";
       color = "success";
       break;
 
@@ -112,7 +112,7 @@ function waitForStatusChange() {
 $(document).ready(function() {
 
   $("#btnSubmit").click(function() {
-    params = { };
+    let params = { };
     let submitButton = $("#btnSubmit");
     let textBefore = submitButton.text();
     submitButton.prop("disabled", true);
@@ -143,7 +143,7 @@ $(document).ready(function() {
     $("#btnPrev").prop("disabled", true);
     sendRequest({ "prev": true }, function(success) {
       if(!success) {
-        $("#btnPrev").prop("disabled",false);
+        $("#btnPrev").prop("disabled", false);
       } else {
         window.location.reload();
       }

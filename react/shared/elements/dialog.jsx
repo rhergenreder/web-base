@@ -7,7 +7,7 @@ import {
     DialogContent,
     DialogContentText,
     DialogTitle,
-    Input, List, ListItem, Select, TextField
+    Input, List, ListItem, TextField
 } from "@mui/material";
 
 export default function Dialog(props) {
@@ -48,8 +48,10 @@ export default function Dialog(props) {
 
         switch (input.type) {
             case 'text':
+            case 'password':
                 inputElements.push(<TextField
                     {...inputProps}
+                    type={input.type}
                     sx={{marginTop: 1}}
                     size={"small"} fullWidth={true}
                     key={"input-" + input.name}

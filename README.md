@@ -38,8 +38,9 @@ I actually don't know what i want to implement here. There are quite to many CMS
 ### Afterwards
 
 For any changes made in [/react](/react), run:
-1. once: `yarn i`
+1. once: `yarn install`
 2. build: `yarn run build`
+
 The compiled dist files will be automatically moved to `/js`.
 
 To spawn a temporary development server, run:

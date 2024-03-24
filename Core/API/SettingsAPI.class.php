@@ -155,37 +155,4 @@ namespace Core\API\Settings {
       $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to modify site settings");
     }
   }
-
-  class GenerateJWT extends SettingsAPI {
-
-    public function __construct(Context $context, bool $externalCall = false) {
-      parent::__construct($context, $externalCall, [
-        "type" => new StringType("type", 32, true, "HS512")
-      ]);
-    }
-
-    protected function _execute(): bool {
-      $algorithm = $this->getParam("type");
-      if (!Settings::isJwtAlgorithmSupported($algorithm)) {
-        return $this->createError("Algorithm is not supported");
-      }
-
-      $settings = $this->context->getSettings();
-      if (!$settings->generateJwtKey($algorithm)) {
-        return $this->createError("Error generating JWT-Key: " . $settings->getLogger()->getLastMessage());
-      }
-
-      $saveRequest = $settings->saveJwtKey($this->context);
-      if (!$saveRequest->success()) {
-        return $this->createError("Error saving JWT-Key: " . $saveRequest->getLastError());
-      }
-
-      $this->result["jwt_public_key"] = $settings->getJwtPublicKey(false)?->getKeyMaterial();
-      return true;
-    }
-
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to regenerate the JWT key. This invalidates all sessions");
-    }
-  }
 }

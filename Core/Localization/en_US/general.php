@@ -15,6 +15,7 @@ return [
   "not_supported" => "Not supported",
   "yes" => "Yes",
   "no" => "No",
+  "create_new" => "Create",
 
   # dialog / actions
   "action" => "Action",

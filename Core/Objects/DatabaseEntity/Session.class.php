@@ -4,7 +4,6 @@ namespace Core\Objects\DatabaseEntity;
 
 use DateTime;
 use Exception;
-use Firebase\JWT\JWT;
 use Core\Objects\Context;
 use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\Json;
@@ -21,6 +20,7 @@ class Session extends DatabaseEntity {
   private User $user;
   private DateTime $expires;
   #[MaxLength(45)] private string $ipAddress;
+  #[MaxLength(36)] private string $uuid;
   #[DefaultValue(true)] private bool $active;
   #[MaxLength(64)] private ?string $os;
   #[MaxLength(64)] private ?string $browser;
@@ -32,15 +32,21 @@ class Session extends DatabaseEntity {
     parent::__construct();
     $this->context = $context;
     $this->user = $user;
+    $this->uuid = uuidv4();
     $this->stayLoggedIn = false;
     $this->csrfToken = $csrfToken ?? generateRandomString(16);
     $this->expires = (new DateTime())->modify(sprintf("+%d second", Session::DURATION));
     $this->active = true;
   }
 
-  public static function init(Context $context, int $userId, int $sessionId): ?Session {
-    $session = Session::find($context->getSQL(), $sessionId, true, true);
-    if (!$session || !$session->active || $session->user->getId() !== $userId) {
+  public static function init(Context $context, string $sessionUUID): ?Session {
+    $sql = $context->getSQL();
+    $session = Session::findBy(Session::createBuilder($sql, true)
+      ->fetchEntities(true)
+      ->whereEq("Session.uuid", $sessionUUID)
+      ->whereTrue("Session.active")
+      ->whereGt("Session.expires", $sql->now()));
+    if (!$session) {
       return null;
     }
 
@@ -82,18 +88,13 @@ class Session extends DatabaseEntity {
     }
   }
 
-  public function getCookie(): string {
-    $this->updateMetaData();
-    $settings = $this->context->getSettings();
-    $token = ['userId' => $this->user->getId(), 'sessionId' => $this->getId()];
-    $jwtPublicKey = $settings->getJwtPublicKey();
-    return JWT::encode($token, $jwtPublicKey->getKeyMaterial(), $jwtPublicKey->getAlgorithm());
+  public function getUUID(): string {
+    return $this->uuid;
   }
 
   public function sendCookie(string $domain) {
-    $sessionCookie = $this->getCookie();
     $secure = strcmp(getProtocol(), "https") === 0;
-    setcookie('session', $sessionCookie, $this->getExpiresTime(), "/", $domain, $secure, true);
+    setcookie('session', $this->uuid, $this->getExpiresTime(), "/", $domain, $secure, true);
   }
 
   public function getExpiresTime(): int {

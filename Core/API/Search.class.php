@@ -9,7 +9,7 @@ use Core\Objects\Search\SearchQuery;
 
 class Search extends Request {
 
-  public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+  public function __construct(Context $context, bool $externalCall = false) {
     parent::__construct($context, $externalCall, [
       "text" => new StringType("text", 32)
     ]);

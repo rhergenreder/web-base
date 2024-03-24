@@ -13,12 +13,14 @@ use Core\Driver\SQL\Condition\CondIn;
 use Core\Driver\SQL\Expression\DateSub;
 use Core\Driver\SQL\SQL;
 use Core\Objects\ConnectionData;
+use JetBrains\PhpStorm\NoReturn;
 
-function printLine(string $line = "") {
+function printLine(string $line = ""): void {
   echo $line . PHP_EOL;
 }
 
-function _exit(string $line = "") {
+#[NoReturn]
+function _exit(string $line = ""): void {
   printLine($line);
   die();
 }
@@ -49,10 +51,11 @@ if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
 }
 
 if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
+  printLine("Detected docker environment in config, running docker exec...");
   if (count($argv) < 3 || $argv[1] !== "db" || !in_array($argv[2], ["shell", "import", "export"])) {
     $containerName = $dockerYaml["services"]["php"]["container_name"];
     $command = array_merge(["docker", "exec", "-it", $containerName, "php"], $argv);
-    $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes, "/application");
+    $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes);
     exit(proc_close($proc));
   }
 }
@@ -68,8 +71,10 @@ function connectSQL(): ?SQL {
   return $sql;
 }
 
-function printHelp() {
-  // TODO: help
+function printHelp(array $argv): void {
+  printLine("=== WebBase CLI tool ===");
+  printLine("Usage: ");
+  var_dump($argv);
 }
 
 function applyPatch(\Core\Driver\SQL\SQL $sql, string $patchName): bool {
@@ -99,13 +104,13 @@ function applyPatch(\Core\Driver\SQL\SQL $sql, string $patchName): bool {
   return true;
 }
 
-function handleDatabase(array $argv) {
+function handleDatabase(array $argv): void {
   global $dockerYaml;
   $action = $argv[2] ?? "";
 
   if ($action === "migrate") {
     $sql = connectSQL() or die();
-
+    _exit("Not implemented: migrate");
   } else if (in_array($action, ["export", "import", "shell"])) {
 
     // database config
@@ -257,7 +262,7 @@ function findPullBranch(array $output): ?string {
   return null;
 }
 
-function onMaintenance(array $argv) {
+function onMaintenance(array $argv): void {
   $action = $argv[2] ?? "status";
   $maintenanceFile = "MAINTENANCE";
   $isMaintenanceEnabled = file_exists($maintenanceFile);
@@ -376,7 +381,7 @@ function getConsoleWidth(): int {
   return intval($width);
 }
 
-function printTable(array $head, array $body) {
+function printTable(array $head, array $body): void {
 
   $columns = [];
   foreach ($head as $key) {
@@ -409,7 +414,7 @@ function printTable(array $head, array $body) {
   }
 }
 
-function onSettings(array $argv) {
+function onSettings(array $argv): void {
   global $context;
   connectSQL() or die();
   $action = $argv[2] ?? "list";
@@ -455,7 +460,7 @@ function onSettings(array $argv) {
   }
 }
 
-function onRoutes(array $argv) {
+function onRoutes(array $argv): void {
   global $context;
   connectSQL() or die();
   $action = $argv[2] ?? "list";
@@ -553,7 +558,7 @@ function onRoutes(array $argv) {
   }
 }
 
-function onTest($argv) {
+function onTest($argv): void {
   $files = glob(WEBROOT . '/test/*.test.php');
   $requestedTests = array_filter(array_slice($argv, 2), function ($t) {
     return !startsWith($t, "-");
@@ -569,11 +574,11 @@ function onTest($argv) {
 
     $className =  $baseName . "Test";
     if (class_exists($className)) {
-      echo "=== Running $className ===" . PHP_EOL;
+      printLine("=== Running $className ===");
       $testClass = new \PHPUnit\Framework\TestSuite();
       $testClass->addTestSuite($className);
       $result = $testClass->run();
-      echo "Done after " . $result->time() . "s" . PHP_EOL;
+      printLine("Done after " . $result->time() . "s");
       $stats = [
         "total" => $result->count(),
         "skipped" => $result->skippedCount(),
@@ -583,16 +588,19 @@ function onTest($argv) {
       ];
 
       // Summary
-      echo implode(", ", array_map(function ($key) use ($stats) {
+      printLine(
+        implode(", ", array_map(function ($key) use ($stats) {
           return "$key: " . $stats[$key];
-        }, array_keys($stats))) . PHP_EOL;
+        }, array_keys($stats)))
+      );
 
       $reports = array_merge($result->errors(), $result->failures());
       foreach ($reports as $error) {
         $exception = $error->thrownException();
         echo $error->toString();
         if ($verbose) {
-          echo ". Stacktrace:" . PHP_EOL . $exception->getTraceAsString() . PHP_EOL;
+          printLine(". Stacktrace:");
+          printLine($exception->getTraceAsString());
         } else {
           $location = array_filter($exception->getTrace(), function ($t) use ($file) {
             return isset($t["file"]) && $t["file"] === $file;
@@ -600,9 +608,9 @@ function onTest($argv) {
           $location = array_reverse($location);
           $location = array_pop($location);
           if ($location)  {
-            echo " in " . substr($location["file"], strlen(WEBROOT)) . "#" . $location["line"] . PHP_EOL;
+            printLine(" in " . substr($location["file"], strlen(WEBROOT)) . "#" . $location["line"]);
           } else {
-            echo PHP_EOL;
+            printLine();
           }
         }
       }
@@ -610,7 +618,7 @@ function onTest($argv) {
   }
 }
 
-function onMail($argv) {
+function onMail($argv): void {
   global $context;
   $action = $argv[2] ?? null;
   if ($action === "send_queue") {
@@ -625,7 +633,7 @@ function onMail($argv) {
   }
 }
 
-function onImpersonate($argv) {
+function onImpersonate($argv): void {
   global $context;
 
   if (count($argv) < 3) {
@@ -651,7 +659,7 @@ function onImpersonate($argv) {
   $session = new \Core\Objects\DatabaseEntity\Session($context, $user);
   $session->setData(["2faAuthenticated" => true]);
   $session->update();
-  echo "session=" . $session->getCookie() . PHP_EOL;
+  echo "session=" . $session->getUUID() . PHP_EOL;
 }
 
 $argv = $_SERVER['argv'];
@@ -662,7 +670,7 @@ if (count($argv) < 2) {
 $command = $argv[1];
 switch ($command) {
   case 'help':
-    printHelp();
+    printHelp($argv);
     exit;
   case 'db':
     handleDatabase($argv);
@@ -688,6 +696,6 @@ switch ($command) {
   default:
     printLine("Unknown command '$command'");
     printLine();
-    printHelp();
+    printHelp($argv);
     exit;
 }

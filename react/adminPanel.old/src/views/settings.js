@@ -54,8 +54,7 @@ export default class Settings extends React.Component {
 
         this.hiddenKeys = [
             "recaptcha_private_key",
-            "mail_password",
-            "jwt_secret"
+            "mail_password"
         ];
     }
 

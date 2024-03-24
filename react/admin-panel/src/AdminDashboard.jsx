@@ -43,7 +43,7 @@ export default function AdminDashboard(props) {
     }, []);
 
     useEffect(() => {
-        requestModules(api, ["general", "admin"], currentLocale).then(data => {
+        requestModules(api, ["general", "admin", "account"], currentLocale).then(data => {
             if (!data.success) {
                 alert(data.msg);
             }

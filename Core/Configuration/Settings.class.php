@@ -26,11 +26,6 @@ class Settings {
   private array $allowedExtensions;
   private string $timeZone;
 
-  // jwt
-  private ?string $jwtPublicKey;
-  private ?string $jwtSecretKey;
-  private string $jwtAlgorithm;
-
   // recaptcha
   private bool $recaptchaEnabled;
   private string $recaptchaPublicKey;
@@ -84,22 +79,6 @@ class Settings {
     }
   }
 
-  public function getJwtPublicKey(bool $allowPrivate = true): ?\Firebase\JWT\Key {
-    if (empty($this->jwtPublicKey)) {
-      if ($allowPrivate && $this->jwtSecretKey) {
-        // we might have a symmetric key, should we instead return the private key?
-        return new \Firebase\JWT\Key($this->jwtSecretKey, $this->jwtAlgorithm);
-      }
-      return null;
-    } else {
-      return new \Firebase\JWT\Key($this->jwtPublicKey, $this->jwtAlgorithm);
-    }
-  }
-
-  public function getJwtSecretKey(): ?\Firebase\JWT\Key {
-    return $this->jwtSecretKey ? new \Firebase\JWT\Key($this->jwtSecretKey, $this->jwtAlgorithm) : null;
-  }
-
   public function isInstalled(): bool {
     return $this->installationComplete;
   }
@@ -124,11 +103,6 @@ class Settings {
     $settings->registrationAllowed = false;
     $settings->timeZone = date_default_timezone_get();
 
-    // JWT
-    $settings->jwtSecretKey = null;
-    $settings->jwtPublicKey = null;
-    $settings->jwtAlgorithm = "HS256";
-
     // Recaptcha
     $settings->recaptchaEnabled = false;
     $settings->recaptchaPublicKey = "";
@@ -143,50 +117,6 @@ class Settings {
     return $settings;
   }
 
-  public function generateJwtKey(string $algorithm = null): bool {
-    $this->jwtAlgorithm = $algorithm ?? $this->jwtAlgorithm;
-
-    // TODO: key encryption necessary?
-    if (in_array($this->jwtAlgorithm, ["HS256", "HS384", "HS512"])) {
-      $this->jwtSecretKey = generateRandomString(32);
-      $this->jwtPublicKey = null;
-    } else if (in_array($this->jwtAlgorithm, ["RS256", "RS384", "RS512"])) {
-      $bits = intval(substr($this->jwtAlgorithm, 2));
-      $private_key = openssl_pkey_new(["private_key_bits" => $bits]);
-      $this->jwtPublicKey = openssl_pkey_get_details($private_key)['key'];
-      openssl_pkey_export($private_key, $this->jwtSecretKey);
-    } else if (in_array($this->jwtAlgorithm, ["ES256", "ES384"])) {
-      // $ec = new \Elliptic\EC('secp256k1'); ??
-      $this->logger->error("JWT algorithm: '$this->jwtAlgorithm' is currently not supported.");
-      return false;
-    } else if ($this->jwtAlgorithm == "EdDSA") {
-      $keyPair = sodium_crypto_sign_keypair();
-      $this->jwtSecretKey = base64_encode(sodium_crypto_sign_secretkey($keyPair));
-      $this->jwtPublicKey = base64_encode(sodium_crypto_sign_publickey($keyPair));
-    } else {
-      $this->logger->error("Invalid JWT algorithm: '$this->jwtAlgorithm', expected one of: " .
-        implode(",", array_keys(\Firebase\JWT\JWT::$supported_algs)));
-      return false;
-    }
-
-    return true;
-  }
-
-  public static function isJwtAlgorithmSupported(string $algorithm): bool {
-    return in_array(strtoupper($algorithm), ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "EDDSA"]);
-  }
-
-  public function saveJwtKey(Context $context): \Core\API\Settings\Set {
-    $req = new \Core\API\Settings\Set($context);
-    $req->execute(array("settings" => array(
-      "jwt_secret_key" => $this->jwtSecretKey,
-      "jwt_public_key" => $this->jwtSecretKey,
-      "jwt_algorithm" => $this->jwtAlgorithm,
-    )));
-
-    return $req;
-  }
-
   public function loadFromDatabase(Context $context): bool {
     $this->logger = new Logger("Settings", $context->getSQL());
     $req = new \Core\API\Settings\Get($context);
@@ -199,9 +129,6 @@ class Settings {
       $this->registrationAllowed = $result["user_registration_enabled"] ?? $this->registrationAllowed;
       $this->installationComplete = $result["installation_completed"] ?? $this->installationComplete;
       $this->timeZone = $result["time_zone"] ?? $this->timeZone;
-      $this->jwtSecretKey = $result["jwt_secret_key"] ?? $this->jwtSecretKey;
-      $this->jwtPublicKey = $result["jwt_public_key"] ?? $this->jwtPublicKey;
-      $this->jwtAlgorithm = $result["jwt_algorithm"] ?? $this->jwtAlgorithm;
       $this->recaptchaEnabled = $result["recaptcha_enabled"] ?? $this->recaptchaEnabled;
       $this->recaptchaPublicKey = $result["recaptcha_public_key"] ?? $this->recaptchaPublicKey;
       $this->recaptchaPrivateKey = $result["recaptcha_private_key"] ?? $this->recaptchaPrivateKey;
@@ -210,13 +137,6 @@ class Settings {
       $this->mailFooter = $result["mail_footer"] ?? $this->mailFooter;
       $this->mailAsync = $result["mail_async"] ?? $this->mailAsync;
       $this->allowedExtensions = explode(",", $result["allowed_extensions"] ?? strtolower(implode(",", $this->allowedExtensions)));
-
-      if (!isset($result["jwt_secret_key"])) {
-        if ($this->generateJwtKey()) {
-          $this->saveJwtKey($context);
-        }
-      }
-
       date_default_timezone_set($this->timeZone);
     }
 
@@ -229,9 +149,6 @@ class Settings {
       ->addRow("user_registration_enabled", $this->registrationAllowed ? "1" : "0", false, false)
       ->addRow("installation_completed", $this->installationComplete ? "1" : "0", true, true)
       ->addRow("time_zone", $this->timeZone, false, false)
-      ->addRow("jwt_secret_key", $this->jwtSecretKey, true, false)
-      ->addRow("jwt_public_key", $this->jwtPublicKey, false, false)
-      ->addRow("jwt_algorithm", $this->jwtAlgorithm, false, false)
       ->addRow("recaptcha_enabled", $this->recaptchaEnabled ? "1" : "0", false, false)
       ->addRow("recaptcha_public_key", $this->recaptchaPublicKey, false, false)
       ->addRow("recaptcha_private_key", $this->recaptchaPrivateKey, true, false)

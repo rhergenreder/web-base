@@ -9,7 +9,6 @@ use Core\Driver\SQL\Condition\CondLike;
 use Core\Driver\SQL\Condition\CondOr;
 use Core\Driver\SQL\Join\InnerJoin;
 use Core\Driver\SQL\SQL;
-use Firebase\JWT\JWT;
 use Core\Objects\DatabaseEntity\Language;
 use Core\Objects\DatabaseEntity\Session;
 use Core\Objects\DatabaseEntity\User;
@@ -99,28 +98,14 @@ class Context {
     session_write_close();
   }
 
-  private function loadSession(int $userId, int $sessionId): void {
-    $this->session = Session::init($this, $userId, $sessionId);
+  private function loadSession(string $sessionUUID): void {
+    $this->session = Session::init($this, $sessionUUID);
     $this->user = $this->session?->getUser();
   }
 
   public function parseCookies(): void {
     if (isset($_COOKIE['session']) && is_string($_COOKIE['session']) && !empty($_COOKIE['session'])) {
-      try {
-        $token = $_COOKIE['session'];
-        $settings = $this->configuration->getSettings();
-        $jwtKey = $settings->getJwtSecretKey();
-        if ($jwtKey) {
-          $decoded = (array)JWT::decode($token, $jwtKey);
-          $userId = ($decoded['userId'] ?? NULL);
-          $sessionId = ($decoded['sessionId'] ?? NULL);
-          if (!is_null($userId) && !is_null($sessionId)) {
-            $this->loadSession($userId, $sessionId);
-          }
-        }
-      } catch (\Exception $e) {
-        // ignored
-      }
+      $this->loadSession($_COOKIE['session']);
     }
 
     // set language by priority: 1. GET parameter, 2. cookie, 3. user's settings

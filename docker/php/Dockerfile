@@ -23,7 +23,9 @@ RUN mkdir -p /usr/local/etc/php/extra/ && \
 RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
     apt-get update && \
     apt-get -y install nodejs && \
-    npm install --global yarn
+    curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarnkey.gpg >/dev/null && \
+    echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" | tee /etc/apt/sources.list.d/yarn.list && \
+    apt-get update && apt-get -y install yarn
 
 # Runkit for unit testing (no stable release available)
 RUN pecl install runkit7-4.0.0a6  && docker-php-ext-enable runkit7 && \

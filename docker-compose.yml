@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   web:
-    container_name: web
+    container_name: webbase-web
     ports:
       - "80:80"
     volumes:
@@ -13,7 +13,7 @@ services:
       - db
       - php
   db:
-    container_name: db
+    container_name: webbase-db
     image: mariadb:latest
     ports:
       -  '3306:3306'
@@ -21,7 +21,7 @@ services:
       - "MYSQL_ROOT_PASSWORD=webbasedb"
       - "MYSQL_DATABASE=webbase"
   php:
-    container_name: php
+    container_name: webbase-php
     volumes:
       - .:/application:rw
       - ./docker/php/php.ini:/usr/local/etc/php/php.ini:ro
@@ -29,5 +29,3 @@ services:
       context: './docker/php/'
     links:
       - db
-    
-

@@ -8,24 +8,36 @@ let Core = function () {
   this.apiCall = function (func, params, callback) {
     params = typeof params !== 'undefined' ? params : {};
     callback = typeof callback !== 'undefined' ? callback : function (data) {};
+    let config = { method: "POST" };
 
+    if (params instanceof FormData) {
+      config.body = params;
+    } else {
+      config.headers = { "Content-Type": "application/json" };
+      config.body = JSON.stringify(params);
+    }
+
+    const self = this;
     const path = '/api' + (func.startsWith('/') ? '' : '/') + func;
-    $.post(path, params, function (data) {
-      console.log(func + "(): success=" + data.success + " msg=" + data.msg);
-      callback.call(this, data);
-    }, "json").fail(function (jqXHR, textStatus, errorThrown) {
-      let msg = func + " Status: " + textStatus + " error thrown: " + errorThrown;
-      console.log("API-Function Error: " + msg);
-      callback.call(this, {success: false, msg: "An error occurred. API-Function: " + msg });
+    fetch(path, config).then((data) => {
+      data.json().then(data => {
+        callback.call(self, data);
+      }).catch(reason => {
+        console.log("API-Function Error: " + reason);
+        callback.call(self, {success: false, msg: "An error occurred. API-Function: " + reason });
+      })
+    }).catch(reason => {
+      console.log("API-Function Error: " + reason);
+      callback.call(self, {success: false, msg: "An error occurred. API-Function: " + reason });
     });
   };
 
   this.getCookie = function (cname) {
-    var name = cname + "=";
-    var decodedCookie = decodeURIComponent(document.cookie);
-    var ca = decodedCookie.split(";");
-    for (var i = 0; i < ca.length; i++) {
-      var c = ca[i];
+    let name = cname + "=";
+    let decodedCookie = decodeURIComponent(document.cookie);
+    let ca = decodedCookie.split(";");
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
       while (c.charAt(0) === ' ') {
         c = c.substring(1);
       }
@@ -84,9 +96,9 @@ let Core = function () {
       return null;
   };
 
-  this.setParameter = function (param, newvalue) {
-    newvalue = typeof newvalue !== 'undefined' ? newvalue : '';
-    this.parameters[param] = newvalue;
+  this.setParameter = function (param, newValue) {
+    newValue = typeof newValue !== 'undefined' ? newValue : '';
+    this.parameters[param] = newValue;
     this.updateUrl();
   };
 
@@ -95,15 +107,13 @@ let Core = function () {
     if (this.url.indexOf('?') === -1)
       return;
 
-    var paramString = this.url.substring(this.url.indexOf('?') + 1);
-    var split = paramString.split('&');
-    for (var i = 0; i < split.length; i++) {
-      var param = split[i];
-      var index = param.indexOf('=');
+    let paramString = this.url.substring(this.url.indexOf('?') + 1);
+    let split = paramString.split('&');
+    for (let i = 0; i < split.length; i++) {
+      let param = split[i];
+      let index = param.indexOf('=');
       if (index !== -1) {
-        var key = param.substring(0, index);
-        var val = param.substring(index + 1);
-        this.parameters[key] = val;
+        this.parameters[param.substring(0, index)] = param.substring(index + 1);
       } else
         this.parameters[param] = '';
     }
@@ -112,7 +122,7 @@ let Core = function () {
   this.updateUrl = function () {
     this.clearUrl();
     let i = 0;
-    for (var parameter in this.parameters) {
+    for (let parameter in this.parameters) {
       this.url += (i === 0 ? "?" : "&") + parameter;
       if (this.parameters.hasOwnProperty(parameter) && this.parameters[parameter].toString().length > 0) {
         this.url += "=" + this.parameters[parameter];
@@ -127,10 +137,12 @@ let Core = function () {
   };
 
   this.clearUrl = function () {
-    if (this.url.indexOf('#') !== -1)
+    if (this.url.indexOf('#') !== -1) {
       this.url = this.url.substring(0, this.url.indexOf('#'));
-    if (this.url.indexOf('?') !== -1)
+    }
+    if (this.url.indexOf('?') !== -1) {
       this.url = this.url.substring(0, this.url.indexOf('?'));
+    }
   };
 
   this.getJsonDateTime = function (date) {

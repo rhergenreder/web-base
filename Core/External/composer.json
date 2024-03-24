@@ -6,7 +6,6 @@
         "christian-riesen/base32": "^1.6",
         "spomky-labs/cbor-php": "2.1.0",
         "web-auth/cose-lib": "3.3.12",
-        "firebase/php-jwt": "^6.2",
         "html2text/html2text": "^4.3"
     },
     "require-dev": {

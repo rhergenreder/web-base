@@ -32,6 +32,7 @@ return [
   "not_supported" => "Nicht unterstützt",
   "yes" => "Ja",
   "no" => "Nein",
+  "create_new" => "Erstellen",
 
   # dialog / actions
   "action" => "Aktion",

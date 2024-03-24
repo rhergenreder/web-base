@@ -3,7 +3,7 @@
 Web-Base is a php framework which provides basic web functionalities and a modern ReactJS Admin Dashboard.
 
 ### Requirements
-- PHP >= 7.4
+- PHP >= 8.1
 - One of these php extensions: mysqli, postgres
 - Apache/nginx or docker
 
@@ -31,15 +31,22 @@ I actually don't know what i want to implement here. There are quite to many CMS
 3. Open the webapp in your browser and follow the installation guide
 
 ### Docker Installation
-1. `docker-compose up`
-2. Open the webapp in your browser and follow the installation guide
+1. `docker-compose build`
+2. `docker-compose up`
+3. Open the webapp in your browser and follow the installation guide
 
 ### Afterwards
 
-For any changes made in [/adminPanel](/adminPanel), run:
-1. once: `npm i`
-2. build: `npm run build`
+For any changes made in [/react](/react), run:
+1. once: `yarn i`
+2. build: `yarn run build`
 The compiled dist files will be automatically moved to `/js`.
+
+To spawn a temporary development server, run:
+```bash
+cd react
+yarn workspace $project run dev
+```
 
 To fulfill the requirements of data deletion for **GDPR**, add the following line to your `/etc/crontab`
 or any other cron file:
@@ -51,29 +58,25 @@ or any other cron file:
 
 ### Adding API-Endpoints
 
-Each API endpoint has usually one overlying category, for example all user and authorization endpoints belong to the [UserAPI](/core/Api/UserAPI.class.php).
+Each API endpoint has usually one overlying category, for example all user and authorization endpoints belong to the [UserAPI](/Core/API/UserAPI.class.php).
 These endpoints can be accessed by requesting URLs starting with `/api/user`, for example: `/api/user/login`. There are also endpoints, which don't have
-a category, e.g. [VerifyCaptcha](/core/Api/VerifyCaptcha.class.php). These functions can be called directly, for example with `/api/verifyCaptcha`. Both methods have one thing in common:
-Each endpoint is represented by a class inheriting the [Request Class](/core/Api/Request.class.php). An example endpoint looks like this:
+a category, e.g. [VerifyCaptcha](/Core/API/VerifyCaptcha.class.php). These functions can be called directly, for example with `/api/verifyCaptcha`. Both methods have one thing in common:
+Each endpoint is represented by a class inheriting the [Request Class](/Core/API/Request.class.php). An example endpoint looks like this:
 
 ```php
-namespace Api;
-use Core\API\Parameter\Parameter;
-use Core\Objects\DatabaseEntity\User;
+namespace Core\API;
+use Core\Objects\Context;
 
 class SingleEndpoint extends Request {
 
-  public function __construct(User $user, bool $externalCall = false) {
-    parent::__construct($user, $externalCall, array(
+  public function __construct(Context $context, bool $externalCall = false) {
+    parent::__construct($context, $externalCall, array(
       "someParameter" => new Parameter("someParameter", Parameter::TYPE_INT, true, 100)
     ));
     $this->forbidMethod("POST");
   }
 
-  public function execute($values = array()): bool {
-    if (!parent::execute($values)) {
-       return false;
-    }
+  public function _execute(): bool {
     $this->result['someAttribute'] = $this->getParam("someParameter") * 2;
     return true;
   }
@@ -87,7 +90,7 @@ An endpoint consists of two important functions:
 To create an API category containing multiple endpoints, a parent class inheriting from `Request`, e.g. `class MultipleAPI extends Request` is required.
 All endpoints inside this category then inherit from the `MultipleAPI` class.
 
-The classes must be present inside the [Api](/core/Api) directory according to the other endpoints.
+The classes must be present inside the [API](/Core/API) directory according to the other endpoints.
 
 ### Access Control
 
@@ -100,7 +103,7 @@ By default, and if not further specified or restricted, all endpoints have the f
 6. All user groups can access the method (Database, Table: `ApiPermission`)
 
 The first five restrictions can be modified inside the constructor, while the group permissions are changed using
-the [Admin Dashboard](/adminPanel). It's default values are set inside the [database script](/core/Configuration/CreateDatabase.class.php).
+the [Admin Dashboard](/react/admin-panel). It's default values are set inside the [database script](/Core/Configuration/CreateDatabase.class.php).
 
 ### Using the API internally
 
@@ -109,11 +112,11 @@ can be used by creating the desired request object, and calling the execute func
 
 ```php
 $req = new \Core\API\Mail\Send($context);
-$success = $req->execute(array(
+$success = $req->execute([
   "to" => "mail@example.org", 
   "subject" => "Example Mail", 
   "body" => "This is an example mail"
-));
+]);
 
 if (!$success) {
    echo $req->getLastError();
@@ -127,9 +130,9 @@ If any result is expected from the api call, the `$req->getResult()` method can 
 
 This step is not really required, as and changes made to the database must not be presented inside the code.
 On the other hand, it is recommended to keep track of any modifications for later use or to deploy the application
-to other systems. Therefore, either the [default installation script](/core/Configuration/CreateDatabase.class.php) or
+to other systems. Therefore, either the [default installation script](/Core/Configuration/CreateDatabase.class.php) or
 an additional patch file, which can be executed using the [CLI](#CLI), can be created. The patch files are usually
-located in [/core/Configuration/Patch](/core/Configuration/Patch) and have the following structure:
+located in [/Core/Configuration/Patch](/Core/Configuration/Patch) and have the following structure:
 
 ```php
 namespace Core\Configuration\Patch;
@@ -175,7 +178,7 @@ Secondly, it passes the second group (`$2`), which is all the text after the las
 A frontend page consists of a document, which again consists of a head and a body. Furthermore, a document can have various views, which have to be implemented
 programmatically. Usually, all pages inside a document look somehow similar, for example share a common side- or navbar, a header or a footer. If we think of a web-shop,
 we could have one document, when showing different articles and products, and a view for various pages, e.g. the dashboard with all the products, a single product view and so on.
-To create a new document, a class inside [/core/Documents](/core/Documents) is created with the following scheme:
+To create a new document, a class inside [/Core/Documents](/Core/Documents) is created with the following scheme:
 
 ```php
 namespace Documents {
@@ -242,38 +245,29 @@ Of course, the head and body classes can be placed in any file, as the code migh
 ### Localization
 
 Currently, there are two languages specified, which are stored in the database: `en_US` and `de_DE`.
-A language is dynamically loaded according to the sent `Accept-Language`-Header, but can also be set using the `lang` parameter
-or [/api/language/set](/core/Api/LanguageAPI.class.php) endpoint. Localization of strings can be achieved using the [LanguageModule](/core/Objects/lang/LanguageModule.php)-Class.
-Let's look at this example:
+A language is dynamically loaded according to the `Accept-Language`-Header received, but can also be set using the `lang` parameter
+or [/api/language/set](/Core/API/LanguageAPI.class.php) endpoint.
 
-```php
-class ExampleLangModule extends \Objects\lang\LanguageModule {
-    public function getEntries(string $langCode) {
-      $entries = array();
-      switch ($langCode) {
-        case 'de_DE': 
-          $entries["EXAMPLE_KEY"] = "Das ist eine Beispielübersetzung";
-          $entries["Welcome"] = "Willkommen";
-          break;
-        default:
-          $entries["EXAMPLE_KEY"] = "This is an example translation";
-          break;
-      }
-      return $entries;     
-    }
-}
-```
 
 If any translation key is not defined, the key is returned, which means, we don't need to specify the string `Welcome` again. To access the translations,
 we firstly have to load the module. This is done by adding the class, or the object inside the constructor.
 To translate the defined strings, we can use the global `L()` function. The following code snipped shows the use of 
 our sample language module:
 
+**/Core/Localization/de_DE/example.php**:
+```php
+<?php
+return [
+    "Welcome" => "Willkommen",
+    "EXAMPLE_KEY" => "Beispielübersetzung",
+];
+```
+
 ```php
 class SomeView extends \Elements\View {
   public function __construct(\Elements\Document $document) {
     parent::__construct($document);
-    $this->langModules[] = ExampleModule::class;
+    $this->langModules[] = "example";
   }
   
   public function getCode() : string{

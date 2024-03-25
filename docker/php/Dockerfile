@@ -5,7 +5,7 @@ WORKDIR "/application"
 ARG ADDITIONAL_PACKAGES
 ARG ADDITIONAL_SCRIPT
 
-RUN mkdir -p /application/core/Configuration /var/www/.gnupg && \
+RUN mkdir -p /application/Core/Configuration /var/www/.gnupg && \
     chown -R www-data:www-data /application /var/www/ && \
     chmod 700 /var/www/.gnupg
 

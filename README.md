@@ -305,7 +305,17 @@ php cli.php routes remove 1
 php cli.php routes enable 1
 php cli.php routes disable 1
 php cli.php routes add /some/path static /static/test.html
-php.cli.php routes modify 1 '/regex(/.*)?' dynamic '\\Documents\\Test'
+php cli.php routes modify 1 '/regex(/.*)?' dynamic '\\Documents\\Test'
+```
+
+### Frontend commands
+```bash
+# Frontend commands
+php cli.php frontend build
+php cli.php frontend ls
+php cli.php frontend add <module-name>
+php cli.php frontend rm <module-name>
+php cli.php frontend dev <module-name>
 ```
 
 ## Anything more?

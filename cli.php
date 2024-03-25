@@ -50,16 +50,6 @@ if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
   }
 }
 
-if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
-  printLine("Detected docker environment in config, running docker exec...");
-  if (count($argv) < 3 || $argv[1] !== "db" || !in_array($argv[2], ["shell", "import", "export"])) {
-    $containerName = $dockerYaml["services"]["php"]["container_name"];
-    $command = array_merge(["docker", "exec", "-it", $containerName, "php"], $argv);
-    $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes);
-    exit(proc_close($proc));
-  }
-}
-
 function connectSQL(): ?SQL {
   global $context;
   $sql = $context->initSQL();
@@ -662,40 +652,180 @@ function onImpersonate($argv): void {
   echo "session=" . $session->getUUID() . PHP_EOL;
 }
 
-$argv = $_SERVER['argv'];
-if (count($argv) < 2) {
-  _exit("Usage: cli.php <db|routes|settings|maintenance|impersonate> [options...]");
+function onFrontend(array $argv): void {
+  if (count($argv) < 3) {
+    _exit("Usage: cli.php frontend <build|add|ls> [options...]");
+  }
+
+  $reactRoot = realpath(WEBROOT . "/react/");
+  if (!$reactRoot) {
+    _exit("React root directory not found!");
+  }
+
+  $action = $argv[2] ?? null;
+  if ($action === "build") {
+    $proc = proc_open(["yarn", "run", "build"], [1 => STDOUT, 2 => STDERR], $pipes, $reactRoot);
+    exit(proc_close($proc));
+  } else if ($action === "add") {
+    if (count($argv) < 4) {
+      _exit("Usage: cli.php frontend add <module-name>");
+    }
+
+    $moduleName = strtolower($argv[3]);
+    if (!preg_match("/[a-z0-9_-]/", $moduleName)) {
+      _exit("Module name should only be [a-zA-Z0-9_-]");
+    }
+
+    $templatePath = implode(DIRECTORY_SEPARATOR, [$reactRoot, "_tmpl"]);
+    $modulePath = implode(DIRECTORY_SEPARATOR, [$reactRoot, $moduleName]);
+    if (file_exists($modulePath)) {
+      _exit("File or module does already exist: " . $modulePath);
+    }
+
+    $rootPackageJsonPath = implode(DIRECTORY_SEPARATOR, [$reactRoot, "package.json"]);
+    $rootPackageJson = @json_decode(@file_get_contents($rootPackageJsonPath), true);
+    if (!$rootPackageJson) {
+      _exit("Unable to read root package.json");
+    }
+
+    $reactVersion = $rootPackageJson["dependencies"]["react"];
+    if (!array_key_exists($moduleName, $rootPackageJson["targets"])) {
+      $rootPackageJson["targets"][$moduleName] = [
+        "source" => "./$moduleName/src/index.js",
+        "distDir" => "./dist/$moduleName"
+      ];
+      file_put_contents($rootPackageJsonPath, json_encode($rootPackageJson, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
+    }
+
+    mkdir($modulePath, 0775, true);
+    $placeHolders = [
+      "MODULE_NAME" => $moduleName,
+      "REACT_VERSION" => $reactVersion
+    ];
+
+    $it = new RecursiveDirectoryIterator($templatePath);
+    foreach (new RecursiveIteratorIterator($it) as $file) {
+      $fileName = $file->getFilename();
+      $relDir = substr($file->getPath(), strlen($templatePath) + 1);
+      $targetFile = implode(DIRECTORY_SEPARATOR, [$modulePath, $relDir, $fileName]);
+      if ($file->isFile()) {
+        $contents = file_get_contents($file);
+        foreach ($placeHolders as $key => $value) {
+          $contents = str_replace("{{{$key}}}", $value, $contents);
+        }
+        $directory = dirname($targetFile);
+        if (!is_dir($directory)) {
+          mkdir($directory, 0775, true);
+        }
+
+        file_put_contents($targetFile, $contents);
+      }
+    }
+
+    printLine("Successfully added react module: $moduleName");
+    printLine("Run `php cli.php frontend build` to create a production build or");
+    printLine("run `php cli.php frontend dev $moduleName` to start a dev-server with your module");
+  } else if ($action === "dev") {
+    if (count($argv) < 4) {
+      _exit("Usage: cli.php frontend add <module-name>");
+    }
+
+    $moduleName = strtolower($argv[3]);
+    $proc = proc_open(["yarn", "workspace", $moduleName, "run", "dev"], [1 => STDOUT, 2 => STDERR], $pipes, $reactRoot);
+    exit(proc_close($proc));
+  } else if ($action === "rm") {
+    if (count($argv) < 4) {
+      _exit("Usage: cli.php frontend add <module-name>");
+    }
+
+    $moduleName = strtolower($argv[3]);
+    if (!preg_match("/[a-z0-9_-]/", $moduleName)) {
+      _exit("Module name should only be [a-zA-Z0-9_-]");
+    }
+
+    $modulePath = implode(DIRECTORY_SEPARATOR, [$reactRoot, $moduleName]);
+    if (!is_dir($modulePath)) {
+      _exit("Module not found: $modulePath");
+    }
+
+    $rootPackageJsonPath = implode(DIRECTORY_SEPARATOR, [$reactRoot, "package.json"]);
+    $rootPackageJson = @json_decode(@file_get_contents($rootPackageJsonPath), true);
+    if (!$rootPackageJson) {
+      _exit("Unable to read root package.json");
+    }
+
+    if (array_key_exists($moduleName, $rootPackageJson["targets"])) {
+      unset($rootPackageJson["targets"][$moduleName]);
+      file_put_contents($rootPackageJsonPath, json_encode($rootPackageJson, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
+    }
+
+    $input = strtolower(trim(readline("Do you want to disable the module only and keep the files? [Y|n]: ")));
+    if ($input === "n") {
+      rrmdir($modulePath);
+      printLine("Disabled and deleted module: $moduleName");
+    } else {
+      printLine("Disabled module: $moduleName");
+    }
+  } else if ($action === "ls") {
+    printLine("Current available modules:");
+    foreach (glob(implode(DIRECTORY_SEPARATOR, [$reactRoot, "*"]), GLOB_ONLYDIR) as $directory) {
+      if (basename($directory) === "_tmpl") {
+        continue;
+      }
+
+      $packageJson = realpath(implode(DIRECTORY_SEPARATOR, [$directory, "package.json"]));
+      if ($packageJson) {
+        $packageJsonContents = @json_decode(@file_get_contents($packageJson), true);
+        if (!$packageJsonContents) {
+          printLine("$directory: Unable to read package.json");
+        } else {
+          $packageName = $packageJsonContents["name"];
+          $packageVersion = $packageJsonContents["version"];
+          printLine("- $packageName version: $packageVersion");
+        }
+      }
+    }
+  } else {
+    _exit("Usage: cli.php frontend <build|ls|add|rm|dev> [options...]");
+  }
 }
 
-$command = $argv[1];
-switch ($command) {
-  case 'help':
-    printHelp($argv);
-    exit;
-  case 'db':
-    handleDatabase($argv);
-    break;
-  case 'routes':
-    onRoutes($argv);
-    break;
-  case 'maintenance':
-    onMaintenance($argv);
-    break;
-  case 'test':
-    onTest($argv);
-    break;
-  case 'mail':
-    onMail($argv);
-    break;
-  case 'settings':
-    onSettings($argv);
-    break;
-  case 'impersonate':
-    onImpersonate($argv);
-    break;
-  default:
+$argv = $_SERVER['argv'];
+$registeredCommands = [
+  "help" => ["handler" => "printHelp"],
+  "db" => ["handler" => "handleDatabase", "requiresDocker" => ["shell", "import", "export"]],
+  "routes" => ["handler" => "onRoutes"],
+  "maintenance" => ["handler" => "onMaintenance"],
+  "test" => ["handler" => "onTest"],
+  "mail" => ["handler" => "onMail"],
+  "settings" => ["handler" => "onSettings"],
+  "impersonate" => ["handler" => "onImpersonate"],
+  "frontend" => ["handler" => "onFrontend"],
+];
+
+
+if (count($argv) < 2) {
+  _exit("Usage: cli.php <" . implode("|", array_keys($registeredCommands)) . "> [options...]");
+} else {
+  $command = $argv[1];
+  if (array_key_exists($command, $registeredCommands)) {
+
+    if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
+      $requiresDocker = in_array($argv[2] ?? null, $registeredCommands[$command]["requiresDocker"] ?? []);
+      if ($requiresDocker) {
+        printLine("Detected docker environment in config, running docker exec...");
+        $containerName = $dockerYaml["services"]["php"]["container_name"];
+        $command = array_merge(["docker", "exec", "-it", $containerName, "php"], $argv);
+        $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes);
+        exit(proc_close($proc));
+      }
+    }
+
+    call_user_func($registeredCommands[$command]["handler"], $argv);
+  } else {
     printLine("Unknown command '$command'");
     printLine();
     printHelp($argv);
     exit;
+  }
 }

@@ -1,66 +1,66 @@
 {
-  "name": "web-base-frontend",
-  "version": "1.0.0",
-  "description": "",
-  "private": true,
-  "targets": {
-    "admin-panel": {
-      "source": "./admin-panel/src/index.js",
-      "distDir": "./dist/admin-panel"
-    }
-  },
-  "workspaces": [
-    "admin-panel"
-  ],
-  "scripts": {
-    "build": "parcel build",
-    "clean": "rm -rfd .parcel-cache dist/*"
-  },
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@babel/core": "^7.20.5",
-    "@babel/plugin-transform-react-jsx": "^7.19.0",
-    "customize-cra": "^1.0.0",
-    "parcel": "^2.8.0",
-    "react-app-rewired": "^2.2.1",
-    "react-scripts": "^5.0.1"
-  },
-  "@parcel/bundler-default": {
-    "minBundles": 1,
-    "minBundleSize": 3000,
-    "maxParallelRequests": 1
-  },
-  "dependencies": {
-    "@emotion/react": "^11.10.5",
-    "@emotion/styled": "^11.10.5",
-    "@material-ui/core": "^4.12.4",
-    "@material-ui/icons": "^4.11.3",
-    "@material-ui/lab": "^4.0.0-alpha.61",
-    "@mui/icons-material": "^5.11.0",
-    "@mui/material": "^5.11.3",
-    "chart.js": "^4.0.1",
-    "clsx": "^1.2.1",
-    "date-fns": "^2.29.3",
-    "material-ui-color-picker": "^3.5.1",
-    "mini-css-extract-plugin": "^2.7.1",
-    "react": "^18.2.0",
-    "react-chartjs-2": "^5.0.1",
-    "react-collapse": "^5.1.1",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.6.2",
-    "sprintf-js": "^1.1.2"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
+    "name": "web-base-frontend",
+    "version": "1.0.0",
+    "description": "",
+    "private": true,
+    "targets": {
+        "admin-panel": {
+            "source": "./admin-panel/src/index.js",
+            "distDir": "./dist/admin-panel"
+        }
+    },
+    "workspaces": [
+        "admin-panel"
     ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  }
+    "scripts": {
+        "build": "parcel build",
+        "clean": "rm -rfd .parcel-cache dist/*"
+    },
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@babel/core": "^7.20.5",
+        "@babel/plugin-transform-react-jsx": "^7.19.0",
+        "customize-cra": "^1.0.0",
+        "parcel": "^2.8.0",
+        "react-app-rewired": "^2.2.1",
+        "react-scripts": "^5.0.1"
+    },
+    "@parcel/bundler-default": {
+        "minBundles": 1,
+        "minBundleSize": 3000,
+        "maxParallelRequests": 1
+    },
+    "dependencies": {
+        "@emotion/react": "^11.10.5",
+        "@emotion/styled": "^11.10.5",
+        "@material-ui/core": "^4.12.4",
+        "@material-ui/icons": "^4.11.3",
+        "@material-ui/lab": "^4.0.0-alpha.61",
+        "@mui/icons-material": "^5.11.0",
+        "@mui/material": "^5.11.3",
+        "chart.js": "^4.0.1",
+        "clsx": "^1.2.1",
+        "date-fns": "^2.29.3",
+        "material-ui-color-picker": "^3.5.1",
+        "mini-css-extract-plugin": "^2.7.1",
+        "react": "^18.2.0",
+        "react-chartjs-2": "^5.0.1",
+        "react-collapse": "^5.1.1",
+        "react-dom": "^18.2.0",
+        "react-router-dom": "^6.6.2",
+        "sprintf-js": "^1.1.2"
+    },
+    "browserslist": {
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
+    }
 }

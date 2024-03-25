@@ -1,5 +1,5 @@
 import {format, parse, formatDistance as formatDistanceDateFns } from "date-fns";
-import {API_DATE_FORMAT, API_DATETIME_FORMAT} from "./constants";
+import {API_DATETIME_FORMAT} from "./constants";
 
 function createDownload(name, data) {
     const url = window.URL.createObjectURL(new Blob([data]));

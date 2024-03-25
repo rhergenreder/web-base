@@ -17,10 +17,14 @@ namespace Core\API\Logs {
   use Core\API\LogsAPI;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
+  use Core\API\Traits\Pagination;
   use Core\Driver\Logger\Logger;
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\Compare;
+  use Core\Driver\SQL\Condition\CondAnd;
   use Core\Driver\SQL\Condition\CondIn;
+  use Core\Driver\SQL\Condition\CondLike;
+  use Core\Driver\SQL\Condition\CondOr;
   use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
@@ -28,11 +32,15 @@ namespace Core\API\Logs {
 
   class Get extends LogsAPI {
 
+    use Pagination;
+
     public function __construct(Context $context, bool $externalCall = false) {
-      parent::__construct($context, $externalCall, [
-        "since" => new Parameter("since", Parameter::TYPE_DATE_TIME, true),
-        "severity" => new StringType("severity", 32, true, "debug")
-      ]);
+      $params =  self::getPaginationParameters(['id', 'timestamp', "module", "severity"],
+        'timestamp', 'desc');
+      $params["since"] = new Parameter("since", Parameter::TYPE_DATE_TIME, true);
+      $params["severity"] = new StringType("severity", 32, true, "debug");
+      $params["query"] = new StringType("query", 64, true, null);
+      parent::__construct($context, $externalCall, $params);
       $this->csrfTokenRequired = false;
     }
 
@@ -40,6 +48,7 @@ namespace Core\API\Logs {
       $since = $this->getParam("since");
       $sql = $this->context->getSQL();
       $severity = strtolower(trim($this->getParam("severity")));
+      $query = $this->getParam("query");
       $shownLogLevels = Logger::LOG_LEVELS;
 
       $logLevel = array_search($severity, Logger::LOG_LEVELS, true);
@@ -49,19 +58,23 @@ namespace Core\API\Logs {
         $shownLogLevels = array_slice(Logger::LOG_LEVELS, $logLevel);
       }
 
-
-      $query = SystemLog::createBuilder($sql, false)
-        ->orderBy("timestamp")
-        ->descending();
-
+      $condition = new CondIn(new Column("severity"), $shownLogLevels);
       if ($since !== null) {
-        $query->where(new Compare("timestamp", $since, ">="));
+        $condition = new CondAnd($condition, new Compare("timestamp", $since, ">="));
       }
 
-      if ($logLevel > 0) {
-        $query->where(new CondIn(new Column("severity"), $shownLogLevels));
+      if ($query) {
+        $condition = new CondAnd($condition, new CondOr(
+          new CondLike(new Column("message"), "%$query%"),
+          new CondLike(new Column("module"), "%$query%"),
+        ));
       }
 
+      if (!$this->initPagination($sql, SystemLog::class, $condition)) {
+        return false;
+      }
+
+      $query = $this->createPaginationQuery($sql);
       $logEntries = SystemLog::findBy($query);
       $this->success = $logEntries !== false;
       $this->lastError = $sql->getLastError();
@@ -97,7 +110,7 @@ namespace Core\API\Logs {
             if ($content && $date) {
 
               // filter log date
-              if ($since !== null && datetimeDiff($date, $since) < 0) {
+              if ($since !== null && datetimeDiff($date, $since) > 0) {
                 continue;
               }
 

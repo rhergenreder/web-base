@@ -360,4 +360,13 @@ export default class API {
     async downloadGPG(userId) {
         return this.apiCall("user/downloadGPG", { id: userId }, true);
     }
+
+    /** Log API **/
+    async fetchLogEntries(pageNum = 1, count = 20, orderBy = 'id', sortOrder = 'asc',
+                          severity = "debug", since = null, query = "") {
+        return this.apiCall("logs/get", {
+            page: pageNum, count: count, orderBy: orderBy, sortOrder: sortOrder,
+            since: since, severity: severity, query: query
+        });
+    }
 };

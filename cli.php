@@ -674,6 +674,8 @@ function onFrontend(array $argv): void {
     $moduleName = strtolower($argv[3]);
     if (!preg_match("/[a-z0-9_-]/", $moduleName)) {
       _exit("Module name should only be [a-zA-Z0-9_-]");
+    } else if (in_array($moduleName, ["_tmpl", "dist", "shared"])) {
+      _exit("Invalid module name");
     }
 
     $templatePath = implode(DIRECTORY_SEPARATOR, [$reactRoot, "_tmpl"]);
@@ -741,6 +743,8 @@ function onFrontend(array $argv): void {
     $moduleName = strtolower($argv[3]);
     if (!preg_match("/[a-z0-9_-]/", $moduleName)) {
       _exit("Module name should only be [a-zA-Z0-9_-]");
+    } else if (in_array($moduleName, ["_tmpl", "dist", "shared"])) {
+      _exit("This module cannot be removed");
     }
 
     $modulePath = implode(DIRECTORY_SEPARATOR, [$reactRoot, $moduleName]);

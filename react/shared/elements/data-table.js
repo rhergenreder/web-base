@@ -16,6 +16,7 @@ export function DataTable(props) {
         columns, data, pagination,
         fetchData, onClick, onFilter,
         defaultSortColumn, defaultSortOrder,
+        forceReload,
         title, ...other } = props;
 
     const {translate: L} = useContext(LocaleContext);
@@ -53,10 +54,10 @@ export function DataTable(props) {
         }
     }, [pagination?.data?.pageSize, pagination?.data?.current]);
 
-    // sorting changed
+    // sorting changed or we forced an update
     useEffect(() => {
         onFetchData(true);
-    }, [sortAscending, sortColumn]);
+    }, [sortAscending, sortColumn, forceReload]);
 
     let headerRow = [];
     const onChangeSort = useCallback((index, column) => {

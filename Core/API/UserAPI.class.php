@@ -148,7 +148,6 @@ namespace Core\API\User {
   use ImagickException;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\GpgKey;
-  use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
   use Core\Objects\DatabaseEntity\User;
 
   class Create extends UserAPI {

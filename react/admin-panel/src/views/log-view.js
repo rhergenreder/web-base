@@ -12,13 +12,14 @@ import {format, toDate} from "date-fns";
 
 export default function LogView(props) {
 
-    //
-    const LOG_LEVELS = ['debug', 'info', 'warning', 'error', 'severe'];
-
+    // meta
     const api = props.api;
     const showDialog = props.showDialog;
     const {translate: L, requestModules, currentLocale} = useContext(LocaleContext);
     const pagination = usePagination();
+
+    // data
+    const LOG_LEVELS = ['debug', 'info', 'warning', 'error', 'severe'];
     const [logEntries, setLogEntries] = useState([]);
 
     // filters
@@ -68,7 +69,7 @@ export default function LogView(props) {
         new NumericColumn(L("general.id"), "id"),
         new StringColumn(L("module"), "module"),
         new StringColumn(L("severity"), "severity"),
-        new DateTimeColumn(L("timestamp"), "timestamp"),
+        new DateTimeColumn(L("timestamp"), "timestamp", { precise: true }),
         messageColumn,
     ];
 

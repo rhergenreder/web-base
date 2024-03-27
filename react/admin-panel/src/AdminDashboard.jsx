@@ -12,13 +12,14 @@ import './res/adminlte.min.css';
 
 // views
 import View404 from "./views/404";
-import LogView from "./views/log-view";
+import clsx from "clsx";
 const Overview = lazy(() => import('./views/overview'));
 const UserListView = lazy(() => import('./views/user/user-list'));
 const UserEditView = lazy(() => import('./views/user/user-edit'));
 const GroupListView = lazy(() => import('./views/group-list'));
 const EditGroupView = lazy(() => import('./views/group-edit'));
-
+const LogView = lazy(() => import("./views/log-view"));
+const AccessControlList = lazy(() => import("./views/access-control-list"));
 
 export default function AdminDashboard(props) {
 
@@ -57,6 +58,11 @@ export default function AdminDashboard(props) {
         hideDialog: hideDialog
     };
 
+    // add fixed-layout to body, I don't want to rewrite my base.twig template
+    if (!document.body.className.includes("layout-fixed")) {
+        document.body.className = clsx(document.body.className, "layout-fixed");
+    }
+
     return <BrowserRouter>
         <Header {...controlObj} />
         <Sidebar {...controlObj} />
@@ -72,6 +78,7 @@ export default function AdminDashboard(props) {
                             <Route path={"/admin/groups"} element={<GroupListView {...controlObj} />}/>
                             <Route path={"/admin/group/:groupId"} element={<EditGroupView {...controlObj} />}/>
                             <Route path={"/admin/logs"} element={<LogView {...controlObj} />}/>
+                            <Route path={"/admin/acl"} element={<AccessControlList {...controlObj} />}/>
                             <Route path={"*"} element={<View404 />} />
                         </Routes>
                     </Suspense>

@@ -3,11 +3,24 @@
 namespace Core\API {
 
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\ApiKey;
 
   abstract class ApiKeyAPI extends Request {
 
     public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
       parent::__construct($context, $externalCall, $params);
+    }
+
+    protected function fetchAPIKey(int $apiKeyId): ApiKey|bool {
+      $sql = $this->context->getSQL();
+      $apiKey = ApiKey::find($sql, $apiKeyId);
+      if ($apiKey === false) {
+        return $this->createError("Error fetching API-Key details: " . $sql->getLastError());
+      } else if ($apiKey === null) {
+        return $this->createError("API-Key does not exit");
+      }
+
+      return $apiKey;
     }
   }
 }
@@ -110,22 +123,16 @@ namespace Core\API\ApiKey {
     }
 
     public function _execute(): bool {
-      $sql = $this->context->getSQL();
-      $id = $this->getParam("id");
-      $apiKey = ApiKey::find($sql, $id);
-      if ($apiKey === false) {
-        return $this->createError("Error fetching API-Key details: " . $sql->getLastError());
-      } else if ($apiKey === null) {
-        return $this->createError("API-Key does not exit");
+      $apiKey = $this->fetchAPIKey($this->getParam("id"));
+      if ($apiKey) {
+        $sql = $this->context->getSQL();
+        $this->success = $apiKey->refresh($sql, 30) !== false;
+        $this->lastError = $sql->getLastError();
+
+        if ($this->success) {
+          $this->result["validUntil"] = $apiKey->getValidUntil()->getTimestamp();
+        }
       }
-
-      $this->success = $apiKey->refresh($sql, 30) !== false;
-      $this->lastError = $sql->getLastError();
-
-      if ($this->success) {
-        $this->result["validUntil"] = $apiKey->getValidUntil()->getTimestamp();
-      }
-
       return $this->success;
     }
 
@@ -144,17 +151,12 @@ namespace Core\API\ApiKey {
     }
 
     public function _execute(): bool {
-      $sql = $this->context->getSQL();
-      $id = $this->getParam("id");
-      $apiKey = ApiKey::find($sql, $id);
-      if ($apiKey === false) {
-        return $this->createError("Error fetching API-Key details: " . $sql->getLastError());
-      } else if ($apiKey === null) {
-        return $this->createError("API-Key does not exit");
+      $apiKey = $this->fetchAPIKey($this->getParam("id"));
+      if ($apiKey) {
+        $sql = $this->context->getSQL();
+        $this->success = $apiKey->revoke($sql);
+        $this->lastError = $sql->getLastError();
       }
-
-      $this->success = $apiKey->revoke($sql);
-      $this->lastError = $sql->getLastError();
 
       return $this->success;
     }

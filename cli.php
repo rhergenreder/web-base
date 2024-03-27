@@ -13,6 +13,8 @@ use Core\Driver\SQL\Condition\CondIn;
 use Core\Driver\SQL\Expression\DateSub;
 use Core\Driver\SQL\SQL;
 use Core\Objects\ConnectionData;
+
+// TODO: is this available in all installations?
 use JetBrains\PhpStorm\NoReturn;
 
 function printLine(string $line = ""): void {
@@ -41,6 +43,7 @@ if (!$context->isCLI()) {
   _exit("Can only be executed via CLI");
 }
 
+$dockerYaml = null;
 $database = $context->getConfig()->getDatabase();
 if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
   if (function_exists("yaml_parse")) {
@@ -181,6 +184,7 @@ function handleDatabase(array $argv): void {
       $command = array_merge(["docker", "exec", "-it", $containerName], $command);
     }
 
+    var_dump($command);
     $process = proc_open($command, $descriptorSpec, $pipes, null, $env);
 
     if (is_resource($process)) {
@@ -797,7 +801,7 @@ function onFrontend(array $argv): void {
 $argv = $_SERVER['argv'];
 $registeredCommands = [
   "help" => ["handler" => "printHelp"],
-  "db" => ["handler" => "handleDatabase", "requiresDocker" => ["shell", "import", "export"]],
+  "db" => ["handler" => "handleDatabase"],
   "routes" => ["handler" => "onRoutes"],
   "maintenance" => ["handler" => "onMaintenance"],
   "test" => ["handler" => "onTest"],
@@ -814,11 +818,13 @@ if (count($argv) < 2) {
   $command = $argv[1];
   if (array_key_exists($command, $registeredCommands)) {
 
+    // TODO: do we need this?
     if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
       $requiresDocker = in_array($argv[2] ?? null, $registeredCommands[$command]["requiresDocker"] ?? []);
       if ($requiresDocker) {
-        printLine("Detected docker environment in config, running docker exec...");
         $containerName = $dockerYaml["services"]["php"]["container_name"];
+        printLine("Detected docker environment in config, running docker exec for container: $containerName");
+        var_dump($argv);
         $command = array_merge(["docker", "exec", "-it", $containerName, "php"], $argv);
         $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes);
         exit(proc_close($proc));

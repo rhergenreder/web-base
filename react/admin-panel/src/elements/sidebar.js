@@ -40,6 +40,10 @@ export default function Sidebar(props) {
             "name": "admin.settings",
             "icon": "tools"
         },
+        "acl": {
+            "name": "admin.acl",
+            "icon": "door-open"
+        },
         "logs": {
             "name": "admin.logs",
             "icon": "file-medical-alt"
@@ -71,7 +75,7 @@ export default function Sidebar(props) {
         </a>
     </li>);
 
-    return (
+    return <>
         <aside className={"main-sidebar sidebar-dark-primary elevation-4"}>
             <Link href={"#"} className={"brand-link"} to={"/admin/dashboard"}>
                 <img src={"/img/icons/logo.png"} alt={"Logo"} className={"brand-image img-circle elevation-3"} style={{opacity: ".8"}} />
@@ -92,7 +96,7 @@ export default function Sidebar(props) {
                         <div className={"os-content"} style={{padding: "0px 0px", height: "100%", width: "100%"}}>
                             <div className="user-panel mt-3 pb-3 mb-3 d-flex">
                                 <div className="info">
-                                    <span className={"d-block"}>{L("account.logged_in_as")}:&nbsp;
+                                    <span className={"d-block text-light"}>{L("account.logged_in_as")}:&nbsp;
                                         <Link to={"/admin/user/" + api.user.id}>{api.user.name}</Link>
                                     </span>
                                 </div>
@@ -107,5 +111,5 @@ export default function Sidebar(props) {
                 </div>
             </div>
         </aside>
-    )
+    </>
 }

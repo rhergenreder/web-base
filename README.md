@@ -165,14 +165,14 @@ To access and view any frontend pages, the internal router is used. Available ro
 A static route targets a file, usually located in [/static](/static) and does nothing more, than returning its content. A dynamic route is usually the way to go:
 It takes two parameters, firstly the target document and secondly, an optional view. For example, take the following routing table:
 
-| Route | Action | Target | Extra |
-| ----- | ------ | ------ | ----- |
-| `/funnyCatImage` | `Serve Static` | `/static/cat.jpg` | |
-| `/someRoute(/(.*))?` | `Redirect Dynamic` | `\Documents\MyDocument\` | `$2` |
+| Route                     | Action | Target | Extra   |
+|---------------------------| ------ | ------ |---------|
+| `/funnyCatImage`          | `Serve Static` | `/static/cat.jpg` |         |
+| `/someRoute/{param:str?}` | `Redirect Dynamic` | `\Documents\MyDocument\` | `param` |
 
 The first route would return the cat image, if the case-insensitive path `/funnyCatImage` is requested.
-The second route is more interesting, as it firstly contains regex, which means, any route starting with `/someRoute/` or just `/someRoute` is accepted.
-Secondly, it passes the second group (`$2`), which is all the text after the last slash (or `null`) to the dynamically loaded document `MyDocument`.
+The second route is more interesting, as it includes an optional parameter of type string, which means, any route starting with `/someRoute/` or just `/someRoute` is accepted.
+Secondly, it passes the second argument (`param`), which is all the text after the last slash (or `null`) to the dynamically loaded document `MyDocument`.
 
 ### Creating and Modifying documents
 
@@ -299,7 +299,6 @@ php cli.php db migrate Patch/SomePatch
 
 ### Route commands
 ```bash
-# Route commands
 php cli.php routes list
 php cli.php routes remove 1
 php cli.php routes enable 1
@@ -310,7 +309,6 @@ php cli.php routes modify 1 '/regex(/.*)?' dynamic '\\Documents\\Test'
 
 ### Frontend commands
 ```bash
-# Frontend commands
 php cli.php frontend build
 php cli.php frontend ls
 php cli.php frontend add <module-name>

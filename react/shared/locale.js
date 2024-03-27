@@ -1,6 +1,7 @@
 import React, {useReducer} from 'react';
 import {createContext, useCallback, useState} from "react";
 import { enUS as dateFnsEN, de as dateFnsDE } from 'date-fns/locale';
+import {getCookie, getParameter} from "./util";
 
 const LocaleContext = createContext(null);
 
@@ -31,7 +32,7 @@ function reducer(entries, action) {
 function LocaleProvider(props) {
 
     const [entries, dispatch] = useReducer(reducer, window.languageEntries || {});
-    const [currentLocale, setCurrentLocale] = useState(window.languageCode || "en_US");
+    const [currentLocale, setCurrentLocale] = useState(window.languageCode || getParameter("lang") || getCookie("lang") || "en_US");
 
     const translate = useCallback((key, defaultTranslation = null) => {
 

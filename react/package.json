@@ -43,7 +43,6 @@
         "chart.js": "^4.0.1",
         "clsx": "^1.2.1",
         "date-fns": "^2.29.3",
-        "dayjs": "^1.11.10",
         "material-ui-color-picker": "^3.5.1",
         "mini-css-extract-plugin": "^2.7.1",
         "react": "^18.2.0",

@@ -1,14 +1,14 @@
 import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
-import {Link, useNavigate} from "react-router-dom";
+import {Link} from "react-router-dom";
 import usePagination from "shared/hooks/pagination";
 import {DataColumn, DataTable, DateTimeColumn, NumericColumn, StringColumn} from "shared/elements/data-table";
-import dayjs, { Dayjs } from 'dayjs';
-import {Chip, TextField} from "@mui/material";
-import {DateTimePicker} from "@mui/x-date-pickers";
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import {TextField} from "@mui/material";
+import {DesktopDateTimePicker} from "@mui/x-date-pickers";
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import {API_DATETIME_FORMAT_DAYJS} from "shared/constants";
+import {API_DATETIME_FORMAT} from "shared/constants";
+import {format, toDate} from "date-fns";
 
 export default function LogView(props) {
 
@@ -18,7 +18,6 @@ export default function LogView(props) {
     const api = props.api;
     const showDialog = props.showDialog;
     const {translate: L, requestModules, currentLocale} = useContext(LocaleContext);
-    const navigate = useNavigate();
     const pagination = usePagination();
     const [logEntries, setLogEntries] = useState([]);
 
@@ -37,7 +36,11 @@ export default function LogView(props) {
     }, [currentLocale]);
 
     const onFetchLogs = useCallback((page, count, orderBy, sortOrder) => {
-        api.fetchLogEntries(page, count, orderBy, sortOrder, LOG_LEVELS[logLevel], timestamp?.format(API_DATETIME_FORMAT_DAYJS), query).then((res) => {
+        api.fetchLogEntries(page, count, orderBy, sortOrder,
+                LOG_LEVELS[logLevel],
+                timestamp ? format(timestamp, API_DATETIME_FORMAT) : null,
+                query
+        ).then((res) => {
             if (res.success) {
                 setLogEntries(res.logs);
                 pagination.update(res.pagination);
@@ -99,13 +102,12 @@ export default function LogView(props) {
                     <div className={"col-4"}>
                         <div className={"form-group"}>
                             <label>{L("log.timestamp")}</label>
-                            <LocalizationProvider dateAdapter={AdapterDayjs}>
-                                <DateTimePicker className={"form-control"}
-                                                label="Select date time to filter..."
-                                                value={timestamp ? dayjs(timestamp) : null}
-                                                onChange={(newValue) => {console.log(newValue);
-                                                    setTimestamp(newValue)
-                                                }}
+                            <LocalizationProvider dateAdapter={AdapterDateFns}>
+                                <DesktopDateTimePicker className={"form-control"}
+                                                label={L("Select date time to filter...")}
+                                                value={timestamp ? toDate(new Date()) : null}
+                                                format={L("general.datefns_datetime_format_precise")}
+                                                onChange={(newValue) => setTimestamp(newValue)}
                                                 slotProps={{ textField: { size: 'small' } }}
                                 />
                             </LocalizationProvider>

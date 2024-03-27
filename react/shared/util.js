@@ -46,6 +46,16 @@ const getParameter = (key) => {
     }
 }
 
+const getCookie = (name) => {
+    let cookieString = decodeURIComponent(document.cookie);
+    let match = cookieString.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    if (match) {
+        return match[2];
+    } else {
+        return null;
+    }
+}
+
 const encodeText = (str) => {
     return Uint8Array.from(str, c => c.charCodeAt(0));
 }
@@ -87,7 +97,6 @@ function formatDistance(dateFns, apiDate) {
     return formatDistanceDateFns(toDate(apiDate), new Date(), { addSuffix: true, locale: dateFns });
 }
 
-
 const upperFirstChars = (str) => {
     return str.split(" ")
         .map(block => block.charAt(0).toUpperCase() + block.substring(1))
@@ -100,7 +109,7 @@ const isInt = (value) => {
         !isNaN(parseInt(value, 10));
 }
 
-export { humanReadableSize, removeParameter, getParameter,
+export { humanReadableSize, removeParameter, getParameter, getCookie,
     encodeText, decodeText, getBaseUrl,
     formatDate, formatDateTime, formatDistance,
     upperFirstChars, isInt, createDownload };

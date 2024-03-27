@@ -105,7 +105,7 @@ namespace Core\API\Routes {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch site routing");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch site routing", true);
     }
   }
 
@@ -210,7 +210,7 @@ namespace Core\API\Routes {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to save the site routing");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to save the site routing", true);
     }
   }
 
@@ -248,7 +248,7 @@ namespace Core\API\Routes {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to add new routes");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to add new routes", true);
     }
   }
 
@@ -306,7 +306,7 @@ namespace Core\API\Routes {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to update existing routes");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to update existing routes", true);
     }
   }
 
@@ -335,7 +335,7 @@ namespace Core\API\Routes {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to remove routes");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to remove routes", true);
     }
   }
 
@@ -353,7 +353,7 @@ namespace Core\API\Routes {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to enable a route");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to enable a route", true);
     }
   }
 
@@ -371,7 +371,7 @@ namespace Core\API\Routes {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to disable a route");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to disable a route", true);
     }
   }
 
@@ -416,7 +416,7 @@ namespace Core\API\Routes {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to regenerate the routing cache");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to regenerate the routing cache", true);
     }
   }
 }

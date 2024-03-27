@@ -68,8 +68,6 @@ export default function Overview(props) {
     }
      */
 
-    console.log(stats);
-
     return <>
         <div className={"content-header"}>
             <div className={"container-fluid"}>

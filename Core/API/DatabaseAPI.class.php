@@ -33,7 +33,7 @@ namespace Core\API\Database {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to view the database status");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to view the database status", true);
     }
   }
 
@@ -106,7 +106,7 @@ namespace Core\API\Database {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to migrate the database structure");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to migrate the database structure", true);
     }
   }
 }

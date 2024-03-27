@@ -135,7 +135,7 @@ namespace Core\API\Logs {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch system logs");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch system logs", true);
     }
   }
 

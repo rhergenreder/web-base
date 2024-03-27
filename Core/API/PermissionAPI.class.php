@@ -109,7 +109,7 @@ namespace Core\API\Permission {
       }
 
       $sql = $this->context->getSQL();
-      $res = $sql->select("method", "groups", "description")
+      $res = $sql->select("method", "groups", "description", "isCore")
         ->from("ApiPermission")
         ->execute();
 
@@ -117,16 +117,18 @@ namespace Core\API\Permission {
       $this->lastError = $sql->getLastError();
 
       if ($this->success) {
-        $permissions = array();
+        $permissions = [];
         foreach ($res as $row) {
           $method = $row["method"];
           $description = $row["description"];
           $groups = json_decode($row["groups"]);
-          $permissions[] = array(
+          $isCore = $row["isCore"];
+          $permissions[] = [
             "method" => $method,
             "groups" => $groups,
-            "description" => $description
-          );
+            "description" => $description,
+            "isCore" => $isCore
+          ];
         }
         $this->result["permissions"] = $permissions;
         $this->result["groups"] = $this->groups;
@@ -136,7 +138,7 @@ namespace Core\API\Permission {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch API permissions");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch API permissions", true);
     }
   }
 
@@ -158,29 +160,37 @@ namespace Core\API\Permission {
       $sql = $this->context->getSQL();
       $methodParam = new StringType('method', 32);
       $groupsParam = new Parameter('groups', Parameter::TYPE_ARRAY);
+      $descriptionParam = new StringType('method', 128);
 
-      $updateQuery = $sql->insert("ApiPermission", array("method", "groups"))
-        ->onDuplicateKeyStrategy(new UpdateStrategy(array("method"), array("groups" => new Column("groups"))));
+      $updateQuery = $sql->insert("ApiPermission", ["method", "groups", "description"])
+        ->onDuplicateKeyStrategy(new UpdateStrategy(["method"], [
+          "groups" => new Column("groups"),
+          "description" => new Column("description")
+        ]));
 
       $insertedMethods = array();
 
       foreach ($permissions as $permission) {
         if (!is_array($permission)) {
           return $this->createError("Invalid data type found in parameter: permissions, expected: object");
-        } else if (!isset($permission["method"]) || !array_key_exists("groups", $permission)) {
-          return $this->createError("Invalid object found in parameter: permissions, expected keys 'method' and 'groups'");
+        } else if (!isset($permission["method"]) || !isset($permission["description"]) || !array_key_exists("groups", $permission)) {
+          return $this->createError("Invalid object found in parameter: permissions, expected keys: 'method', 'groups', 'description'");
         } else if (!$methodParam->parseParam($permission["method"])) {
           $expectedType = $methodParam->getTypeName();
           return $this->createError("Invalid data type found for attribute 'method', expected: $expectedType");
         } else if (!$groupsParam->parseParam($permission["groups"])) {
           $expectedType = $groupsParam->getTypeName();
           return $this->createError("Invalid data type found for attribute 'groups', expected: $expectedType");
+        } else if (!$descriptionParam->parseParam($permission["description"])) {
+          $expectedType = $descriptionParam->getTypeName();
+          return $this->createError("Invalid data type found for attribute 'description', expected: $expectedType");
         } else if (empty(trim($methodParam->value))) {
           return $this->createError("Method cannot be empty.");
         } else {
           $method = $methodParam->value;
           $groups = $groupsParam->value;
-          $updateQuery->addRow($method, $groups);
+          $description = $descriptionParam->value;
+          $updateQuery->addRow($method, $groups, $description);
           $insertedMethods[] = $method;
         }
       }
@@ -205,8 +215,11 @@ namespace Core\API\Permission {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN],
-        "Allows users to modify API permissions. This is restricted to the administrator and cannot be changed");
+      $insert->addRow(
+        self::getEndpoint(), [Group::ADMIN],
+        "Allows users to modify API permissions. This is restricted to the administrator and cannot be changed",
+        true
+      );
     }
   }
 }

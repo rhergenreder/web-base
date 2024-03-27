@@ -45,11 +45,13 @@ if (!$context->isCLI()) {
 
 $dockerYaml = null;
 $database = $context->getConfig()->getDatabase();
-if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
-  if (function_exists("yaml_parse")) {
-    $dockerYaml = yaml_parse(file_get_contents("./docker-compose.yml"));
-  } else {
-    _exit("yaml_parse not found but required for docker file parsing.");
+if ($database !== null) {
+  if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
+    if (function_exists("yaml_parse")) {
+      $dockerYaml = yaml_parse(file_get_contents("./docker-compose.yml"));
+    } else {
+      _exit("yaml_parse not found but required for docker file parsing.");
+    }
   }
 }
 
@@ -819,7 +821,7 @@ if (count($argv) < 2) {
   if (array_key_exists($command, $registeredCommands)) {
 
     // TODO: do we need this?
-    if ($database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
+    if ($database !== null && $database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
       $requiresDocker = in_array($argv[2] ?? null, $registeredCommands[$command]["requiresDocker"] ?? []);
       if ($requiresDocker) {
         $containerName = $dockerYaml["services"]["php"]["container_name"];

@@ -62,7 +62,7 @@ namespace Core\API\ApiKey {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to create new API-Keys");
+      $insert->addRow(self::getEndpoint(), [], "Allows users to create new API-Keys", true);
     }
   }
 
@@ -109,7 +109,7 @@ namespace Core\API\ApiKey {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to fetch new API-Key");
+      $insert->addRow(self::getEndpoint(), [], "Allows users to fetch new API-Keys", true);
     }
   }
 
@@ -137,7 +137,7 @@ namespace Core\API\ApiKey {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to refresh API-Key");
+      $insert->addRow(self::getEndpoint(), [], "Allows users to refresh API-Keys", true);
     }
   }
 
@@ -162,7 +162,7 @@ namespace Core\API\ApiKey {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to revoke API-Key");
+      $insert->addRow(self::getEndpoint(), [], "Allows users to revoke API-Keys", true);
     }
   }
 }

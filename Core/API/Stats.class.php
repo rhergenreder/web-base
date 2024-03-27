@@ -99,6 +99,6 @@ class Stats extends Request {
   }
 
   public static function getDefaultACL(Insert $insert): void {
-    $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to view site statistics");
+    $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to view site statistics", true);
   }
 }

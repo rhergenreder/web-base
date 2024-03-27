@@ -211,7 +211,7 @@ namespace Core\API\User {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to create new users");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to create new users", true);
     }
   }
 
@@ -273,7 +273,7 @@ namespace Core\API\User {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch all users");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch all users", true);
     }
   }
 
@@ -316,7 +316,7 @@ namespace Core\API\User {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to get details about a user");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to get details about a user", true);
     }
   }
 
@@ -438,7 +438,7 @@ namespace Core\API\User {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to invite new users");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to invite new users", true);
     }
   }
 
@@ -853,7 +853,7 @@ namespace Core\API\User {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to modify other user's details");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to modify other user's details", true);
     }
   }
 
@@ -890,7 +890,7 @@ namespace Core\API\User {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to delete other users");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to delete other users", true);
     }
   }
 

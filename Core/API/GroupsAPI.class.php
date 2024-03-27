@@ -85,7 +85,7 @@ namespace Core\API\Groups {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch available groups");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch available groups", true);
     }
   }
 
@@ -112,7 +112,7 @@ namespace Core\API\Groups {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to get details about a group");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to get details about a group", true);
     }
   }
 
@@ -151,7 +151,7 @@ namespace Core\API\Groups {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch members of a group");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch members of a group", true);
     }
   }
 
@@ -195,7 +195,7 @@ namespace Core\API\Groups {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to create a new group");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to create a new group", true);
     }
   }
 
@@ -226,7 +226,7 @@ namespace Core\API\Groups {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to delete a group");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to delete a group", true);
     }
   }
 
@@ -268,7 +268,7 @@ namespace Core\API\Groups {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to add members to a group");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to add members to a group", true);
     }
   }
 
@@ -310,7 +310,7 @@ namespace Core\API\Groups {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to remove members from a group");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to remove members from a group", true);
     }
   }
 }

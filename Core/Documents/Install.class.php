@@ -20,8 +20,6 @@ namespace Documents\Install {
   use Core\Configuration\Configuration;
   use Core\Configuration\CreateDatabase;
   use Core\Driver\SQL\Expression\Count;
-  use Core\Driver\SQL\Query\Commit;
-  use Core\Driver\SQL\Query\StartTransaction;
   use Core\Driver\SQL\SQL;
   use Core\Elements\Body;
   use Core\Elements\Head;
@@ -363,22 +361,23 @@ namespace Documents\Install {
           $msg = "";
           $success = true;
           $queries = CreateDatabase::createQueries($sql);
-          array_unshift($queries, new StartTransaction($sql));
-          $queries[] = new Commit($sql);
-          foreach ($queries as $query) {
-            try {
+          try {
+            $sql->startTransaction();
+            foreach ($queries as $query) {
               if (!$query->execute()) {
                 $msg = "Error creating tables: " . $sql->getLastError();
                 $success = false;
               }
-            } finally {
+
               if (!$success) {
-                $sql->rollback();
+                break;
               }
             }
-
+          } finally {
             if (!$success) {
-              break;
+              $sql->rollback();
+            } else {
+              $sql->commit();
             }
           }
 

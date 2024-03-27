@@ -50,7 +50,7 @@ namespace Core\API\Settings {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch site settings");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch site settings", true);
     }
   }
 
@@ -152,7 +152,7 @@ namespace Core\API\Settings {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to modify site settings");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to modify site settings", true);
     }
   }
 }

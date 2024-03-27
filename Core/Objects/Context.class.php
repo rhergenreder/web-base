@@ -104,8 +104,11 @@ class Context {
   }
 
   public function parseCookies(): void {
-    if (isset($_COOKIE['session']) && is_string($_COOKIE['session']) && !empty($_COOKIE['session'])) {
-      $this->loadSession($_COOKIE['session']);
+
+    if ($this->sql) {
+      if (isset($_COOKIE['session']) && is_string($_COOKIE['session']) && !empty($_COOKIE['session'])) {
+        $this->loadSession($_COOKIE['session']);
+      }
     }
 
     // set language by priority: 1. GET parameter, 2. cookie, 3. user's settings

@@ -82,7 +82,7 @@ namespace Core\API\Mail {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to send a test email to verify configuration");
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to send a test email to verify configuration", true);
     }
   }
 

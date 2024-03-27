@@ -3,12 +3,12 @@ import {LocaleContext} from "shared/locale";
 import {Link, useNavigate} from "react-router-dom";
 import {Button, Checkbox, TextField, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@material-ui/core";
 import {Add, Refresh} from "@material-ui/icons";
+import {USER_GROUP_ADMIN} from "shared/constants";
 
 
 export default function AccessControlList(props) {
 
     // meta
-    const showDialog = props.showDialog;
     const {translate: L, requestModules, currentLocale} = useContext(LocaleContext);
     const navigate = useNavigate();
 
@@ -74,7 +74,8 @@ export default function AccessControlList(props) {
                         <i>{permission.description}</i>
                     </TableCell>
                     {groups.map(group => <TableCell key={"perm-" + index + "-group-" + group.id} align={"center"}>
-                        <Checkbox checked={!permission.groups.length || permission.groups.includes(group.id)} />
+                        <Checkbox checked={!permission.groups.length || permission.groups.includes(group.id)}
+                            disabled={permission.method.toLowerCase() === "permission/save" || !props.api.hasGroup(USER_GROUP_ADMIN)}/>
                     </TableCell>)}
                 </TableRow>
             );
@@ -118,7 +119,8 @@ export default function AccessControlList(props) {
                     <Button variant={"outlined"} color={"primary"} className={"m-1"} startIcon={<Refresh />} onClick={() => onFetchACL(true)}>
                         {L("general.reload")}
                     </Button>
-                    <Button variant={"outlined"} className={"m-1"} startIcon={<Add />} onClick={() => navigate("/admin/acl/new")}>
+                    <Button variant={"outlined"} className={"m-1"} startIcon={<Add />} disabled={!props.api.hasGroup(USER_GROUP_ADMIN)}
+                            onClick={() => navigate("/admin/acl/new")}>
                         {L("general.add")}
                     </Button>
                 </div>

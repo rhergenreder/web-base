@@ -38,7 +38,8 @@ class CreateDatabase extends DatabaseScript {
       ->addString("method", 32)
       ->addJson("groups", true, '[]')
       ->addString("description", 128, false, "")
-      ->primaryKey("method");
+      ->primaryKey("method")
+      ->addBool("isCore", false);
 
     self::loadDefaultACL($queries, $sql);
     self::loadPatches($queries, $sql);
@@ -121,7 +122,7 @@ class CreateDatabase extends DatabaseScript {
   }
 
   public static function loadDefaultACL(array &$queries, SQL $sql) {
-    $query = $sql->insert("ApiPermission", ["method", "groups", "description"]);
+    $query = $sql->insert("ApiPermission", ["method", "groups", "description", "isCore"]);
 
     foreach (Request::getApiEndpoints() as $reflectionClass) {
       $method = $reflectionClass->getName() . "::getDefaultACL";

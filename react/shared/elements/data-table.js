@@ -123,8 +123,8 @@ export function DataTable(props) {
             {title ?
                 <h3>
                     {fetchData ?
-                        <IconButton onClick={() => onFetchData(true)}>
-                            <CachedIcon/>
+                        <IconButton onClick={() => onFetchData(true)} title={L("general.reload")}>
+                            <CachedIcon/>&nbsp;
                         </IconButton>
                         : <></>
                     }

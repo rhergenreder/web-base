@@ -183,14 +183,14 @@ namespace Core\API\User {
       $groups = [];
       $sql = $this->context->getSQL();
 
-      // TODO: Currently low-privileged users can request any groups here, so a simple privilege escalation is possible. \
-      // what do? limit access to user/create to admins only?
       $requestedGroups = array_unique($this->getParam("groups"));
       if (!empty($requestedGroups)) {
-        $groups = Group::findAll($sql, new CondIn(new Column("id"), $requestedGroups));
+        $availableGroups = Group::findAll($sql, new CondIn(new Column("id"), $requestedGroups));
         foreach ($requestedGroups as $groupId) {
-          if (!isset($groups[$groupId])) {
+          if (!isset($availableGroups[$groupId])) {
             return $this->createError("Group with id=$groupId does not exist.");
+          } else if ($groupId === Group::ADMIN && !$this->context->getUser()->hasGroup(Group::ADMIN)) {
+            return $this->createError("You cannot create users with administrator groups.");
           }
         }
       }
@@ -632,7 +632,7 @@ namespace Core\API\User {
     public function __construct(Context $context, bool $externalCall = false) {
       $parameters = array(
         "username" => new StringType("username", 32),
-        'email' => new Parameter('email', Parameter::TYPE_EMAIL),
+        "email" => new Parameter("email", Parameter::TYPE_EMAIL),
         "password" => new StringType("password"),
         "confirmPassword" => new StringType("confirmPassword"),
       );
@@ -746,7 +746,7 @@ namespace Core\API\User {
         'fullName' => new StringType('fullName', 64, true, NULL),
         'email' => new Parameter('email', Parameter::TYPE_EMAIL, true, NULL),
         'password' => new StringType('password', -1, true, NULL),
-        'groups' => new Parameter('groups', Parameter::TYPE_ARRAY, true, NULL),
+        'groups' => new ArrayType('groups', Parameter::TYPE_INT, true, true, NULL),
         'confirmed' => new Parameter('confirmed', Parameter::TYPE_BOOLEAN, true, NULL)
       ));
 
@@ -777,19 +777,18 @@ namespace Core\API\User {
 
         $groupIds = array();
         if (!is_null($groups)) {
-          $param = new Parameter('groupId', Parameter::TYPE_INT);
-
-          foreach ($groups as $groupId) {
-            if (!$param->parseParam($groupId)) {
-              $value = print_r($groupId, true);
-              return $this->createError("Invalid Type for groupId in parameter groups: '$value' (Required: " . $param->getTypeName() . ")");
-            }
-
-            $groupIds[] = $param->value;
-          }
-
+          $groupIds = array_unique($groups);
           if ($id === $currentUser->getId() && !in_array(Group::ADMIN, $groupIds)) {
             return $this->createError("Cannot remove Administrator group from own user.");
+          } else if (in_array(Group::ADMIN, $groupIds) && !$currentUser->hasGroup(Group::ADMIN)) {
+            return $this->createError("You cannot add the administrator group to other users.");
+          }
+
+          $availableGroups = Group::findAll($sql, new CondIn(new Column("id"), $groupIds));
+          foreach ($groupIds as $groupId) {
+            if (!isset($availableGroups[$groupId])) {
+              return $this->createError("Group with id=$groupId does not exist.");
+            }
           }
         }
 

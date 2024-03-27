@@ -16,8 +16,8 @@ import clsx from "clsx";
 const Overview = lazy(() => import('./views/overview'));
 const UserListView = lazy(() => import('./views/user/user-list'));
 const UserEditView = lazy(() => import('./views/user/user-edit'));
-const GroupListView = lazy(() => import('./views/group-list'));
-const EditGroupView = lazy(() => import('./views/group-edit'));
+const GroupListView = lazy(() => import('./views/group/group-list'));
+const EditGroupView = lazy(() => import('./views/group/group-edit'));
 const LogView = lazy(() => import("./views/log-view"));
 const AccessControlList = lazy(() => import("./views/access-control-list"));
 

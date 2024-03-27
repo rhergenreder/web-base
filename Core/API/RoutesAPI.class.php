@@ -67,19 +67,11 @@ namespace Core\API\Routes {
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\API\RoutesAPI;
-  use Core\Driver\SQL\Condition\Compare;
-  use Core\Driver\SQL\Condition\CondBool;
   use Core\Driver\SQL\Query\Insert;
-  use Core\Driver\SQL\Query\StartTransaction;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\Route;
-  use Core\Objects\Router\DocumentRoute;
-  use Core\Objects\Router\RedirectPermanentlyRoute;
-  use Core\Objects\Router\RedirectRoute;
-  use Core\Objects\Router\RedirectTemporaryRoute;
   use Core\Objects\Router\Router;
-  use Core\Objects\Router\StaticFileRoute;
 
   class Fetch extends RoutesAPI {
 
@@ -417,6 +409,40 @@ namespace Core\API\Routes {
 
     public static function getDefaultACL(Insert $insert): void {
       $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to regenerate the routing cache", true);
+    }
+  }
+
+  class Check extends RoutesAPI {
+    public function __construct(Context $context, bool $externalCall) {
+      parent::__construct($context, $externalCall, [
+        "id" => new Parameter("id", Parameter::TYPE_INT),
+        "path" => new StringType("path")
+      ]);
+    }
+
+    protected function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $routeId = $this->getParam("id");
+      $route = Route::find($sql, $routeId);
+      if ($route === false) {
+        $this->lastError = $sql->getLastError();
+        return false;
+      } else if ($route === null) {
+        return $this->createError("Route not found");
+      }
+
+      $this->success = true;
+      $path = $this->getParam("path");
+      $this->result["match"] = $route->match($path);
+      return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow("routes/check",
+        [Group::ADMIN, Group::MODERATOR],
+        "Users with this permission can see, if a route is matched with the given path for debugging purposes",
+        true
+      );
     }
   }
 }

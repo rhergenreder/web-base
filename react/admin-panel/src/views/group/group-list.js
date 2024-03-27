@@ -5,30 +5,40 @@ import {DataColumn, DataTable, NumericColumn, StringColumn} from "shared/element
 import {Button, IconButton} from "@material-ui/core";
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
+import usePagination from "shared/hooks/pagination";
 
 
 export default function GroupListView(props) {
 
+    // meta
     const {translate: L, requestModules, currentLocale} = useContext(LocaleContext);
     const navigate = useNavigate();
+    const pagination = usePagination();
+    const api = props.api;
+
+    // data
+    const [groups, setGroups] = useState([]);
 
     useEffect(() => {
         requestModules(props.api, ["general", "account"], currentLocale).then(data => {
             if (!data.success) {
-                alert(data.msg);
+                props.showDialog(data.msg, "Error fetching localization");
             }
         });
     }, [currentLocale]);
 
     const onFetchGroups = useCallback(async (page, count, orderBy, sortOrder) => {
-        let res = await props.api.fetchGroups(page, count, orderBy, sortOrder);
-        if (res.success) {
-            return Promise.resolve([res.groups, res.pagination]);
-        } else {
-            props.showAlert("Error fetching groups", res.msg);
-            return null;
-        }
-    }, []);
+
+        api.fetchGroups(page, count, orderBy, sortOrder).then((res) => {
+            if (res.success) {
+                setGroups(res.groups);
+                pagination.update(res.pagination);
+            } else {
+                props.showDialog(res.msg, "Error fetching groups");
+                return null;
+            }
+        });
+    }, [api, pagination]);
 
     const actionColumn = (() => {
         let column = new DataColumn(L("general.actions"), null, false);
@@ -69,10 +79,16 @@ export default function GroupListView(props) {
                             {L("general.create_new")}
                         </Button>
                     </Link>
-                    <DataTable className={"table table-striped"}
-                               fetchData={onFetchGroups}
-                               placeholder={"No groups to display"}
-                               columns={columnDefinitions} />
+                    <DataTable
+                        data={groups}
+                        pagination={pagination}
+                        defaultSortOrder={"asc"}
+                        defaultSortColumn={0}
+                        className={"table table-striped"}
+                        fetchData={onFetchGroups}
+                        placeholder={"No groups to display"}
+                        title={L("account.groups")}
+                        columns={columnDefinitions} />
                 </div>
             </div>
         </div>

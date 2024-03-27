@@ -1,6 +1,7 @@
 import React, {useState} from "react";
 import {Box, MenuItem, Select, Pagination as MuiPagination} from "@mui/material";
 import {sprintf} from "sprintf-js";
+import {FormControl} from "@material-ui/core";
 
 class Pagination {
 
@@ -57,15 +58,17 @@ class Pagination {
         options = options || [10, 25, 50, 100];
 
         return <Box display={"grid"} gridTemplateColumns={"75px auto"} className={"pagination-controls"}>
-            <Select
-                value={this.data.pageSize}
-                className={"pagination-page-size"}
-                label={L("general.entries_per_page")}
-                onChange={(e) => this.setPageSize(parseInt(e.target.value))}
-                size={"small"}
-            >
-                {options.map(size => <MenuItem key={"size-" + size} value={size}>{size}</MenuItem>)}
-            </Select>
+            <FormControl>
+                <Select
+                    value={this.data.pageSize}
+                    className={"pagination-page-size"}
+                    label={L("general.entries_per_page")}
+                    onChange={(e) => this.setPageSize(parseInt(e.target.value))}
+                    size={"small"}
+                >
+                    {options.map(size => <MenuItem key={"size-" + size} value={size}>{size}</MenuItem>)}
+                </Select>
+            </FormControl>
             <MuiPagination
                 count={this.getPageCount()}
                 onChange={(_, page) => this.setPage(page)}

@@ -61,7 +61,7 @@ class DocumentRoute extends Route {
     return true;
   }
 
-  public function match(string $url) {
+  public function match(string $url): bool|array {
     $match = parent::match($url);
     if ($match === false || !$this->loadClass()) {
       return false;

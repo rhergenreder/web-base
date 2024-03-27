@@ -29,8 +29,12 @@ export default function Sidebar(props) {
             "icon": "chart-bar",
         },
         "users": {
-            "name": "admin.user_groups",
+            "name": "admin.users",
             "icon": "users"
+        },
+        "groups": {
+            "name": "admin.groups",
+            "icon": "users-cog"
         },
         "pages": {
             "name": "admin.page_routes",

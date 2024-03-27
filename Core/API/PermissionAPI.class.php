@@ -34,6 +34,7 @@ namespace Core\API\Permission {
   use Core\API\Parameter\StringType;
   use Core\API\PermissionAPI;
   use Core\Driver\SQL\Column\Column;
+  use Core\Driver\SQL\Condition\CondIn;
   use Core\Driver\SQL\Condition\CondLike;
   use Core\Driver\SQL\Query\Insert;
   use Core\Driver\SQL\Strategy\UpdateStrategy;
@@ -168,25 +169,25 @@ namespace Core\API\Permission {
         return $this->createError("This method cannot be updated.");
       }
 
-      $groups = $this->getParam("groups");
-      if (!empty($groups)) {
-        sort($groups);
-        $availableGroups = Group::findAll($sql);
-        foreach ($groups as $groupId) {
+      $groupIds = array_unique($this->getParam("groups"));
+      if (!empty($groupIds)) {
+        sort($groupIds);
+        $availableGroups = Group::findAll($sql, new CondIn(new Column("id"), $groupIds));
+        foreach ($groupIds as $groupId) {
           if (!isset($availableGroups[$groupId])) {
-            return $this->createError("Unknown group id: $groupId");
+            return $this->createError("Group with id=$groupId does not exist.");
           }
         }
       }
 
       if ($description === null) {
         $updateQuery = $sql->insert("ApiPermission", ["method", "groups", "isCore"])
-          ->onDuplicateKeyStrategy(new UpdateStrategy(["method"], ["groups" => $groups]))
-          ->addRow($method, $groups, false);
+          ->onDuplicateKeyStrategy(new UpdateStrategy(["method"], ["groups" => $groupIds]))
+          ->addRow($method, $groupIds, false);
       } else {
         $updateQuery = $sql->insert("ApiPermission", ["method", "groups", "isCore", "description"])
-          ->onDuplicateKeyStrategy(new UpdateStrategy(["method"], ["groups" => $groups, "description" => $description]))
-          ->addRow($method, $groups, false, $description);
+          ->onDuplicateKeyStrategy(new UpdateStrategy(["method"], ["groups" => $groupIds, "description" => $description]))
+          ->addRow($method, $groupIds, false, $description);
       }
 
       $this->success = $updateQuery->execute() !== false;

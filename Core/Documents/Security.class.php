@@ -8,6 +8,7 @@ use Core\Elements\Document;
 use Core\Objects\DatabaseEntity\GpgKey;
 use Core\Objects\DatabaseEntity\Language;
 use Core\Objects\Router\Router;
+use DateTimeInterface;
 
 // Source: https://www.rfc-editor.org/rfc/rfc9116
 class Security extends Document {
@@ -42,12 +43,12 @@ class Security extends Document {
 
       $lines = [
         "# This project is based on the open-source framework hosted on https://github.com/rhergenreder/web-base",
-        "# Any non-site specific issues can be reported via the github security reporting feature:",
+        "# Any non site-specific issues can be reported via the github security reporting feature:",
         "# https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing/privately-reporting-a-security-vulnerability",
         "",
         "Canonical: $baseUrl/.well-known/security.txt",
         "Preferred-Languages: $languageCodes",
-        "Expires: " . $expires->format(\DateTime::ATOM),
+        "Expires: " . $expires->format(DateTimeInterface::ATOM),
         "",
       ];
 
@@ -85,6 +86,9 @@ class Security extends Document {
             return "Error exporting public key: " . $res["msg"];
           }
         }
+      } else {
+        http_response_code(412);
+        return "No gpg key configured yet.";
       }
     }
 

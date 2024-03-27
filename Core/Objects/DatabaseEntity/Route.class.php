@@ -56,6 +56,10 @@ abstract class Route extends DatabaseEntity {
     $this->active = true;
   }
 
+  public function isActive(): bool {
+    return $this->active;
+  }
+
   private static function parseParamType(?string $type): ?int {
     if ($type === null || trim($type) === "") {
       return null;
@@ -115,7 +119,7 @@ abstract class Route extends DatabaseEntity {
     }
   }
 
-  public function match(string $url) {
+  public function match(string $url): bool|array {
 
     # /test/{abc}/{param:?}/{xyz:int}/{aaa:int?}
     $patternParts = self::getParts(Router::cleanURL($this->pattern, false));

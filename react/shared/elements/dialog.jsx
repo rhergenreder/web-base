@@ -50,6 +50,7 @@ export default function Dialog(props) {
 
         switch (input.type) {
             case 'label':
+                delete inputProps.value;
                 inputElements.push(<span {...inputProps}>{input.value}</span>);
                 break;
             case 'text':
@@ -57,11 +58,9 @@ export default function Dialog(props) {
                 inputElements.push(<TextField
                     {...inputProps}
                     type={input.type}
-                    sx={{marginTop: 1}}
                     size={"small"} fullWidth={true}
                     key={"input-" + input.name}
                     value={inputData[input.name] || ""}
-                    defaultValue={input.defaultValue || ""}
                     onChange={e => setInputData({ ...inputData, [input.name]: e.target.value })}
                 />)
                 break;

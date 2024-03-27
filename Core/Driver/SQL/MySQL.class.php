@@ -52,7 +52,7 @@ class MySQL extends SQL {
       return true;
     }
 
-    @$this->connection = mysqli_connect(
+    $this->connection = @mysqli_connect(
       $this->connectionData->getHost(),
       $this->connectionData->getLogin(),
       $this->connectionData->getPassword(),

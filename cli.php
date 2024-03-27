@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 
 define('WEBROOT', realpath("."));
@@ -68,8 +69,7 @@ function connectSQL(): ?SQL {
 
 function printHelp(array $argv): void {
   printLine("=== WebBase CLI tool ===");
-  printLine("Usage: ");
-  var_dump($argv);
+  printLine("Usage: " . $argv[0]);
 }
 
 function applyPatch(\Core\Driver\SQL\SQL $sql, string $patchName): bool {
@@ -186,7 +186,6 @@ function handleDatabase(array $argv): void {
       $command = array_merge(["docker", "exec", "-it", $containerName], $command);
     }
 
-    var_dump($command);
     $process = proc_open($command, $descriptorSpec, $pipes, null, $env);
 
     if (is_resource($process)) {
@@ -655,7 +654,8 @@ function onImpersonate($argv): void {
   $session = new \Core\Objects\DatabaseEntity\Session($context, $user);
   $session->setData(["2faAuthenticated" => true]);
   $session->update();
-  echo "session=" . $session->getUUID() . PHP_EOL;
+  echo "Cookie: session=" . $session->getUUID() . PHP_EOL .
+       "CSRF-Token: " . $session->getCsrfToken() . PHP_EOL;
 }
 
 function onFrontend(array $argv): void {
@@ -809,7 +809,7 @@ $registeredCommands = [
   "test" => ["handler" => "onTest"],
   "mail" => ["handler" => "onMail"],
   "settings" => ["handler" => "onSettings"],
-  "impersonate" => ["handler" => "onImpersonate"],
+  "impersonate" => ["handler" => "onImpersonate", "requiresDocker" => true],
   "frontend" => ["handler" => "onFrontend"],
 ];
 
@@ -820,13 +820,12 @@ if (count($argv) < 2) {
   $command = $argv[1];
   if (array_key_exists($command, $registeredCommands)) {
 
-    // TODO: do we need this?
     if ($database !== null && $database->getProperty("isDocker", false) && !is_file("/.dockerenv")) {
-      $requiresDocker = in_array($argv[2] ?? null, $registeredCommands[$command]["requiresDocker"] ?? []);
+      $requiresDockerArgs = $registeredCommands[$command]["requiresDocker"] ?? [];
+      $requiresDocker = $requiresDockerArgs === true || in_array($argv[2] ?? null, $requiresDockerArgs);
       if ($requiresDocker) {
         $containerName = $dockerYaml["services"]["php"]["container_name"];
         printLine("Detected docker environment in config, running docker exec for container: $containerName");
-        var_dump($argv);
         $command = array_merge(["docker", "exec", "-it", $containerName, "php"], $argv);
         $proc = proc_open($command, [1 => STDOUT, 2 => STDERR], $pipes);
         exit(proc_close($proc));

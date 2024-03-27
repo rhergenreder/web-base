@@ -41,11 +41,6 @@ class Swagger extends Request {
       return false;
     }
 
-    // special case: hardcoded permission
-    if ($request instanceof \Core\API\Permission\Save && (!$isLoggedIn || !$currentUser->hasGroup(Group::ADMIN))) {
-      return false;
-    }
-
     if (!empty($requiredGroups)) {
       $userGroups = array_keys($currentUser?->getGroups() ?? []);
       return !empty(array_intersect($requiredGroups, $userGroups));

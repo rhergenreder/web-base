@@ -12,6 +12,7 @@ namespace Core\API {
     }
 
     protected function checkStaticPermission(): bool {
+      // hardcoded permission checking
       $user = $this->context->getUser();
       if (!$user || !$user->hasGroup(Group::ADMIN)) {
         return $this->createError("Permission denied.");
@@ -19,18 +20,21 @@ namespace Core\API {
 
       return true;
     }
+
+    protected function isRestricted(string $method): bool {
+      return in_array(strtolower($method), ["permission/update", "permission/delete"]);
+    }
   }
 }
 
 namespace Core\API\Permission {
 
+  use Core\API\Parameter\ArrayType;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\API\PermissionAPI;
   use Core\Driver\SQL\Column\Column;
-  use Core\Driver\SQL\Condition\CondIn;
   use Core\Driver\SQL\Condition\CondLike;
-  use Core\Driver\SQL\Condition\CondNot;
   use Core\Driver\SQL\Query\Insert;
   use Core\Driver\SQL\Strategy\UpdateStrategy;
   use Core\Objects\Context;
@@ -142,73 +146,100 @@ namespace Core\API\Permission {
     }
   }
 
-  class Save extends PermissionAPI {
-
+  class Update extends PermissionAPI {
     public function __construct(Context $context, bool $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
-        'permissions' => new Parameter('permissions', Parameter::TYPE_ARRAY)
-      ));
+      parent::__construct($context, $externalCall, [
+        "method" => new StringType("method", 32, false),
+        "groups" => new ArrayType("groups", Parameter::TYPE_INT, true, false),
+        "description" => new StringType("description", 128, true, null),
+      ]);
     }
 
-    public function _execute(): bool {
+    protected function _execute(): bool {
 
       if (!$this->checkStaticPermission()) {
         return false;
       }
 
-      $permissions = $this->getParam("permissions");
       $sql = $this->context->getSQL();
-      $methodParam = new StringType('method', 32);
-      $groupsParam = new Parameter('groups', Parameter::TYPE_ARRAY);
-      $descriptionParam = new StringType('method', 128);
+      $method = $this->getParam("method");
+      $description = $this->getParam("description");
+      if ($this->isRestricted($method)) {
+        return $this->createError("This method cannot be updated.");
+      }
 
-      $updateQuery = $sql->insert("ApiPermission", ["method", "groups", "description"])
-        ->onDuplicateKeyStrategy(new UpdateStrategy(["method"], [
-          "groups" => new Column("groups"),
-          "description" => new Column("description")
-        ]));
-
-      $insertedMethods = array();
-
-      foreach ($permissions as $permission) {
-        if (!is_array($permission)) {
-          return $this->createError("Invalid data type found in parameter: permissions, expected: object");
-        } else if (!isset($permission["method"]) || !isset($permission["description"]) || !array_key_exists("groups", $permission)) {
-          return $this->createError("Invalid object found in parameter: permissions, expected keys: 'method', 'groups', 'description'");
-        } else if (!$methodParam->parseParam($permission["method"])) {
-          $expectedType = $methodParam->getTypeName();
-          return $this->createError("Invalid data type found for attribute 'method', expected: $expectedType");
-        } else if (!$groupsParam->parseParam($permission["groups"])) {
-          $expectedType = $groupsParam->getTypeName();
-          return $this->createError("Invalid data type found for attribute 'groups', expected: $expectedType");
-        } else if (!$descriptionParam->parseParam($permission["description"])) {
-          $expectedType = $descriptionParam->getTypeName();
-          return $this->createError("Invalid data type found for attribute 'description', expected: $expectedType");
-        } else if (empty(trim($methodParam->value))) {
-          return $this->createError("Method cannot be empty.");
-        } else {
-          $method = $methodParam->value;
-          $groups = $groupsParam->value;
-          $description = $descriptionParam->value;
-          $updateQuery->addRow($method, $groups, $description);
-          $insertedMethods[] = $method;
+      $groups = $this->getParam("groups");
+      if (!empty($groups)) {
+        sort($groups);
+        $availableGroups = Group::findAll($sql);
+        foreach ($groups as $groupId) {
+          if (!isset($availableGroups[$groupId])) {
+            return $this->createError("Unknown group id: $groupId");
+          }
         }
       }
 
-      if (!empty($permissions)) {
-        $res = $updateQuery->execute();
-        $this->success = ($res !== FALSE);
-        $this->lastError = $sql->getLastError();
+      if ($description === null) {
+        $updateQuery = $sql->insert("ApiPermission", ["method", "groups", "isCore"])
+          ->onDuplicateKeyStrategy(new UpdateStrategy(["method"], ["groups" => $groups]))
+          ->addRow($method, $groups, false);
+      } else {
+        $updateQuery = $sql->insert("ApiPermission", ["method", "groups", "isCore", "description"])
+          ->onDuplicateKeyStrategy(new UpdateStrategy(["method"], ["groups" => $groups, "description" => $description]))
+          ->addRow($method, $groups, false, $description);
       }
 
-      if ($this->success) {
-        $res = $sql->delete("ApiPermission")
-          ->whereEq("description", "") // only delete non default permissions
-          ->where(new CondNot(new CondIn(new Column("method"), $insertedMethods)))
-          ->execute();
+      $this->success = $updateQuery->execute() !== false;
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
 
-        $this->success = ($res !== FALSE);
-        $this->lastError = $sql->getLastError();
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(
+        self::getEndpoint(), [Group::ADMIN],
+        "Allows users to modify API permissions. This is restricted to the administrator and cannot be changed",
+        true
+      );
+    }
+  }
+
+  class Delete extends PermissionAPI {
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        "method" => new StringType("method", 32, false),
+      ]);
+    }
+
+    protected function _execute(): bool {
+
+      if (!$this->checkStaticPermission()) {
+        return false;
+      }
+
+      $sql = $this->context->getSQL();
+      $method = $this->getParam("method");
+      if ($this->isRestricted($method)) {
+        return $this->createError("This method cannot be deleted.");
+      }
+
+      $res = $sql->select("method")
+        ->from("ApiPermission")
+        ->whereEq("method", $method)
+        ->execute();
+
+      $this->success = $res !== false;
+      $this->lastError = $sql->getLastError();
+
+      if ($this->success) {
+        if (!$res) {
+          return $this->createError("This method was not configured yet");
+        } else {
+          $res = $sql->delete("ApiPermission")
+            ->whereEq("method", $method)
+            ->execute();
+          $this->success = $res !== false;
+          $this->lastError = $sql->getLastError();
+        }
       }
 
       return $this->success;
@@ -217,7 +248,7 @@ namespace Core\API\Permission {
     public static function getDefaultACL(Insert $insert): void {
       $insert->addRow(
         self::getEndpoint(), [Group::ADMIN],
-        "Allows users to modify API permissions. This is restricted to the administrator and cannot be changed",
+        "Allows users to delete API permissions. This is restricted to the administrator and cannot be changed",
         true
       );
     }

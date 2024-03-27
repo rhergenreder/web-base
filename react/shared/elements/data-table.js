@@ -8,6 +8,7 @@ import clsx from "clsx";
 import {Box, IconButton, Select, TextField} from "@mui/material";
 import {formatDate, formatDateTime} from "../util";
 import CachedIcon from "@material-ui/icons/Cached";
+import {isNumber} from "chart.js/helpers";
 
 
 export function DataTable(props) {
@@ -22,8 +23,8 @@ export function DataTable(props) {
     const {translate: L} = useContext(LocaleContext);
 
     const [doFetchData, setFetchData] = useState(false);
-    const [sortAscending, setSortAscending] = useState(["asc","ascending"].includes(defaultSortOrder?.toLowerCase));
-    const [sortColumn, setSortColumn] = useState(defaultSortColumn || null);
+    const [sortAscending, setSortAscending] = useState(["asc","ascending"].includes(defaultSortOrder?.toLowerCase()));
+    const [sortColumn, setSortColumn] = useState(isNumber(defaultSortColumn) || null);
     const sortable = !!fetchData && (props.hasOwnProperty("sortable") ? !!props.sortable : true);
     const onRowClick = onClick || (() => {});
 

@@ -244,13 +244,11 @@ abstract class Request {
       }
 
       // Check for permission
-      if (!($this instanceof \Core\API\Permission\Save)) {
-        $req = new \Core\API\Permission\Check($this->context);
-        $this->success = $req->execute(array("method" => self::getEndpoint()));
-        $this->lastError = $req->getLastError();
-        if (!$this->success) {
-          return false;
-        }
+      $req = new \Core\API\Permission\Check($this->context);
+      $this->success = $req->execute(array("method" => self::getEndpoint()));
+      $this->lastError = $req->getLastError();
+      if (!$this->success) {
+        return false;
       }
     }
 

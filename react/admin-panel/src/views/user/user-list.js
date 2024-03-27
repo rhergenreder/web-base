@@ -77,6 +77,8 @@ export default function UserListView(props) {
                 <DataTable
                     data={users}
                     pagination={pagination}
+                    defaultSortOrder={"asc"}
+                    defaultSortColumn={0}
                     className={"table table-striped"}
                     fetchData={onFetchUsers}
                     placeholder={"No users to display"}

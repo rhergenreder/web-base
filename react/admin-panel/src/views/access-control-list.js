@@ -54,6 +54,40 @@ export default function AccessControlList(props) {
         });
     }, [currentLocale]);
 
+    const onChangePermission = useCallback((methodIndex, groupId, selected) => {
+        let newGroups = null;
+        let currentGroups = acl[methodIndex].groups;
+        let groupIndex = currentGroups.indexOf(groupId);
+        if (!selected) {
+            if (currentGroups.length === 0) {
+                // it was an "everyone permission" before
+                newGroups = groups.filter(group => group.id !== groupId).map(group => group.id);
+            } else if (groupIndex !== -1 && currentGroups.length > 1) {
+                newGroups = [...currentGroups];
+                newGroups.splice(groupIndex, 1);
+            }
+        } else if (groupIndex === -1) {
+            newGroups = [...currentGroups];
+            newGroups.push(groupId);
+        }
+
+        if (newGroups !== null) {
+            props.api.updatePermission(acl[methodIndex].method, newGroups).then((data) => {
+               if (data.success) {
+                   let newACL = [...acl];
+                   newACL[methodIndex].groups = newGroups;
+                   setACL(newACL);
+               } else {
+                   props.showDialog("Error updating permission: " + data.msg);
+               }
+            });
+        }
+    }, [acl]);
+
+    const isRestricted = (method) => {
+        return ["permissions/update", "permissions/delete"].includes(method.toLowerCase());
+    }
+
     const PermissionList = () => {
         let rows = [];
 
@@ -75,7 +109,8 @@ export default function AccessControlList(props) {
                     </TableCell>
                     {groups.map(group => <TableCell key={"perm-" + index + "-group-" + group.id} align={"center"}>
                         <Checkbox checked={!permission.groups.length || permission.groups.includes(group.id)}
-                            disabled={permission.method.toLowerCase() === "permission/save" || !props.api.hasGroup(USER_GROUP_ADMIN)}/>
+                                  onChange={(e) => onChangePermission(index, group.id, e.target.checked)}
+                                  disabled={isRestricted(permission.method) || !props.api.hasGroup(USER_GROUP_ADMIN)} />
                     </TableCell>)}
                 </TableRow>
             );
@@ -132,7 +167,9 @@ export default function AccessControlList(props) {
                     <TableHead>
                         <TableRow>
                             <TableCell sx={{width: "auto"}}>{L("permission")}</TableCell>
-                            { groups.map(group => <TableCell key={"group-" + group.id} align={"center"}>{group.name}</TableCell>) }
+                            { groups.map(group => <TableCell key={"group-" + group.id} align={"center"}>
+                                {group.name}
+                            </TableCell>) }
                         </TableRow>
                     </TableHead>
                     <TableBody>

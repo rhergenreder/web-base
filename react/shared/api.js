@@ -253,6 +253,14 @@ export default class API {
         return this.apiCall("permission/save", { permissions: permissions });
     }
 
+    async updatePermission(method, groups, description = null) {
+        return this.apiCall("permission/update", { method: method, groups: groups, description: description });
+    }
+
+    async deletePermission(method) {
+        return this.apiCall("permission/delete", { method: method });
+    }
+
     /** VisitorsAPI **/
     async getVisitors(type, date) {
         return this.apiCall("visitors/stats", { type: type, date: date });

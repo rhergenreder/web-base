@@ -7,7 +7,7 @@ import {
     DialogContent,
     DialogContentText,
     DialogTitle,
-    Input, List, ListItem, TextField
+    List, ListItem, TextField
 } from "@mui/material";
 
 export default function Dialog(props) {
@@ -24,7 +24,9 @@ export default function Dialog(props) {
         if (props.inputs) {
             let initialData = {};
             for (const input of props.inputs) {
-                initialData[input.name] = input.value || "";
+                if (input.type !== "label") {
+                    initialData[input.name] = input.value || "";
+                }
             }
             setInputData(initialData);
         }
@@ -47,6 +49,9 @@ export default function Dialog(props) {
         delete inputProps.type;
 
         switch (input.type) {
+            case 'label':
+                inputElements.push(<span {...inputProps}>{input.value}</span>);
+                break;
             case 'text':
             case 'password':
                 inputElements.push(<TextField
@@ -56,6 +61,7 @@ export default function Dialog(props) {
                     size={"small"} fullWidth={true}
                     key={"input-" + input.name}
                     value={inputData[input.name] || ""}
+                    defaultValue={input.defaultValue || ""}
                     onChange={e => setInputData({ ...inputData, [input.name]: e.target.value })}
                 />)
                 break;

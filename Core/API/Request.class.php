@@ -93,7 +93,7 @@ abstract class Request {
     foreach ($structure as $name => $param) {
       $value = $values[$name] ?? NULL;
 
-      $isEmpty = (is_string($value) && strlen($value) === 0) || (is_array($value) && empty($value));
+      $isEmpty = is_string($value) && strlen($value) === 0;
       if (!$param->optional && (is_null($value) || $isEmpty)) {
         return $this->createError("Missing parameter: $name");
       }

@@ -24,7 +24,7 @@ class ArrayType extends Parameter {
   }
 
   public function parseParam($value): bool {
-    if(!is_array($value)) {
+    if (!is_array($value)) {
       if (!$this->canBeOne) {
         return false;
       } else {

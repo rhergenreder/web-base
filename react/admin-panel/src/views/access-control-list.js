@@ -1,9 +1,23 @@
 import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
 import {Link, useNavigate} from "react-router-dom";
-import {Button, Checkbox, TextField, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@material-ui/core";
-import {Add, Refresh} from "@material-ui/icons";
+import {
+    Button,
+    Checkbox,
+    TextField,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    IconButton
+} from "@material-ui/core";
+import {Add, Delete, Edit, Refresh} from "@material-ui/icons";
 import {USER_GROUP_ADMIN} from "shared/constants";
+import Dialog from "shared/elements/dialog";
+import {TableFooter} from "@mui/material";
 
 
 export default function AccessControlList(props) {
@@ -19,6 +33,9 @@ export default function AccessControlList(props) {
 
     // filters
     const [query, setQuery] = useState("");
+
+    // view
+    const [dialogData, setDialogData] = useState({open: false});
 
     const onFetchACL = useCallback((force = false) => {
         if (force || fetchACL) {
@@ -84,8 +101,33 @@ export default function AccessControlList(props) {
         }
     }, [acl]);
 
+    const onDeletePermission = useCallback(method => {
+        props.api.deletePermission(method).then(data => {
+            if (data.success) {
+                let newACL = acl.filter(acl => acl.method.toLowerCase() !== method.toLowerCase());
+                setACL(newACL);
+            } else {
+                props.showDialog("Error deleting permission: " + data.msg);
+            }
+        })
+    }, [acl]);
+
+    const onUpdatePermission = useCallback((inputData, groups) => {
+        props.api.updatePermission(inputData.method, groups, inputData.description).then(data => {
+            if (data.success) {
+                let newACL = acl.filter(acl => acl.method.toLowerCase() !== inputData.method.toLowerCase());
+                newACL.push({method: inputData.method, groups: groups, description: inputData.description});
+                newACL = newACL.sort((a, b) => a.method.localeCompare(b.method))
+                setACL(newACL);
+            } else {
+                props.showDialog("Error updating permission: " + data.msg);
+            }
+        })
+    }, [acl]);
+
     const isRestricted = (method) => {
-        return ["permissions/update", "permissions/delete"].includes(method.toLowerCase());
+        return ["permissions/update", "permissions/delete"].includes(method.toLowerCase()) &&
+                !props.api.hasGroup(USER_GROUP_ADMIN);
     }
 
     const PermissionList = () => {
@@ -104,13 +146,44 @@ export default function AccessControlList(props) {
             rows.push(
                 <TableRow key={"perm-" + index}>
                     <TableCell>
-                        <b>{permission.method}</b><br />
-                        <i>{permission.description}</i>
+                        <div style={{display: "grid", gridTemplateColumns: "60px auto"}}>
+                            <div style={{alignSelf: "center"}}>
+                                <IconButton style={{padding: 0}} size={"small"} color={"primary"}
+                                            disabled={isRestricted(permission.method)}
+                                            onClick={() => setDialogData({
+                                                open: true,
+                                                title: L("Edit permission"),
+                                                inputs: [
+                                                    { type: "label", value: L("general.method") + ":" },
+                                                    { type: "text", name: "method", value: permission.method, disabled: true },
+                                                    { type: "label", value: L("general.description") + ":" },
+                                                    { type: "text", name: "description", value: permission.description, maxLength: 128 }
+                                                ],
+                                                onOption: (option, inputData) => option === 0 && onUpdatePermission(inputData, permission.groups)
+                                            })} >
+                                    <Edit />
+                                </IconButton>
+                                <IconButton style={{padding: 0}} size={"small"} color={"secondary"}
+                                            disabled={isRestricted(permission.method)}
+                                            onClick={() => setDialogData({
+                                                open: true,
+                                                title: L("Do you really want to delete this permission?"),
+                                                message: "Method: " + permission.method,
+                                                onOption: (option) => option === 0 && onDeletePermission(permission.method)
+                                            })} >
+                                    <Delete />
+                                </IconButton>
+                            </div>
+                            <div>
+                                <b>{permission.method}</b><br />
+                                <i>{permission.description}</i>
+                            </div>
+                        </div>
                     </TableCell>
                     {groups.map(group => <TableCell key={"perm-" + index + "-group-" + group.id} align={"center"}>
                         <Checkbox checked={!permission.groups.length || permission.groups.includes(group.id)}
                                   onChange={(e) => onChangePermission(index, group.id, e.target.checked)}
-                                  disabled={isRestricted(permission.method) || !props.api.hasGroup(USER_GROUP_ADMIN)} />
+                                  disabled={isRestricted(permission.method)} />
                     </TableCell>)}
                 </TableRow>
             );
@@ -155,18 +228,28 @@ export default function AccessControlList(props) {
                         {L("general.reload")}
                     </Button>
                     <Button variant={"outlined"} className={"m-1"} startIcon={<Add />} disabled={!props.api.hasGroup(USER_GROUP_ADMIN)}
-                            onClick={() => navigate("/admin/acl/new")}>
+                            onClick={() => setDialogData({
+                                open: true,
+                                title: L("Add permission"),
+                                inputs: [
+                                    { type: "label", value: L("general.method") + ":" },
+                                    { type: "text", name: "method", value: "", placeholder: L("general.method") },
+                                    { type: "label", value: L("general.description") + ":" },
+                                    { type: "text", name: "description", maxLength: 128, placeholder: L("general.description") }
+                                ],
+                                onOption: (option, inputData) => option === 0 && onUpdatePermission(inputData, [])
+                            })} >
                         {L("general.add")}
                     </Button>
                 </div>
             </div>
         </div>
         <div>
-            <TableContainer component={Paper}>
-                <Table size={"small"}>
+            <TableContainer component={Paper} style={{overflowX: "initial"}}>
+                <Table stickyHeader size={"small"} className={"table-striped"}>
                     <TableHead>
                         <TableRow>
-                            <TableCell sx={{width: "auto"}}>{L("permission")}</TableCell>
+                            <TableCell>{L("permission")}</TableCell>
                             { groups.map(group => <TableCell key={"group-" + group.id} align={"center"}>
                                 {group.name}
                             </TableCell>) }
@@ -178,5 +261,13 @@ export default function AccessControlList(props) {
                 </Table>
             </TableContainer>
         </div>
+        <Dialog show={dialogData.open}
+                onClose={() => setDialogData({open: false})}
+                title={dialogData.title}
+                message={dialogData.message}
+                onOption={dialogData.onOption}
+                inputs={dialogData.inputs}
+                options={[L("general.ok"), L("general.cancel")]} />
+
     </>
 }

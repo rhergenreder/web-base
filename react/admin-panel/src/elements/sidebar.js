@@ -36,7 +36,7 @@ export default function Sidebar(props) {
             "name": "admin.groups",
             "icon": "users-cog"
         },
-        "pages": {
+        "routes": {
             "name": "admin.page_routes",
             "icon": "copy",
         },

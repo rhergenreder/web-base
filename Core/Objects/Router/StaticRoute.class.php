@@ -2,11 +2,15 @@
 
 namespace Core\Objects\Router;
 
+use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Core\Objects\DatabaseEntity\Route;
 
 class StaticRoute extends Route {
 
+  #[Transient]
   private string $data;
+
+  #[Transient]
   private int $code;
 
   public function __construct(string $pattern, bool $exact, string $data, int $code = 200) {

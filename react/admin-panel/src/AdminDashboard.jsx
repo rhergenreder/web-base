@@ -20,6 +20,7 @@ const GroupListView = lazy(() => import('./views/group/group-list'));
 const EditGroupView = lazy(() => import('./views/group/group-edit'));
 const LogView = lazy(() => import("./views/log-view"));
 const AccessControlList = lazy(() => import("./views/access-control-list"));
+const RouteListView = lazy(() => import("./views/routes"));
 
 export default function AdminDashboard(props) {
 
@@ -79,6 +80,7 @@ export default function AdminDashboard(props) {
                             <Route path={"/admin/group/:groupId"} element={<EditGroupView {...controlObj} />}/>
                             <Route path={"/admin/logs"} element={<LogView {...controlObj} />}/>
                             <Route path={"/admin/acl"} element={<AccessControlList {...controlObj} />}/>
+                            <Route path={"/admin/routes"} element={<RouteListView {...controlObj} />}/>
                             <Route path={"*"} element={<View404 />} />
                         </Routes>
                     </Suspense>

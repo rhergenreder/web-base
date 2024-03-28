@@ -5,6 +5,7 @@ namespace Core\API {
   use Core\API\Routes\GenerateCache;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Route;
+  use Core\Objects\Router\ApiRoute;
 
   abstract class RoutesAPI extends Request {
 
@@ -24,6 +25,8 @@ namespace Core\API {
         return false;
       } else if ($route === null) {
         return $this->createError("Route not found");
+      } else if ($route instanceof ApiRoute) {
+        return $this->createError("This route cannot be modified");
       }
 
       $route->setActive($active);
@@ -71,6 +74,7 @@ namespace Core\API\Routes {
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\Route;
+  use Core\Objects\Router\ApiRoute;
   use Core\Objects\Router\Router;
 
   class Fetch extends RoutesAPI {
@@ -87,10 +91,7 @@ namespace Core\API\Routes {
       $this->success = ($routes !== FALSE);
 
       if ($this->success) {
-        $this->result["routes"] = [];
-        foreach ($routes as $route) {
-          $this->result["routes"][$route->getId()] = $route->jsonSerialize();
-        }
+        $this->result["routes"] = $routes;
       }
 
       return $this->success;
@@ -307,7 +308,6 @@ namespace Core\API\Routes {
       parent::__construct($context, $externalCall, array(
         "id" => new Parameter("id", Parameter::TYPE_INT)
       ));
-      $this->isPublic = false;
     }
 
     public function _execute(): bool {
@@ -319,6 +319,8 @@ namespace Core\API\Routes {
         return $this->createError("Error fetching route: " . $sql->getLastError());
       } else if ($route === null) {
         return $this->createError("Route not found");
+      } else if ($route instanceof ApiRoute) {
+        return $this->createError("This route cannot be deleted");
       }
 
       $this->success = $route->delete($sql) !== false;
@@ -336,7 +338,6 @@ namespace Core\API\Routes {
       parent::__construct($context, $externalCall, array(
         "id" => new Parameter("id", Parameter::TYPE_INT)
       ));
-      $this->isPublic = false;
     }
 
     public function _execute(): bool {
@@ -354,7 +355,6 @@ namespace Core\API\Routes {
       parent::__construct($context, $externalCall, array(
         "id" => new Parameter("id", Parameter::TYPE_INT)
       ));
-      $this->isPublic = false;
     }
 
     public function _execute(): bool {
@@ -373,7 +373,6 @@ namespace Core\API\Routes {
 
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, []);
-      $this->isPublic = false;
       $this->router = null;
     }
 
@@ -408,7 +407,10 @@ namespace Core\API\Routes {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to regenerate the routing cache", true);
+      $insert->addRow(self::getEndpoint(),
+        [Group::ADMIN, Group::SUPPORT],
+        "Allows users to regenerate the routing cache", true
+      );
     }
   }
 

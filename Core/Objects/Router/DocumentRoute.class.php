@@ -5,6 +5,7 @@ namespace Core\Objects\Router;
 use Core\Driver\SQL\SQL;
 use Core\Elements\Document;
 use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Core\Objects\DatabaseEntity\Route;
 use Core\Objects\Search\Searchable;
 use Core\Objects\Search\SearchQuery;
@@ -15,7 +16,10 @@ class DocumentRoute extends Route {
 
   use Searchable;
 
+  #[Transient]
   private array $args;
+
+  #[Transient]
   private ?\ReflectionClass $reflectionClass = null;
 
   public function __construct(string $pattern, bool $exact, string $className, ...$args) {

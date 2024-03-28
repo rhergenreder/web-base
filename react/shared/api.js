@@ -213,12 +213,28 @@ export default class API {
     }
 
     /** RoutesAPI **/
-    async getRoutes() {
+    async fetchRoutes() {
         return this.apiCall("routes/fetch");
+    }
+
+    async enableRoute(id) {
+        return this.apiCall("routes/enable", { id: id });
+    }
+
+    async disableRoute(id) {
+        return this.apiCall("routes/disable", { id: id });
+    }
+
+    async deleteRoute(id) {
+        return this.apiCall("routes/remove", { id: id });
     }
 
     async saveRoutes(routes) {
         return this.apiCall("routes/save", { routes: routes });
+    }
+
+    async regenerateRouterCache() {
+        return this.apiCall("routes/generateCache");
     }
 
     /** GroupAPI **/

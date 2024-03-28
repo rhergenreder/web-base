@@ -2,11 +2,13 @@
 
 namespace Core\Objects\Router;
 
+use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Core\Objects\DatabaseEntity\Route;
 use JetBrains\PhpStorm\Pure;
 
 class RedirectRoute extends Route {
 
+  #[Transient]
   private int $code;
 
   public function __construct(string $type, string $pattern, bool $exact, string $destination, int $code = 307) {

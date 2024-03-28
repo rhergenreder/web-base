@@ -12,12 +12,11 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    IconButton
+    IconButton, styled
 } from "@material-ui/core";
 import {Add, Delete, Edit, Refresh} from "@material-ui/icons";
 import {USER_GROUP_ADMIN} from "shared/constants";
 import Dialog from "shared/elements/dialog";
-import {TableFooter} from "@mui/material";
 
 
 export default function AccessControlList(props) {
@@ -74,18 +73,22 @@ export default function AccessControlList(props) {
     const onChangePermission = useCallback((methodIndex, groupId, selected) => {
         let newGroups = null;
         let currentGroups = acl[methodIndex].groups;
-        let groupIndex = currentGroups.indexOf(groupId);
-        if (!selected) {
-            if (currentGroups.length === 0) {
-                // it was an "everyone permission" before
-                newGroups = groups.filter(group => group.id !== groupId).map(group => group.id);
-            } else if (groupIndex !== -1 && currentGroups.length > 1) {
+        if (groupId === null) {
+            newGroups = [];
+        } else {
+            let groupIndex = currentGroups.indexOf(groupId);
+            if (!selected) {
+                if (currentGroups.length === 0) {
+                    // it was an "everyone permission" before
+                    newGroups = groups.filter(group => group.id !== groupId).map(group => group.id);
+                } else if (groupIndex !== -1) {
+                    newGroups = [...currentGroups];
+                    newGroups.splice(groupIndex, 1);
+                }
+            } else if (groupIndex === -1) {
                 newGroups = [...currentGroups];
-                newGroups.splice(groupIndex, 1);
+                newGroups.push(groupId);
             }
-        } else if (groupIndex === -1) {
-            newGroups = [...currentGroups];
-            newGroups.push(groupId);
         }
 
         if (newGroups !== null) {
@@ -94,6 +97,7 @@ export default function AccessControlList(props) {
                    let newACL = [...acl];
                    newACL[methodIndex].groups = newGroups;
                    setACL(newACL);
+                   props.api.fetchUser();
                } else {
                    props.showDialog("Error updating permission: " + data.msg);
                }
@@ -106,6 +110,7 @@ export default function AccessControlList(props) {
             if (data.success) {
                 let newACL = acl.filter(acl => acl.method.toLowerCase() !== method.toLowerCase());
                 setACL(newACL);
+                props.api.fetchUser();
             } else {
                 props.showDialog("Error deleting permission: " + data.msg);
             }
@@ -119,6 +124,7 @@ export default function AccessControlList(props) {
                 newACL.push({method: inputData.method, groups: groups, description: inputData.description});
                 newACL = newACL.sort((a, b) => a.method.localeCompare(b.method))
                 setACL(newACL);
+                props.api.fetchUser();
             } else {
                 props.showDialog("Error updating permission: " + data.msg);
             }
@@ -180,8 +186,13 @@ export default function AccessControlList(props) {
                             </div>
                         </div>
                     </TableCell>
+                    <BorderedColumn key={"perm-" + index + "-everyone"} align={"center"}>
+                        <Checkbox checked={!permission.groups.length}
+                                  onChange={(e) => onChangePermission(index, null, e.target.checked)}
+                                  disabled={isRestricted(permission.method)} />
+                    </BorderedColumn>
                     {groups.map(group => <TableCell key={"perm-" + index + "-group-" + group.id} align={"center"}>
-                        <Checkbox checked={!permission.groups.length || permission.groups.includes(group.id)}
+                        <Checkbox checked={permission.groups.includes(group.id)}
                                   onChange={(e) => onChangePermission(index, group.id, e.target.checked)}
                                   disabled={isRestricted(permission.method)} />
                     </TableCell>)}
@@ -191,6 +202,11 @@ export default function AccessControlList(props) {
 
         return <>{rows}</>
     }
+
+    const BorderedColumn = styled(TableCell)({
+        borderLeft: "1px dotted #666",
+        borderRight: "1px dotted #666",
+    });
 
     return <>
         <div className={"content-header"}>
@@ -244,23 +260,22 @@ export default function AccessControlList(props) {
                 </div>
             </div>
         </div>
-        <div>
-            <TableContainer component={Paper} style={{overflowX: "initial"}}>
-                <Table stickyHeader size={"small"} className={"table-striped"}>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>{L("permission")}</TableCell>
-                            { groups.map(group => <TableCell key={"group-" + group.id} align={"center"}>
-                                {group.name}
-                            </TableCell>) }
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        <PermissionList />
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </div>
+        <TableContainer component={Paper} style={{overflowX: "initial"}}>
+            <Table stickyHeader size={"small"} className={"table-striped"}>
+                <TableHead>
+                    <TableRow>
+                        <TableCell>{L("permission")}</TableCell>
+                        <BorderedColumn align={"center"}><i>{L("everyone")}</i></BorderedColumn>
+                        { groups.map(group => <TableCell key={"group-" + group.id} align={"center"}>
+                            {group.name}
+                        </TableCell>) }
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    <PermissionList />
+                </TableBody>
+            </Table>
+        </TableContainer>
         <Dialog show={dialogData.open}
                 onClose={() => setDialogData({open: false})}
                 title={dialogData.title}
@@ -268,6 +283,5 @@ export default function AccessControlList(props) {
                 onOption={dialogData.onOption}
                 inputs={dialogData.inputs}
                 options={[L("general.ok"), L("general.cancel")]} />
-
     </>
 }

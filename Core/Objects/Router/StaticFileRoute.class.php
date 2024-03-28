@@ -4,6 +4,7 @@ namespace Core\Objects\Router;
 
 use Core\Driver\SQL\SQL;
 use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Core\Objects\DatabaseEntity\Route;
 use Core\Objects\Search\Searchable;
 use Core\Objects\Search\SearchQuery;
@@ -14,6 +15,7 @@ class StaticFileRoute extends Route {
 
   use Searchable;
 
+  #[Transient]
   private int $code;
 
   public function __construct(string $pattern, bool $exact, string $path, int $code = 200) {

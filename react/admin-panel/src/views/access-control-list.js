@@ -18,6 +18,10 @@ import {Add, Delete, Edit, Refresh} from "@material-ui/icons";
 import {USER_GROUP_ADMIN} from "shared/constants";
 import Dialog from "shared/elements/dialog";
 
+const BorderedColumn = styled(TableCell)({
+    borderLeft: "1px dotted #666",
+    borderRight: "1px dotted #666",
+});
 
 export default function AccessControlList(props) {
 
@@ -202,11 +206,6 @@ export default function AccessControlList(props) {
 
         return <>{rows}</>
     }
-
-    const BorderedColumn = styled(TableCell)({
-        borderLeft: "1px dotted #666",
-        borderRight: "1px dotted #666",
-    });
 
     return <>
         <div className={"content-header"}>

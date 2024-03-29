@@ -9,6 +9,7 @@ namespace Core\API {
 
     public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
       parent::__construct($context, $externalCall, $params);
+      $this->loginRequired = true;
     }
 
     protected function fetchAPIKey(int $apiKeyId): ApiKey|bool {
@@ -41,7 +42,6 @@ namespace Core\API\ApiKey {
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, array());
       $this->apiKeyAllowed = false;
-      $this->loginRequired = true;
     }
 
     public function _execute(): bool {
@@ -73,9 +73,7 @@ namespace Core\API\ApiKey {
     public function __construct(Context $context, $externalCall = false) {
       $params = $this->getPaginationParameters(["token", "validUntil", "active"]);
       $params["showActiveOnly"] = new Parameter("showActiveOnly", Parameter::TYPE_BOOLEAN, true, true);
-
       parent::__construct($context, $externalCall, $params);
-      $this->loginRequired = true;
     }
 
     public function _execute(): bool {
@@ -119,7 +117,7 @@ namespace Core\API\ApiKey {
       parent::__construct($context, $externalCall, array(
         "id" => new Parameter("id", Parameter::TYPE_INT),
       ));
-      $this->loginRequired = true;
+      $this->apiKeyAllowed = false;
     }
 
     public function _execute(): bool {
@@ -147,7 +145,6 @@ namespace Core\API\ApiKey {
       parent::__construct($user, $externalCall, array(
         "id" => new Parameter("id", Parameter::TYPE_INT),
       ));
-      $this->loginRequired = true;
     }
 
     public function _execute(): bool {

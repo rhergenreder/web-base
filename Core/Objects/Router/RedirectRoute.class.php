@@ -9,7 +9,7 @@ use JetBrains\PhpStorm\Pure;
 class RedirectRoute extends Route {
 
   #[Transient]
-  private int $code;
+  protected int $code;
 
   public function __construct(string $type, string $pattern, bool $exact, string $destination, int $code = 307) {
     parent::__construct($type, $pattern, $destination, $exact);

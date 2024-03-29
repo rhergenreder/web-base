@@ -14,7 +14,7 @@ class StaticRoute extends Route {
   private int $code;
 
   public function __construct(string $pattern, bool $exact, string $data, int $code = 200) {
-    parent::__construct("static", $pattern, $exact);
+    parent::__construct("static", $pattern, "", $exact);
     $this->data = $data;
     $this->code = $code;
   }

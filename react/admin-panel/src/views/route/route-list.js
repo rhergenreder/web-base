@@ -13,8 +13,13 @@ import {
 import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
 import {Add, Cached, Delete, Edit, Refresh} from "@material-ui/icons";
-import {Quiz} from "@mui/icons-material";
 import Dialog from "shared/elements/dialog";
+
+const RouteTableRow = styled(TableRow)((props) => ({
+    "& td": {
+        fontFamily: "monospace"
+    }
+}));
 
 
 export default function RouteListView(props) {
@@ -109,12 +114,6 @@ export default function RouteListView(props) {
         }
     }, [isGeneratingCache]);
 
-    const RouteTableRow = styled(TableRow)((props) => ({
-        "& td": {
-            fontFamily: "monospace"
-        }
-    }));
-
     const BoolCell = (props) => props.checked ? L("general.yes") : L("general.no")
 
     return <>
@@ -203,11 +202,6 @@ export default function RouteListView(props) {
                                                 onOption: btn => btn === 0 && onDeleteRoute(route.id)
                                             })}>
                                     <Delete />
-                                </IconButton>
-                                <IconButton size={"small"} title={L("general.test")}
-                                            disabled={!api.hasPermission("routes/check")}
-                                            color={"primary"}>
-                                    <Quiz />
                                 </IconButton>
                             </TableCell>
                         </RouteTableRow>

@@ -76,6 +76,7 @@ namespace Core\API\Routes {
   use Core\Objects\DatabaseEntity\Route;
   use Core\Objects\Router\ApiRoute;
   use Core\Objects\Router\Router;
+  use Core\Objects\Router\StaticRoute;
 
   class Fetch extends RoutesAPI {
 
@@ -102,108 +103,40 @@ namespace Core\API\Routes {
     }
   }
 
-  class Save extends RoutesAPI {
-
-    private array $routes;
+  class Get extends RoutesAPI {
 
     public function __construct(Context $context, $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
-        'routes' => new Parameter('routes', Parameter::TYPE_ARRAY, false)
-      ));
+      parent::__construct($context, $externalCall, [
+        "id" => new Parameter("id", Parameter::TYPE_INT)
+      ]);
     }
 
     public function _execute(): bool {
-      if (!$this->validateRoutes()) {
-        return false;
-      }
-
       $sql = $this->context->getSQL();
-      $sql->startTransaction();
+      $routeId = $this->getParam("id");
 
-      // DELETE old rules;
-      $this->success = ($sql->truncate("Route")->execute() !== FALSE);
+      $route = Route::find($sql, $routeId);
       $this->lastError = $sql->getLastError();
-
-      // INSERT new routes
-      if ($this->success) {
-        $insertStatement = Route::getHandler($sql)->getInsertQuery($this->routes);
-        $this->success = ($insertStatement->execute() !== FALSE);
-        $this->lastError = $sql->getLastError();
-      }
+      $this->success = ($route !== FALSE);
 
       if ($this->success) {
-        $sql->commit();
-        return $this->regenerateCache();
-      } else {
-        $sql->rollback();
-        return false;
-      }
-    }
-
-    private function validateRoutes(): bool {
-
-      $this->routes = array();
-      $keys = array(
-        "id" => Parameter::TYPE_INT,
-        "pattern" => [Parameter::TYPE_STRING, Parameter::TYPE_INT],
-        "type" => Parameter::TYPE_STRING,
-        "target" => Parameter::TYPE_STRING,
-        "extra" => Parameter::TYPE_STRING,
-        "active" => Parameter::TYPE_BOOLEAN,
-        "exact" => Parameter::TYPE_BOOLEAN,
-      );
-
-      foreach ($this->getParam("routes") as $index => $route) {
-        foreach ($keys as $key => $expectedType) {
-          if (!array_key_exists($key, $route)) {
-            if ($key !== "id") {  // id is optional
-              return $this->createError("Route $index missing key: $key");
-            } else {
-              continue;
-            }
-          }
-
-          $value = $route[$key];
-          $type = Parameter::parseType($value);
-          if (!is_array($expectedType)) {
-            $expectedType = [$expectedType];
-          }
-
-          if (!in_array($type, $expectedType)) {
-            if (count($expectedType) > 0) {
-              $expectedTypeName = "expected: " . Parameter::names[$expectedType];
-            } else {
-              $expectedTypeName = "expected one of: " . implode(",", array_map(
-                function ($type) {
-                  return Parameter::names[$type];
-                }, $expectedType));
-            }
-            $gotTypeName = Parameter::names[$type];
-            return $this->createError("Route $index has invalid value for key: $key, $expectedTypeName, got: $gotTypeName");
-          }
+        if ($route === null) {
+          return $this->createError("Route not found");
+        } else {
+          $this->result["route"] = $route;
         }
-
-        $type = $route["type"];
-        if (!isset(Route::ROUTE_TYPES[$type])) {
-          return $this->createError("Invalid type: $type");
-        }
-
-        if (empty($route["pattern"])) {
-          return $this->createError("Pattern cannot be empty.");
-        }
-
-        if (empty($route["target"])) {
-          return $this->createError("Target cannot be empty.");
-        }
-
-        $this->routes[] = $route;
       }
 
-      return true;
+      return $this->success;
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to save the site routing", true);
+      $insert->addRow(
+        self::getEndpoint(),
+        [Group::ADMIN, Group::MODERATOR],
+        "Allows users to fetch a single route",
+        true
+      );
     }
   }
 
@@ -218,7 +151,6 @@ namespace Core\API\Routes {
         "exact" => new Parameter("exact", Parameter::TYPE_BOOLEAN),
         "active" => new Parameter("active", Parameter::TYPE_BOOLEAN, true, true),
       ));
-      $this->isPublic = false;
     }
 
     public function _execute(): bool {
@@ -237,6 +169,11 @@ namespace Core\API\Routes {
       $sql = $this->context->getSQL();
       $this->success = $route->save($sql) !== false;
       $this->lastError = $sql->getLastError();
+
+      if ($this->success) {
+        $this->result["routeId"] = $route->getId();
+      }
+
       return $this->success && $this->regenerateCache();
     }
 
@@ -256,7 +193,6 @@ namespace Core\API\Routes {
         "exact" => new Parameter("exact", Parameter::TYPE_BOOLEAN),
         "active" => new Parameter("active", Parameter::TYPE_BOOLEAN, true, true),
       ));
-      $this->isPublic = false;
     }
 
     public function _execute(): bool {
@@ -417,24 +353,17 @@ namespace Core\API\Routes {
   class Check extends RoutesAPI {
     public function __construct(Context $context, bool $externalCall) {
       parent::__construct($context, $externalCall, [
-        "id" => new Parameter("id", Parameter::TYPE_INT),
-        "path" => new StringType("path")
+        "pattern" => new StringType("pattern", 128),
+        "path" => new StringType("path"),
+        "exact" => new Parameter("exact", Parameter::TYPE_BOOLEAN, true, true)
       ]);
     }
 
     protected function _execute(): bool {
-      $sql = $this->context->getSQL();
-      $routeId = $this->getParam("id");
-      $route = Route::find($sql, $routeId);
-      if ($route === false) {
-        $this->lastError = $sql->getLastError();
-        return false;
-      } else if ($route === null) {
-        return $this->createError("Route not found");
-      }
-
-      $this->success = true;
       $path = $this->getParam("path");
+      $pattern = $this->getParam("pattern");
+      $exact = $this->getParam("exact");
+      $route = new StaticRoute($pattern, $exact, "");
       $this->result["match"] = $route->match($path);
       return $this->success;
     }
@@ -442,7 +371,7 @@ namespace Core\API\Routes {
     public static function getDefaultACL(Insert $insert): void {
       $insert->addRow("routes/check",
         [Group::ADMIN, Group::MODERATOR],
-        "Users with this permission can see, if a route is matched with the given path for debugging purposes",
+        "Users with this permission can see, if a route pattern is matched with the given path for debugging purposes",
         true
       );
     }

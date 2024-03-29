@@ -217,6 +217,10 @@ export default class API {
         return this.apiCall("routes/fetch");
     }
 
+    async getRoute(id) {
+        return this.apiCall("routes/get", { id: id });
+    }
+
     async enableRoute(id) {
         return this.apiCall("routes/enable", { id: id });
     }
@@ -229,12 +233,20 @@ export default class API {
         return this.apiCall("routes/remove", { id: id });
     }
 
-    async saveRoutes(routes) {
-        return this.apiCall("routes/save", { routes: routes });
-    }
-
     async regenerateRouterCache() {
         return this.apiCall("routes/generateCache");
+    }
+
+    async testRoute(pattern, path, exact = true) {
+        return this.apiCall("routes/check", { pattern: pattern, path: path, exact: exact });
+    }
+
+    async addRoute(pattern, type, target, extra, exact, active) {
+        return this.apiCall("routes/add", { pattern, type, target, extra, exact, active });
+    }
+
+    async updateRoute(id, pattern, type, target, extra, exact, active) {
+        return this.apiCall("routes/update", { id, pattern, type, target, extra, exact, active });
     }
 
     /** GroupAPI **/

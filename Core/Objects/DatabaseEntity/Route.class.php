@@ -10,7 +10,8 @@ use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Attribute\Unique;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 use Core\Objects\Router\DocumentRoute;
-use Core\Objects\Router\RedirectRoute;
+use Core\Objects\Router\RedirectPermanentlyRoute;
+use Core\Objects\Router\RedirectTemporaryRoute;
 use Core\Objects\Router\Router;
 use Core\Objects\Router\StaticFileRoute;
 
@@ -23,8 +24,8 @@ abstract class Route extends DatabaseEntity {
   const TYPE_REDIRECT_PERMANENTLY = "redirect_permanently";
   const TYPE_REDIRECT_TEMPORARY = "redirect_temporary";
   const ROUTE_TYPES = [
-    self::TYPE_REDIRECT_TEMPORARY => RedirectRoute::class,
-    self::TYPE_REDIRECT_PERMANENTLY => RedirectRoute::class,
+    self::TYPE_REDIRECT_TEMPORARY => RedirectTemporaryRoute::class,
+    self::TYPE_REDIRECT_PERMANENTLY => RedirectPermanentlyRoute::class,
     self::TYPE_STATIC => StaticFileRoute::class,
     self::TYPE_DYNAMIC => DocumentRoute::class
   ];
@@ -58,6 +59,10 @@ abstract class Route extends DatabaseEntity {
 
   public function isActive(): bool {
     return $this->active;
+  }
+
+  public function isExact(): bool {
+    return $this->exact;
   }
 
   private static function parseParamType(?string $type): ?int {

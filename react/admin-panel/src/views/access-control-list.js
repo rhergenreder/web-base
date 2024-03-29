@@ -45,13 +45,13 @@ export default function AccessControlList(props) {
             setFetchACL(false);
             props.api.fetchGroups().then(res => {
                if (!res.success) {
-                   props.showDialog(res.msg, "Error fetching groups");
+                   props.showDialog(res.msg, L("permissions.fetch_group_error"));
                    navigate("/admin/dashboard");
                } else {
                    setGroups(res.groups);
                    props.api.fetchPermissions().then(res => {
                        if (!res.success) {
-                           props.showDialog(res.msg, "Error fetching permissions");
+                           props.showDialog(res.msg, L("permissions.fetch_permission_error"));
                            navigate("/admin/dashboard");
                        } else {
                            setACL(res.permissions);
@@ -67,7 +67,7 @@ export default function AccessControlList(props) {
     }, []);
 
     useEffect(() => {
-        requestModules(props.api, ["general"], currentLocale).then(data => {
+        requestModules(props.api, ["general", "permissions"], currentLocale).then(data => {
             if (!data.success) {
                 props.showDialog("Error fetching translations: " + data.msg);
             }
@@ -103,7 +103,7 @@ export default function AccessControlList(props) {
                    setACL(newACL);
                    props.api.fetchUser();
                } else {
-                   props.showDialog("Error updating permission: " + data.msg);
+                   props.showDialog(data.msg, L("permissions.update_permission_error"));
                }
             });
         }
@@ -116,7 +116,7 @@ export default function AccessControlList(props) {
                 setACL(newACL);
                 props.api.fetchUser();
             } else {
-                props.showDialog("Error deleting permission: " + data.msg);
+                props.showDialog(data.msg, L("permissions.delete_permission_error"));
             }
         })
     }, [acl]);
@@ -130,7 +130,7 @@ export default function AccessControlList(props) {
                 setACL(newACL);
                 props.api.fetchUser();
             } else {
-                props.showDialog("Error updating permission: " + data.msg);
+                props.showDialog(data.msg, L("permissions.update_permission_error"));
             }
         })
     }, [acl]);
@@ -162,11 +162,11 @@ export default function AccessControlList(props) {
                                             disabled={isRestricted(permission.method)}
                                             onClick={() => setDialogData({
                                                 open: true,
-                                                title: L("Edit permission"),
+                                                title: L("permissions.edit_permission"),
                                                 inputs: [
-                                                    { type: "label", value: L("general.method") + ":" },
+                                                    { type: "label", value: L("permissions.method") + ":" },
                                                     { type: "text", name: "method", value: permission.method, disabled: true },
-                                                    { type: "label", value: L("general.description") + ":" },
+                                                    { type: "label", value: L("permissions.description") + ":" },
                                                     { type: "text", name: "description", value: permission.description, maxLength: 128 }
                                                 ],
                                                 onOption: (option, inputData) => option === 0 && onUpdatePermission(inputData, permission.groups)
@@ -177,8 +177,8 @@ export default function AccessControlList(props) {
                                             disabled={isRestricted(permission.method)}
                                             onClick={() => setDialogData({
                                                 open: true,
-                                                title: L("Do you really want to delete this permission?"),
-                                                message: "Method: " + permission.method,
+                                                title: L("permissions.delete_permission_confirm"),
+                                                message: L("permissions.method") + ": " + permission.method,
                                                 onOption: (option) => option === 0 && onDeletePermission(permission.method)
                                             })} >
                                     <Delete />
@@ -212,12 +212,12 @@ export default function AccessControlList(props) {
             <div className={"container-fluid"}>
                 <div className={"row mb-2"}>
                     <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>Access Control List</h1>
+                        <h1 className={"m-0 text-dark"}>{L("permissions.title")}</h1>
                     </div>
                     <div className={"col-sm-6"}>
                         <ol className={"breadcrumb float-sm-right"}>
                             <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">ACL</li>
+                            <li className="breadcrumb-item active">{L("permissions.title_short")}</li>
                         </ol>
                     </div>
                 </div>
@@ -226,10 +226,10 @@ export default function AccessControlList(props) {
         <div className={"row"}>
             <div className={"col-6"}>
                 <div className={"form-group"}>
-                    <label>{L("query")}</label>
+                    <label>{L("permissions.query")}</label>
                     <TextField
                         className={"form-control"}
-                        placeholder={L("search_query") + "…"}
+                        placeholder={L("permissions.query") + "…"}
                         value={query}
                         onChange={e => setQuery(e.target.value)}
                         variant={"outlined"}
@@ -245,7 +245,7 @@ export default function AccessControlList(props) {
                     <Button variant={"outlined"} className={"m-1"} startIcon={<Add />} disabled={!props.api.hasGroup(USER_GROUP_ADMIN)}
                             onClick={() => setDialogData({
                                 open: true,
-                                title: L("Add permission"),
+                                title: L("permissions.add_permission"),
                                 inputs: [
                                     { type: "label", value: L("general.method") + ":" },
                                     { type: "text", name: "method", value: "", placeholder: L("general.method") },
@@ -263,8 +263,8 @@ export default function AccessControlList(props) {
             <Table stickyHeader size={"small"} className={"table-striped"}>
                 <TableHead>
                     <TableRow>
-                        <TableCell>{L("permission")}</TableCell>
-                        <BorderedColumn align={"center"}><i>{L("everyone")}</i></BorderedColumn>
+                        <TableCell>{L("permissions.permission")}</TableCell>
+                        <BorderedColumn align={"center"}><i>{L("permissions.everyone")}</i></BorderedColumn>
                         { groups.map(group => <TableCell key={"group-" + group.id} align={"center"}>
                             {group.name}
                         </TableCell>) }

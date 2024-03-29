@@ -30,6 +30,7 @@ return [
   "cancel" => "Cancel",
   "confirm" => "Confirm",
   "add" => "Add",
+  "select" => "Select",
   "close" => "Close",
   "ok" => "OK",
   "id" => "ID",

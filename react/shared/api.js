@@ -308,12 +308,12 @@ export default class API {
         return res;
     }
 
-    async getLanguageEntries(modules, code=null, useCache=false) {
+    async getLanguageEntries(modules, code=null, compression=null) {
         if (!Array.isArray(modules)) {
             modules = [modules];
         }
 
-        return this.apiCall("language/getEntries", {code: code, modules: modules});
+        return this.apiCall("language/getEntries", {code: code, modules: modules, compression: compression});
     }
 
     /** ApiKeyAPI **/

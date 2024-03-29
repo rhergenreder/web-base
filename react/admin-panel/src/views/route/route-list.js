@@ -42,7 +42,7 @@ export default function RouteListView(props) {
             setFetchRoutes(false);
             props.api.fetchRoutes().then(res => {
                 if (!res.success) {
-                    props.showDialog(res.msg, "Error fetching routes");
+                    props.showDialog(res.msg, L("routes.fetch_routes_error"));
                     navigate("/admin/dashboard");
                 } else {
                     setRoutes(res.routes);
@@ -56,7 +56,7 @@ export default function RouteListView(props) {
     }, []);
 
     useEffect(() => {
-        requestModules(props.api, ["general"], currentLocale).then(data => {
+        requestModules(props.api, ["general", "routes"], currentLocale).then(data => {
             if (!data.success) {
                 props.showDialog("Error fetching translations: " + data.msg);
             }
@@ -67,7 +67,7 @@ export default function RouteListView(props) {
         if (active) {
             props.api.enableRoute(id).then(data => {
                 if (!data.success) {
-                    props.showDialog(data.msg, L("Error enabling route"));
+                    props.showDialog(data.msg, L("routes.enable_route_error"));
                 } else {
                     setRoutes({...routes, [id]: { ...routes[id], active: true }});
                 }
@@ -75,7 +75,7 @@ export default function RouteListView(props) {
         } else {
             props.api.disableRoute(id).then(data => {
                 if (!data.success) {
-                    props.showDialog(data.msg, L("Error enabling route"));
+                    props.showDialog(data.msg, L("routes.disable_route_error"));
                 } else {
                     setRoutes({...routes, [id]: { ...routes[id], active: false }});
                 }
@@ -86,7 +86,7 @@ export default function RouteListView(props) {
     const onDeleteRoute = useCallback(id => {
         props.api.deleteRoute(id).then(data => {
             if (!data.success) {
-                props.showDialog(data.msg, L("Error removing route"));
+                props.showDialog(data.msg, L("routes.remove_route_error"));
             } else {
                 let newRoutes = { ...routes };
                 delete newRoutes[id];
@@ -100,13 +100,13 @@ export default function RouteListView(props) {
             setGeneratingCache(true);
             props.api.regenerateRouterCache().then(data => {
                 if (!data.success) {
-                    props.showDialog(data.msg, L("Error regenerating router cache"));
+                    props.showDialog(data.msg, L("routes.regenerate_router_cache_error"));
                     setGeneratingCache(false);
                 } else {
                     setDialogData({
                         open: true,
                         title: L("general.success"),
-                        message: L("Router cache successfully regenerated"),
+                        message: L("routes.regenerate_router_cache_success"),
                         onClose: () => setGeneratingCache(false)
                     })
                 }
@@ -121,12 +121,12 @@ export default function RouteListView(props) {
             <div className={"container-fluid"}>
                 <div className={"row mb-2"}>
                     <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>Routes</h1>
+                        <h1 className={"m-0 text-dark"}>{L("routes.title")}</h1>
                     </div>
                     <div className={"col-sm-6"}>
                         <ol className={"breadcrumb float-sm-right"}>
                             <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">Routes</li>
+                            <li className="breadcrumb-item active">{L("routes.title")}</li>
                         </ol>
                     </div>
                 </div>
@@ -147,7 +147,7 @@ export default function RouteListView(props) {
                     <Button variant={"outlined"} className={"m-1"} startIcon={<Cached />}
                             disabled={!props.api.hasPermission("routes/generateCache") || isGeneratingCache}
                             onClick={onRegenerateCache} >
-                        {isGeneratingCache ? L("regenerating_cache") + "…" : L("regenerate_cache")}
+                        {isGeneratingCache ? L("routes.regenerating_cache") + "…" : L("routes.regenerate_cache")}
                     </Button>
                 </div>
             </div>
@@ -157,12 +157,12 @@ export default function RouteListView(props) {
                 <TableHead>
                     <TableRow>
                         <TableCell>{L("general.id")}</TableCell>
-                        <TableCell>{L("Route")}</TableCell>
-                        <TableCell>{L("Type")}</TableCell>
-                        <TableCell>{L("Target")}</TableCell>
-                        <TableCell>{L("Extra")}</TableCell>
-                        <TableCell align={"center"}>{L("Active")}</TableCell>
-                        <TableCell align={"center"}>{L("Exact")}</TableCell>
+                        <TableCell>{L("routes.route")}</TableCell>
+                        <TableCell>{L("routes.type")}</TableCell>
+                        <TableCell>{L("routes.target")}</TableCell>
+                        <TableCell>{L("routes.extra")}</TableCell>
+                        <TableCell align={"center"}>{L("routes.active")}</TableCell>
+                        <TableCell align={"center"}>{L("routes.exact")}</TableCell>
                         <TableCell align={"center"}>{L("general.controls")}</TableCell>
                     </TableRow>
                 </TableHead>

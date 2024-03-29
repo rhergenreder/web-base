@@ -115,7 +115,8 @@ namespace Core\API\Language {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, [
         "code" => new StringType("code", 5, true, NULL),
-        "modules" => new ArrayType("modules", Parameter::TYPE_STRING, true, false)
+        "modules" => new ArrayType("modules", Parameter::TYPE_STRING, true, false),
+        "compression" => new StringType("compression", -1, true, NULL, ["gzip", "zlib"])
       ]);
       $this->loginRequired = false;
       $this->csrfTokenRequired = false;
@@ -156,7 +157,23 @@ namespace Core\API\Language {
       }
 
       $this->result["code"] = $code;
-      $this->result["entries"] = $entries;
+
+      $compression = $this->getParam("compression");
+      if ($compression) {
+        switch ($compression) {
+          case "gzip":
+            $this->result["compressed"] = base64_encode(gzencode(json_encode($entries), 9));
+            break;
+          case "zlib":
+            $this->result["compressed"] = base64_encode(gzcompress(json_encode($entries), 9, ZLIB_ENCODING_DEFLATE));
+            break;
+          default:
+            http_response_code(400);
+            return $this->createError("Invalid compression method: $compression");
+        }
+      } else {
+        $this->result["entries"] = $entries;
+      }
       return true;
     }
   }

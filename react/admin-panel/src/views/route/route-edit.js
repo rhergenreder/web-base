@@ -48,7 +48,7 @@ export default function RouteEditView(props) {
     const [isSaving, setSaving] = useState(false);
 
     useEffect(() => {
-        requestModules(props.api, ["general"], currentLocale).then(data => {
+        requestModules(props.api, ["general", "routes"], currentLocale).then(data => {
             if (!data.success) {
                 props.showDialog("Error fetching translations: " + data.msg);
             }
@@ -122,15 +122,13 @@ export default function RouteEditView(props) {
         <div className={"container-fluid"}>
             <ol className={"breadcrumb"}>
                 <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                <li className="breadcrumb-item active"><Link to={"/admin/routes"}>Routes</Link></li>
-                <li className="breadcrumb-item active">{isNewRoute ? "New" : "Edit"}</li>
+                <li className="breadcrumb-item active"><Link to={"/admin/routes"}>{L("routes.title")}</Link></li>
+                <li className="breadcrumb-item active">{isNewRoute ? L("general.new") : L("general.edit")}</li>
             </ol>
         </div>
         <div className={"content"}>
             <div className={"container-fluid"}>
-                <h3>{L(isNewRoute ? "Create new Route" : "Edit Route")}</h3>
-                <div className={"col-sm-12 col-lg-6"}>
-                </div>
+                <h3>{L(isNewRoute ? "routes.create_route_title" : "routes.edit_route_title")}</h3>
             </div>
         </div>
         <RouteForm route={route} setRoute={setRoute} />
@@ -147,10 +145,10 @@ export default function RouteEditView(props) {
             </Button>
         </ButtonBar>
         <Box mt={3}>
-            <h5>{L("Validate Route")}</h5>
+            <h5>{L("routes.validate_route")}</h5>
             <MonoSpaceTextField value={routeTest} onChange={e => setRouteTest(e.target.value)}
                 variant={"outlined"} size={"small"} fullWidth={true}
-                placeholder={L("Enter a path to test the route…")} />
+                placeholder={L("routes.validate_route_placeholder") + "…"} />
             <pre>
                 Match: {JSON.stringify(routeTestResult)}
             </pre>

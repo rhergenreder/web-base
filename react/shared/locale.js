@@ -1,7 +1,8 @@
 import React, {useReducer} from 'react';
 import {createContext, useCallback, useState} from "react";
 import { enUS as dateFnsEN, de as dateFnsDE } from 'date-fns/locale';
-import {getCookie, getParameter} from "./util";
+import {encodeText, getCookie, getParameter} from "./util";
+import pako from "pako";
 
 const LocaleContext = createContext(null);
 
@@ -109,7 +110,13 @@ function LocaleProvider(props) {
         }
 
         if (modules.length > 0) {
-            let data = await api.apiCall("language/getEntries", { code: code, modules: modules });
+            let compression = "zlib";
+
+            let data = await api.getLanguageEntries(modules, code, compression);
+
+            if (compression && data.success) {
+                data.entries = JSON.parse(pako.inflate(encodeText(atob(data.compressed)), { to: 'string' }));
+            }
 
             if (useCache) {
                 if (data && data.success) {

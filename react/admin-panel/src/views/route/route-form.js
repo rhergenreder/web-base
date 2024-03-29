@@ -1,4 +1,4 @@
-import {Box, Checkbox, FormControl, FormControlLabel, FormGroup, Select, styled, TextField} from "@material-ui/core";
+import {Checkbox, FormControl, FormControlLabel, Select, styled, TextField} from "@material-ui/core";
 import * as React from "react";
 import {useCallback, useContext, useEffect, useRef} from "react";
 import {LocaleContext} from "shared/locale";
@@ -38,30 +38,30 @@ export default function RouteForm(props) {
 
     const elements = [
         <RouteFormControl key={"form-control-pattern"} fullWidth={true}>
-            <label htmlFor={"route-pattern"}>{L("Pattern")}</label>
+            <label htmlFor={"route-pattern"}>{L("routes.pattern")}</label>
             <TextField id={"route-pattern"} variant={"outlined"} size={"small"}
                        value={route.pattern}
                        onChange={e => setRoute({...route, pattern: e.target.value})} />
         </RouteFormControl>,
-        <FormGroup key={"form-control-exact"}>
-            <FormControlLabel label={L("Exact")} control={<Checkbox
+        <RouteFormControl key={"form-control-exact"}>
+            <FormControlLabel label={L("routes.exact")} control={<Checkbox
                 checked={route.exact}
                 onChange={e => setRoute({...route, exact: e.target.checked})} />} />
-        </FormGroup>,
-        <FormGroup key={"form-control-active"}>
-            <FormControlLabel label={L("Active")} control={<Checkbox
+        </RouteFormControl>,
+        <RouteFormControl key={"form-control-active"}>
+            <FormControlLabel label={L("routes.active")} control={<Checkbox
                 checked={route.active}
                 onChange={e => setRoute({...route, active: e.target.checked})} />} />
-        </FormGroup>,
+        </RouteFormControl>,
         <RouteFormControl key={"form-control-type"} fullWidth={true} size={"small"}>
-            <label htmlFor={"route-type"}>{L("Type")}</label>
+            <label htmlFor={"route-type"}>{L("routes.type")}</label>
             <Select value={route.type} variant={"outlined"} size={"small"} labelId={"route-type"}
                     onChange={e => onChangeRouteType(e.target.value)} native>
-                <option value={""}>Select…</option>
-                <option value={"dynamic"}>Dynamic</option>
-                <option value={"static"}>Static</option>
-                <option value={"redirect_permanently"}>Redirect Permanently</option>
-                <option value={"redirect_temporary"}>Redirect Temporary</option>
+                <option value={""}>{L("general.select")}…</option>
+                <option value={"dynamic"}>{L("routes.type_dynamic")}</option>
+                <option value={"static"}>{L("routes.type_static")}</option>
+                <option value={"redirect_permanently"}>{L("routes.type_redirect_permanently")}</option>
+                <option value={"redirect_temporary"}>{L("routes.type_redirect_temporary")}</option>
             </Select>
         </RouteFormControl>,
     ];
@@ -77,7 +77,7 @@ export default function RouteForm(props) {
     if (route.type) {
         elements.push(
             <RouteFormControl key={"form-control-target"} fullWidth={true}>
-                <label htmlFor={"route-target"}>{L("Target")}</label>
+                <label htmlFor={"route-target"}>{L("routes.target")}</label>
                 <TextField id={"route-target"} variant={"outlined"} size={"small"}
                            value={route.target}
                            onChange={e => setRoute({...route, target: e.target.value})}/>
@@ -95,23 +95,22 @@ export default function RouteForm(props) {
             }
             elements.push(
                 <RouteFormControl key={"form-control-extra"} fullWidth={true}>
-                    <label htmlFor={"route-extra"}>{L("Arguments")}</label>
+                    <label htmlFor={"route-extra"}>{L("routes.arguments")}</label>
                     <textarea id={"route-extra"}
                               ref={extraRef}
                               value={extraArgs ?? route.extra}
                               onChange={e => setRoute({...route, extra: minifyJson(e.target.value)})}/>
                     <i>{
                         extraArgs === null ?
-                            "Invalid JSON-string" :
-                            (type !== "object" ?
-                                "JSON must be Array or Object" : "JSON ok!")
+                            L("routes.json_err") :
+                                (type !== "object" ? L("routes.json_not_obj") : L("routes.json_ok"))
                     }</i>
                 </RouteFormControl>
             );
         } else if (route.type === "static") {
             elements.push(
                 <RouteFormControl key={"form-control-extra"} fullWidth={true}>
-                    <label htmlFor={"route-extra"}>{L("Status Code")}</label>
+                    <label htmlFor={"route-extra"}>{L("routes.status_code")}</label>
                     <TextField id={"route-extra"} variant={"outlined"} size={"small"}
                                type={"number"} value={route.extra}
                                onChange={e => setRoute({...route, extra: parseInt(e.target.value) || 200})} />

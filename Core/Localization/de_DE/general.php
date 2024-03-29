@@ -19,6 +19,7 @@ return [
   "cancel" => "Abbrechen",
   "confirm" => "Bestätigen",
   "add" => "Hinzufügen",
+  "select" => "Auswählen",
   "ok" => "OK",
   "id" => "ID",
   "user" => "Benutzer",

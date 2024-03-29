@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {Box, MenuItem, Select, Pagination as MuiPagination} from "@mui/material";
+import {Box, Select, Pagination as MuiPagination} from "@mui/material";
 import {sprintf} from "sprintf-js";
 import {FormControl} from "@material-ui/core";
 

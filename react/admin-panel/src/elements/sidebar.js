@@ -44,7 +44,7 @@ export default function Sidebar(props) {
             "name": "admin.settings",
             "icon": "tools"
         },
-        "acl": {
+        "permissions": {
             "name": "admin.acl",
             "icon": "door-open"
         },

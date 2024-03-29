@@ -12,7 +12,7 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    IconButton, styled
+    IconButton, styled, FormGroup, FormLabel, FormControl, Box
 } from "@material-ui/core";
 import {Add, Delete, Edit, Refresh} from "@material-ui/icons";
 import {USER_GROUP_ADMIN} from "shared/constants";
@@ -224,39 +224,40 @@ export default function AccessControlList(props) {
             </div>
         </div>
         <div className={"row"}>
-            <div className={"col-6"}>
-                <div className={"form-group"}>
-                    <label>{L("permissions.query")}</label>
-                    <TextField
-                        className={"form-control"}
-                        placeholder={L("permissions.query") + "…"}
-                        value={query}
-                        onChange={e => setQuery(e.target.value)}
-                        variant={"outlined"}
-                        size={"small"} />
-                </div>
-            </div>
+            <FormGroup className={"col-6"}>
+                <FormLabel>{L("permissions.search")}</FormLabel>
+                <TextField
+                    placeholder={L("permissions.query") + "…"}
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    variant={"outlined"}
+                    size={"small"} />
+            </FormGroup>
             <div className={"col-6 text-right"}>
-                <label>{L("general.controls")}</label>
-                <div className={"form-group"}>
-                    <Button variant={"outlined"} color={"primary"} className={"m-1"} startIcon={<Refresh />} onClick={() => onFetchACL(true)}>
+                <Box>
+                    <FormLabel>{L("general.controls")}</FormLabel>
+                </Box>
+                <Box mb={2}>
+                    <Button variant={"outlined"} color={"primary"} className={"mr-1"}
+                            startIcon={<Refresh />} onClick={() => onFetchACL(true)}>
                         {L("general.reload")}
                     </Button>
-                    <Button variant={"outlined"} className={"m-1"} startIcon={<Add />} disabled={!props.api.hasGroup(USER_GROUP_ADMIN)}
+                    <Button variant={"outlined"} startIcon={<Add />}
+                            disabled={!props.api.hasGroup(USER_GROUP_ADMIN)}
                             onClick={() => setDialogData({
                                 open: true,
                                 title: L("permissions.add_permission"),
                                 inputs: [
-                                    { type: "label", value: L("general.method") + ":" },
-                                    { type: "text", name: "method", value: "", placeholder: L("general.method") },
-                                    { type: "label", value: L("general.description") + ":" },
-                                    { type: "text", name: "description", maxLength: 128, placeholder: L("general.description") }
+                                    { type: "label", value: L("permissions.method") + ":" },
+                                    { type: "text", name: "method", value: "", placeholder: L("permissions.method") },
+                                    { type: "label", value: L("permissions.description") + ":" },
+                                    { type: "text", name: "description", maxLength: 128, placeholder: L("permissions.description") }
                                 ],
                                 onOption: (option, inputData) => option === 0 && onUpdatePermission(inputData, [])
                             })} >
                         {L("general.add")}
                     </Button>
-                </div>
+                </Box>
             </div>
         </div>
         <TableContainer component={Paper} style={{overflowX: "initial"}}>

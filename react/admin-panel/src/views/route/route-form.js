@@ -1,7 +1,8 @@
-import {Checkbox, FormControl, FormControlLabel, Select, styled, TextField} from "@material-ui/core";
+import {Box, Checkbox, FormControl, FormControlLabel, Select, styled, TextField} from "@material-ui/core";
 import * as React from "react";
 import {useCallback, useContext, useEffect, useRef} from "react";
 import {LocaleContext} from "shared/locale";
+import {CheckCircle, ErrorRounded} from "@material-ui/icons";
 
 const RouteFormControl = styled(FormControl)((props) => ({
     "& > label": {
@@ -85,11 +86,12 @@ export default function RouteForm(props) {
         );
 
         if (route.type === "dynamic") {
-            let extraArgs, type;
+            let extraArgs, type, isValid = false;
             try {
                 extraArgs = JSON.parse(route.extra);
                 type = typeof extraArgs;
                 extraArgs = JSON.stringify(extraArgs, null, 2);
+                isValid = type === "object";
             } catch (e) {
                 extraArgs = null
             }
@@ -97,14 +99,16 @@ export default function RouteForm(props) {
                 <RouteFormControl key={"form-control-extra"} fullWidth={true}>
                     <label htmlFor={"route-extra"}>{L("routes.arguments")}</label>
                     <textarea id={"route-extra"}
-                              ref={extraRef}
+                              ref={extraRef} style={!isValid ? {borderColor: "red"} : {}}
                               value={extraArgs ?? route.extra}
                               onChange={e => setRoute({...route, extra: minifyJson(e.target.value)})}/>
-                    <i>{
+                    <Box mt={1} fontStyle={"italic"} display={"grid"} gridTemplateColumns={"30px auto"}>{
                         extraArgs === null ?
-                            L("routes.json_err") :
-                                (type !== "object" ? L("routes.json_not_obj") : L("routes.json_ok"))
-                    }</i>
+                            <><ErrorRounded color={"secondary"}/><span>{L("routes.json_err")}</span></> :
+                                (type !== "object" ?
+                                    <><ErrorRounded color={"secondary"}/><span>{L("routes.json_not_object")}</span></> :
+                                    <><CheckCircle color={"primary"} /><span>{L("routes.json_ok")}</span></>)
+                    }</Box>
                 </RouteFormControl>
             );
         } else if (route.type === "static") {

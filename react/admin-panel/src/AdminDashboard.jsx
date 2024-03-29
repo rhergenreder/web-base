@@ -37,8 +37,8 @@ export default function AdminDashboard(props) {
 
     const showDialog = useCallback((message, title, options=["Close"], onOption = null) => {
         setDialog({
-            show: true, message:
-            message,
+            show: true,
+            message: message,
             title: title,
             options: options,
             onOption: onOption,
@@ -80,27 +80,12 @@ export default function AdminDashboard(props) {
                             <Route path={"/admin/groups"} element={<GroupListView {...controlObj} />}/>
                             <Route path={"/admin/group/:groupId"} element={<EditGroupView {...controlObj} />}/>
                             <Route path={"/admin/logs"} element={<LogView {...controlObj} />}/>
-                            <Route path={"/admin/acl"} element={<AccessControlList {...controlObj} />}/>
+                            <Route path={"/admin/permissions"} element={<AccessControlList {...controlObj} />}/>
                             <Route path={"/admin/routes"} element={<RouteListView {...controlObj} />}/>
                             <Route path={"/admin/routes/:routeId"} element={<RouteEditView {...controlObj} />}/>
                             <Route path={"*"} element={<View404 />} />
                         </Routes>
                     </Suspense>
-                    {/*<Route exact={true} path={"/admin/users"}><UserOverview {...this.controlObj} /></Route>
-                                <Route path={"/admin/user/add"}><CreateUser {...this.controlObj} /></Route>
-                                <Route path={"/admin/user/edit/:userId"} render={(props) => {
-                                    let newProps = {...props, ...this.controlObj};
-                                    return <EditUser {...newProps} />
-                                }}/>
-                                <Route path={"/admin/user/permissions"}><PermissionSettings {...this.controlObj}/></Route>
-                                <Route path={"/admin/group/add"}><CreateGroup {...this.controlObj} /></Route>
-                                <Route exact={true} path={"/admin/contact/"}><ContactRequestOverview {...this.controlObj} /></Route>
-                                <Route path={"/admin/visitors"}><Visitors {...this.controlObj} /></Route>
-                                <Route path={"/admin/logs"}><Logs {...this.controlObj} notifications={this.state.notifications} /></Route>
-                                <Route path={"/admin/settings"}><Settings {...this.controlObj} /></Route>
-                                <Route path={"/admin/pages"}><PageOverview {...this.controlObj} /></Route>
-                                <Route path={"/admin/help"}><HelpPage {...this.controlObj} /></Route>
-                                <Route path={"*"}><View404 /></Route>*/}
                     <Dialog {...dialog}/>
                 </section>
             </div>

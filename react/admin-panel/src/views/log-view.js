@@ -4,12 +4,12 @@ import {Link} from "react-router-dom";
 import usePagination from "shared/hooks/pagination";
 import {DataColumn, DataTable, DateTimeColumn, NumericColumn, StringColumn} from "shared/elements/data-table";
 import {TextField} from "@mui/material";
-import {DesktopDateTimePicker} from "@mui/x-date-pickers";
+import {DateTimePicker} from "@mui/x-date-pickers";
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import {API_DATETIME_FORMAT} from "shared/constants";
 import {format, toDate} from "date-fns";
-import {Select} from "@material-ui/core";
+import {FormControl, FormGroup, FormLabel, MenuItem, Select} from "@material-ui/core";
 
 export default function LogView(props) {
 
@@ -30,7 +30,7 @@ export default function LogView(props) {
     const [forceReload, setForceReload] = useState(0);
 
     useEffect(() => {
-        requestModules(props.api, ["general"], currentLocale).then(data => {
+        requestModules(props.api, ["general", "logs"], currentLocale).then(data => {
             if (!data.success) {
                 props.showDialog("Error fetching translations: " + data.msg);
             }
@@ -38,16 +38,22 @@ export default function LogView(props) {
     }, [currentLocale]);
 
     const onFetchLogs = useCallback((page, count, orderBy, sortOrder) => {
+        let apiTimeStamp = null;
+        try {
+            if (timestamp) {
+                apiTimeStamp = format(timestamp, API_DATETIME_FORMAT);
+            }
+        } catch (e) {
+            apiTimeStamp = null;
+        }
+
         api.fetchLogEntries(page, count, orderBy, sortOrder,
-                LOG_LEVELS[logLevel],
-                timestamp ? format(timestamp, API_DATETIME_FORMAT) : null,
-                query
-        ).then((res) => {
+                LOG_LEVELS[logLevel], apiTimeStamp, query).then((res) => {
             if (res.success) {
                 setLogEntries(res.logs);
                 pagination.update(res.pagination);
             } else {
-                showDialog(res.msg, "Error fetching log entries");
+                showDialog(res.msg, L("logs.fetch_logs_error"));
                 return null;
             }
         });
@@ -59,7 +65,7 @@ export default function LogView(props) {
     }, [query, timestamp, logLevel]);
 
     const messageColumn = (() => {
-        let column = new DataColumn(L("message"), "message");
+        let column = new DataColumn(L("logs.message"), "message");
         column.sortable = false;
         column.renderData = (L, entry) => {
             return <pre>{entry.message}</pre>
@@ -69,9 +75,9 @@ export default function LogView(props) {
 
     const columnDefinitions = [
         new NumericColumn(L("general.id"), "id"),
-        new StringColumn(L("module"), "module"),
-        new StringColumn(L("severity"), "severity"),
-        new DateTimeColumn(L("timestamp"), "timestamp", { precise: true }),
+        new StringColumn(L("logs.module"), "module"),
+        new StringColumn(L("logs.severity"), "severity"),
+        new DateTimeColumn(L("logs.timestamp"), "timestamp", { precise: true }),
         messageColumn,
     ];
 
@@ -80,54 +86,55 @@ export default function LogView(props) {
             <div className={"container-fluid"}>
                 <div className={"row mb-2"}>
                     <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>System Log</h1>
+                        <h1 className={"m-0 text-dark"}>{L("logs.title")}</h1>
                     </div>
                     <div className={"col-sm-6"}>
                         <ol className={"breadcrumb float-sm-right"}>
                             <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">System Log</li>
+                            <li className="breadcrumb-item active">{L("logs.title")}</li>
                         </ol>
                     </div>
                 </div>
             </div>
             <div className={"content overflow-auto"}>
                 <div className={"row p-2"}>
-                    <div className={"col-2"}>
-                        <div className={"form-group"}>
-                            <label>{L("log.severity")}</label>
-                            <Select native className={"form-control"} value={logLevel} onChange={e => setLogLevel(parseInt(e.target.value))}>
+                    <FormGroup className={"col-2"}>
+                        <FormLabel>{L("logs.severity")}</FormLabel>
+                        <FormControl>
+                            <TextField select variant={"outlined"} size={"small"} value={logLevel}
+                                    onChange={e => setLogLevel(parseInt(e.target.value))}
+                                    inputProps={{ size: "small" }}>
                                 {LOG_LEVELS.map((value, index) =>
-                                    <option key={"option-" + value} value={index}>{value}</option>)
+                                    <MenuItem key={"option-" + value} value={index}>{value}</MenuItem>)
                                 }
-                            </Select>
-                        </div>
-                    </div>
-                    <div className={"col-4"}>
-                        <div className={"form-group"}>
-                            <label>{L("log.timestamp")}</label>
+                            </TextField>
+                        </FormControl>
+                    </FormGroup>
+                    <FormGroup className={"col-4"}>
+                        <FormLabel>{L("logs.timestamp")}</FormLabel>
+                        <FormControl>
                             <LocalizationProvider dateAdapter={AdapterDateFns}>
-                                <DesktopDateTimePicker className={"form-control"}
-                                                label={L("Select date time to filter...")}
+                                <DateTimePicker label={L("logs.timestamp_placeholder") + "…"}
                                                 value={timestamp ? toDate(new Date()) : null}
                                                 format={L("general.datefns_datetime_format_precise")}
                                                 onChange={(newValue) => setTimestamp(newValue)}
-                                                slotProps={{ textField: {  } }}
+                                                slotProps={{ textField: { size:'small' } }}
+                                                sx={{"& .MuiInputBase-input": { height: "23px", padding: 1 }}}
                                 />
                             </LocalizationProvider>
-                        </div>
-                    </div>
-                    <div className={"col-6"}>
-                        <div className={"form-group"}>
-                            <label>{L("log.query")}</label>
+                        </FormControl>
+                    </FormGroup>
+                    <FormGroup className={"col-6"}>
+                        <FormLabel>{L("logs.search")}</FormLabel>
+                        <FormControl>
                             <TextField
-                                className={"form-control"}
-                                placeholder={L("log.search_query") + "…"}
+                                placeholder={L("logs.search_query") + "…"}
                                 value={query}
                                 onChange={e => setQuery(e.target.value)}
                                 variant={"outlined"}
                                 size={"small"}/>
-                        </div>
-                    </div>
+                        </FormControl>
+                    </FormGroup>
                 </div>
                 <div className={"container-fluid"}>
                     <DataTable
@@ -138,7 +145,7 @@ export default function LogView(props) {
                         forceReload={forceReload}
                         defaultSortColumn={3}
                         defaultSortOrder={"desc"}
-                        placeholder={"No log entries to display"}
+                        placeholder={L("logs.no_entries_placeholder")}
                         columns={columnDefinitions} />
                 </div>
             </div>

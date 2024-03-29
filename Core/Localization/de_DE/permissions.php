@@ -3,6 +3,7 @@
 return [
   "title" => "Berechtigungen",
   "title_short" => "ACL",
+  "search" => "Suche",
   "query" => "Suchanfrage",
   "add_permission" => "Berechtigung hinzufügen",
   "permission" => "Berechtigung",

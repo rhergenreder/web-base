@@ -9,6 +9,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import {API_DATETIME_FORMAT} from "shared/constants";
 import {format, toDate} from "date-fns";
+import {Select} from "@material-ui/core";
 
 export default function LogView(props) {
 
@@ -59,6 +60,7 @@ export default function LogView(props) {
 
     const messageColumn = (() => {
         let column = new DataColumn(L("message"), "message");
+        column.sortable = false;
         column.renderData = (L, entry) => {
             return <pre>{entry.message}</pre>
         }
@@ -93,11 +95,11 @@ export default function LogView(props) {
                     <div className={"col-2"}>
                         <div className={"form-group"}>
                             <label>{L("log.severity")}</label>
-                            <select className={"form-control"} value={logLevel} onChange={e => setLogLevel(parseInt(e.target.value))}>
+                            <Select native className={"form-control"} value={logLevel} onChange={e => setLogLevel(parseInt(e.target.value))}>
                                 {LOG_LEVELS.map((value, index) =>
                                     <option key={"option-" + value} value={index}>{value}</option>)
                                 }
-                            </select>
+                            </Select>
                         </div>
                     </div>
                     <div className={"col-4"}>
@@ -109,7 +111,7 @@ export default function LogView(props) {
                                                 value={timestamp ? toDate(new Date()) : null}
                                                 format={L("general.datefns_datetime_format_precise")}
                                                 onChange={(newValue) => setTimestamp(newValue)}
-                                                slotProps={{ textField: { size: 'small' } }}
+                                                slotProps={{ textField: {  } }}
                                 />
                             </LocalizationProvider>
                         </div>

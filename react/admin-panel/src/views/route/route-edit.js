@@ -17,6 +17,12 @@ const ButtonBar = styled(Box)((props) => ({
     }
 }));
 
+const MonoSpaceTextField = styled(TextField)((props) => ({
+    "& input": {
+        fontFamily: "monospace"
+    }
+}));
+
 export default function RouteEditView(props) {
 
     const {api, showDialog} = props;
@@ -142,7 +148,7 @@ export default function RouteEditView(props) {
         </ButtonBar>
         <Box mt={3}>
             <h5>{L("Validate Route")}</h5>
-            <TextField value={routeTest} onChange={e => setRouteTest(e.target.value)}
+            <MonoSpaceTextField value={routeTest} onChange={e => setRouteTest(e.target.value)}
                 variant={"outlined"} size={"small"} fullWidth={true}
                 placeholder={L("Enter a path to test the route…")} />
             <pre>

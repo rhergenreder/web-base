@@ -1,6 +1,6 @@
 import {Box, Checkbox, FormControl, FormControlLabel, FormGroup, Select, styled, TextField} from "@material-ui/core";
 import * as React from "react";
-import {useCallback, useContext} from "react";
+import {useCallback, useContext, useEffect, useRef} from "react";
 import {LocaleContext} from "shared/locale";
 
 const RouteFormControl = styled(FormControl)((props) => ({
@@ -16,6 +16,7 @@ export default function RouteForm(props) {
 
     const {route, setRoute} = props;
     const {translate: L} = useContext(LocaleContext);
+    const extraRef = useRef();
 
     const onChangeRouteType = useCallback((type) => {
         let newRoute = {...route, type: type };
@@ -27,6 +28,13 @@ export default function RouteForm(props) {
 
         setRoute(newRoute);
     }, [route]);
+
+    useEffect(() => {
+        if (extraRef.current) {
+            const scrollHeight = extraRef.current.scrollHeight + 5;
+            extraRef.current.style.height = scrollHeight + "px";
+        }
+    }, [extraRef?.current, route.extra]);
 
     const elements = [
         <RouteFormControl key={"form-control-pattern"} fullWidth={true}>
@@ -48,7 +56,7 @@ export default function RouteForm(props) {
         <RouteFormControl key={"form-control-type"} fullWidth={true} size={"small"}>
             <label htmlFor={"route-type"}>{L("Type")}</label>
             <Select value={route.type} variant={"outlined"} size={"small"} labelId={"route-type"}
-                    onChange={e => onChangeRouteType(e.target.value)}>
+                    onChange={e => onChangeRouteType(e.target.value)} native>
                 <option value={""}>Select…</option>
                 <option value={"dynamic"}>Dynamic</option>
                 <option value={"static"}>Static</option>
@@ -57,6 +65,14 @@ export default function RouteForm(props) {
             </Select>
         </RouteFormControl>,
     ];
+
+    const minifyJson = (value) => {
+        try {
+            return JSON.stringify(JSON.parse(value));
+        } catch (e) {
+            return value;
+        }
+    }
 
     if (route.type) {
         elements.push(
@@ -69,9 +85,11 @@ export default function RouteForm(props) {
         );
 
         if (route.type === "dynamic") {
-            let extraArgs;
+            let extraArgs, type;
             try {
-                extraArgs = JSON.parse(route.extra)
+                extraArgs = JSON.parse(route.extra);
+                type = typeof extraArgs;
+                extraArgs = JSON.stringify(extraArgs, null, 2);
             } catch (e) {
                 extraArgs = null
             }
@@ -79,12 +97,13 @@ export default function RouteForm(props) {
                 <RouteFormControl key={"form-control-extra"} fullWidth={true}>
                     <label htmlFor={"route-extra"}>{L("Arguments")}</label>
                     <textarea id={"route-extra"}
-                              value={route.extra}
-                              onChange={e => setRoute({...route, extra: e.target.value})}/>
+                              ref={extraRef}
+                              value={extraArgs ?? route.extra}
+                              onChange={e => setRoute({...route, extra: minifyJson(e.target.value)})}/>
                     <i>{
                         extraArgs === null ?
                             "Invalid JSON-string" :
-                            (typeof extraArgs !== "object" ?
+                            (type !== "object" ?
                                 "JSON must be Array or Object" : "JSON ok!")
                     }</i>
                 </RouteFormControl>

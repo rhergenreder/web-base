@@ -60,13 +60,14 @@ class Pagination {
         return <Box display={"grid"} gridTemplateColumns={"75px auto"} className={"pagination-controls"}>
             <FormControl>
                 <Select
+                    native
                     value={this.data.pageSize}
                     className={"pagination-page-size"}
                     label={L("general.entries_per_page")}
                     onChange={(e) => this.setPageSize(parseInt(e.target.value))}
                     size={"small"}
                 >
-                    {options.map(size => <MenuItem key={"size-" + size} value={size}>{size}</MenuItem>)}
+                    {options.map(size => <option key={"size-" + size} value={size}>{size}</option>)}
                 </Select>
             </FormControl>
             <MuiPagination

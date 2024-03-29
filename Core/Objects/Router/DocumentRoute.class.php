@@ -35,7 +35,7 @@ class DocumentRoute extends Route {
 
   public function preInsert(array &$row) {
     parent::preInsert($row);
-    $this->extra = json_encode($this->args);
+    $this->extra = json_encode($this->args, JSON_UNESCAPED_SLASHES);
   }
 
   #[Pure] private function getClassName(): string {

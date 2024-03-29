@@ -298,7 +298,7 @@ abstract class SQL {
     }
   }
 
-  public function setLastError($str) {
+  public function setLastError($str): void {
     $this->lastError = $str;
   }
 
@@ -306,7 +306,7 @@ abstract class SQL {
     return $this->lastInsertId;
   }
 
-  public function close() {
+  public function close(): void {
     $this->disconnect();
     $this->connection = NULL;
   }

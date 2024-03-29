@@ -9,7 +9,6 @@ namespace Core\API {
       parent::__construct($context, $externalCall, $params);
     }
   }
-
 }
 
 namespace Core\API\Logs {
@@ -34,33 +33,35 @@ namespace Core\API\Logs {
 
     use Pagination;
 
+    protected array $shownLogLevels;
+    protected ?\DateTime $since;
+
     public function __construct(Context $context, bool $externalCall = false) {
       $params =  self::getPaginationParameters(['id', 'timestamp', "module", "severity"],
         'timestamp', 'desc');
       $params["since"] = new Parameter("since", Parameter::TYPE_DATE_TIME, true);
-      $params["severity"] = new StringType("severity", 32, true, "debug");
+      $params["severity"] = new StringType("severity", 32, true, "debug", array_values(Logger::LOG_LEVELS));
       $params["query"] = new StringType("query", 64, true, null);
       parent::__construct($context, $externalCall, $params);
-      $this->csrfTokenRequired = false;
+      $this->shownLogLevels = Logger::LOG_LEVELS;
+      $this->since = null;
     }
 
-    protected function _execute(): bool {
-      $since = $this->getParam("since");
-      $sql = $this->context->getSQL();
+    protected function getFilter(): CondIn|CondAnd|bool {
+      $this->since = $this->getParam("since");
       $severity = strtolower(trim($this->getParam("severity")));
       $query = $this->getParam("query");
-      $shownLogLevels = Logger::LOG_LEVELS;
 
       $logLevel = array_search($severity, Logger::LOG_LEVELS, true);
       if ($logLevel === false) {
         return $this->createError("Invalid severity. Allowed values: " . implode(",", Logger::LOG_LEVELS));
       } else if ($logLevel > 0) {
-        $shownLogLevels = array_slice(Logger::LOG_LEVELS, $logLevel);
+        $this->shownLogLevels = array_slice(Logger::LOG_LEVELS, $logLevel);
       }
 
-      $condition = new CondIn(new Column("severity"), $shownLogLevels);
-      if ($since !== null) {
-        $condition = new CondAnd($condition, new Compare("timestamp", $since, ">="));
+      $condition = new CondIn(new Column("severity"), $this->shownLogLevels);
+      if ($this->since !== null) {
+        $condition = new CondAnd($condition, new Compare("timestamp", $this->since, ">="));
       }
 
       if ($query) {
@@ -70,6 +71,48 @@ namespace Core\API\Logs {
         ));
       }
 
+      return $condition;
+    }
+
+    protected function loadFromFileSystem(array &$logs): void {
+      // get all log entries from filesystem (if database failed)
+      $logPath = realpath(implode(DIRECTORY_SEPARATOR, [WEBROOT, "Site", "Logs"]));
+      if ($logPath) {
+        $index = 1;
+        foreach (scandir($logPath) as $fileName) {
+          $logFile = $logPath . DIRECTORY_SEPARATOR . $fileName;
+          // {module}_{severity}_{date}_{time}_{ms}.log
+          if (preg_match("/^(\w+)_(\w+)_((\d+-\d+-\d+_){2}\d+)\.log$/", $fileName, $matches) && is_file($logFile)) {
+            $content = @file_get_contents($logFile);
+            $date = \DateTime::createFromFormat(Logger::LOG_FILE_DATE_FORMAT, $matches[3]);
+            if ($content && $date) {
+
+              // filter log date
+              if ($this->since !== null && datetimeDiff($date, $this->since) > 0) {
+                continue;
+              }
+
+              // filter log level
+              if (!in_array(trim(strtolower($matches[2])), $this->shownLogLevels)) {
+                continue;
+              }
+
+              $logs[] = [
+                "id" => "file-" . ($index++),
+                "module" => $matches[1],
+                "severity" => $matches[2],
+                "message" => $content,
+                "timestamp" => $date->format(Parameter::DATE_TIME_FORMAT)
+              ];
+            }
+          }
+        }
+      }
+    }
+
+    protected function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $condition = $this->getFilter();
       if (!$this->initPagination($sql, SystemLog::class, $condition)) {
         return false;
       }
@@ -97,40 +140,7 @@ namespace Core\API\Logs {
         ];
       }
 
-      // get all log entries from filesystem (if database failed)
-      $logPath = realpath(implode(DIRECTORY_SEPARATOR, [WEBROOT, "Site", "Logs"]));
-      if ($logPath) {
-        $index = 1;
-        foreach (scandir($logPath) as $fileName) {
-          $logFile = $logPath . DIRECTORY_SEPARATOR . $fileName;
-          // {module}_{severity}_{date}_{time}_{ms}.log
-          if (preg_match("/^(\w+)_(\w+)_((\d+-\d+-\d+_){2}\d+)\.log$/", $fileName, $matches) && is_file($logFile)) {
-            $content = @file_get_contents($logFile);
-            $date = \DateTime::createFromFormat(Logger::LOG_FILE_DATE_FORMAT, $matches[3]);
-            if ($content && $date) {
-
-              // filter log date
-              if ($since !== null && datetimeDiff($date, $since) > 0) {
-                continue;
-              }
-
-              // filter log level
-              if (!in_array(trim(strtolower($matches[2])), $shownLogLevels)) {
-                continue;
-              }
-
-              $this->result["logs"][] = [
-                "id" => "file-" . ($index++),
-                "module" => $matches[1],
-                "severity" => $matches[2],
-                "message" => $content,
-                "timestamp" => $date->format(Parameter::DATE_TIME_FORMAT)
-              ];
-            }
-          }
-        }
-      }
-
+      $this->loadFromFileSystem($this->result["logs"]);
       return true;
     }
 
@@ -138,5 +148,4 @@ namespace Core\API\Logs {
       $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch system logs", true);
     }
   }
-
 }

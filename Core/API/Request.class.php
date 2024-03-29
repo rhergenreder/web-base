@@ -32,17 +32,20 @@ abstract class Request {
     $this->context = $context;
     $this->logger = new Logger($this->getAPIName(), $this->context->getSQL());
     $this->defaultParams = $params;
+    $this->externalCall = $externalCall;
+    $this->variableParamCount = false;
 
+    // result
+    $this->lastError = "";
     $this->success = false;
     $this->result = array();
-    $this->externalCall = $externalCall;
+
+    // restrictions
     $this->isPublic = true;
     $this->isDisabled = false;
     $this->loginRequired = false;
-    $this->variableParamCount = false;
     $this->apiKeyAllowed = true;
     $this->allowedMethods = array("GET", "POST");
-    $this->lastError = "";
     $this->csrfTokenRequired = true;
   }
 
@@ -267,14 +270,19 @@ abstract class Request {
     }
 
     $this->success = true;
-    $success = $this->_execute();
-    if ($this->success !== $success) {
-      // _execute returns a different value then it set for $this->success
-      // this should actually not occur, how to handle this case?
-      $this->success = $success;
+    try {
+      $success = $this->_execute();
+      if ($this->success !== $success) {
+        // _execute might return a different value then it set for $this->success
+        // this should actually not occur, how to handle this case?
+        $this->success = $success;
+      }
+    } catch (\Error $err) {
+      $this->createError($err->getMessage());
+      $this->logger->error($err->getMessage());
     }
 
-    $sql->setLastError('');
+    $sql->setLastError("");
     return $this->success;
   }
 

@@ -114,7 +114,7 @@ namespace Core\API\Permission {
       }
 
       $sql = $this->context->getSQL();
-      $res = $sql->select("method", "groups", "description", "isCore")
+      $res = $sql->select("method", "groups", "description", "is_core")
         ->from("ApiPermission")
         ->execute();
 
@@ -127,12 +127,12 @@ namespace Core\API\Permission {
           $method = $row["method"];
           $description = $row["description"];
           $groups = json_decode($row["groups"]);
-          $isCore = $row["isCore"];
+          $isCore = $row["is_core"];
           $permissions[] = [
             "method" => $method,
             "groups" => $groups,
             "description" => $description,
-            "isCore" => $isCore
+            "is_core" => $isCore
           ];
         }
         $this->result["permissions"] = $permissions;
@@ -181,11 +181,11 @@ namespace Core\API\Permission {
       }
 
       if ($description === null) {
-        $updateQuery = $sql->insert("ApiPermission", ["method", "groups", "isCore"])
+        $updateQuery = $sql->insert("ApiPermission", ["method", "groups", "is_core"])
           ->onDuplicateKeyStrategy(new UpdateStrategy(["method"], ["groups" => $groupIds]))
           ->addRow($method, $groupIds, false);
       } else {
-        $updateQuery = $sql->insert("ApiPermission", ["method", "groups", "isCore", "description"])
+        $updateQuery = $sql->insert("ApiPermission", ["method", "groups", "is_core", "description"])
           ->onDuplicateKeyStrategy(new UpdateStrategy(["method"], ["groups" => $groupIds, "description" => $description]))
           ->addRow($method, $groupIds, false, $description);
       }

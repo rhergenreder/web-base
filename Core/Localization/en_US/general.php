@@ -59,7 +59,6 @@ return [
   "move" => "Move",
   "overwrite" => "Overwrite",
 
-
   # data table
   "showing_x_of_y_entries" => "Showing %d of %d entries",
   "controls" => "Controls",

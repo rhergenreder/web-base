@@ -278,6 +278,7 @@ abstract class Request {
         $this->success = $success;
       }
     } catch (\Error $err) {
+      http_response_code(500);
       $this->createError($err->getMessage());
       $this->logger->error($err->getMessage());
     }

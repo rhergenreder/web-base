@@ -5,7 +5,7 @@ import {
     BoolColumn,
     ControlsColumn,
     DataColumn,
-    DataTable,
+    DataTable, DateTimeColumn,
     NumericColumn,
     StringColumn
 } from "shared/elements/data-table";
@@ -48,7 +48,11 @@ export default function UserListView(props) {
     const groupColumn = (() => {
        let column = new DataColumn(L("account.groups"), "groups");
        column.renderData = (L, entry) => {
-           return Object.values(entry.groups).map(group => <Chip key={"group-" + group.id} label={group.name}/>)
+           return Object.values(entry.groups).map(group => <Chip
+               key={"group-" + group.id}
+               style={{ backgroundColor: group.color }}
+               label={group.name} />
+           )
        }
        return column;
     })();
@@ -59,6 +63,8 @@ export default function UserListView(props) {
         new StringColumn(L("account.full_name"), "fullName"),
         new StringColumn(L("account.email"), "email"),
         groupColumn,
+        new DateTimeColumn(L("account.registered_at"), "registeredAt"),
+        new BoolColumn(L("account.active"), "active", { align: "center" }),
         new BoolColumn(L("account.confirmed"), "confirmed", { align: "center" }),
         new ControlsColumn(L("general.controls"), [
             { label: L("general.edit"), element: EditIcon, onClick: (entry) => navigate(`/admin/user/${entry.id}`) }

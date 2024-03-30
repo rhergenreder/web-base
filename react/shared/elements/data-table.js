@@ -83,7 +83,11 @@ export function DataTable(props) {
                                       title={L("general.sort_by") + ": " + column.label}
                                       onClick={() => onChangeSort(index, column)}
                                       align={column.align}>
-                {sortColumn === index ? (sortAscending ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />): <></>}{column.renderHead(index)}
+                {sortColumn === index ?
+                    (sortAscending ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />) :
+                    <></>
+                }
+                {column.renderHead(index)}
             </TableCell>);
         } else {
             headerRow.push(<TableCell key={"col-" + index} align={column.align}>

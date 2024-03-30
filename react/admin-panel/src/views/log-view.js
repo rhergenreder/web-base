@@ -9,7 +9,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import {API_DATETIME_FORMAT} from "shared/constants";
 import {format, toDate} from "date-fns";
-import {FormControl, FormGroup, FormLabel, MenuItem, Select} from "@material-ui/core";
+import {Box, FormControl, FormGroup, FormLabel, IconButton, MenuItem, Select} from "@material-ui/core";
+import {ExpandLess, ExpandMore} from "@material-ui/icons";
 
 export default function LogView(props) {
 
@@ -59,6 +60,16 @@ export default function LogView(props) {
         });
     }, [api, showDialog, logLevel, timestamp, query]);
 
+    const onToggleDetails = useCallback(entry => {
+        let newLogEntries = [...logEntries];
+        for (const logEntry of newLogEntries) {
+            if (logEntry.id === entry.id) {
+                logEntry.showDetails = !logEntry.showDetails;
+            }
+        }
+        setLogEntries(newLogEntries);
+    }, [logEntries]);
+
     useEffect(() => {
         // TODO: wait for user to finish typing before force reloading
         setForceReload(forceReload + 1);
@@ -68,7 +79,19 @@ export default function LogView(props) {
         let column = new DataColumn(L("logs.message"), "message");
         column.sortable = false;
         column.renderData = (L, entry) => {
-            return <pre>{entry.message}</pre>
+            return <Box display={"grid"} gridTemplateColumns={"40px auto"}>
+                    <Box alignSelf={"top"} textAlign={"center"}>
+                        <IconButton size={"small"} onClick={() => onToggleDetails(entry)}
+                                    title={L(entry.showDetails ? "logs.hide_details" : "logs.show_details")}>
+                            {entry.showDetails ? <ExpandLess /> : <ExpandMore />}
+                        </IconButton>
+                    </Box>
+                    <Box alignSelf={"center"}>
+                        <pre>
+                            {entry.showDetails ? entry.message : entry.message.split("\n")[0]}
+                        </pre>
+                    </Box>
+                </Box>
         }
         return column;
     })();

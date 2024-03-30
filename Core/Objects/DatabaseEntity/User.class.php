@@ -45,6 +45,10 @@ class User extends DatabaseEntity {
   #[DefaultValue(false)]
   public bool $confirmed;
 
+  #[Visibility(Visibility::BY_GROUP, Group::ADMIN, Group::SUPPORT)]
+  #[DefaultValue(true)]
+  public bool $active;
+
   #[DefaultValue(Language::AMERICAN_ENGLISH)] public Language $language;
 
   #[Visibility(Visibility::BY_GROUP, Group::ADMIN, Group::SUPPORT)]
@@ -90,6 +94,14 @@ class User extends DatabaseEntity {
 
   public function getProfilePicture(): ?string {
     return $this->profilePicture;
+  }
+
+  public function isActive():bool {
+    return $this->active;
+  }
+
+  public function isConfirmed():bool {
+    return $this->confirmed;
   }
 
   public function __debugInfo(): array {

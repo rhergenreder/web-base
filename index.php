@@ -65,7 +65,13 @@ if ($installation) {
       is_string($_GET["error"]) && preg_match("/^\d+$/", $_GET["error"])) {
       $response = $router->returnStatusCode(intval($_GET["error"]));
     } else {
-      $response = $router->run($requestedUri);
+      try {
+        $response = $router->run($requestedUri);
+      } catch (\Error $e) {
+        http_response_code(500);
+        $router->getLogger()->error($e->getMessage());
+        $router->returnStatusCode(500);
+      }
     }
   }
 

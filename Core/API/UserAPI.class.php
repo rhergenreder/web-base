@@ -576,26 +576,26 @@ namespace Core\API\User {
       if ($user !== false) {
         if ($user === null) {
           return $this->wrongCredentials();
-        } else {
-          if (password_verify($password, $user->password)) {
-            if (!$user->confirmed) {
-              $this->result["emailConfirmed"] = false;
-              return $this->createError("Your email address has not been confirmed yet.");
-            } else if (!($session = $this->context->createSession($user, $stayLoggedIn))) {
-              return $this->createError("Error creating Session: " . $sql->getLastError());
-            } else {
-              $tfaToken = $user->getTwoFactorToken();
-
-              $this->result["loggedIn"] = true;
-              $this->result["user"] = $user->jsonSerialize();
-              $this->result["session"] = $session->jsonSerialize();
-              $this->result["logoutIn"] = $session->getExpiresSeconds();
-              $this->check2FA($tfaToken);
-              $this->success = true;
-            }
+        } else if (!$user->isActive()) {
+          return $this->createError("This user is currently disabled. Contact the server administrator, if you believe this is a mistake.");
+        } else if (password_verify($password, $user->password)) {
+          if (!$user->confirmed) {
+            $this->result["emailConfirmed"] = false;
+            return $this->createError("Your email address has not been confirmed yet.");
+          } else if (!($session = $this->context->createSession($user, $stayLoggedIn))) {
+            return $this->createError("Error creating Session: " . $sql->getLastError());
           } else {
-            return $this->wrongCredentials();
+            $tfaToken = $user->getTwoFactorToken();
+
+            $this->result["loggedIn"] = true;
+            $this->result["user"] = $user->jsonSerialize();
+            $this->result["session"] = $session->jsonSerialize();
+            $this->result["logoutIn"] = $session->getExpiresSeconds();
+            $this->check2FA($tfaToken);
+            $this->success = true;
           }
+        } else {
+          return $this->wrongCredentials();
         }
       } else {
         return $this->createError("Error fetching user details: " . $sql->getLastError());
@@ -934,43 +934,47 @@ namespace Core\API\User {
       if ($user === false) {
         return $this->createError("Could not fetch user details: " . $sql->getLastError());
       } else if ($user !== null) {
-        $validHours = 1;
-        $token = generateRandomString(36);
-        $userToken = new UserToken($user, $token, UserToken::TYPE_PASSWORD_RESET, $validHours);
-        if (!$userToken->save($sql)) {
-          return $this->createError("Could not create user token: " . $sql->getLastError());
-        }
+        if (!$user->isActive()) {
+          return $this->createError("This user is currently disabled. Contact the server administrator, if you believe this is a mistake.");
+        } else {
+          $validHours = 1;
+          $token = generateRandomString(36);
+          $userToken = new UserToken($user, $token, UserToken::TYPE_PASSWORD_RESET, $validHours);
+          if (!$userToken->save($sql)) {
+            return $this->createError("Could not create user token: " . $sql->getLastError());
+          }
 
-        $baseUrl = $settings->getBaseUrl();
-        $siteName = $settings->getSiteName();
+          $baseUrl = $settings->getBaseUrl();
+          $siteName = $settings->getSiteName();
 
-        $req = new Render($this->context);
-        $this->success = $req->execute([
-          "file" => "mail/reset_password.twig",
-          "parameters" => [
-            "link" => "$baseUrl/resetPassword?token=$token",
-            "site_name" => $siteName,
-            "base_url" => $baseUrl,
-            "username" => $user->name,
-            "valid_time" => $this->formatDuration($validHours, "hour")
-          ]
-        ]);
-        $this->lastError = $req->getLastError();
+          $req = new Render($this->context);
+          $this->success = $req->execute([
+            "file" => "mail/reset_password.twig",
+            "parameters" => [
+              "link" => "$baseUrl/resetPassword?token=$token",
+              "site_name" => $siteName,
+              "base_url" => $baseUrl,
+              "username" => $user->name,
+              "valid_time" => $this->formatDuration($validHours, "hour")
+            ]
+          ]);
+          $this->lastError = $req->getLastError();
 
-        if ($this->success) {
-          $messageBody = $req->getResult()["html"];
+          if ($this->success) {
+            $messageBody = $req->getResult()["html"];
 
-          $gpgKey = $user->getGPG();
-          $gpgFingerprint = ($gpgKey && $gpgKey->isConfirmed()) ? $gpgKey->getFingerprint() : null;
-          $request = new \Core\API\Mail\Send($this->context);
-          $this->success = $request->execute(array(
-            "to" => $email,
-            "subject" => "[$siteName] Password Reset",
-            "body" => $messageBody,
-            "gpgFingerprint" => $gpgFingerprint
-          ));
-          $this->lastError = $request->getLastError();
-          $this->logger->info("Requested password reset for user id=" . $user->getId() . " by ip_address=" . $_SERVER["REMOTE_ADDR"]);
+            $gpgKey = $user->getGPG();
+            $gpgFingerprint = ($gpgKey && $gpgKey->isConfirmed()) ? $gpgKey->getFingerprint() : null;
+            $request = new \Core\API\Mail\Send($this->context);
+            $this->success = $request->execute(array(
+              "to" => $email,
+              "subject" => "[$siteName] Password Reset",
+              "body" => $messageBody,
+              "gpgFingerprint" => $gpgFingerprint
+            ));
+            $this->lastError = $request->getLastError();
+            $this->logger->info("Requested password reset for user id=" . $user->getId() . " by ip_address=" . $_SERVER["REMOTE_ADDR"]);
+          }
         }
       }
 

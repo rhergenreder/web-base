@@ -12,4 +12,12 @@ return [
   "acl" => "Access Control",
   "logs" => "Logs",
   "help" => "Help",
+
+  # Dashboard
+  "users_registered" => "Users registered",
+  "available_groups" => "available Groups",
+  "routes_defined" => "Routes defined",
+
+  # Dialogs
+  "fetch_stats_error" => "Error fetching stats",
 ];

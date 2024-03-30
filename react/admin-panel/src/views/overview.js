@@ -1,13 +1,45 @@
 import * as React from "react";
 import {Link} from "react-router-dom";
 import {format, getDaysInMonth} from "date-fns";
-import {CircularProgress, Icon} from "@material-ui/core";
-import {useCallback, useEffect, useState} from "react";
+import {CircularProgress} from "@material-ui/core";
+import {useCallback, useContext, useEffect, useState} from "react";
+import {LocaleContext} from "shared/locale";
+import {LibraryBooks, People} from "@material-ui/icons";
+import {ArrowCircleRight, Groups} from "@mui/icons-material";
+
+const StatBox = (props) => <div className={"col-lg-3 col-6"}>
+    <div className={"small-box bg-" + props.color}>
+        <div className={"inner"}>
+            {props.count ?
+                <>
+                    <h3>{props.count}</h3>
+                    <p>{props.text}</p>
+                </> : <CircularProgress variant={"determinate"} />
+            }
+        </div>
+        <div className={"icon"}>
+            {props.icon}
+        </div>
+        <Link to={props.link} className={"small-box-footer text-right p-1"}>
+            More info <ArrowCircleRight />
+        </Link>
+    </div>
+</div>
 
 export default function Overview(props) {
 
     const [fetchStats, setFetchStats] = useState(true);
     const [stats, setStats] = useState(null);
+    const {translate: L, currentLocale, requestModules} = useContext(LocaleContext);
+
+
+    useEffect(() => {
+        requestModules(props.api, ["general", "admin"], currentLocale).then(data => {
+            if (!data.success) {
+                props.showDialog("Error fetching translations: " + data.msg);
+            }
+        });
+    }, [currentLocale]);
 
     const onFetchStats = useCallback((force = false) => {
         if (force || fetchStats) {
@@ -16,7 +48,7 @@ export default function Overview(props) {
                 if (res.success) {
                     setStats(res.data);
                 } else {
-                    props.showDialog("Error fetching stats: " + res.msg, "Error fetching stats");
+                    props.showDialog(res.msg, L("admin.fetch_stats_error"));
                 }
             });
         }
@@ -73,12 +105,12 @@ export default function Overview(props) {
             <div className={"container-fluid"}>
                 <div className={"row mb-2"}>
                     <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>Dashboard</h1>
+                        <h1 className={"m-0 text-dark"}>{L("admin.dashboard")}</h1>
                     </div>
                     <div className={"col-sm-6"}>
                         <ol className={"breadcrumb float-sm-right"}>
                             <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">Dashboard</li>
+                            <li className="breadcrumb-item active">{L("admin.dashboard")}</li>
                         </ol>
                     </div>
                 </div>
@@ -87,24 +119,18 @@ export default function Overview(props) {
         <section className={"content"}>
             <div className={"container-fluid"}>
                 <div className={"row"}>
-                    <div className={"col-lg-3 col-6"}>
-                        <div className="small-box bg-info">
-                            <div className={"inner"}>
-                                {stats ?
-                                    <>
-                                        <h3>{stats.userCount}</h3>
-                                        <p>Users registered</p>
-                                    </> : <CircularProgress variant={"determinate"} />
-                                }
-                            </div>
-                            <div className="icon">
-                                <Icon icon={"users"} />
-                            </div>
-                            <Link to={"/admin/users"} className="small-box-footer">
-                                More info <Icon icon={"arrow-circle-right"}/>
-                            </Link>
-                        </div>
-                    </div>
+                    <StatBox color={"info"} count={stats?.userCount}
+                             text={L("admin.users_registered")}
+                             icon={<People />}
+                             link={"/admin/users"} />
+                    <StatBox color={"success"} count={stats?.groupCount}
+                             text={L("admin.available_groups")}
+                             icon={<Groups />}
+                             link={"/admin/users"} />
+                    <StatBox color={"warning"} count={stats?.pageCount}
+                             text={L("admin.routes_defined")}
+                             icon={<LibraryBooks />}
+                             link={"/admin/routes"} />
                 </div>
             </div>
         </section>

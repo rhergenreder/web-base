@@ -57,6 +57,7 @@ class Stats extends Request {
     $sql = $this->context->getSQL();
     $userCount = User::count($sql);
     $pageCount = Route::count($sql, new CondBool("active"));
+    $groupCount = Group::count($sql);
     $req = new \Core\API\Visitors\Stats($this->context);
     $this->success = $req->execute(array("type"=>"monthly"));
     $this->lastError = $req->getLastError();
@@ -82,6 +83,7 @@ class Stats extends Request {
     $this->result["data"] = [
       "userCount" => $userCount,
       "pageCount" => $pageCount,
+      "groupCount" => $groupCount,
       "visitors" => $visitorStatistics,
       "visitorsTotal" => $visitorCount,
       "server" => [

@@ -46,7 +46,13 @@ class Session extends DatabaseEntity {
       ->whereEq("Session.uuid", $sessionUUID)
       ->whereTrue("Session.active")
       ->whereGt("Session.expires", $sql->now()));
+
     if (!$session) {
+      return null;
+    }
+
+    $user = $session->getUser();
+    if (!$user->isActive() || !$user->isConfirmed()) {
       return null;
     }
 

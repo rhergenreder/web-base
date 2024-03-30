@@ -176,8 +176,9 @@ class Context {
       ->addJoin(new InnerJoin("ApiKey", "ApiKey.user_id", "User.id"))
       ->whereEq("ApiKey.api_key", $apiKey)
       ->whereGt("valid_until", $this->sql->currentTimestamp())
-      ->whereTrue("ApiKey.active", true)
-      ->whereTrue("User.confirmed", true)
+      ->whereTrue("ApiKey.active")
+      ->whereTrue("User.confirmed")
+      ->whereTrue("User.active")
       ->fetchEntities());
 
     return $this->user !== null;

@@ -12,4 +12,12 @@ return [
   "acl" => "Zugriffsberechtigung",
   "logs" => "Logs",
   "help" => "Hilfe",
+
+  # Dashboard
+  "users_registered" => "Benutzer registriert",
+  "available_groups" => "verfügbare Gruppen",
+  "routes_defined" => "Routen definiert",
+
+  # Dialogs
+  "fetch_stats_error" => "Fehler beim Holen der Stats",
 ];

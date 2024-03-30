@@ -52,8 +52,8 @@ export default function GroupListView(props) {
 
     const columnDefinitions = [
         new NumericColumn(L("general.id"), "id"),
-        new StringColumn(L("group.name"), "name"),
-        new NumericColumn(L("group.member_count"), "memberCount"),
+        new StringColumn(L("account.name"), "name"),
+        new NumericColumn(L("account.member_count"), "memberCount"),
         actionColumn,
     ];
 
@@ -66,7 +66,7 @@ export default function GroupListView(props) {
                     <div className={"col-sm-6"}>
                         <ol className={"breadcrumb float-sm-right"}>
                             <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">Groups</li>
+                            <li className="breadcrumb-item active">{L("account.groups")}</li>
                         </ol>
                     </div>
                 </div>

@@ -56,7 +56,7 @@ export default function EditGroupView(props) {
                     <div className={"col-sm-6"}>
                         <ol className={"breadcrumb float-sm-right"}>
                             <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active"><Link to={"/admin/groups"}>Group</Link></li>
+                            <li className="breadcrumb-item active"><Link to={"/admin/groups"}>{L("account.group")}</Link></li>
                             <li className="breadcrumb-item active">{ isNewGroup ? L("general.new") : groupId }</li>
                         </ol>
                     </div>
@@ -68,13 +68,15 @@ export default function EditGroupView(props) {
                 <div className={"col-6 pl-5 pr-5"}>
                     <form role={"form"} onSubmit={(e) => this.submitForm(e)}>
                         <div className={"form-group"}>
-                            <label htmlFor={"name"}>Group Name</label>
+                            <label htmlFor={"name"}>{L("account.group_name")}</label>
                             <input type={"text"} className={"form-control"} placeholder={"Name"}
                                    name={"name"} id={"name"} maxLength={32} value={group.name}/>
                         </div>
 
                         <div className={"form-group"}>
-                            <label htmlFor={"color"}>Color</label>
+                            <label htmlFor={"color"}>
+                                {L("account.color")}
+                            </label>
                             <div>
                                 <ColorPicker
                                     value={group.color}
@@ -88,13 +90,15 @@ export default function EditGroupView(props) {
                         </div>
 
                         <Link to={"/admin/groups"} className={"btn btn-info mt-2 mr-2"}>
-                            &nbsp;Back
+                            &nbsp;{L("general.go_back")}
                         </Link>
-                        <button type={"submit"} className={"btn btn-primary mt-2"}>Submit</button>
+                        <button type={"submit"} className={"btn btn-primary mt-2"}>
+                            {L("general.submit")}
+                        </button>
                     </form>
                 </div>
                 <div className={"col-6"}>
-                    <h3>Members</h3>
+                    <h3>{L("account.members")}</h3>
                 </div>
             </div>
         </div>

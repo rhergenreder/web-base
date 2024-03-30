@@ -10,6 +10,8 @@ return [
   "search_query" => "Suchanfrage",
   "no_entries_placeholder" => "Keine Log-Einträge zum Anzeigen",
   "timestamp_placeholder" => "Datum und Zeitpunk Auswählen zum Filtern",
+  "hide_details" => "Details verstecken",
+  "show_details" => "Details zeigen",
 
   // dialog
   "fetch_log_error" => "Fehler beim Holen der Log-Einträge",

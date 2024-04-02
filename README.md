@@ -316,6 +316,36 @@ php cli.php frontend rm <module-name>
 php cli.php frontend dev <module-name>
 ```
 
+## Project Structure
+```
+├── Core                    
+│   ├── API                 # Core API-Endpoints (User, Groups, Permissions, etc.)
+│   ├── Configuration       # Classes for configuration and settings
+│   ├── Documents           # Core Documents (Account, Admin, etc.)
+│   ├── Driver              # Logger and SQL drier implementation
+│   ├── Elements            # HTML element classes
+│   ├── External            # composer dependencies & external libraries
+│   ├── Localization        # Core translations
+│   ├── Objects             # Database objects & general classes
+│   └── Templates           # Core twig templates
+├── Site                    # Site specific content and overwrites
+│   ├── API
+│   ├── Cache               # Twig template and router cache
+│   ├── Configuration       # Dynamic configuration, e.g. database connection etc.
+│   ├── Documents
+│   ├── Localization        
+│   ├── Logs                # Directory for log output, if the database fails
+│   ├── Objects
+│   └── Templates
+├── react                   # react frontend 
+│   ├── shared              # shared source files, including API and localization
+│   ├── admin-panel         # the admin panel source files
+│   ├── dist                # compiler output
+├── [js/css/img/fonts/files/docs] # static web assets, files, licenses
+├── docker                  # docker configuration files and build scripts
+└── test                    # php unit & integraton test files
+```
+
 ## Anything more?
 
 Feel free to contact me regarding this project and any other questions.

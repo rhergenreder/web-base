@@ -1,7 +1,7 @@
 import {Link, useNavigate} from "react-router-dom";
 import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
-import {DataColumn, DataTable, NumericColumn, StringColumn} from "shared/elements/data-table";
+import {ControlsColumn, DataColumn, DataTable, NumericColumn, StringColumn} from "shared/elements/data-table";
 import {Button, IconButton} from "@material-ui/core";
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
@@ -28,7 +28,6 @@ export default function GroupListView(props) {
     }, [currentLocale]);
 
     const onFetchGroups = useCallback(async (page, count, orderBy, sortOrder) => {
-
         api.fetchGroups(page, count, orderBy, sortOrder).then((res) => {
             if (res.success) {
                 setGroups(res.groups);
@@ -40,21 +39,13 @@ export default function GroupListView(props) {
         });
     }, [api, pagination]);
 
-    const actionColumn = (() => {
-        let column = new DataColumn(L("general.actions"), null, false);
-        column.renderData = (L, entry) => <>
-            <IconButton size={"small"} title={L("general.edit")} onClick={() => navigate("/admin/group/" + entry.id)}>
-                <EditIcon />
-            </IconButton>
-        </>
-        return column;
-    })();
-
     const columnDefinitions = [
         new NumericColumn(L("general.id"), "id"),
         new StringColumn(L("account.name"), "name"),
-        new NumericColumn(L("account.member_count"), "memberCount"),
-        actionColumn,
+        new NumericColumn(L("account.member_count"), "memberCount", { align: "center" }),
+        new ControlsColumn(L("general.controls"), [
+            { label: L("general.edit"), element: EditIcon, onClick: (entry) => navigate(`/admin/group/${entry.id}`) }
+        ]),
     ];
 
     return <>

@@ -153,14 +153,6 @@ export default class API {
         return this.apiCall("user/fetch", { page: pageNum, count: count, orderBy: orderBy, sortOrder: sortOrder });
     }
 
-    async fetchGroups(pageNum = 1, count = 20, orderBy = 'id', sortOrder = 'asc') {
-        return this.apiCall("groups/fetch", { page: pageNum, count: count, orderBy: orderBy, sortOrder: sortOrder });
-    }
-
-    async getGroup(id) {
-        return this.apiCall("groups/get", { id: id });
-    }
-
     async inviteUser(username, email) {
         return this.apiCall("user/invite", { username: username, email: email });
     }
@@ -207,6 +199,39 @@ export default class API {
         return res;
     }
 
+    /** Groups API **/
+    async fetchGroups(pageNum = 1, count = 20, orderBy = 'id', sortOrder = 'asc') {
+        return this.apiCall("groups/fetch", { page: pageNum, count: count, orderBy: orderBy, sortOrder: sortOrder });
+    }
+
+    async fetchGroupMembers(groupId, pageNum = 1, count = 20, orderBy = 'id', sortOrder = 'asc') {
+        return this.apiCall("groups/getMembers", { id: groupId, page: pageNum, count: count, orderBy: orderBy, sortOrder: sortOrder });
+    }
+
+    async removeGroupMember (groupId, userId) {
+        return this.apiCall("groups/removeMember", { id: groupId, userId: userId });
+    }
+
+    async addGroupMember (groupId, userId) {
+        return this.apiCall("groups/addMember", { id: groupId, userId: userId });
+    }
+
+    async getGroup(id) {
+        return this.apiCall("groups/get", { id: id });
+    }
+
+    async createGroup(name, color) {
+        return this.apiCall("groups/create", { name: name, color: color });
+    }
+
+    async updateGroup(id, name, color) {
+        return this.apiCall("groups/update", { id: id, name: name, color: color });
+    }
+
+    async deleteGroup(id) {
+        return this.apiCall("groups/delete", { id: id });
+    }
+
     /** Stats **/
     async getStats() {
         return this.apiCall("stats");
@@ -247,15 +272,6 @@ export default class API {
 
     async updateRoute(id, pattern, type, target, extra, exact, active) {
         return this.apiCall("routes/update", { id, pattern, type, target, extra, exact, active });
-    }
-
-    /** GroupAPI **/
-    async createGroup(name, color) {
-        return this.apiCall("groups/create", { name: name, color: color });
-    }
-
-    async deleteGroup(id) {
-        return this.apiCall("groups/delete", { id: id });
     }
 
     /** SettingsAPI **/

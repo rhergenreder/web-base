@@ -1,15 +1,27 @@
 import {useCallback, useContext, useEffect, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router-dom";
 import {LocaleContext} from "shared/locale";
-import {CircularProgress} from "@material-ui/core";
+import {Button, CircularProgress} from "@material-ui/core";
 import * as React from "react";
 import ColorPicker from "material-ui-color-picker";
+import {ControlsColumn, DataTable, NumericColumn, StringColumn} from "shared/elements/data-table";
+import EditIcon from "@mui/icons-material/Edit";
+import usePagination from "shared/hooks/pagination";
+import {Delete, KeyboardArrowLeft, Save} from "@material-ui/icons";
+import Dialog from "shared/elements/dialog";
+import {Box, FormControl, FormGroup, FormLabel, styled, TextField} from "@mui/material";
 
 const defaultGroupData = {
     name: "",
     color: "#ccc",
     members: []
 };
+
+const ButtonBar = styled(Box)((props) => ({
+    "& > button": {
+        marginRight: props.theme.spacing(1)
+    }
+}));
 
 export default function EditGroupView(props) {
 
@@ -18,14 +30,30 @@ export default function EditGroupView(props) {
     const { groupId } = useParams();
     const navigate = useNavigate();
     const isNewGroup = groupId === "new";
+    const pagination = usePagination();
+    const api = props.api;
 
+    // data
     const [fetchGroup, setFetchGroup] = useState(!isNewGroup);
     const [group, setGroup] = useState(isNewGroup ? defaultGroupData : null);
+    const [members, setMembers] = useState([]);
+
+    // ui
+    const [dialogData, setDialogData] = useState({open: false});
+    const [isSaving, setSaving] = useState(false);
+
+    useEffect(() => {
+        requestModules(props.api, ["general", "account"], currentLocale).then(data => {
+            if (!data.success) {
+                props.showDialog(data.msg, "Error fetching localization");
+            }
+        });
+    }, [currentLocale]);
 
     const onFetchGroup = useCallback((force = false) => {
         if (force || fetchGroup) {
             setFetchGroup(false);
-            props.api.getGroup(groupId).then(res => {
+            api.getGroup(groupId).then(res => {
                if (!res.success) {
                    props.showDialog(res.msg, "Error fetching group");
                    navigate("/admin/groups");
@@ -34,7 +62,51 @@ export default function EditGroupView(props) {
                }
             });
         }
-    }, []);
+    }, [api, fetchGroup]);
+
+    const onFetchMembers = useCallback(async (page, count, orderBy, sortOrder) => {
+        api.fetchGroupMembers(groupId, page, count, orderBy, sortOrder).then((res) => {
+            if (res.success) {
+                setMembers(res.users);
+                pagination.update(res.pagination);
+            } else {
+                props.showDialog(res.msg, "Error fetching group members");
+                return null;
+            }
+        });
+    }, [groupId, api, pagination]);
+
+    const onRemoveMember = useCallback(userId => {
+        api.removeGroupMember(groupId, userId).then(data => {
+            if (data.success) {
+                let newMembers = members.filter(u => u.id !== userId);
+                setMembers(newMembers);
+            } else {
+                props.showDialog(data.msg, "Error removing group member");
+            }
+        });
+    }, [api, groupId, members]);
+
+    const onSave = useCallback(() => {
+        setSaving(true);
+        if (isNewGroup) {
+            api.createGroup(group.name, group.color).then(data => {
+               if (!data.success) {
+                   props.showDialog(data.msg, "Error creating group");
+                   setSaving(false);
+               } else {
+                   navigate(`/admin/groups/${data.id}`)
+               }
+            });
+        } else {
+            api.updateGroup(groupId, group.name, group.color).then(data => {
+                setSaving(false);
+                if (!data.success) {
+                    props.showDialog(data.msg, "Error updating group");
+                }
+            });
+        }
+    }, [api, groupId, isNewGroup, group]);
 
     useEffect(() => {
         onFetchGroup();
@@ -65,43 +137,97 @@ export default function EditGroupView(props) {
         </div>
         <div className={"content"}>
             <div className={"row"}>
-                <div className={"col-6 pl-5 pr-5"}>
-                    <form role={"form"} onSubmit={(e) => this.submitForm(e)}>
-                        <div className={"form-group"}>
-                            <label htmlFor={"name"}>{L("account.group_name")}</label>
-                            <input type={"text"} className={"form-control"} placeholder={"Name"}
-                                   name={"name"} id={"name"} maxLength={32} value={group.name}/>
-                        </div>
+                <div className={"col-4 pl-5 pr-5"}>
+                    <FormGroup className={"my-2"}>
+                        <FormLabel htmlFor={"name"}>
+                            {L("account.group_name")}
+                        </FormLabel>
+                        <FormControl>
+                            <TextField maxLength={32} value={group.name}
+                                       size={"small"} name={"name"}
+                                       placeholder={L("account.name")}
+                                       onChange={e => setGroup({...group, name: e.target.value})}/>
+                        </FormControl>
+                    </FormGroup>
 
-                        <div className={"form-group"}>
-                            <label htmlFor={"color"}>
-                                {L("account.color")}
-                            </label>
-                            <div>
-                                <ColorPicker
-                                    value={group.color}
-                                    size={"small"}
-                                    variant={"outlined"}
-                                    style={{ backgroundColor: group.color }}
-                                    floatingLabelText={group.color}
-                                    onChange={color => setGroup({...group, color: color})}
-                                />
-                            </div>
-                        </div>
+                    <FormGroup className={"my-2"}>
+                        <FormLabel htmlFor={"color"}>
+                            {L("account.color")}
+                        </FormLabel>
+                        <FormControl>
+                            <ColorPicker
+                                value={group.color}
+                                size={"small"}
+                                variant={"outlined"}
+                                style={{ backgroundColor: group.color }}
+                                floatingLabelText={group.color}
+                                onChange={color => setGroup({...group, color: color})}
+                            />
+                        </FormControl>
+                    </FormGroup>
 
-                        <Link to={"/admin/groups"} className={"btn btn-info mt-2 mr-2"}>
-                            &nbsp;{L("general.go_back")}
-                        </Link>
-                        <button type={"submit"} className={"btn btn-primary mt-2"}>
-                            {L("general.submit")}
-                        </button>
-                    </form>
-                </div>
-                <div className={"col-6"}>
-                    <h3>{L("account.members")}</h3>
+                    <ButtonBar mt={2}>
+                        <Button startIcon={<KeyboardArrowLeft />}
+                                variant={"outlined"}
+                                onClick={() => navigate("/admin/groups")}>
+                            {L("general.cancel")}
+                        </Button>
+                        <Button startIcon={<Save />} color={"primary"}
+                                variant={"outlined"} disabled={isSaving}
+                                onClick={onSave}>
+                            {isSaving ? L("general.saving") + "…" : L("general.save")}
+                        </Button>
+                    </ButtonBar>
                 </div>
             </div>
+            {!isNewGroup && api.hasPermission("groups/getMembers") ?
+                <div className={"m-3"}>
+                    <div className={"col-6"}>
+                    <DataTable
+                        data={members}
+                        pagination={pagination}
+                        defaultSortOrder={"asc"}
+                        defaultSortColumn={0}
+                        className={"table table-striped"}
+                        fetchData={onFetchMembers}
+                        placeholder={L("No members in this group")}
+                        title={L("account.members")}
+                        columns={[
+                            new NumericColumn(L("general.id"), "id"),
+                            new StringColumn(L("account.name"), "name"),
+                            new StringColumn(L("account.full_name"), "fullName"),
+                            new ControlsColumn(L("general.controls"), [
+                                {
+                                    label: L("general.edit"),
+                                    element: EditIcon,
+                                    onClick: (entry) => navigate(`/admin/user/${entry.id}`)
+                                },
+                                {
+                                    label: L("general.remove"),
+                                    element: Delete,
+                                    disabled: !api.hasPermission("groups/removeMember"),
+                                    onClick: (entry) => setDialogData({
+                                        open: true,
+                                        title: L("Remove member"),
+                                        message: sprintf(L("Do you really want to remove user '%s' from this group?"), entry.fullName || entry.name),
+                                        onOption: (option) => option === 0 && onRemoveMember(entry.id)
+                                    })
+                                }
+                            ]),
+                        ]}
+                    />
+                    </div>
+                </div>
+                : <></>
+            }
         </div>
+        <Dialog show={dialogData.open}
+                onClose={() => setDialogData({open: false})}
+                title={dialogData.title}
+                message={dialogData.message}
+                onOption={dialogData.onOption}
+                inputs={dialogData.inputs}
+                options={[L("general.ok"), L("general.cancel")]} />
     </>
 
 }

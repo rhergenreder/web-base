@@ -106,8 +106,11 @@ class Swagger extends Request {
         "post" => [
           "produces" => ["application/json"],
           "responses" => [
-            "200" => ["description" => ""],
+            "200" => ["description" => "OK!"],
+            "400" => ["description" => "Parameter validation failed"],
             "401" => ["description" => "Login or 2FA Authorization is required"],
+            "403" => ["description" => "CSRF-Token validation failed or insufficient permissions"],
+            "503" => ["description" => "Function is disabled"],
           ]
         ]
       ];

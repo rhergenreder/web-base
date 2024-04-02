@@ -88,13 +88,12 @@ namespace Core\API\Language {
       return $this->success;
     }
 
-    private function updateLanguage(): bool {
+    private function updateLanguage(): void {
       $sql = $this->context->getSQL();
       $currentUser = $this->context->getUser();
       $currentUser->language = $this->language;
       $this->success = $currentUser->save($sql, ["language"]);
       $this->lastError = $sql->getLastError();
-      return $this->success;
     }
 
     public function _execute(): bool {
@@ -141,12 +140,12 @@ namespace Core\API\Language {
         }
 
         $moduleFound = false;
-        foreach (["Site", "Core"] as $baseDir) {
-          $filePath = realpath(implode("/", [$baseDir, "Localization", $code, "$module.php"]));
+        foreach (["Core", "Site"] as $baseDir) {
+          $filePath = realpath(implode("/", [WEBROOT, $baseDir, "Localization", $code, "$module.php"]));
           if ($filePath && is_file($filePath)) {
             $moduleFound = true;
             $moduleEntries = @include_once $filePath;
-            $entries[$module] = $moduleEntries;
+            $entries[$module] = array_merge($entries[$module] ?? [], $moduleEntries);
             break;
           }
         }

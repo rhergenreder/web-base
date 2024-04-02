@@ -4,6 +4,8 @@ namespace Core\API {
 
   use Core\Driver\SQL\Expression\Count;
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\Group;
+  use Core\Objects\DatabaseEntity\User;
 
   abstract class GroupsAPI extends Request {
 
@@ -22,6 +24,30 @@ namespace Core\API {
       $this->lastError = $sql->getLastError();
       return $this->success && $res[0]["count"] > 0;
     }
+
+    protected function getGroup(int $groupId): Group|false {
+      $sql = $this->context->getSQL();
+      $group = Group::find($sql, $groupId);
+      if ($group === false) {
+        return $this->createError("Error fetching group: " . $sql->getLastError());
+      } else if ($group === null) {
+        return $this->createError("This group does not exist.");
+      }
+
+      return $group;
+    }
+
+    protected function getUser(int $userId): User|false {
+      $sql = $this->context->getSQL();
+      $user = User::find($sql, $userId, true);
+      if ($user === false) {
+        return $this->createError("Error fetching user: " . $sql->getLastError());
+      } else if ($user === null) {
+        return $this->createError("This user does not exist.");
+      }
+
+      return $user;
+    }
   }
 }
 
@@ -33,12 +59,14 @@ namespace Core\API\Groups {
   use Core\API\Traits\Pagination;
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\Compare;
+  use Core\Driver\SQL\Condition\CondAnd;
   use Core\Driver\SQL\Expression\Alias;
   use Core\Driver\SQL\Expression\Count;
   use Core\Driver\SQL\Join\InnerJoin;
   use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
+  use Core\Objects\DatabaseEntity\Route;
   use Core\Objects\DatabaseEntity\User;
 
   class Fetch extends GroupsAPI {
@@ -49,7 +77,7 @@ namespace Core\API\Groups {
 
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall,
-        self::getPaginationParameters(['id', 'name', 'member_count'])
+        self::getPaginationParameters(['id', 'name', 'memberCount'])
       );
 
       $this->groupCount = 0;
@@ -97,14 +125,9 @@ namespace Core\API\Groups {
     }
 
     protected function _execute(): bool {
-      $sql = $this->context->getSQL();
       $groupId = $this->getParam("id");
-      $group = Group::find($sql, $groupId);
-      if ($group === false) {
-        return $this->createError("Error fetching group: " . $sql->getLastError());
-      } else if ($group === null) {
-        return $this->createError("Group not found");
-      } else {
+      $group = $this->getGroup($groupId);
+      if ($group) {
         $this->result["group"] = $group->jsonSerialize();
       }
 
@@ -157,10 +180,10 @@ namespace Core\API\Groups {
 
   class Create extends GroupsAPI {
     public function __construct(Context $context, $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
+      parent::__construct($context, $externalCall, [
         'name' => new StringType('name', 32),
         'color' => new StringType('color', 10),
-      ));
+      ]);
     }
 
     public function _execute(): bool {
@@ -199,6 +222,55 @@ namespace Core\API\Groups {
     }
   }
 
+  class Update extends GroupsAPI {
+    public function __construct(Context $context, $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        "id" => new Parameter("id", Parameter::TYPE_INT),
+        'name' => new StringType('name', 32),
+        'color' => new StringType('color', 10),
+      ]);
+    }
+
+    public function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $groupId = $this->getParam("id");
+      $name = $this->getParam("name");
+      if (preg_match("/^[a-zA-Z][a-zA-Z0-9_-]*$/", $name) !== 1) {
+        return $this->createError("Invalid name");
+      }
+
+      $color = $this->getParam("color");
+      if (preg_match("/^#[a-fA-F0-9]{3,6}$/", $color) !== 1) {
+        return $this->createError("Invalid color");
+      }
+
+      $group = $this->getGroup($groupId);
+      if ($group === false) {
+        return false;
+      }
+
+      $otherGroup = Group::findBy(Group::createBuilder($sql, true)
+        ->whereNeq("id", $groupId)
+        ->whereEq("name", $name)
+        ->first());
+
+      if ($otherGroup) {
+        return $this->createError("This name is already in use");
+      }
+
+      $group->name = $name;
+      $group->color = $color;
+      $this->success = ($group->save($sql) !== FALSE);
+      $this->lastError = $sql->getLastError();
+
+      return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to update existing groups", true);
+    }
+  }
+
   class Delete extends GroupsAPI {
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, array(
@@ -213,16 +285,13 @@ namespace Core\API\Groups {
       }
 
       $sql = $this->context->getSQL();
-      $group = Group::find($sql, $id);
-      if ($group === false) {
-        return $this->createError("Error fetching group: " . $sql->getLastError());
-      } else if ($group === null) {
-        return $this->createError("This group does not exist.");
-      } else {
+      $group = $this->getGroup($id);
+      if ($group) {
         $this->success = ($group->delete($sql) !== FALSE);
         $this->lastError = $sql->getLastError();
-        return $this->success;
       }
+
+      return $this->success;
     }
 
     public static function getDefaultACL(Insert $insert): void {
@@ -233,32 +302,31 @@ namespace Core\API\Groups {
   class AddMember extends GroupsAPI {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, [
-        new Parameter("id", Parameter::TYPE_INT),
-        new Parameter("userId", Parameter::TYPE_INT)
+        "id" => new Parameter("id", Parameter::TYPE_INT),
+        "userId" => new Parameter("userId", Parameter::TYPE_INT)
       ]);
     }
 
     protected function _execute(): bool {
-      $sql = $this->context->getSQL();
       $groupId = $this->getParam("id");
-      $userId = $this->getParam("userId");
-      $group = Group::find($sql, $groupId);
+      $group = $this->getGroup($groupId);
       if ($group === false) {
-        return $this->createError("Error fetching group: " . $sql->getLastError());
-      } else if ($group === null) {
-        return $this->createError("This group does not exist.");
+        return false;
       }
 
-      $user = User::find($sql, $userId, true);
+      $userId = $this->getParam("userId");
+      $currentUser = $this->context->getUser();
+      $user = $this->getUser($userId);
       if ($user === false) {
-        return $this->createError("Error fetching user: " . $sql->getLastError());
-      } else if ($user === null) {
-        return $this->createError("This user does not exist.");
+        return false;
       } else if (isset($user->getGroups()[$groupId])) {
         return $this->createError("This user is already member of this group.");
+      } else if ($groupId === Group::ADMIN && !$currentUser->hasGroup(Group::ADMIN)) {
+        return $this->createError("You cannot add the administrator group to other users.");
       }
 
       $user->groups[$groupId] = $group;
+      $sql = $this->context->getSQL();
       $this->success = $user->save($sql, ["groups"], true);
       if (!$this->success) {
         return $this->createError("Error saving user: " . $sql->getLastError());
@@ -275,32 +343,31 @@ namespace Core\API\Groups {
   class RemoveMember extends GroupsAPI {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, [
-        new Parameter("id", Parameter::TYPE_INT),
-        new Parameter("userId", Parameter::TYPE_INT)
+        "id" => new Parameter("id", Parameter::TYPE_INT),
+        "userId" => new Parameter("userId", Parameter::TYPE_INT)
       ]);
     }
 
     protected function _execute(): bool {
-      $sql = $this->context->getSQL();
       $groupId = $this->getParam("id");
-      $userId = $this->getParam("userId");
-      $group = Group::find($sql, $groupId);
+      $group = $this->getGroup($groupId);
       if ($group === false) {
-        return $this->createError("Error fetching group: " . $sql->getLastError());
-      } else if ($group === null) {
-        return $this->createError("This group does not exist.");
+        return false;
       }
 
-      $user = User::find($sql, $userId, true);
+      $userId = $this->getParam("userId");
+      $currentUser = $this->context->getUser();
+      $user = $this->getUser($userId);
       if ($user === false) {
-        return $this->createError("Error fetching user: " . $sql->getLastError());
-      } else if ($user === null) {
-        return $this->createError("This user does not exist.");
+        return false;
       } else if (!isset($user->getGroups()[$groupId])) {
         return $this->createError("This user is not member of this group.");
+      } else if ($userId === $currentUser->getId() && $groupId === Group::ADMIN) {
+        return $this->createError("Cannot remove Administrator group from own user.");
       }
 
       unset($user->groups[$groupId]);
+      $sql = $this->context->getSQL();
       $this->success = $user->save($sql, ["groups"], true);
       if (!$this->success) {
         return $this->createError("Error saving user: " . $sql->getLastError());

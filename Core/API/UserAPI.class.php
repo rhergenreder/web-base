@@ -136,6 +136,7 @@ namespace Core\API\User {
   use Core\API\UserAPI;
   use Core\API\VerifyCaptcha;
   use Core\Driver\SQL\Condition\CondBool;
+  use Core\Driver\SQL\Condition\CondLike;
   use Core\Driver\SQL\Condition\CondOr;
   use Core\Driver\SQL\Expression\Alias;
   use Core\Driver\SQL\Query\Insert;
@@ -317,6 +318,39 @@ namespace Core\API\User {
 
     public static function getDefaultACL(Insert $insert): void {
       $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to get details about a user", true);
+    }
+  }
+
+  class Search extends UserAPI {
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        "query" => new StringType("query", 64)
+      ]);
+    }
+
+    protected function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $query = $this->getParam("query");
+
+      $users = User::findBy(User::createBuilder($sql, false)
+        ->where(new CondOr(
+          new CondLike(new Column("name"), "%$query%"),
+          new CondLike(new Column("full_name"), "%$query%"),
+          new CondLike(new Column("email"), "%$query%"),
+        ))
+        ->whereTrue("active")
+      );
+
+      if ($users === false) {
+        return $this->createError($sql->getLastError());
+      }
+
+      $this->result["users"] = $users;
+      return true;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), "Allows users to search other users", [Group::ADMIN, Group::SUPPORT], true);
     }
   }
 

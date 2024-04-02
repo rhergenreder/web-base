@@ -44,4 +44,14 @@ class Group extends DatabaseEntity {
       new Group(Group::SUPPORT, Group::GROUPS[Group::SUPPORT], "#007bff"),
     ];
   }
+
+  public function delete(SQL $sql): bool {
+    if (parent::delete($sql)) {
+      $handler = User::getHandler($sql);
+      $table = $handler->getNMRelation("groups")->getTableName();
+      return $sql->delete($table)->whereEq("group_id", $this->id)->execute();
+    } else {
+      return false;
+    }
+  }
 }

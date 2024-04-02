@@ -1,6 +1,7 @@
 import {useCallback, useContext, useEffect, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router-dom";
 import {LocaleContext} from "shared/locale";
+import SearchField from "shared/elements/search-field";
 import {Button, CircularProgress} from "@material-ui/core";
 import * as React from "react";
 import ColorPicker from "material-ui-color-picker";
@@ -10,6 +11,7 @@ import usePagination from "shared/hooks/pagination";
 import {Delete, KeyboardArrowLeft, Save} from "@material-ui/icons";
 import Dialog from "shared/elements/dialog";
 import {Box, FormControl, FormGroup, FormLabel, styled, TextField} from "@mui/material";
+import {Add} from "@mui/icons-material";
 
 const defaultGroupData = {
     name: "",
@@ -37,6 +39,7 @@ export default function EditGroupView(props) {
     const [fetchGroup, setFetchGroup] = useState(!isNewGroup);
     const [group, setGroup] = useState(isNewGroup ? defaultGroupData : null);
     const [members, setMembers] = useState([]);
+    const [selectedUser, setSelectedUser] = useState(null);
 
     // ui
     const [dialogData, setDialogData] = useState({open: false});
@@ -91,11 +94,11 @@ export default function EditGroupView(props) {
         setSaving(true);
         if (isNewGroup) {
             api.createGroup(group.name, group.color).then(data => {
-               if (!data.success) {
+                setSaving(false);
+                if (!data.success) {
                    props.showDialog(data.msg, "Error creating group");
-                   setSaving(false);
                } else {
-                   navigate(`/admin/groups/${data.id}`)
+                   navigate(`/admin/group/${data.id}`)
                }
             });
         } else {
@@ -107,6 +110,41 @@ export default function EditGroupView(props) {
             });
         }
     }, [api, groupId, isNewGroup, group]);
+
+    const onSearchUser = useCallback((async (query) => {
+        let data = await api.searchUser(query);
+        if (!data.success) {
+            props.showDialog(data.msg, "Error searching users");
+            return [];
+        }
+
+        return data.users;
+    }), [api]);
+
+    const onAddMember = useCallback(() => {
+        if (selectedUser) {
+            api.addGroupMember(groupId, selectedUser.id).then(data => {
+                if (!data.success) {
+                    props.showDialog(data.msg, "Error adding member");
+                } else {
+                    let newMembers = [...members];
+                    newMembers.push(selectedUser);
+                    setMembers(newMembers);
+                }
+                setSelectedUser(null);
+            });
+        }
+    }, [api, groupId, selectedUser])
+
+    const onDeleteGroup = useCallback(() => {
+        api.deleteGroup(groupId).then(data => {
+           if (!data.success) {
+               props.showDialog(data.msg, "Error deleting group");
+           } else {
+               navigate("/admin/groups");
+           }
+        });
+    }, [api, groupId]);
 
     useEffect(() => {
         onFetchGroup();
@@ -170,19 +208,31 @@ export default function EditGroupView(props) {
                         <Button startIcon={<KeyboardArrowLeft />}
                                 variant={"outlined"}
                                 onClick={() => navigate("/admin/groups")}>
-                            {L("general.cancel")}
+                            {L("general.go_back")}
                         </Button>
                         <Button startIcon={<Save />} color={"primary"}
-                                variant={"outlined"} disabled={isSaving}
+                                variant={"outlined"}
+                                disabled={isSaving || (!api.hasPermission(isNewGroup ? "groups/create" : "groups/update"))}
                                 onClick={onSave}>
                             {isSaving ? L("general.saving") + "…" : L("general.save")}
                         </Button>
+                        { !isNewGroup &&
+                            <Button startIcon={<Delete/>} disabled={!api.hasPermission("groups/delete")}
+                                    variant={"outlined"} color={"secondary"}
+                                    onClick={() => setDialogData({
+                                        open: true,
+                                        title: L("Delete Group"),
+                                        message: L("Do you really want to delete this group? This action cannot be undone."),
+                                        onOption: option => option === 0 && onDeleteGroup()
+                                    })}>
+                                {L("general.delete")}
+                            </Button>
+                        }
                     </ButtonBar>
                 </div>
             </div>
             {!isNewGroup && api.hasPermission("groups/getMembers") ?
-                <div className={"m-3"}>
-                    <div className={"col-6"}>
+                <div className={"m-3 col-6"}>
                     <DataTable
                         data={members}
                         pagination={pagination}
@@ -216,7 +266,26 @@ export default function EditGroupView(props) {
                             ]),
                         ]}
                     />
-                    </div>
+                    <Button startIcon={<Add />} color={"primary"}
+                            variant={"outlined"} disabled={!api.hasPermission("groups/addMember")}
+                            onClick={() => setDialogData({
+                                open: true,
+                                title: L("Add member"),
+                                message: "Search a user to add to the group",
+                                inputs: [
+                                    {
+                                        type: "custom", name: "search", element: SearchField,
+                                        size: "small", key: "search",
+                                        onSearch: v => onSearchUser(v),
+                                        onSelect: u => setSelectedUser(u),
+                                        displayText: u => u.fullName || u.name
+                                    }
+                                ],
+                                onOption: (option) => option === 0 ? onAddMember() : setSelectedUser(null)
+                                })
+                            }>
+                        {L("general.add")}
+                    </Button>
                 </div>
                 : <></>
             }

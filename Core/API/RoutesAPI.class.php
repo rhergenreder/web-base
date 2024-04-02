@@ -75,8 +75,8 @@ namespace Core\API\Routes {
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\Route;
   use Core\Objects\Router\ApiRoute;
+  use Core\Objects\Router\EmptyRoute;
   use Core\Objects\Router\Router;
-  use Core\Objects\Router\StaticRoute;
 
   class Fetch extends RoutesAPI {
 
@@ -363,7 +363,7 @@ namespace Core\API\Routes {
       $path = $this->getParam("path");
       $pattern = $this->getParam("pattern");
       $exact = $this->getParam("exact");
-      $route = new StaticRoute($pattern, $exact, "");
+      $route = new EmptyRoute($pattern, $exact, "");
       $this->result["match"] = $route->match($path);
       return $this->success;
     }

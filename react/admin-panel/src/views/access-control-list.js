@@ -147,7 +147,7 @@ export default function AccessControlList(props) {
             const permission = acl[index];
 
             if (query) {
-                if (!permission.method.toLowerCase().includes(query.toLowerCase()) ||
+                if (!permission.method.toLowerCase().includes(query.toLowerCase()) &&
                     !permission.description.toLowerCase().includes(query.toLowerCase())) {
                     continue;
                 }

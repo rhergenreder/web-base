@@ -54,7 +54,7 @@ class Logger {
     }, $debugTrace));
   }
 
-  public function log(string $message, string $severity, bool $appendStackTrace = true) {
+  public function log(string $message, string $severity, bool $appendStackTrace = true): void {
 
     if ($appendStackTrace) {
       $message .= "\n" . $this->getStackTrace();

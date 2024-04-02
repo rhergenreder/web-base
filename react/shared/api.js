@@ -161,6 +161,10 @@ export default class API {
         return this.apiCall("user/create", { username: username, email: email, password: password, confirmPassword: confirmPassword });
     }
 
+    async searchUser(query) {
+        return this.apiCall("user/search", { query : query });
+    }
+
     async updateProfile(username=null, fullName=null, password=null, confirmPassword = null, oldPassword = null) {
         let res = await this.apiCall("user/updateProfile", { username: username, fullName: fullName,
             password: password, confirmPassword: confirmPassword, oldPassword: oldPassword });

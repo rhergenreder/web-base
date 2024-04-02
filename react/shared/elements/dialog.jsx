@@ -24,7 +24,7 @@ export default function Dialog(props) {
         if (props.inputs) {
             let initialData = {};
             for (const input of props.inputs) {
-                if (input.type !== "label") {
+                if (input.type !== "label" && input.hasOwnProperty("name")) {
                     initialData[input.name] = input.value || "";
                 }
             }
@@ -76,6 +76,14 @@ export default function Dialog(props) {
                         {listItems}
                     </List>
                 </Box>);
+                break;
+            case 'custom':
+                let element = inputProps.element;
+                delete inputProps.element;
+                inputElements.push(React.createElement(element, inputProps));
+                break;
+            default:
+                break;
         }
     }
 

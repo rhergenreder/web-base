@@ -102,7 +102,7 @@ namespace Core\API {
       if ($count === 1) {
         return $string;
       } else {
-        return "the next $count ${string}s";
+        return "the next $count {$string}s";
       }
     }
 
@@ -222,7 +222,7 @@ namespace Core\API\User {
 
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall,
-        self::getPaginationParameters(['id', 'name', 'fullName', 'email', 'groups', 'registeredAt', 'confirmed'],
+        self::getPaginationParameters(['id', 'name', 'fullName', 'email', 'groups', 'registeredAt', 'active', 'confirmed'],
           'id', 'asc')
       );
     }

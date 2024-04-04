@@ -56,8 +56,8 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
     }
 
     foreach (self::FUNCTION_OVERRIDES as $functionName) {
-      runkit7_function_rename($functionName, "__orig_${functionName}_impl");
-      runkit7_function_rename("__new_${functionName}_impl", $functionName);
+      runkit7_function_rename($functionName, "__orig_{$functionName}_impl");
+      runkit7_function_rename("__new_{$functionName}_impl", $functionName);
     }
   }
 
@@ -65,7 +65,7 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
     RequestTest::$CONTEXT->getSQL()?->close();
     foreach (self::FUNCTION_OVERRIDES as $functionName) {
       runkit7_function_remove($functionName);
-      runkit7_function_rename("__orig_${functionName}_impl", $functionName);
+      runkit7_function_rename("__orig_{$functionName}_impl", $functionName);
     }
   }
 
@@ -99,6 +99,7 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
     $this->assertTrue($this->simulateRequest($allMethodsAllowed, "POST"), $allMethodsAllowed->getLastError());
     $this->assertFalse($this->simulateRequest($allMethodsAllowed, "PUT"), $allMethodsAllowed->getLastError());
     $this->assertFalse($this->simulateRequest($allMethodsAllowed, "DELETE"), $allMethodsAllowed->getLastError());
+    $this->assertFalse($this->simulateRequest($allMethodsAllowed, "NONEXISTENT"), $allMethodsAllowed->getLastError());
     $this->assertTrue($this->simulateRequest($allMethodsAllowed, "OPTIONS"), $allMethodsAllowed->getLastError());
     $this->assertEquals(204, self::$SENT_STATUS_CODE);
     $this->assertEquals(["Allow" => "OPTIONS, GET, POST"], self::$SENT_HEADERS);
@@ -155,6 +156,10 @@ abstract class TestRequest extends Request {
 
   protected function _execute(): bool {
     return true;
+  }
+
+  public static function getEndpoint(string $prefix = ""): ?string {
+    return "test";
   }
 }
 

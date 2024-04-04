@@ -68,4 +68,20 @@ return [
   "color" => "Farbe",
   "logged_in_as" => "Eingeloggt als",
   "active" => "Aktiv",
+  "group" => "Gruppe",
+
+  # dialogs
+  "fetch_group_members_error" => "Fehler beim Holen der Gruppenmitglieder",
+  "remove_group_member_error" => "Fehler beim Entfernen des Gruppenmitglieds",
+  "add_group_member_error" => "Fehler beim Hinzufügen des Gruppenmitglieds",
+  "create_group_error" => "Fehler beim Erstellen der Gruppe",
+  "update_group_error" => "Error beim Aktualisieren der Gruppe",
+  "delete_group_error" => "Error beim Löschen der Gruppe",
+  "search_users_error" => "Fehler beim Suchen des Benutzers",
+  "delete_group_title" => "Gruppe löschen",
+  "delete_group_text" => "Möchten Sie diese Gruppe wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+  "remove_group_member_title" => "Mitglied entfernen",
+  "remove_group_member_text" => "Möchten Sie wirklich den Benutzer '%s' von dieser Gruppe entfernen?",
+  "add_group_member_title" => "Mitglied hinzufügen",
+  "add_group_member_text" => "Einen Benutzer suchen um ihn der Gruppe hinzuzufügen",
 ];

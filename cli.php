@@ -7,6 +7,7 @@ include_once 'Core/core.php';
 require_once 'Core/datetime.php';
 include_once 'Core/constants.php';
 
+use Core\API\Request;
 use Core\Configuration\DatabaseScript;
 use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Condition\Compare;
@@ -16,6 +17,7 @@ use Core\Driver\SQL\SQL;
 use Core\Objects\ConnectionData;
 
 // TODO: is this available in all installations?
+use Core\Objects\Context;
 use JetBrains\PhpStorm\NoReturn;
 
 function printLine(string $line = ""): void {
@@ -68,8 +70,13 @@ function connectSQL(): ?SQL {
 }
 
 function printHelp(array $argv): void {
+  global $registeredCommands;
   printLine("=== WebBase CLI tool ===");
-  printLine("Usage: " . $argv[0]);
+  printLine("Usage: " . $argv[0] . " [action] <args>");
+  foreach ($registeredCommands as $command => $data) {
+    $description = $data["description"] ?? "";
+    printLine(" - $command: $description");
+  }
 }
 
 function applyPatch(\Core\Driver\SQL\SQL $sql, string $patchName): bool {
@@ -660,7 +667,7 @@ function onImpersonate($argv): void {
 
 function onFrontend(array $argv): void {
   if (count($argv) < 3) {
-    _exit("Usage: cli.php frontend <build|add|ls> [options...]");
+    _exit("Usage: cli.php frontend <build|add|rm|ls> [options...]");
   }
 
   $reactRoot = realpath(WEBROOT . "/react/");
@@ -800,17 +807,126 @@ function onFrontend(array $argv): void {
   }
 }
 
+function onAPI(array $argv): void {
+  if (count($argv) < 3) {
+    _exit("Usage: cli.php api <ls|add> [options...]");
+  }
+
+  $action = $argv[2] ?? null;
+  if ($action === "ls") {
+    $endpoints = Request::getApiEndpoints();
+    foreach ($endpoints as $endpoint => $class) {
+      $className = $class->getName();
+      printLine(" - $className: $endpoint");
+    }
+    // var_dump($endpoints);
+  } else if ($action === "add") {
+    echo "API-Name: ";
+    $methodNames = [];
+    $apiName = ucfirst(trim(fgets(STDIN)));
+    if (!preg_match("/[a-zA-Z_-]/", $apiName)) {
+      _exit("Invalid API-Name, should be [a-zA-Z_-]");
+    }
+
+    printLine("Do you want to add nested methods? Leave blank to skip.");
+    while (true) {
+      echo "Method name: ";
+      $methodName = ucfirst(trim(fgets(STDIN)));
+      if ($methodName) {
+        if (!preg_match("/[a-zA-Z_-]/", $methodName)) {
+          printLine("Invalid method name, should be [a-zA-Z_-]");
+        } else if (in_array($methodName, $methodNames)) {
+          printLine("You already added this method.");
+        } else {
+          $methodNames[] = $methodName;
+        }
+      } else {
+        break;
+      }
+    }
+
+    if (!empty($methodNames)) {
+      $fileName = "{$apiName}API.class.php";
+      $methods = implode("\n\n", array_map(function ($methodName) use ($apiName) {
+        return "  class $methodName extends {$apiName}API {
+
+    public function __construct(Context \$context, bool \$externalCall = false) {
+      parent::__construct(\$context, \$externalCall, []);
+      // TODO: auto-generated method stub
+    }
+   
+    protected function _execute(): bool {
+      // TODO: auto-generated method stub
+      return \$this->success;
+    }
+  }";
+      }, $methodNames));
+      $content = "<?php
+      
+namespace Site\API {
+  
+  use Core\API\Request;
+  use Core\Objects\Context;
+  
+  abstract class {$apiName}API extends Request {
+    public function __construct(Context \$context, bool \$externalCall = false, array \$params = []) {
+      parent::__construct(\$context, \$externalCall, \$params);
+      // TODO: auto-generated method stub
+    }
+  }
+}
+
+namespace Site\API\\$apiName {
+
+  use Core\Objects\Context;
+  use Site\API\TestAPI;
+  
+$methods
+}";
+    } else {
+      $fileName = "$apiName.class.php";
+      $content = "<?php
+      
+namespace Site\API;
+
+use Core\API\Request;
+use Core\Objects\Context;
+
+class $apiName extends Request {
+
+  public function __construct(Context \$context, bool \$externalCall = false) {
+    parent::__construct(\$context, \$externalCall, []);
+    // TODO: auto-generated method stub
+  }
+   
+  protected function _execute(): bool {
+    // TODO: auto-generated method stub
+    return \$this->success;
+  }
+}
+";
+    }
+
+    $path = implode(DIRECTORY_SEPARATOR, [WEBROOT, "Site", "API", $fileName]);
+    file_put_contents($path, $content);
+    printLine("Successfully created API-template: $path");
+  } else {
+    _exit("Usage: cli.php api <ls|add> [options...]");
+  }
+}
+
 $argv = $_SERVER['argv'];
 $registeredCommands = [
-  "help" => ["handler" => "printHelp"],
-  "db" => ["handler" => "handleDatabase"],
-  "routes" => ["handler" => "onRoutes"],
-  "maintenance" => ["handler" => "onMaintenance"],
-  "test" => ["handler" => "onTest"],
-  "mail" => ["handler" => "onMail"],
-  "settings" => ["handler" => "onSettings"],
-  "impersonate" => ["handler" => "onImpersonate", "requiresDocker" => true],
-  "frontend" => ["handler" => "onFrontend"],
+  "help" => ["handler" => "printHelp", "description" => "prints this help page"],
+  "db" => ["handler" => "handleDatabase", "description" => "database actions like importing, exporting and shell"],
+  "routes" => ["handler" => "onRoutes", "description" => "view and modify routes"],
+  "maintenance" => ["handler" => "onMaintenance", "description" => "toggle maintenance mode"],
+  "test" => ["handler" => "onTest", "description" => "run unit and integration tests", "requiresDocker" => true],
+  "mail" => ["handler" => "onMail", "description" => "send mails and process the pipeline"],
+  "settings" => ["handler" => "onSettings", "description" => "change and view settings"],
+  "impersonate" => ["handler" => "onImpersonate", "description" => "create a session and print cookies and csrf tokens", "requiresDocker" => true],
+  "frontend" => ["handler" => "onFrontend", "description" => "build and manage frontend modules"],
+  "api" => ["handler" => "onAPI", "description" => "view and create API endpoints"],
 ];
 
 

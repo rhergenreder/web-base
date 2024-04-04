@@ -73,7 +73,7 @@ export default function EditGroupView(props) {
                 setMembers(res.users);
                 pagination.update(res.pagination);
             } else {
-                props.showDialog(res.msg, "Error fetching group members");
+                props.showDialog(res.msg, L("account.fetch_group_members_error"));
                 return null;
             }
         });
@@ -85,47 +85,16 @@ export default function EditGroupView(props) {
                 let newMembers = members.filter(u => u.id !== userId);
                 setMembers(newMembers);
             } else {
-                props.showDialog(data.msg, "Error removing group member");
+                props.showDialog(data.msg, L("account.remove_group_member_error"));
             }
         });
     }, [api, groupId, members]);
-
-    const onSave = useCallback(() => {
-        setSaving(true);
-        if (isNewGroup) {
-            api.createGroup(group.name, group.color).then(data => {
-                setSaving(false);
-                if (!data.success) {
-                   props.showDialog(data.msg, "Error creating group");
-               } else {
-                   navigate(`/admin/group/${data.id}`)
-               }
-            });
-        } else {
-            api.updateGroup(groupId, group.name, group.color).then(data => {
-                setSaving(false);
-                if (!data.success) {
-                    props.showDialog(data.msg, "Error updating group");
-                }
-            });
-        }
-    }, [api, groupId, isNewGroup, group]);
-
-    const onSearchUser = useCallback((async (query) => {
-        let data = await api.searchUser(query);
-        if (!data.success) {
-            props.showDialog(data.msg, "Error searching users");
-            return [];
-        }
-
-        return data.users;
-    }), [api]);
 
     const onAddMember = useCallback(() => {
         if (selectedUser) {
             api.addGroupMember(groupId, selectedUser.id).then(data => {
                 if (!data.success) {
-                    props.showDialog(data.msg, "Error adding member");
+                    props.showDialog(data.msg, L("account.add_group_member_error"));
                 } else {
                     let newMembers = [...members];
                     newMembers.push(selectedUser);
@@ -136,10 +105,41 @@ export default function EditGroupView(props) {
         }
     }, [api, groupId, selectedUser])
 
+    const onSave = useCallback(() => {
+        setSaving(true);
+        if (isNewGroup) {
+            api.createGroup(group.name, group.color).then(data => {
+                setSaving(false);
+                if (!data.success) {
+                   props.showDialog(data.msg, L("account.create_group_error"));
+               } else {
+                   navigate(`/admin/group/${data.id}`)
+               }
+            });
+        } else {
+            api.updateGroup(groupId, group.name, group.color).then(data => {
+                setSaving(false);
+                if (!data.success) {
+                    props.showDialog(data.msg, L("account.update_group_error"));
+                }
+            });
+        }
+    }, [api, groupId, isNewGroup, group]);
+
+    const onSearchUser = useCallback((async (query) => {
+        let data = await api.searchUser(query);
+        if (!data.success) {
+            props.showDialog(data.msg, L("account.search_users_error"));
+            return [];
+        }
+
+        return data.users;
+    }), [api]);
+
     const onDeleteGroup = useCallback(() => {
         api.deleteGroup(groupId).then(data => {
            if (!data.success) {
-               props.showDialog(data.msg, "Error deleting group");
+               props.showDialog(data.msg, L("account.delete_group_error"));
            } else {
                navigate("/admin/groups");
            }
@@ -149,6 +149,15 @@ export default function EditGroupView(props) {
     useEffect(() => {
         onFetchGroup();
     }, []);
+
+    const complementaryColor = (color) => {
+        if (color.startsWith("#")) {
+            color = color.substring(1);
+        }
+
+        let numericValue = parseInt(color, 16);
+        return "#" + (0xFFFFFF - numericValue).toString(16);
+    }
 
     if (group === null) {
         return <CircularProgress />
@@ -221,8 +230,8 @@ export default function EditGroupView(props) {
                                     variant={"outlined"} color={"secondary"}
                                     onClick={() => setDialogData({
                                         open: true,
-                                        title: L("Delete Group"),
-                                        message: L("Do you really want to delete this group? This action cannot be undone."),
+                                        title: L("account.delete_group_title"),
+                                        message: L("account.delete_group_text"),
                                         onOption: option => option === 0 && onDeleteGroup()
                                     })}>
                                 {L("general.delete")}
@@ -258,8 +267,8 @@ export default function EditGroupView(props) {
                                     disabled: !api.hasPermission("groups/removeMember"),
                                     onClick: (entry) => setDialogData({
                                         open: true,
-                                        title: L("Remove member"),
-                                        message: sprintf(L("Do you really want to remove user '%s' from this group?"), entry.fullName || entry.name),
+                                        title: L("account.remove_group_member_title"),
+                                        message: sprintf(L("account.remove_group_member_text"), entry.fullName || entry.name),
                                         onOption: (option) => option === 0 && onRemoveMember(entry.id)
                                     })
                                 }
@@ -270,8 +279,8 @@ export default function EditGroupView(props) {
                             variant={"outlined"} disabled={!api.hasPermission("groups/addMember")}
                             onClick={() => setDialogData({
                                 open: true,
-                                title: L("Add member"),
-                                message: "Search a user to add to the group",
+                                title: L("account.add_group_member_title"),
+                                message: L("account.add_group_member_text"),
                                 inputs: [
                                     {
                                         type: "custom", name: "search", element: SearchField,

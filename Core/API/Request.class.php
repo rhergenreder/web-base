@@ -248,7 +248,7 @@ abstract class Request {
 
       // Check for permission
       $req = new \Core\API\Permission\Check($this->context);
-      $this->success = $req->execute(array("method" => self::getEndpoint()));
+      $this->success = $req->execute(["method" => self::getEndpoint()]);
       $this->lastError = $req->getLastError();
       if (!$this->success) {
         return false;
@@ -336,11 +336,19 @@ abstract class Request {
       return null;
     }
 
-    $isNestedAPI = $reflectionClass->getParentClass()->getName() !== Request::class;
+    $parentClass = $reflectionClass->getParentClass();
+    if ($parentClass === false) {
+      return null;
+    }
+
+    $isNestedAPI = $parentClass->getName() !== Request::class;
     if (!$isNestedAPI) {
       # e.g. /api/stats or /api/info
       $methodName = $reflectionClass->getShortName();
       return $prefix . lcfirst($methodName);
+    } else if ($parentClass->getName() === \TestRequest::class) {
+      $methodName = $reflectionClass->getShortName();
+      return $prefix . "/e2e-test/" . lcfirst($methodName);
     } else {
       # e.g. /api/user/login
       $methodClass = $reflectionClass;
@@ -348,6 +356,10 @@ abstract class Request {
       while (!endsWith($nestedClass->getName(), "API")) {
         $methodClass = $nestedClass;
         $nestedClass = $nestedClass->getParentClass();
+
+        if (!$nestedClass) {
+          return null;
+        }
       }
 
       $nestedAPI = substr(lcfirst($nestedClass->getShortName()), 0, -3);

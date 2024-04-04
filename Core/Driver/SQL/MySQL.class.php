@@ -510,7 +510,7 @@ class RowIteratorMySQL extends RowIterator {
     return $row;
   }
 
-  public function rewind() {
+  public function rewind(): void {
     if ($this->useCache) {
       $this->rowIndex = 0;
     } else if ($this->rowIndex !== 0) {

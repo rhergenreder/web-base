@@ -68,4 +68,20 @@ return [
   "color" => "Color",
   "logged_in_as" => "Logged in as",
   "active" => "Active",
+  "group" => "Group",
+
+  # dialogs
+  "fetch_group_members_error" => "Error fetching group members",
+  "remove_group_member_error" => "Error removing group member",
+  "add_group_member_error" => "Error adding member",
+  "create_group_error" => "Error creating group",
+  "update_group_error" => "Error updating group",
+  "delete_group_error" => "Error deleting group",
+  "search_users_error" => "Error searching users",
+  "delete_group_title" => "Delete Group",
+  "delete_group_text" => "Do you really want to delete this group? This action cannot be undone.",
+  "remove_group_member_title" => "Remove member",
+  "remove_group_member_text" => "Do you really want to remove user '%s' from this group?",
+  "add_group_member_title" => "Add member",
+  "add_group_member_text" => "Search a user to add to the group",
 ];

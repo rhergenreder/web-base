@@ -38,4 +38,6 @@ return [
   "remove_route_error" => "Error removing route",
   "regenerate_router_cache_error" => "Error regenerating router cache",
   "regenerate_router_cache_success" => "Router cache successfully regenerated",
+  "delete_route_title" => "Delete Route",
+  "delete_route_text" => "Do you really want to delete the following route?",
 ];

@@ -193,10 +193,10 @@ export default function RouteListView(props) {
                                             color={"secondary"}
                                             onClick={() => setDialogData({
                                                 open: true,
-                                                title: L("Delete Route"),
-                                                message: L("Do you really want to delete the following route?"),
+                                                title: L("routes.delete_route_title"),
+                                                message: L("routes.delete_route_text"),
                                                 inputs: [
-                                                    { type: "text", value: route.pattern, disabled: true}
+                                                    { type: "text", name: "pattern", value: route.pattern, disabled: true}
                                                 ],
                                                 options: [L("general.ok"), L("general.cancel")],
                                                 onOption: btn => btn === 0 && onDeleteRoute(route.id)

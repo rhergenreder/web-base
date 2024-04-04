@@ -21,15 +21,15 @@ abstract class RowIterator implements \Iterator {
   protected abstract function getNumRows(): int;
   protected abstract function fetchRow(int $index): array;
 
-  public function current() {
+  public function current(): array {
     return $this->fetchRow($this->rowIndex);
   }
 
-  public function next() {
+  public function next(): void {
     $this->rowIndex++;
   }
 
-  public function key() {
+  public function key(): int {
     return $this->rowIndex;
   }
 

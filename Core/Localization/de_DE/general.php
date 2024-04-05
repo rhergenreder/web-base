@@ -50,6 +50,8 @@ return [
   "info" => "Info",
   "reload" => "Aktualisieren",
   "success" => "Erfolg",
+  "send" => "Senden",
+  "sending" => "Sende ab",
 
   # file
   "choose_file" => "Datei auswählen",

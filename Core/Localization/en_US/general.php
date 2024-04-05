@@ -48,6 +48,8 @@ return [
   "info" => "Info",
   "reload" => "Reload",
   "success" => "Success",
+  "send" => "Send",
+  "sending" => "Sending",
 
   # file
   "choose_file" => "Choose File",

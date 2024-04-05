@@ -159,7 +159,8 @@ class Settings {
       ->addRow("mail_password", "", true, false)
       ->addRow("mail_from", "", false, false)
       ->addRow("mail_last_sync", "", false, false)
-      ->addRow("mail_footer", "", false, false);
+      ->addRow("mail_footer", "", false, false)
+      ->addRow("mail_async", false, false, false);
   }
 
   public function getSiteName(): string {

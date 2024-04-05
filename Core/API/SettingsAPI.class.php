@@ -117,6 +117,10 @@ namespace Core\API\Settings {
 
         $this->success = ($query->execute() !== FALSE);
         $this->lastError = $sql->getLastError();
+
+        if ($this->success) {
+          $this->logger->info("The site settings were changed");
+        }
       }
 
       return $this->success;

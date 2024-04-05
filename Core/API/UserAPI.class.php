@@ -183,6 +183,8 @@ namespace Core\API\User {
 
       $groups = [];
       $sql = $this->context->getSQL();
+      $currentUser = $this->context->getUser();
+      $currentUserId = $currentUser->getId();
 
       $requestedGroups = array_unique($this->getParam("groups"));
       if (!empty($requestedGroups)) {
@@ -190,7 +192,7 @@ namespace Core\API\User {
         foreach ($requestedGroups as $groupId) {
           if (!isset($availableGroups[$groupId])) {
             return $this->createError("Group with id=$groupId does not exist.");
-          } else if ($groupId === Group::ADMIN && !$this->context->getUser()->hasGroup(Group::ADMIN)) {
+          } else if ($groupId === Group::ADMIN && !$currentUser->hasGroup(Group::ADMIN)) {
             return $this->createError("You cannot create users with administrator groups.");
           }
         }
@@ -202,6 +204,7 @@ namespace Core\API\User {
       if ($user !== false) {
         $this->user = $user;
         $this->result["userId"] = $user->getId();
+        $this->logger->info("A new user with username='$username' and email='$email' was created by userId='$currentUserId'");
       }
 
       return $this->success;
@@ -422,6 +425,9 @@ namespace Core\API\User {
       if ($user === false) {
         return false;
       }
+
+      $currentUserId = $this->context->getUser()->getId();
+      $this->logger->info("A new user with username='$username' and email='$email' was invited by userId='$currentUserId'");
 
       // Create Token
       $token = generateRandomString(36);
@@ -724,6 +730,8 @@ namespace Core\API\User {
         return false;
       }
 
+      $this->logger->info("A new user with username='$username' and email='$email' was created");
+
       $validHours = 48;
       $token = generateRandomString(36);
       $userToken = new UserToken($user, $token, UserToken::TYPE_EMAIL_CONFIRM, $validHours);
@@ -756,12 +764,12 @@ namespace Core\API\User {
           $this->lastError = $request->getLastError();
         }
       } else {
-        $this->lastError = "Could create user token: " . $sql->getLastError();
+        $this->lastError = "Could not create user token: " . $sql->getLastError();
         $this->success = false;
       }
 
       if (!$this->success) {
-        $this->logger->error("Could not deliver email to=$email type=register reason=" . $this->lastError);
+        $this->logger->error("Could not deliver email to='$email' type='register' reason='" . $this->lastError . "'");
         $this->lastError = "Your account was registered but the confirmation email could not be sent. " .
           "Please contact the server administration. This issue has been automatically logged. Reason: " . $this->lastError;
       }
@@ -1007,7 +1015,7 @@ namespace Core\API\User {
               "gpgFingerprint" => $gpgFingerprint
             ));
             $this->lastError = $request->getLastError();
-            $this->logger->info("Requested password reset for user id=" . $user->getId() . " by ip_address=" . $_SERVER["REMOTE_ADDR"]);
+            $this->logger->info("Requested password reset for user id='" . $user->getId() . "' by ip_address='" . $_SERVER["REMOTE_ADDR"] . "'");
           }
         }
       }

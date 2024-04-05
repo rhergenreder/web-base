@@ -3,7 +3,7 @@ import {LocaleContext} from "shared/locale";
 import {
     Box, Button, Checkbox,
     CircularProgress, FormControl, FormControlLabel,
-    FormGroup, FormLabel, IconButton,
+    FormGroup, FormLabel, Grid, IconButton,
     Paper, Select, styled,
     Tab,
     Table,
@@ -14,7 +14,17 @@ import {
     Tabs, TextField
 } from "@mui/material";
 import {Link} from "react-router-dom";
-import {Add, Delete, Google, LibraryBooks, Mail, RestartAlt, Save, SettingsApplications} from "@mui/icons-material";
+import {
+    Add,
+    Delete,
+    Google,
+    LibraryBooks,
+    Mail,
+    RestartAlt,
+    Save,
+    Send,
+    SettingsApplications
+} from "@mui/icons-material";
 import {TableContainer} from "@material-ui/core";
 import TIME_ZONES from "shared/time-zones";
 
@@ -50,6 +60,7 @@ export default function SettingsView(props) {
           "mail_port",
           "mail_username",
           "mail_password",
+          "mail_async",
       ],
       "recaptcha": [
           "recaptcha_enabled",
@@ -69,6 +80,8 @@ export default function SettingsView(props) {
     const [hasChanged, setChanged] = useState(false);
     const [isSaving, setSaving] = useState(false);
     const [newKey, setNewKey] = useState("");
+    const [testMailAddress, setTestMailAddress] = useState("");
+    const [isSending, setSending] = useState(false);
 
     const isUncategorized = (key) => {
         return !(Object.values(KNOWN_SETTING_KEYS).reduce((acc, arr) => {
@@ -161,11 +174,26 @@ export default function SettingsView(props) {
         }
     }, [settings]);
 
+    const onSendTestMail = useCallback(() => {
+        if (!isSending) {
+            setSending(true);
+            api.sendTestMail(testMailAddress).then(data => {
+                setSending(false);
+               if (!data.success) {
+                   showDialog(data.msg, L("settings.send_test_email_error"));
+               } else {
+                   showDialog(L("settings.send_test_email_success"), L("general.success"));
+                   setTestMailAddress("");
+               }
+            });
+        }
+    }, [api, showDialog, testMailAddress, isSending]);
+
     if (settings === null) {
         return <CircularProgress />
     }
 
-    const parseBool = (v) => v === true || v === 1 || ["true", "1", "yes"].includes(v.toString().toLowerCase());
+    const parseBool = (v) => v !== undefined && (v === true || v === 1 || ["true", "1", "yes"].includes(v.toString().toLowerCase()));
 
     const renderTextInput = (key_name, disabled=false, props={}) => {
         return <SettingsFormGroup key={"form-" + key_name} {...props}>
@@ -254,6 +282,30 @@ export default function SettingsView(props) {
                 renderTextInput("mail_username", !parseBool(settings.mail_enabled)),
                 renderPasswordInput("mail_password", !parseBool(settings.mail_enabled)),
                 renderTextInput("mail_footer", !parseBool(settings.mail_enabled)),
+                renderCheckBox("mail_async", !parseBool(settings.mail_enabled)),
+                <FormGroup key={"mail-test"}>
+                    <FormLabel>{L("settings.send_test_email")}</FormLabel>
+                    <FormControl disabled={!parseBool(settings.mail_enabled)}>
+                        <Grid container spacing={1}>
+                            <Grid item xs={1}>
+                                <Button startIcon={isSending ? <CircularProgress size={14} /> : <Send />}
+                                        variant={"outlined"} onClick={onSendTestMail}
+                                        fullWidth={true}
+                                        disabled={!parseBool(settings.mail_enabled) || isSending || !api.hasPermission("mail/test")}>
+                                    {isSending ? L("general.sending") + "…" : L("general.send")}
+                                </Button>
+                            </Grid>
+                            <Grid item xs={11}>
+                                <TextField disabled={!parseBool(settings.mail_enabled)}
+                                           fullWidth={true}
+                                           variant={"outlined"} value={testMailAddress}
+                                           onChange={e => setTestMailAddress(e.target.value)}
+                                           size={"small"} type={"email"}
+                                           placeholder={L("settings.mail_address")} />
+                            </Grid>
+                        </Grid>
+                    </FormControl>
+                </FormGroup>
             ];
         } else if (selectedTab === "recaptcha") {
             return [
@@ -291,7 +343,7 @@ export default function SettingsView(props) {
                             <TableRow>
                                 <TableCell>
                                     <TextField fullWidth={true} size={"small"} onChange={e => setNewKey(e.target.value)}
-                                        onBlur={() => onAddKey(newKey)} value={newKey}/>
+                                        onBlur={() => onAddKey(newKey)} value={newKey} />
                                 </TableCell>
                                 <TableCell>
                                     <TextField fullWidth={true} size={"small"} />
@@ -348,7 +400,7 @@ export default function SettingsView(props) {
             <ButtonBar>
                 <Button color={"primary"}
                         onClick={onSaveSettings}
-                        disabled={isSaving}
+                        disabled={isSaving || !api.hasPermission("settings/set")}
                         startIcon={isSaving ? <CircularProgress size={14} /> : <Save />}
                         variant={"outlined"} title={L(hasChanged ? "general.unsaved_changes" : "general.save")}>
                     {isSaving ? L("general.saving") + "…" : (L("general.save") + (hasChanged ? " *" : ""))}

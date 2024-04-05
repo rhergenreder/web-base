@@ -185,6 +185,7 @@ namespace Core\API\Mail {
             $mail->addStringAttachment("Version: 1", null, PHPMailer::ENCODING_BASE64, "application/pgp-encrypted", "");
             $mail->addStringAttachment($encryptedBody, "encrypted.asc", PHPMailer::ENCODING_7BIT, "application/octet-stream", "");
           } else {
+            $this->logger->error("Error encrypting with gpg: " . $res["error"]);
             return $this->createError($res["error"]);
           }
         } else {
@@ -237,6 +238,7 @@ namespace Core\API\Mail {
       if ($this->success && is_array($mailQueueItems)) {
         if ($debug) {
           echo "Found " . count($mailQueueItems) . " mails to send" . PHP_EOL;
+          $this->logger->debug("Found " . count($mailQueueItems) . " mails to send");
         }
 
         $successfulMails = 0;
@@ -249,6 +251,7 @@ namespace Core\API\Mail {
 
           if ($debug) {
             echo "Sending subject=$mailQueueItem->subject to=$mailQueueItem->to" . PHP_EOL;
+            $this->logger->debug("Sending subject=$mailQueueItem->subject to=$mailQueueItem->to");
           }
 
           if ($mailQueueItem->send($this->context)) {
@@ -257,6 +260,9 @@ namespace Core\API\Mail {
         }
 
         $this->success = $successfulMails === count($mailQueueItems);
+        if ($successfulMails > 0) {
+          $this->logger->debug("Sent $successfulMails emails successfully");
+        }
       }
 
       return $this->success;

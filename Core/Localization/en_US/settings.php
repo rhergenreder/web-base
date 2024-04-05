@@ -47,6 +47,9 @@ return [
   "mail_username" => "Mail server username",
   "mail_password" => "Mail server password",
   "mail_footer" => "Path to e-mail footer",
+  "mail_async" => "Send e-mails asynchronously (requires a cron-job)",
+  "mail_address" => "Mail address",
+  "send_test_email" => "Send test e-mail",
 
   # recaptcha
   "recaptcha_enabled" => "Enable Google reCaptcha",
@@ -57,4 +60,6 @@ return [
   "fetch_settings_error" => "Error fetching settings",
   "save_settings_success" => "Settings saved successfully",
   "save_settings_error" => "Error saving settings",
+  "send_test_email_error" => "Error sending test email",
+  "send_test_email_success" => "Test email successfully sent. Please check your inbox!",
 ];

@@ -8,11 +8,12 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    IconButton, Button, Checkbox
-} from "@material-ui/core";
+    Button,
+    IconButton, Checkbox
+} from "@mui/material";
 import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
-import {Add, Cached, Delete, Edit, Refresh} from "@material-ui/icons";
+import {Add, Cached, Delete, Edit, Refresh} from "@mui/icons-material";
 import Dialog from "shared/elements/dialog";
 
 const RouteTableRow = styled(TableRow)((props) => ({
@@ -136,15 +137,16 @@ export default function RouteListView(props) {
             <div className={"col-6"} />
                 <div className={"col-6 text-right"}>
                 <div className={"form-group"}>
-                    <Button variant={"outlined"} color={"primary"} className={"m-1"} startIcon={<Refresh />} onClick={() => onFetchRoutes(true)}>
+                    <Button variant={"outlined"} color={"primary"} className={"m-1"} size={"small"}
+                            startIcon={<Refresh />} onClick={() => onFetchRoutes(true)}>
                         {L("general.reload")}
                     </Button>
-                    <Button variant={"outlined"} className={"m-1"} startIcon={<Add />}
+                    <Button variant={"outlined"} className={"m-1"} startIcon={<Add />} size={"small"}
                             disabled={!props.api.hasPermission("routes/add")}
                             onClick={() => navigate("/admin/routes/new")} >
                         {L("general.add")}
                     </Button>
-                    <Button variant={"outlined"} className={"m-1"} startIcon={<Cached />}
+                    <Button variant={"outlined"} className={"m-1"} startIcon={<Cached />} size={"small"}
                             disabled={!props.api.hasPermission("routes/generateCache") || isGeneratingCache}
                             onClick={onRegenerateCache} >
                         {isGeneratingCache ? L("routes.regenerating_cache") + "…" : L("routes.regenerate_cache")}

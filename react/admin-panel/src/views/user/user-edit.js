@@ -1,6 +1,6 @@
 import {Link, useNavigate, useParams} from "react-router-dom";
 import {useCallback, useContext, useEffect, useState} from "react";
-import {CircularProgress} from "@material-ui/core";
+import {CircularProgress} from "@mui/material";
 import {LocaleContext} from "shared/locale";
 import * as React from "react";
 

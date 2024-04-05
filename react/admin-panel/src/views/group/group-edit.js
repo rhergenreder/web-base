@@ -2,16 +2,14 @@ import {useCallback, useContext, useEffect, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router-dom";
 import {LocaleContext} from "shared/locale";
 import SearchField from "shared/elements/search-field";
-import {Button, CircularProgress} from "@material-ui/core";
-import * as React from "react";
-import ColorPicker from "material-ui-color-picker";
+import React from "react";
 import {ControlsColumn, DataTable, NumericColumn, StringColumn} from "shared/elements/data-table";
 import EditIcon from "@mui/icons-material/Edit";
 import usePagination from "shared/hooks/pagination";
-import {Delete, KeyboardArrowLeft, Save} from "@material-ui/icons";
 import Dialog from "shared/elements/dialog";
-import {Box, FormControl, FormGroup, FormLabel, styled, TextField} from "@mui/material";
-import {Add} from "@mui/icons-material";
+import {Box, FormControl, FormGroup, FormLabel, styled, TextField, Button, CircularProgress} from "@mui/material";
+import {Add, Delete, KeyboardArrowLeft, Save} from "@mui/icons-material";
+import {MuiColorInput} from "mui-color-input";
 
 const defaultGroupData = {
     name: "",
@@ -146,6 +144,24 @@ export default function EditGroupView(props) {
         });
     }, [api, groupId]);
 
+    const onOpenMemberDialog = useCallback(() => {
+        setDialogData({
+            open: true,
+            title: L("account.add_group_member_title"),
+            message: L("account.add_group_member_text"),
+            inputs: [
+                {
+                    type: "custom", name: "search", element: SearchField,
+                    size: "small", key: "search",
+                    onSearch: v => onSearchUser(v),
+                    onSelect: u => setSelectedUser(u),
+                    displayText: u => u.fullName || u.name
+                }
+            ],
+            onOption: (option) => option === 0 ? onAddMember() : setSelectedUser(null)
+        });
+    }, []);
+
     useEffect(() => {
         onFetchGroup();
     }, []);
@@ -202,12 +218,11 @@ export default function EditGroupView(props) {
                             {L("account.color")}
                         </FormLabel>
                         <FormControl>
-                            <ColorPicker
+                            <MuiColorInput
+                                format={"hex"}
                                 value={group.color}
                                 size={"small"}
                                 variant={"outlined"}
-                                style={{ backgroundColor: group.color }}
-                                floatingLabelText={group.color}
                                 onChange={color => setGroup({...group, color: color})}
                             />
                         </FormControl>
@@ -243,6 +258,7 @@ export default function EditGroupView(props) {
             </div>
             {!isNewGroup && api.hasPermission("groups/getMembers") ?
                 <div className={"m-3 col-6"}>
+                    <h4>{L("account.members")}</h4>
                     <DataTable
                         data={members}
                         pagination={pagination}
@@ -250,8 +266,7 @@ export default function EditGroupView(props) {
                         defaultSortColumn={0}
                         className={"table table-striped"}
                         fetchData={onFetchMembers}
-                        placeholder={L("No members in this group")}
-                        title={L("account.members")}
+                        placeholder={L("account.no_members")}
                         columns={[
                             new NumericColumn(L("general.id"), "id"),
                             new StringColumn(L("account.name"), "name"),
@@ -266,6 +281,7 @@ export default function EditGroupView(props) {
                                     label: L("general.remove"),
                                     element: Delete,
                                     disabled: !api.hasPermission("groups/removeMember"),
+                                    color: "secondary",
                                     onClick: (entry) => setDialogData({
                                         open: true,
                                         title: L("account.remove_group_member_title"),
@@ -275,27 +291,15 @@ export default function EditGroupView(props) {
                                 }
                             ]),
                         ]}
+                        buttons={[{
+                            key: "btn-add-member",
+                            color: "primary",
+                            startIcon: <Add />,
+                            disabled: !api.hasPermission("groups/addMember"),
+                            children: L("general.add"),
+                            onClick: onOpenMemberDialog
+                        }]}
                     />
-                    <Button startIcon={<Add />} color={"primary"}
-                            variant={"outlined"} disabled={!api.hasPermission("groups/addMember")}
-                            onClick={() => setDialogData({
-                                open: true,
-                                title: L("account.add_group_member_title"),
-                                message: L("account.add_group_member_text"),
-                                inputs: [
-                                    {
-                                        type: "custom", name: "search", element: SearchField,
-                                        size: "small", key: "search",
-                                        onSearch: v => onSearchUser(v),
-                                        onSelect: u => setSelectedUser(u),
-                                        displayText: u => u.fullName || u.name
-                                    }
-                                ],
-                                onOption: (option) => option === 0 ? onAddMember() : setSelectedUser(null)
-                                })
-                            }>
-                        {L("general.add")}
-                    </Button>
                 </div>
                 : <></>
             }

@@ -17,6 +17,7 @@ return [
   "users_registered" => "Users registered",
   "available_groups" => "available Groups",
   "routes_defined" => "Routes defined",
+  "error_count" => "Errors in the past 48 hours",
 
   # Dialogs
   "fetch_stats_error" => "Error fetching stats",

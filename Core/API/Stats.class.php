@@ -71,6 +71,18 @@ class Stats extends Request {
       return false;
     }
 
+    $req = new \Core\API\Logs\Get($this->context, false);
+    $success = $req->execute([
+      "since" => (new \DateTime())->modify("-48 hours"),
+      "severity" => "error"
+    ]);
+
+    if ($success) {
+      $errorCount = $req->getResult()["pagination"]["total"];
+    } else {
+      $errorCount = "Unknown";
+    }
+
     $loadAvg = "Unknown";
     if (function_exists("sys_getloadavg")) {
       $loadAvg = sys_getloadavg();
@@ -86,6 +98,7 @@ class Stats extends Request {
       "groupCount" => $groupCount,
       "visitors" => $visitorStatistics,
       "visitorsTotal" => $visitorCount,
+      "errorCount" => $errorCount,
       "server" => [
         "version" => WEBBASE_VERSION,
         "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",

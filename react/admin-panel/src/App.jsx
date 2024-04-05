@@ -2,8 +2,8 @@ import React, {useCallback, useContext, useEffect, useMemo, useState} from 'reac
 import API from "shared/api";
 import Icon from "shared/elements/icon";
 import LoginForm from "shared/views/login";
-import {Alert} from "@material-ui/lab";
-import {Button} from "@material-ui/core";
+import {Alert} from "@mui/lab";
+import {Button} from "@mui/material";
 import {LocaleContext} from "shared/locale";
 import AdminDashboard from "./AdminDashboard";
 

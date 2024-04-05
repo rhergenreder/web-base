@@ -3,14 +3,13 @@ import {LocaleContext} from "shared/locale";
 import {Link} from "react-router-dom";
 import usePagination from "shared/hooks/pagination";
 import {DataColumn, DataTable, DateTimeColumn, NumericColumn, StringColumn} from "shared/elements/data-table";
-import {TextField} from "@mui/material";
+import {Box, FormControl, FormGroup, FormLabel, IconButton, MenuItem, TextField} from "@mui/material";
 import {DateTimePicker} from "@mui/x-date-pickers";
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import {API_DATETIME_FORMAT} from "shared/constants";
 import {format, toDate} from "date-fns";
-import {Box, FormControl, FormGroup, FormLabel, IconButton, MenuItem, Select} from "@material-ui/core";
-import {ExpandLess, ExpandMore} from "@material-ui/icons";
+import {ExpandLess, ExpandMore} from "@mui/icons-material";
 
 export default function LogView(props) {
 

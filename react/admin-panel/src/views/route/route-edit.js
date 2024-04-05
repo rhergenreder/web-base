@@ -4,12 +4,12 @@ import {LocaleContext} from "shared/locale";
 import {
     Box,
     Button,
+    TextField,
     CircularProgress, styled,
-} from "@material-ui/core";
+} from "@mui/material";
 import * as React from "react";
 import RouteForm from "./route-form";
-import {KeyboardArrowLeft, Save} from "@material-ui/icons";
-import {TextField} from "@mui/material";
+import {KeyboardArrowLeft, Save} from "@mui/icons-material";
 
 const ButtonBar = styled(Box)((props) => ({
     "& > button": {
@@ -74,7 +74,7 @@ export default function RouteEditView(props) {
             setFetchRoute(false);
             api.getRoute(routeId).then((res) => {
                 if (!res.success) {
-                    showDialog(res.msg, L("Error fetching route"));
+                    showDialog(res.msg, L("routes.fetch_route_error"));
                     navigate("/admin/routes");
                 } else {
                     setRoute(res.route);
@@ -93,7 +93,7 @@ export default function RouteEditView(props) {
                     if (res.success) {
                         navigate("/admin/routes/" + res.routeId);
                     } else {
-                        showDialog(res.msg, L("Error saving route"));
+                        showDialog(res.msg, L("routes.save_route_error"));
                     }
                 });
             } else {
@@ -101,7 +101,7 @@ export default function RouteEditView(props) {
                 api.updateRoute(...args).then(res => {
                     setSaving(false);
                     if (!res.success) {
-                        showDialog(res.msg, L("Error saving route"));
+                        showDialog(res.msg, L("routes.save_route_error"));
                     }
                 });
             }

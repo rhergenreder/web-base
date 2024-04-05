@@ -1,14 +1,11 @@
-import {Table, TableBody, TableCell, TableHead, TableRow} from "@material-ui/core";
-import ArrowUpwardIcon from "@material-ui/icons/ArrowUpward";
-import ArrowDownwardIcon from "@material-ui/icons/ArrowDownward";
 import React, {useCallback, useContext, useEffect, useState} from "react";
 import "./data-table.css";
 import {LocaleContext} from "../locale";
 import clsx from "clsx";
-import {Box, IconButton, Select, TextField} from "@mui/material";
+import {Box, Button, Select, TextField, Table, TableBody, TableCell, TableHead, TableRow} from "@mui/material";
 import {formatDate, formatDateTime} from "../util";
-import CachedIcon from "@material-ui/icons/Cached";
 import {isNumber} from "chart.js/helpers";
+import {ArrowUpward, ArrowDownward, Refresh} from "@mui/icons-material";
 
 
 export function DataTable(props) {
@@ -18,7 +15,8 @@ export function DataTable(props) {
         fetchData, onClick, onFilter,
         defaultSortColumn, defaultSortOrder,
         forceReload,
-        title, ...other } = props;
+        buttons,
+        ...other } = props;
 
     const {translate: L} = useContext(LocaleContext);
 
@@ -84,7 +82,7 @@ export function DataTable(props) {
                                       onClick={() => onChangeSort(index, column)}
                                       align={column.align}>
                 {sortColumn === index ?
-                    (sortAscending ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />) :
+                    (sortAscending ? <ArrowUpward /> : <ArrowDownward />) :
                     <></>
                 }
                 {column.renderHead(index)}
@@ -124,17 +122,13 @@ export function DataTable(props) {
     }
 
     return <Box position={"relative"}>
-            {title ?
-                <h3>
-                    {fetchData ?
-                        <IconButton onClick={() => onFetchData(true)} title={L("general.reload")}>
-                            <CachedIcon/>&nbsp;
-                        </IconButton>
-                        : <></>
-                    }
-                    {title}
-                </h3> : <></>
-            }
+            <Box textAlign={"left"} mb={1} className={"data-table-button-bar"}>
+                <Button startIcon={<Refresh />} size={"small"} variant={"outlined"}
+                    onClick={() => onFetchData(true)}>
+                    {L("general.reload")}
+                </Button>
+                {(buttons || []).map(b => <Button size={"small"} variant={"outlined"} {...b} />)}
+            </Box>
             <Table className={clsx("data-table", className)} size="small" {...other}>
                 <TableHead>
                     <TableRow>

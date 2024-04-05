@@ -69,6 +69,7 @@ return [
   "logged_in_as" => "Logged in as",
   "active" => "Active",
   "group" => "Group",
+  "no_members" => "No members in this group",
 
   # dialogs
   "fetch_group_members_error" => "Error fetching group members",

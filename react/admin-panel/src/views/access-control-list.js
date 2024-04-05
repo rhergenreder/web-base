@@ -12,9 +12,9 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    IconButton, styled, FormGroup, FormLabel, FormControl, Box
-} from "@material-ui/core";
-import {Add, Delete, Edit, Refresh} from "@material-ui/icons";
+    IconButton, styled, FormGroup, FormLabel, Box
+} from "@mui/material";
+import {Add, Delete, Edit, Refresh} from "@mui/icons-material";
 import {USER_GROUP_ADMIN} from "shared/constants";
 import Dialog from "shared/elements/dialog";
 
@@ -238,11 +238,11 @@ export default function AccessControlList(props) {
                     <FormLabel>{L("general.controls")}</FormLabel>
                 </Box>
                 <Box mb={2}>
-                    <Button variant={"outlined"} color={"primary"} className={"mr-1"}
+                    <Button variant={"outlined"} color={"primary"} className={"mr-1"} size={"small"}
                             startIcon={<Refresh />} onClick={() => onFetchACL(true)}>
                         {L("general.reload")}
                     </Button>
-                    <Button variant={"outlined"} startIcon={<Add />}
+                    <Button variant={"outlined"} startIcon={<Add />} size={"small"}
                             disabled={!props.api.hasGroup(USER_GROUP_ADMIN)}
                             onClick={() => setDialogData({
                                 open: true,

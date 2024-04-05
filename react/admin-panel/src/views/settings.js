@@ -10,6 +10,7 @@ import {
     TableBody,
     TableCell,
     TableHead,
+    TableContainer,
     TableRow,
     Tabs, TextField
 } from "@mui/material";
@@ -25,7 +26,6 @@ import {
     Send,
     SettingsApplications
 } from "@mui/icons-material";
-import {TableContainer} from "@material-ui/core";
 import TIME_ZONES from "shared/time-zones";
 
 const SettingsFormGroup = styled(FormGroup)((props) => ({

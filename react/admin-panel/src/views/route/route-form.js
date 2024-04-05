@@ -1,8 +1,8 @@
-import {Box, Checkbox, FormControl, FormControlLabel, Select, styled, TextField} from "@material-ui/core";
+import {Box, Checkbox, FormControl, FormControlLabel, Select, styled, TextField} from "@mui/material";
 import * as React from "react";
 import {useCallback, useContext, useEffect, useRef} from "react";
 import {LocaleContext} from "shared/locale";
-import {CheckCircle, ErrorRounded} from "@material-ui/icons";
+import {CheckCircle, ErrorRounded} from "@mui/icons-material";
 
 const RouteFormControl = styled(FormControl)((props) => ({
     "& > label": {

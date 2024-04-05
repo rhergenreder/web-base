@@ -33,6 +33,8 @@ return [
 
   # dialogs
   "fetch_routes_error" => "Fehler beim Holen der Routen",
+  "fetch_route_error" => "Fehler beim Holen der Route",
+  "save_route_error" => "Fehler beim Speichern der Route",
   "enable_route_error" => "Fehler beim Aktivieren der Route",
   "disable_route_error" => "Fehler beim Deaktivieren der Route",
   "remove_route_error" => "Fehler beim Entfernen der Route",

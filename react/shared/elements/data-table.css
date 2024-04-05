@@ -49,3 +49,8 @@
     margin-right: 4px;
     cursor: pointer;
 }
+
+.data-table-button-bar button {
+    margin-right: 8px;
+    margin-top: 8px;
+}

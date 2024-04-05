@@ -1,11 +1,10 @@
 import * as React from "react";
 import {Link} from "react-router-dom";
 import {format, getDaysInMonth} from "date-fns";
-import {CircularProgress} from "@material-ui/core";
 import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
-import {LibraryBooks, People} from "@material-ui/icons";
-import {ArrowCircleRight, Groups} from "@mui/icons-material";
+import {ArrowCircleRight, BugReport, Groups, LibraryBooks, People} from "@mui/icons-material";
+import {CircularProgress} from "@mui/material";
 
 const StatBox = (props) => <div className={"col-lg-3 col-6"}>
     <div className={"small-box bg-" + props.color}>
@@ -131,6 +130,10 @@ export default function Overview(props) {
                              text={L("admin.routes_defined")}
                              icon={<LibraryBooks />}
                              link={"/admin/routes"} />
+                    <StatBox color={"danger"} count={stats?.errorCount}
+                             text={L("admin.error_count")}
+                             icon={<BugReport />}
+                             link={"/admin/logs"} />
                 </div>
             </div>
         </section>

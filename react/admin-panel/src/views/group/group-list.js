@@ -1,10 +1,8 @@
 import {Link, useNavigate} from "react-router-dom";
 import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
-import {ControlsColumn, DataColumn, DataTable, NumericColumn, StringColumn} from "shared/elements/data-table";
-import {Button, IconButton} from "@material-ui/core";
-import EditIcon from '@mui/icons-material/Edit';
-import AddIcon from '@mui/icons-material/Add';
+import {ControlsColumn, DataTable, NumericColumn, StringColumn} from "shared/elements/data-table";
+import {Add, Edit} from "@mui/icons-material";
 import usePagination from "shared/hooks/pagination";
 
 
@@ -44,7 +42,7 @@ export default function GroupListView(props) {
         new StringColumn(L("account.name"), "name"),
         new NumericColumn(L("account.member_count"), "memberCount", { align: "center" }),
         new ControlsColumn(L("general.controls"), [
-            { label: L("general.edit"), element: EditIcon, onClick: (entry) => navigate(`/admin/group/${entry.id}`) }
+            { label: L("general.edit"), element: Edit, onClick: (entry) => navigate(`/admin/group/${entry.id}`) }
         ]),
     ];
 
@@ -53,6 +51,7 @@ export default function GroupListView(props) {
             <div className={"container-fluid"}>
                 <div className={"row mb-2"}>
                     <div className={"col-sm-6"}>
+                        <h1 className={"m-0 text-dark"}>{L("account.groups")}</h1>
                     </div>
                     <div className={"col-sm-6"}>
                         <ol className={"breadcrumb float-sm-right"}>
@@ -64,11 +63,6 @@ export default function GroupListView(props) {
             </div>
             <div className={"content"}>
                 <div className={"container-fluid"}>
-                    <Link to="/admin/group/new">
-                        <Button variant={"outlined"} startIcon={<AddIcon />} size={"small"}>
-                            {L("general.create_new")}
-                        </Button>
-                    </Link>
                     <DataTable
                         data={groups}
                         pagination={pagination}
@@ -77,8 +71,15 @@ export default function GroupListView(props) {
                         className={"table table-striped"}
                         fetchData={onFetchGroups}
                         placeholder={"No groups to display"}
-                        title={L("account.groups")}
-                        columns={columnDefinitions} />
+                        columns={columnDefinitions}
+                        buttons={[{
+                            key: "btn-create-group",
+                            color: "primary",
+                            startIcon: <Add />,
+                            onClick: () => navigate("/admin/group/new"),
+                            disabled: !api.hasPermission("groups/create"),
+                            children: L("general.create_new")
+                        }]}/>
                 </div>
             </div>
         </div>

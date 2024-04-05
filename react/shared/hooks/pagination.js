@@ -1,7 +1,6 @@
 import React, {useState} from "react";
-import {Box, Select, Pagination as MuiPagination} from "@mui/material";
+import {FormControl, Box, Select, Pagination as MuiPagination} from "@mui/material";
 import {sprintf} from "sprintf-js";
-import {FormControl} from "@material-ui/core";
 
 class Pagination {
 

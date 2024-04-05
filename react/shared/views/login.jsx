@@ -1,5 +1,4 @@
-import {
-    Box,
+import {Box,
     Button,
     Checkbox, CircularProgress, Container,
     FormControlLabel,
@@ -7,16 +6,16 @@ import {
     Link,
     TextField,
     Typography
-} from "@material-ui/core";
+} from "@mui/material";
 
-import {makeStyles} from '@material-ui/core/styles';
-import {Alert} from '@material-ui/lab';
+import {Alert} from '@mui/lab';
 import React, {useCallback, useContext, useEffect, useState} from "react";
-import ReplayIcon from '@material-ui/icons/Replay';
+import ReplayIcon from '@mui/icons-material/Replay';
 import LanguageSelection from "../elements/language-selection";
 import {decodeText, encodeText, getParameter, removeParameter} from "shared/util";
 import {LocaleContext} from "shared/locale";
 
+/*
 const useStyles = makeStyles((theme) => ({
     paper: {
         marginTop: theme.spacing(8),
@@ -65,11 +64,13 @@ const useStyles = makeStyles((theme) => ({
         }
     }
 }));
+*/
 
 export default function LoginForm(props) {
 
     const api = props.api;
-    const classes = useStyles();
+    // const classes = useStyles();
+    const classes = { };
 
     // inputs
     let [username, setUsername] = useState("");

@@ -1,8 +1,8 @@
 import React, {useCallback, useContext, useState} from 'react';
-import {Box} from "@material-ui/core";
-import {makeStyles} from "@material-ui/core/styles";
+import {Box, Button} from "@mui/material";
 import {LocaleContext} from "shared/locale";
 
+/*
 const useStyles = makeStyles((theme) => ({
     languageFlag: {
         margin: theme.spacing(0.2),
@@ -10,11 +10,11 @@ const useStyles = makeStyles((theme) => ({
         border: 0,
     }
 }));
+*/
 
 export default function LanguageSelection(props) {
 
     const api = props.api;
-    const classes = useStyles();
     const [languages, setLanguages] = useState(null);
     const {translate: L, setLanguageByCode} = useContext(LocaleContext);
 
@@ -39,10 +39,10 @@ export default function LanguageSelection(props) {
     } else {
         for (const language of Object.values(languages)) {
             let key = `lang-${language.code}`;
-            flags.push(<button type={"button"} title={language.name} onClick={() => onSetLanguage(language.code)}
-                               key={key} className={classes.languageFlag} >
+            flags.push(<Button type={"button"} title={language.name} onClick={() => onSetLanguage(language.code)}
+                               key={key} >
                 <img alt={key} src={`/img/icons/lang/${language.code}.gif`} />
-            </button>);
+            </Button>);
         }
     }
 

@@ -9,10 +9,8 @@ import {
     NumericColumn,
     StringColumn
 } from "shared/elements/data-table";
-import {Button} from "@material-ui/core";
-import EditIcon from '@mui/icons-material/Edit';
 import {Chip} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
+import {Edit, Add} from "@mui/icons-material";
 import usePagination from "shared/hooks/pagination";
 
 
@@ -67,19 +65,29 @@ export default function UserListView(props) {
         new BoolColumn(L("account.active"), "active", { align: "center" }),
         new BoolColumn(L("account.confirmed"), "confirmed", { align: "center" }),
         new ControlsColumn(L("general.controls"), [
-            { label: L("general.edit"), element: EditIcon, onClick: (entry) => navigate(`/admin/user/${entry.id}`) }
+            { label: L("general.edit"), element: Edit, onClick: (entry) => navigate(`/admin/user/${entry.id}`) }
         ]),
     ];
 
-    return <div className={"content-header"}>
-        <div className={"container-fluid"}>
-            <ol className={"breadcrumb"}>
-                <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                <li className="breadcrumb-item active">Users</li>
-            </ol>
+    return <>
+        <div className={"content-header"}>
+            <div className={"container-fluid"}>
+                <div className={"row mb-2"}>
+                    <div className={"col-sm-6"}>
+                        <h1 className={"m-0 text-dark"}>{L("account.users")}</h1>
+                    </div>
+                    <div className={"col-sm-6"}>
+                        <ol className={"breadcrumb float-sm-right"}>
+                            <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
+                            <li className="breadcrumb-item active">{L("account.users")}</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
         </div>
         <div className={"content"}>
             <div className={"container-fluid"}>
+
                 <DataTable
                     data={users}
                     pagination={pagination}
@@ -88,14 +96,16 @@ export default function UserListView(props) {
                     className={"table table-striped"}
                     fetchData={onFetchUsers}
                     placeholder={"No users to display"}
-                    title={L("account.users")}
-                    columns={columnDefinitions} />
-                <Link to="/admin/user/new">
-                    <Button variant={"outlined"} startIcon={<AddIcon />} size={"small"}>
-                        {L("general.create_new")}
-                    </Button>
-                </Link>
+                    columns={columnDefinitions}
+                    buttons={[{
+                        key: "btn-create",
+                        color: "primary",
+                        startIcon: <Add />,
+                        children: L("general.create_new"),
+                        disabled: !api.hasPermission("user/create") && !api.hasPermission("user/invite"),
+                        onClick: () => navigate("/admin/user/new")
+                    }]}/>
             </div>
         </div>
-    </div>
+    </>
 }

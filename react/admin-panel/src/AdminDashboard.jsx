@@ -22,6 +22,7 @@ const LogView = lazy(() => import("./views/log-view"));
 const AccessControlList = lazy(() => import("./views/access-control-list"));
 const RouteListView = lazy(() => import("./views/route/route-list"));
 const RouteEditView = lazy(() => import("./views/route/route-edit"));
+const SettingsView = lazy(() => import("./views/settings"));
 
 export default function AdminDashboard(props) {
 
@@ -83,6 +84,7 @@ export default function AdminDashboard(props) {
                             <Route path={"/admin/permissions"} element={<AccessControlList {...controlObj} />}/>
                             <Route path={"/admin/routes"} element={<RouteListView {...controlObj} />}/>
                             <Route path={"/admin/routes/:routeId"} element={<RouteEditView {...controlObj} />}/>
+                            <Route path={"/admin/settings"} element={<SettingsView {...controlObj} />}/>
                             <Route path={"*"} element={<View404 />} />
                         </Routes>
                     </Suspense>

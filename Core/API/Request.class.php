@@ -129,6 +129,8 @@ abstract class Request {
   }
 
   protected abstract function _execute(): bool;
+
+  // TODO: replace this function with two abstract methods: getDefaultPermittedGroups and getDescription
   public static function getDefaultACL(Insert $insert): void { }
 
   protected function check2FA(?TwoFactorToken $tfaToken = null): bool {

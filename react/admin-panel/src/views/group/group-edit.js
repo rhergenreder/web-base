@@ -219,7 +219,8 @@ export default function EditGroupView(props) {
                                 onClick={() => navigate("/admin/groups")}>
                             {L("general.go_back")}
                         </Button>
-                        <Button startIcon={<Save />} color={"primary"}
+                        <Button startIcon={isSaving ? <CircularProgress size={14} /> : <Save />}
+                                color={"primary"}
                                 variant={"outlined"}
                                 disabled={isSaving || (!api.hasPermission(isNewGroup ? "groups/create" : "groups/update"))}
                                 onClick={onSave}>

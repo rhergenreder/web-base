@@ -165,10 +165,12 @@ To access and view any frontend pages, the internal router is used. Available ro
 A static route targets a file, usually located in [/static](/static) and does nothing more, than returning its content. A dynamic route is usually the way to go:
 It takes two parameters, firstly the target document and secondly, an optional view. For example, take the following routing table:
 
-| Route                     | Action | Target | Extra   |
-|---------------------------| ------ | ------ |---------|
-| `/funnyCatImage`          | `Serve Static` | `/static/cat.jpg` |         |
-| `/someRoute/{param:str?}` | `Redirect Dynamic` | `\Documents\MyDocument\` | `param` |
+| Route                     | Action     | Target                       | Extra   |
+|---------------------------|------------|------------------------------|---------|
+| `/funnyCatImage`          | `Static`   | `/static/cat.jpg`            |         |
+| `/someRoute/{param:str?}` | `Dynamic`  | `\Site\Documents\MyDocument` | `param` |
+| `/redirectMe`             | `Redirect` | `https://romanh.de/`         |         |
+
 
 The first route would return the cat image, if the case-insensitive path `/funnyCatImage` is requested.
 The second route is more interesting, as it includes an optional parameter of type string, which means, any route starting with `/someRoute/` or just `/someRoute` is accepted.
@@ -182,12 +184,12 @@ we could have one document, when showing different articles and products, and a 
 To create a new document, a class inside [/Core/Documents](/Core/Documents) is created with the following scheme:
 
 ```php
-namespace Documents {
+namespace Site\Documents {
 
-  use Elements\Document;
-  use Objects\Router\Router;
-  use Documents\Example\ExampleHead;
-  use Documents\Example\ExampleBody;
+  use Core\Elements\Document;
+  use Core\Objects\Router\Router;
+  use Site\Documents\Example\ExampleHead;
+  use Site\Documents\Example\ExampleBody;
 
   class ExampleDocument extends Document {
     public function __construct(Router $router, ?string $view = NULL) {
@@ -196,10 +198,10 @@ namespace Documents {
   }
 }
 
-namespace Documents\Example {
+namespace Site\Documents\Example {
 
-  use Elements\Head;
-  use Elements\Body;
+  use Core\Elements\Head;
+  use Core\Elements\Body;
 
   class ExampleHead extends Head {
   
@@ -255,7 +257,7 @@ we firstly have to load the module. This is done by adding the class, or the obj
 To translate the defined strings, we can use the global `L()` function. The following code snipped shows the use of 
 our sample language module:
 
-**/Core/Localization/de_DE/example.php**:
+**/Site/Localization/de_DE/example.php**:
 ```php
 <?php
 return [
@@ -314,6 +316,12 @@ php cli.php frontend ls
 php cli.php frontend add <module-name>
 php cli.php frontend rm <module-name>
 php cli.php frontend dev <module-name>
+```
+
+### API commands
+```bash
+php cli.php api ls
+php cli.php api <add> # interactive wizard
 ```
 
 ## Project Structure

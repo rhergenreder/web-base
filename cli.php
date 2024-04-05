@@ -859,6 +859,10 @@ function onAPI(array $argv): void {
       // TODO: auto-generated method stub
       return \$this->success;
     }
+
+    public static function getDefaultACL(Insert \$insert): void {
+      \$insert->addRow(self::getEndpoint(), [], \"Short description, what users are allowed to do with this permission\", false);
+    }
   }";
       }, $methodNames));
       $content = "<?php
@@ -867,6 +871,7 @@ namespace Site\API {
   
   use Core\API\Request;
   use Core\Objects\Context;
+  use Core\Driver\SQL\Query\Insert;
   
   abstract class {$apiName}API extends Request {
     public function __construct(Context \$context, bool \$externalCall = false, array \$params = []) {
@@ -891,6 +896,7 @@ namespace Site\API;
 
 use Core\API\Request;
 use Core\Objects\Context;
+use Core\Driver\SQL\Query\Insert;
 
 class $apiName extends Request {
 
@@ -902,6 +908,10 @@ class $apiName extends Request {
   protected function _execute(): bool {
     // TODO: auto-generated method stub
     return \$this->success;
+  }
+  
+  public static function getDefaultACL(Insert \$insert): void {
+    \$insert->addRow(self::getEndpoint(), [], \"Short description, what users are allowed to do with this permission\", false);
   }
 }
 ";

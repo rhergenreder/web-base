@@ -17,8 +17,13 @@ class StringType extends Parameter {
       return false;
     }
 
+    // as long as it's numeric or bool, we can safely cast it to a string
     if (!is_string($value)) {
-      return false;
+      if (is_bool($value) || is_int($value) || is_float($value)) {
+        $this->value = strval($value);
+      } else {
+        return false;
+      }
     }
 
     if ($this->maxLength > 0 && strlen($value) > $this->maxLength) {

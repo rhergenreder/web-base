@@ -138,8 +138,10 @@ export default function RouteEditView(props) {
                     onClick={() => navigate("/admin/routes")}>
                 {L("general.cancel")}
             </Button>
-            <Button startIcon={<Save />} color={"primary"}
-                    variant={"outlined"} disabled={isSaving}
+            <Button startIcon={isSaving ? <CircularProgress size={14} /> : <Save />}
+                    color={"primary"}
+                    variant={"outlined"}
+                    disabled={isSaving}
                     onClick={onSave}>
                 {isSaving ? L("general.saving") + "…" : L("general.save")}
             </Button>

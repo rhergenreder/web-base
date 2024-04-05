@@ -1,7 +1,7 @@
 <?php
 
 return [
-  "settings" => "Einstellungen",
+  "title" => "Einstellungen",
   "information" => "Informationen",
 
   # API Key
@@ -21,5 +21,40 @@ return [
                               "Unter Android kannst du den Google Authenticator benutzen.",
   "register_2fa_fido_text" => "Möglicherweise musst du mit dem Gerät interagieren, zum Beispiel durch Eingeben einer PIN oder durch Berühren des Geräts",
   "remove_2fa" => "2FA-Token entfernen",
-  "remove_2fa_text" => "Gib dein aktuelles Passwort ein um das Entfernen des 2FA-Tokens zu bestätigen"
+  "remove_2fa_text" => "Gib dein aktuelles Passwort ein um das Entfernen des 2FA-Tokens zu bestätigen",
+
+  # settings
+  "key" => "Schlüssel",
+  "value" => "Wert",
+  "general" => "Allgemein",
+  "mail" => "Mail",
+  "recaptcha" => "reCaptcha",
+  "uncategorized" => "Unkategorisiert",
+  "unchanged" => "Unverändert",
+
+  # general settings
+  "site_name" => "Seitenname",
+  "base_url" => "Basis URL",
+  "user_registration_enabled" => "Benutzerregistrierung erlauben",
+  "allowed_extensions" => "Erlaubte Dateierweiterungen",
+  "time_zone" => "Zeitzone",
+
+  # mail settings
+  "mail_enabled" => "E-Mail Versand aktiviert",
+  "mail_from" => "Absender E-Mailadresse",
+  "mail_host" => "Mail-Server Host",
+  "mail_port" => "Mail-Server Port",
+  "mail_username" => "Mail-Server Benutzername",
+  "mail_password" => "Mail-Server Passwort",
+  "mail_footer" => "Pfad zum E-Mail-Footer",
+
+  # recaptcha
+  "recaptcha_enabled" => "Aktiviere Google reCaptcha",
+  "recaptcha_public_key" => "reCaptcha öffentlicher Schlüssel",
+  "recaptcha_private_key" => "reCaptcha privater Schlüssel",
+
+  # dialog
+  "fetch_settings_error" => "Fehler beim Holen der Einstellungen",
+  "save_settings_success" => "Einstellungen erfolgreich gespeichert",
+  "save_settings_error" => "Fehler beim Speichern der Einstellungen",
 ];

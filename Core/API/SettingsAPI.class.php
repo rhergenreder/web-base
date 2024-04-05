@@ -13,6 +13,7 @@ namespace Core\API {
 
 namespace Core\API\Settings {
 
+  use Core\API\Parameter\ArrayType;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\API\SettingsAPI;
@@ -20,8 +21,6 @@ namespace Core\API\Settings {
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\CondBool;
   use Core\Driver\SQL\Condition\CondIn;
-  use Core\Driver\SQL\Condition\CondNot;
-  use Core\Driver\SQL\Condition\CondRegex;
   use Core\Driver\SQL\Query\Insert;
   use Core\Driver\SQL\Strategy\UpdateStrategy;
   use Core\Objects\Context;
@@ -57,7 +56,7 @@ namespace Core\API\Settings {
   class Set extends SettingsAPI {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, array(
-        'settings' => new Parameter('settings', Parameter::TYPE_ARRAY)
+        'settings' => new ArrayType("settings", Parameter::TYPE_MIXED)
       ));
     }
 
@@ -75,13 +74,13 @@ namespace Core\API\Settings {
       $keys = array();
       $deleteKeys = array();
 
-      foreach($values as $key => $value) {
+      foreach ($values as $key => $value) {
         if (!$paramKey->parseParam($key)) {
           $key = print_r($key, true);
           return $this->createError("Invalid Type for key in parameter settings: '$key' (Required: " . $paramKey->getTypeName() . ")");
-        } else if(!is_null($value) && !$paramValue->parseParam($value)) {
+        } else if (!is_null($value) && !$paramValue->parseParam($value)) {
           $value = print_r($value, true);
-          return $this->createError("Invalid Type for value in parameter settings: '$value' (Required: " . $paramValue->getTypeName() . ")");
+          return $this->createError("Invalid Type for value in parameter settings for key '$key': '$value' (Required: " . $paramValue->getTypeName() . ")");
         } else if(preg_match("/^[a-zA-Z_][a-zA-Z_0-9-]*$/", $paramKey->value) !== 1) {
           return $this->createError("The property key should only contain alphanumeric characters, underscores and dashes");
         } else {
@@ -91,6 +90,8 @@ namespace Core\API\Settings {
             $deleteKeys[] = $paramKey->value;
           }
           $keys[] = $paramKey->value;
+          $paramKey->reset();
+          $paramValue->reset();
         }
       }
 
@@ -103,7 +104,7 @@ namespace Core\API\Settings {
         }
       }
 
-      if (!empty($deleteKeys) && !$this->deleteKeys($keys)) {
+      if (!empty($deleteKeys) && !$this->deleteKeys($deleteKeys)) {
         return false;
       }
 

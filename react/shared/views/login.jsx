@@ -1,76 +1,43 @@
-import {Box,
+import {
+    Box,
     Button,
     Checkbox, CircularProgress, Container,
     FormControlLabel,
     Grid,
-    Link,
+    Link, styled,
     TextField,
     Typography
 } from "@mui/material";
 
 import {Alert} from '@mui/lab';
-import React, {useCallback, useContext, useEffect, useState} from "react";
+import React, {useCallback, useContext, useEffect, useRef, useState} from "react";
 import ReplayIcon from '@mui/icons-material/Replay';
 import LanguageSelection from "../elements/language-selection";
 import {decodeText, encodeText, getParameter, removeParameter} from "shared/util";
 import {LocaleContext} from "shared/locale";
 
-/*
-const useStyles = makeStyles((theme) => ({
-    paper: {
-        marginTop: theme.spacing(8),
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-    },
-    avatar: {
-        margin: theme.spacing(2),
+
+const LoginContainer = styled(Container)((props) => ({
+    marginTop: props.theme.spacing(5),
+    paddingBottom: props.theme.spacing(1),
+    borderColor: props.theme.palette.primary.main,
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderRadius: 5,
+    "& h1 > img": {
+        marginRight: props.theme.spacing(2),
         width: "60px",
         height: "60px"
-    },
-    form: {
-        width: '100%', // Fix IE 11 issue.
-        marginTop: theme.spacing(1),
-    },
-    submit: {
-        margin: theme.spacing(3, 0, 2),
-    },
-    logo: {
-        marginRight: theme.spacing(3)
-    },
-    headline: {
-        width: "100%",
-    },
-    container: {
-        marginTop: theme.spacing(5),
-        paddingBottom: theme.spacing(1),
-        borderColor: theme.palette.primary.main,
-        borderStyle: "solid",
-        borderWidth: 1,
-        borderRadius: 5
-    },
-    buttons2FA: {
-        marginTop: theme.spacing(1),
-        marginBottom: theme.spacing(1),
-    },
-    error2FA: {
-        marginTop: theme.spacing(2),
-        marginBottom: theme.spacing(2),
-        "& > div": {
-            fontSize: 16
-        },
-        "& > button": {
-            marginTop: theme.spacing(1)
-        }
     }
 }));
-*/
+
+const ResponseAlert = styled(Alert)((props) => ({
+    marginBottom: props.theme.spacing(2),
+}));
 
 export default function LoginForm(props) {
 
     const api = props.api;
-    // const classes = useStyles();
-    const classes = { };
 
     // inputs
     let [username, setUsername] = useState("");
@@ -90,6 +57,9 @@ export default function LoginForm(props) {
     // state
     let [isLoggingIn, setLoggingIn] = useState(false);
     let [loaded, setLoaded] = useState(false);
+
+    // ui
+    let passwordRef = useRef();
 
     const {translate: L, currentLocale, requestModules} = useContext(LocaleContext);
 
@@ -203,9 +173,9 @@ export default function LoginForm(props) {
                         value={tfaCode} onChange={(e) => set2FACode(e.target.value)}
                     />
                     {
-                        tfaToken.error ? <Alert severity="error">{tfaToken.error}</Alert> : <></>
+                        tfaToken.error ? <ResponseAlert severity="error">{tfaToken.error}</ResponseAlert> : <></>
                     }
-                    <Grid container spacing={2} className={classes.buttons2FA}>
+                    <Grid container spacing={2}>
                         <Grid item xs={6}>
                             <Button
                                 fullWidth variant={"contained"}
@@ -237,16 +207,16 @@ export default function LoginForm(props) {
                     <Box mt={2} textAlign={"center"}>
                         {tfaToken.step !== 2
                             ? <CircularProgress/>
-                            : <div className={classes.error2FA}>
+                            : <Box>
                                 <div><b>{L("general.something_went_wrong")}:</b><br />{tfaToken.error}</div>
                                 <Button onClick={() => set2FAToken({ ...tfaToken, step: 0, error: "" })}
                                         variant={"outlined"} color={"secondary"} size={"small"}>
                                     <ReplayIcon />&nbsp;{L("general.retry")}
                                 </Button>
-                            </div>
+                            </Box>
                         }
                     </Box>
-                    <Grid container spacing={2} className={classes.buttons2FA}>
+                    <Grid container spacing={2}>
                         <Grid item xs={6}>
                             <Button
                                 fullWidth variant={"contained"}
@@ -275,18 +245,21 @@ export default function LoginForm(props) {
 
         return <>
                 <TextField
-                    variant="outlined" margin="normal"
-                    id="username" label={L("account.username")} name="username"
-                    autoComplete="username" disabled={isLoggingIn}
+                    variant={"outlined"} margin={"normal"}
+                    label={L("account.username")} name={"username"}
+                    autoComplete={"username"} disabled={isLoggingIn}
                     required fullWidth autoFocus
                     value={username} onChange={(e) => setUsername(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && passwordRef.current && passwordRef.current.focus()}
                 />
                 <TextField
-                    variant="outlined" margin="normal"
-                    name="password" label={L("account.password")} type="password" id="password"
-                    autoComplete="current-password"
+                    variant={"outlined"} margin={"normal"}
+                    name={"password"} label={L("account.password")} type={"password"}
+                    autoComplete={"current-password"}
                     required fullWidth disabled={isLoggingIn}
                     value={password} onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && onLogin()}
+                    inputRef={passwordRef}
                 />
                 <FormControlLabel
                     control={<Checkbox value="remember" color="primary"/>}
@@ -295,20 +268,20 @@ export default function LoginForm(props) {
                 />
                 {
                     error
-                        ? <Alert severity="error">
+                        ? <ResponseAlert severity={"error"}>
                             {error}
                             {emailConfirmed === false
                                 ? <> <Link href={"/resendConfirmEmail"}>Click here</Link> to resend the confirmation email.</>
                                 : <></>
                             }
-                        </Alert>
+                        </ResponseAlert>
                         : (successMessage
-                            ? <Alert severity="success">{successMessage}</Alert>
+                            ? <ResponseAlert severity={"success"}>{successMessage}</ResponseAlert>
                             : <></>)
                 }
                 <Button
                     type={"submit"} fullWidth variant={"contained"}
-                    color={"primary"} className={classes.submit}
+                    color={"primary"}
                     size={"large"}
                     disabled={isLoggingIn}
                     onClick={onLogin}>
@@ -342,18 +315,14 @@ export default function LoginForm(props) {
     }
 
     let successMessage = getParameter("success");
-    return <Container maxWidth={"xs"} className={classes.container}>
-        <div className={classes.paper}>
-            <div className={classes.headline}>
-                <Typography component="h1" variant="h4">
-                    <img src={"/img/icons/logo.png"} alt={"Logo"} height={48} className={classes.logo}/>
-                    {props.info.siteName}
-                </Typography>
-            </div>
-            <form className={classes.form} onSubmit={(e) => e.preventDefault()}>
-                { createForm() }
-                <LanguageSelection api={api} />
-            </form>
-        </div>
-    </Container>
+    return <LoginContainer maxWidth={"xs"}>
+        <Box mt={2}>
+            <Typography component="h1" variant="h4">
+                <img src={"/img/icons/logo.png"} alt={"Logo"} height={48} />
+                {props.info.siteName}
+            </Typography>
+            { createForm() }
+            <LanguageSelection api={api} />
+        </Box>
+    </LoginContainer>
 }

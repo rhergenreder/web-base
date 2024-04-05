@@ -1,16 +1,12 @@
 import React, {useCallback, useContext, useState} from 'react';
-import {Box, Button} from "@mui/material";
+import {Box, styled} from "@mui/material";
 import {LocaleContext} from "shared/locale";
 
-/*
-const useStyles = makeStyles((theme) => ({
-    languageFlag: {
-        margin: theme.spacing(0.2),
-        cursor: "pointer",
-        border: 0,
-    }
+const LanguageFlag = styled(Box)((props) => ({
+    display: "inline-block",
+    marginRight: props.theme.spacing(0.5),
+    cursor: "pointer"
 }));
-*/
 
 export default function LanguageSelection(props) {
 
@@ -39,10 +35,10 @@ export default function LanguageSelection(props) {
     } else {
         for (const language of Object.values(languages)) {
             let key = `lang-${language.code}`;
-            flags.push(<Button type={"button"} title={language.name} onClick={() => onSetLanguage(language.code)}
-                               key={key} >
-                <img alt={key} src={`/img/icons/lang/${language.code}.gif`} />
-            </Button>);
+            flags.push(<LanguageFlag key={key}>
+                    <img alt={key} src={`/img/icons/lang/${language.code}.gif`} onClick={() => onSetLanguage(language.code)} />
+                </LanguageFlag>
+            );
         }
     }
 

@@ -1231,6 +1231,10 @@ namespace Core\API\User {
       }
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to update their profiles.", true);
+    }
   }
 
   class ImportGPG extends UserAPI {

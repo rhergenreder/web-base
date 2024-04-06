@@ -76,6 +76,10 @@ namespace Core\API\Permission {
         $currentUser = $this->context->getUser();
         $userGroups = $currentUser ? $currentUser->getGroups() : [];
         if (empty($userGroups) || empty(array_intersect($groups, array_keys($userGroups)))) {
+          if (!$currentUser) {
+            $this->result["loggedIn"] = false;
+          }
+
           http_response_code(401);
           return $this->createError("Permission denied.");
         }

@@ -53,7 +53,7 @@ class Context {
     }
   }
 
-  public function setLanguage(Language $language) {
+  public function setLanguage(Language $language): void {
     $this->language = $language;
     $this->language->activate();
 
@@ -90,7 +90,7 @@ class Context {
     return $this->user;
   }
 
-  public function sendCookies() {
+  public function sendCookies(): void {
     $domain = $this->getSettings()->getDomain();
     $this->language->sendCookie($domain);
     $this->session?->sendCookie($domain);
@@ -139,7 +139,7 @@ class Context {
     return false;
   }
 
-  public function processVisit() {
+  public function processVisit(): void {
     if (isset($_COOKIE["PHPSESSID"]) && !empty($_COOKIE["PHPSESSID"])) {
       if ($this->isBot()) {
         return;
@@ -206,7 +206,7 @@ class Context {
       ->set("active", false)
       ->whereEq("user_id", $this->user->getId());
 
-    if (!$keepCurrent && $this->session !== null) {
+    if ($keepCurrent && $this->session !== null) {
       $query->whereNeq("id", $this->session->getId());
     }
 

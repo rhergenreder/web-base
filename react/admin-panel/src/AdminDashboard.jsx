@@ -1,6 +1,5 @@
 import React, {lazy, Suspense, useCallback, useState} from "react";
 import {BrowserRouter, Route, Routes} from "react-router-dom";
-import Header from "./elements/header";
 import Sidebar from "./elements/sidebar";
 import Dialog from "./elements/dialog";
 import Footer from "./elements/footer";
@@ -23,6 +22,7 @@ const AccessControlList = lazy(() => import("./views/access-control-list"));
 const RouteListView = lazy(() => import("./views/route/route-list"));
 const RouteEditView = lazy(() => import("./views/route/route-edit"));
 const SettingsView = lazy(() => import("./views/settings"));
+const ProfileView = lazy(() => import("./views/profile/profile"));
 
 export default function AdminDashboard(props) {
 
@@ -67,7 +67,6 @@ export default function AdminDashboard(props) {
     }
 
     return <BrowserRouter>
-        <Header {...controlObj} />
         <Sidebar {...controlObj} />
         <div className={"wrapper"}>
             <div className={"content-wrapper p-2"}>
@@ -85,6 +84,7 @@ export default function AdminDashboard(props) {
                             <Route path={"/admin/routes"} element={<RouteListView {...controlObj} />}/>
                             <Route path={"/admin/routes/:routeId"} element={<RouteEditView {...controlObj} />}/>
                             <Route path={"/admin/settings"} element={<SettingsView {...controlObj} />}/>
+                            <Route path={"/admin/profile"} element={<ProfileView {...controlObj} />}/>
                             <Route path={"*"} element={<View404 />} />
                         </Routes>
                     </Suspense>

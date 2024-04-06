@@ -70,9 +70,12 @@ if ($installation) {
       } catch (\Error $e) {
         http_response_code(500);
         $router->getLogger()->error($e->getMessage());
-        $router->returnStatusCode(500);
+        $response = $router->returnStatusCode(500);
       }
     }
+  } else {
+    http_response_code(500);
+    $response = "Router could not be instantiated.";
   }
 
   $context->processVisit();

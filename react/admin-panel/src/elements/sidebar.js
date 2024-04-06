@@ -2,6 +2,22 @@ import React, {useCallback, useContext} from 'react';
 import {Link, NavLink} from "react-router-dom";
 import Icon from "shared/elements/icon";
 import {LocaleContext} from "shared/locale";
+import {Avatar, styled} from "@mui/material";
+
+const ProfileLink = styled(Link)((props) => ({
+    "& > div": {
+        padding: 3,
+        width: 30,
+        height: 30,
+    },
+    marginLeft: props.theme.spacing(1),
+    marginTop: props.theme.spacing(1),
+    display: "grid",
+    gridTemplateColumns: "45px auto",
+    "& > span": {
+        alignSelf: "center"
+    }
+}));
 
 export default function Sidebar(props) {
 
@@ -100,9 +116,11 @@ export default function Sidebar(props) {
                         <div className={"os-content"} style={{padding: "0px 0px", height: "100%", width: "100%"}}>
                             <div className="user-panel mt-3 pb-3 mb-3 d-flex">
                                 <div className="info">
-                                    <span className={"d-block text-light"}>{L("account.logged_in_as")}:&nbsp;
-                                        <Link to={"/admin/user/" + api.user.id}>{api.user.name}</Link>
-                                    </span>
+                                    <div className={"d-block text-light"}>{L("account.logged_in_as")}:</div>
+                                    <ProfileLink to={"/admin/profile"}>
+                                        <Avatar fontSize={"small"} />
+                                        <span>{api.user?.name || L("account.not_logged_in")}</span>
+                                    </ProfileLink>
                                 </div>
                             </div>
                             <nav className={"mt-2"}>

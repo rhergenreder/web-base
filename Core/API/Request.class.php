@@ -9,6 +9,7 @@ use Core\Objects\DatabaseEntity\TwoFactorToken;
 use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
 use PhpMqtt\Client\MqttClient;
 
+// TODO: many things are only checked for external calls, e.g. loginRequired. If we call the API internally, we might get null-pointers for $context->user
 abstract class Request {
 
   protected Context $context;
@@ -228,6 +229,7 @@ abstract class Request {
       if ($this->loginRequired) {
         if (!$session && !$apiKeyAuthorized) {
           $this->lastError = 'You are not logged in.';
+          $this->result["loggedIn"] = false;
           http_response_code(401);
           return false;
         } else if ($session && !$this->check2FA()) {
@@ -253,6 +255,9 @@ abstract class Request {
       $this->success = $req->execute(["method" => self::getEndpoint()]);
       $this->lastError = $req->getLastError();
       if (!$this->success) {
+        if (!$this->context->getUser()) {
+          $this->result["loggedIn"] = false;
+        }
         return false;
       }
     }

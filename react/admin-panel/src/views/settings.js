@@ -189,6 +189,12 @@ export default function SettingsView(props) {
         }
     }, [api, showDialog, testMailAddress, isSending]);
 
+    const onReset = useCallback(() => {
+        setFetchSettings(true);
+        setNewKey("");
+        setChanged(false);
+    }, []);
+
     if (settings === null) {
         return <CircularProgress />
     }
@@ -406,7 +412,7 @@ export default function SettingsView(props) {
                     {isSaving ? L("general.saving") + "…" : (L("general.save") + (hasChanged ? " *" : ""))}
                 </Button>
                 <Button color={"secondary"}
-                        onClick={() => { setFetchSettings(true); setNewKey(""); }}
+                        onClick={onReset}
                         disabled={isSaving}
                         startIcon={<RestartAlt />}
                         variant={"outlined"} title={L("general.reset")}>

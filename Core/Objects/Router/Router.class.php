@@ -76,7 +76,7 @@ class Router {
     }
   }
 
-  public function addRoute(Route $route) {
+  public function addRoute(Route $route): void {
     if (preg_match("/^\/(\d+)$/", $route->getPattern(), $re)) {
       $this->statusCodeRoutes[$re[1]] = $route;
     }

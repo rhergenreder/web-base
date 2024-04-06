@@ -1240,9 +1240,9 @@ namespace Core\API\User {
   class ImportGPG extends UserAPI {
 
     public function __construct(Context $context, bool $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
+      parent::__construct($context, $externalCall, [
         "pubkey" => new StringType("pubkey")
-      ));
+      ]);
       $this->loginRequired = true;
       $this->forbidMethod("GET");
     }
@@ -1342,6 +1342,10 @@ namespace Core\API\User {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to import gpg keys for a secure e-mail communication", true);
+    }
   }
 
   class RemoveGPG extends UserAPI {
@@ -1370,6 +1374,10 @@ namespace Core\API\User {
       }
 
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to unlink gpg keys from their profile", true);
     }
   }
 

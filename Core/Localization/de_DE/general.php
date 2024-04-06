@@ -34,6 +34,7 @@ return [
   "yes" => "Ja",
   "no" => "Nein",
   "create_new" => "Erstellen",
+  "unchanged" => "Unverändert",
 
   # dialog / actions
   "action" => "Aktion",

@@ -630,8 +630,33 @@ function onMail($argv): void {
     if (!$req->execute(["debug" => $debug])) {
       _exit("Error processing mail queue: " . $req->getLastError());
     }
+  } else if ($action === "test") {
+    $recipient = $argv[3] ?? null;
+    $gpgFingerprint = $argv[4] ?? null;
+    if (!$recipient) {
+      _exit("Usage: cli.php mail test <recipient> [gpg-fingerprint]");
+    }
+
+    connectSQL() or die();
+    $req = new \Core\API\Mail\Test($context);
+    $success = $req->execute([
+        "receiver" => $recipient,
+        "gpgFingerprint" => $gpgFingerprint,
+    ]);
+
+    $result = $req->getResult();
+    if ($success) {
+      printLine("Test email sent successfully");
+    } else {
+      printLine("Test email failed to sent: " . $req->getLastError());
+    }
+
+    if (array_key_exists("output", $result)) {
+      printLine();
+      printLine($result["output"]);
+    }
   } else {
-    _exit("Usage: cli.php mail <send_queue> [options...]");
+    _exit("Usage: cli.php mail <send_queue|test> [options...]");
   }
 }
 
@@ -643,7 +668,6 @@ function onImpersonate($argv): void {
   }
 
   $sql = connectSQL() or die();
-
   $userId = $argv[2];
   if (!is_numeric($userId)) {
     $res = $sql->select("id")
@@ -932,7 +956,7 @@ $registeredCommands = [
   "routes" => ["handler" => "onRoutes", "description" => "view and modify routes"],
   "maintenance" => ["handler" => "onMaintenance", "description" => "toggle maintenance mode"],
   "test" => ["handler" => "onTest", "description" => "run unit and integration tests", "requiresDocker" => true],
-  "mail" => ["handler" => "onMail", "description" => "send mails and process the pipeline"],
+  "mail" => ["handler" => "onMail", "description" => "send mails and process the pipeline", "requiresDocker" => true],
   "settings" => ["handler" => "onSettings", "description" => "change and view settings"],
   "impersonate" => ["handler" => "onImpersonate", "description" => "create a session and print cookies and csrf tokens", "requiresDocker" => true],
   "frontend" => ["handler" => "onFrontend", "description" => "build and manage frontend modules"],

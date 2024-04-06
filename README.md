@@ -16,7 +16,6 @@ Web-Base is a php framework which provides basic web functionalities and a moder
 - [Command Line Interface (CLI)](#cli)
 - [Account & User functions](#access-control)
 - Admin Dashboard
-- File Sharing Dashboard
 - Docker Support
 
 ### Upcoming:

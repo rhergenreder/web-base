@@ -27,15 +27,10 @@ import {
     SettingsApplications
 } from "@mui/icons-material";
 import TIME_ZONES from "shared/time-zones";
+import ButtonBar from "../elements/button-bar";
 
 const SettingsFormGroup = styled(FormGroup)((props) => ({
     marginBottom: props.theme.spacing(1),
-}));
-
-const ButtonBar = styled(Box)((props) => ({
-    "& > button": {
-        marginRight: props.theme.spacing(1)
-    }
 }));
 
 export default function SettingsView(props) {
@@ -180,7 +175,12 @@ export default function SettingsView(props) {
             api.sendTestMail(testMailAddress).then(data => {
                 setSending(false);
                if (!data.success) {
-                   showDialog(data.msg, L("settings.send_test_email_error"));
+                   showDialog(<>
+                       {data.msg} <br />
+                       <code>
+                           {data.output}
+                       </code>
+                   </>, L("settings.send_test_email_error"));
                } else {
                    showDialog(L("settings.send_test_email_success"), L("general.success"));
                    setTestMailAddress("");
@@ -220,7 +220,7 @@ export default function SettingsView(props) {
                 <TextField size={"small"} variant={"outlined"}
                            type={"password"}
                            disabled={disabled}
-                           placeholder={"(" + L("settings.unchanged") + ")"}
+                           placeholder={"(" + L("general.unchanged") + ")"}
                            value={settings[key_name]}
                            onChange={e => onChangeValue(key_name, e.target.value)} />
             </FormControl>

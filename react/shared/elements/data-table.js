@@ -227,7 +227,7 @@ export class SecretsColumn extends DataColumn {
         properties.className = clsx(properties.className, "font-monospace");
 
         if (this.canCopy) {
-            properties.title = L("Click to copy");
+            properties.title = L("general.click_to_copy");
             properties.className = clsx(properties.className, "data-table-clickable");
             properties.onClick = () => {
                 navigator.clipboard.writeText(originalData);

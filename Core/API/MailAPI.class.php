@@ -55,14 +55,15 @@ namespace Core\API\Mail {
   use Core\External\PHPMailer\PHPMailer;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\GpgKey;
+  use PhpParser\Node\Param;
 
   class Test extends MailAPI {
 
     public function __construct(Context $context, bool $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
+      parent::__construct($context, $externalCall, [
         "receiver" => new Parameter("receiver", Parameter::TYPE_EMAIL),
         "gpgFingerprint" => new StringType("gpgFingerprint", 64, true, null)
-      ));
+      ]);
     }
 
     public function _execute(): bool {
@@ -74,10 +75,12 @@ namespace Core\API\Mail {
         "subject" => "Test E-Mail",
         "body" => "Hey! If you receive this e-mail, your mail configuration seems to be working.",
         "gpgFingerprint" => $this->getParam("gpgFingerprint"),
-        "async" => false
+        "async" => false,
+        "debug" => true,
       ));
 
       $this->lastError = $req->getLastError();
+      $this->result["output"] = $req->getResult()["output"];
       return $this->success;
     }
 
@@ -95,7 +98,8 @@ namespace Core\API\Mail {
         'replyTo' => new Parameter('replyTo', Parameter::TYPE_EMAIL, true, null),
         'replyName' => new StringType('replyName', 32, true, ""),
         'gpgFingerprint' => new StringType("gpgFingerprint", 64, true, null),
-        'async' => new Parameter("async", Parameter::TYPE_BOOLEAN, true, null)
+        'async' => new Parameter("async", Parameter::TYPE_BOOLEAN, true, null),
+        'debug' => new Parameter("debug", Parameter::TYPE_BOOLEAN, true, false)
       ));
       $this->isPublic = false;
     }
@@ -115,6 +119,7 @@ namespace Core\API\Mail {
       $replyName = $this->getParam('replyName');
       $body = $this->getParam('body');
       $gpgFingerprint = $this->getParam("gpgFingerprint");
+      $debug = $this->getParam("debug");
 
       $mailAsync = $this->getParam("async");
       if ($mailAsync === null) {
@@ -156,8 +161,9 @@ namespace Core\API\Mail {
           $mail->addReplyTo($replyTo, $replyName);
         }
 
+
         $mail->Subject = $subject;
-        $mail->SMTPDebug = 0;
+        $mail->SMTPDebug = $debug ? 2 : 0;
         $mail->Host = $mailConfig->getHost();
         $mail->Port = $mailConfig->getPort();
         $mail->SMTPAuth = true;
@@ -193,12 +199,22 @@ namespace Core\API\Mail {
           $mail->AltBody = strip_tags($body);
         }
 
+        ob_start();
         $this->success = @$mail->Send();
+        $output = ob_get_contents();
+        ob_end_clean();
         if (!$this->success) {
           $this->lastError = "Error sending Mail: $mail->ErrorInfo";
           $this->logger->error("sendMail() failed: $mail->ErrorInfo");
+          if ($debug) {
+            $this->logger->debug($output);
+            $this->result["output"] = $output;
+          }
         } else {
           $this->result["messageId"] = $mail->getLastMessageID();
+          if ($debug) {
+            $this->result["output"] = $output;
+          }
         }
       } catch (Exception $e) {
         $this->success = false;

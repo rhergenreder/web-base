@@ -7,21 +7,16 @@ import {ControlsColumn, DataTable, NumericColumn, StringColumn} from "shared/ele
 import EditIcon from "@mui/icons-material/Edit";
 import usePagination from "shared/hooks/pagination";
 import Dialog from "shared/elements/dialog";
-import {Box, FormControl, FormGroup, FormLabel, styled, TextField, Button, CircularProgress} from "@mui/material";
+import {FormControl, FormGroup, FormLabel, styled, TextField, Button, CircularProgress} from "@mui/material";
 import {Add, Delete, KeyboardArrowLeft, Save} from "@mui/icons-material";
 import {MuiColorInput} from "mui-color-input";
+import ButtonBar from "../../elements/button-bar";
 
 const defaultGroupData = {
     name: "",
     color: "#ccc",
     members: []
 };
-
-const ButtonBar = styled(Box)((props) => ({
-    "& > button": {
-        marginRight: props.theme.spacing(1)
-    }
-}));
 
 export default function EditGroupView(props) {
 

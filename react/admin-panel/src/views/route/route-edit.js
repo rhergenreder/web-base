@@ -10,12 +10,7 @@ import {
 import * as React from "react";
 import RouteForm from "./route-form";
 import {KeyboardArrowLeft, Save} from "@mui/icons-material";
-
-const ButtonBar = styled(Box)((props) => ({
-    "& > button": {
-        marginRight: props.theme.spacing(1)
-    }
-}));
+import ButtonBar from "../../elements/button-bar";
 
 const MonoSpaceTextField = styled(TextField)((props) => ({
     "& input": {

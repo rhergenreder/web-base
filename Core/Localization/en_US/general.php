@@ -16,6 +16,7 @@ return [
   "yes" => "Yes",
   "no" => "No",
   "create_new" => "Create",
+  "unchanged" => "Unchanged",
 
   # dialog / actions
   "action" => "Action",

@@ -138,6 +138,7 @@ export default function LoginForm(props) {
                     type: "public-key",
                 }],
                 userVerification: "discouraged",
+                attestation: "direct",
             },
             signal: abortSignal
         }).then((res) => {
@@ -207,7 +208,7 @@ export default function LoginForm(props) {
                     <Box mt={2} textAlign={"center"}>
                         {tfaToken.step !== 2
                             ? <CircularProgress/>
-                            : <Box>
+                            : <Box mb={2}>
                                 <div><b>{L("general.something_went_wrong")}:</b><br />{tfaToken.error}</div>
                                 <Button onClick={() => set2FAToken({ ...tfaToken, step: 0, error: "" })}
                                         variant={"outlined"} color={"secondary"} size={"small"}>

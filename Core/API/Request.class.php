@@ -255,8 +255,11 @@ abstract class Request {
       $this->success = $req->execute(["method" => self::getEndpoint()]);
       $this->lastError = $req->getLastError();
       if (!$this->success) {
+        $res = $req->getResult();
         if (!$this->context->getUser()) {
           $this->result["loggedIn"] = false;
+        } else if (isset($res["twoFactorToken"])) {
+          $this->result["twoFactorToken"] = $res["twoFactorToken"];
         }
         return false;
       }
@@ -284,7 +287,7 @@ abstract class Request {
         // this should actually not occur, how to handle this case?
         $this->success = $success;
       }
-    } catch (\Error $err) {
+    } catch (\Throwable $err) {
       http_response_code(500);
       $this->createError($err->getMessage());
       $this->logger->error($err->getMessage());

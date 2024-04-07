@@ -37,7 +37,7 @@ class KeyBasedTwoFactorToken extends TwoFactorToken {
   }
 
   public function hasChallenge(): bool {
-    return isset($this->challenge);
+    return isset($this->challenge) && !empty($this->challenge);
   }
 
   public function getChallenge(): string {

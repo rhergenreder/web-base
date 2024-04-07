@@ -146,6 +146,7 @@ namespace Core\API\User {
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Condition\CondIn;
   use Core\Driver\SQL\Expression\JsonArrayAgg;
+  use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
   use ImagickException;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\GpgKey;
@@ -374,6 +375,12 @@ namespace Core\API\User {
         $this->result["loggedIn"] = false;
         $userGroups = [];
       } else {
+
+        $twoFactorToken = $currentUser->getTwoFactorToken();
+        if ($twoFactorToken instanceof KeyBasedTwoFactorToken && !$twoFactorToken->hasChallenge()) {
+          $twoFactorToken->generateChallenge();
+        }
+
         $this->result["loggedIn"] = true;
         $userGroups = array_keys($currentUser->getGroups());
         $this->result["user"] = $currentUser->jsonSerialize();
@@ -629,7 +636,7 @@ namespace Core\API\User {
 
             $this->result["loggedIn"] = true;
             $this->result["user"] = $user->jsonSerialize();
-            $this->result["session"] = $session->jsonSerialize();
+            $this->result["session"] = $session->jsonSerialize(["expires", "csrfToken"]);
             $this->result["logoutIn"] = $session->getExpiresSeconds();
             $this->check2FA($tfaToken);
             $this->success = true;
@@ -1310,6 +1317,7 @@ namespace Core\API\User {
       }
 
       $settings = $this->context->getSettings();
+      $siteName = htmlspecialchars($settings->getSiteName());
       $baseUrl = htmlspecialchars($settings->getBaseUrl());
       $token = htmlspecialchars(urlencode($token));
       $url = "$baseUrl/confirmGPG?token=$token";
@@ -1317,14 +1325,12 @@ namespace Core\API\User {
         "you imported a GPG public key for end-to-end encrypted mail communication. " .
         "To confirm the key and verify, you own the corresponding private key, please click on the following link. " .
         "The link is active for one hour.<br><br>" .
-        "<a href='$url'>$url</a><br>
-        Best Regards<br>" .
-      $settings->getSiteName() . " Administration";
+        "<a href='$url'>$url</a><br>Best Regards<br>$siteName Administration";
 
       $sendMail = new \Core\API\Mail\Send($this->context);
       $this->success = $sendMail->execute(array(
         "to" => $currentUser->getEmail(),
-        "subject" => $settings->getSiteName() . " - Confirm GPG-Key",
+        "subject" => "[$siteName] Confirm GPG-Key",
         "body" => $mailBody,
         "gpgFingerprint" => $gpgKey->getFingerprint()
       ));

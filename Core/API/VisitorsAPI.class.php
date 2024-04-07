@@ -29,7 +29,7 @@ namespace Core\API\Visitors {
   class ProcessVisit extends VisitorsAPI {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, array(
-        "cookie" => new StringType("cookie")
+        "cookie" => new StringType("cookie", 26)
       ));
       $this->isPublic = false;
     }

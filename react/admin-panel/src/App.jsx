@@ -28,6 +28,14 @@ export default function App() {
         });
     }, [api]);
 
+    const onLogout = useCallback(() => {
+        api.logout().then(data => {
+            if (!data.success) {
+                setError("Error logging out: " + data.msg);
+            }
+        });
+    }, [api]);
+
     const onInit = useCallback((force = false) => {
         if (loaded && !force) {
             return;
@@ -97,8 +105,8 @@ export default function App() {
         } else {
             return <b>{L("general.loading")}… <Icon icon={"spinner"}/></b>
         }
-    } else if (!user || !api.loggedIn) {
-        return <LoginForm api={api} info={info} onLogin={fetchUser} />
+    } else if (!user || !api.loggedIn || (api.user.twoFactorToken?.confirmed && !api.user.twoFactorToken.authenticated)) {
+        return <LoginForm api={api} info={info} onLogin={fetchUser} onLogout={onLogout} />
     } else {
         return <AdminDashboard api={api} info={info} />
     }

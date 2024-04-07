@@ -2,11 +2,10 @@
 
 namespace Core\Objects\TwoFactor;
 
+use CBOR\MapObject;
 use Core\Objects\ApiObject;
 
 class PublicKey extends ApiObject {
-
-  use CBORDecoder;
 
   private int $keyType;
   private int $usedAlgorithm;
@@ -14,14 +13,13 @@ class PublicKey extends ApiObject {
   private string $xCoordinate;
   private string $yCoordinate;
 
-  public function __construct(?string $cborData = null) {
-    if ($cborData) {
-      $data = $this->decode($cborData)->getNormalizedData();
-      $this->keyType = $data["1"];
-      $this->usedAlgorithm = $data["3"];
-      $this->curveType = $data["-1"];
-      $this->xCoordinate = $data["-2"];
-      $this->yCoordinate = $data["-3"];
+  public function __construct(?MapObject $publicKeyData = null) {
+    if ($publicKeyData) {
+      $this->keyType = $publicKeyData["1"]->getValue();
+      $this->usedAlgorithm = $publicKeyData["3"]->getValue();
+      $this->curveType = $publicKeyData["-1"]->getValue();
+      $this->xCoordinate = $publicKeyData["-2"]->getValue();
+      $this->yCoordinate = $publicKeyData["-3"]->getValue();
     }
   }
 
@@ -53,8 +51,8 @@ class PublicKey extends ApiObject {
 
   public function getNormalizedData(): array {
     return [
-      "1" => $this->keyType,
-      "3" => $this->usedAlgorithm,
+      "1"  => $this->keyType,
+      "3"  => $this->usedAlgorithm,
       "-1" => $this->curveType,
       "-2" => $this->xCoordinate,
       "-3" => $this->yCoordinate,

@@ -67,7 +67,7 @@ if ($installation) {
     } else {
       try {
         $response = $router->run($requestedUri);
-      } catch (\Error $e) {
+      } catch (\Throwable $e) {
         http_response_code(500);
         $router->getLogger()->error($e->getMessage());
         $response = $router->returnStatusCode(500);

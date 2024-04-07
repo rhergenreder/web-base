@@ -388,8 +388,10 @@ export default function ProfileView(props) {
                         </Button>
                     </Box> :
                     <MFAOptions>
-                        <MfaTotp api={api} showDialog={showDialog} setDialogData={setDialogData}/>
-                        <MfaFido api={api} showDialog={showDialog} setDialogData={setDialogData}/>
+                        <MfaTotp api={api} showDialog={showDialog} setDialogData={setDialogData}
+                            set2FA={token => setProfile({...profile, twoFactorToken: token })} />
+                        <MfaFido api={api} showDialog={showDialog} setDialogData={setDialogData}
+                             set2FA={token => setProfile({...profile, twoFactorToken: token })} />
                     </MFAOptions>
                 }
             </CollapseBox>
@@ -409,7 +411,7 @@ export default function ProfileView(props) {
                 message={dialogData.message}
                 inputs={dialogData.inputs}
                 onClose={() => setDialogData({show: false})}
-                options={[L("general.ok"), L("general.cancel")]}
+                options={dialogData.options}
                 onOption={dialogData.onOption} />
     </>
 }

@@ -6,31 +6,47 @@ use Core\Objects\ApiObject;
 
 class AuthenticationData extends ApiObject {
 
+  use CBORDecoder;
+
+  const FLAG_USER_PRESENT = 1;
+  const FLAG_USER_VERIFIED = 4;
+  const FLAG_ATTESTED_DATA_INCLUDED = 64;
+  const FLAG_EXTENSION_DATA_INCLUDED = 128;
+
   private string $rpIDHash;
   private int $flags;
-  private int $counter;
+  private int $signCount;
   private string $aaguid;
   private string $credentialID;
+  private array $extensions;
   private PublicKey $publicKey;
 
   public function __construct(string $buffer) {
 
-    if (strlen($buffer) < 32 + 1 + 4) {
+    $bufferLength = strlen($buffer);
+    if ($bufferLength < 32 + 1 + 4) {
       throw new \Exception("Invalid authentication data buffer size");
     }
 
     $offset = 0;
     $this->rpIDHash = substr($buffer, $offset, 32); $offset += 32;
-    $this->flags = ord($buffer[$offset]); $offset += 1;
-    $this->counter = unpack("N", $buffer, $offset)[1]; $offset += 4;
+    $this->flags = ord(substr($buffer, $offset, 1)); $offset += 1;
+    $this->signCount = unpack("N", substr($buffer, $offset, 4))[1]; $offset += 4;
 
-    if (strlen($buffer) >= $offset + 4 + 2) {
+    if ($this->attestedCredentialData()) {
       $this->aaguid = substr($buffer, $offset, 16); $offset += 16;
-      $credentialIdLength = unpack("n", $buffer, $offset)[1]; $offset += 2;
+      $credentialIdLength = unpack("n",  substr($buffer, $offset, 4))[1]; $offset += 2;
       $this->credentialID = substr($buffer, $offset, $credentialIdLength); $offset += $credentialIdLength;
 
-      $credentialData = substr($buffer, $offset);
-      $this->publicKey = new PublicKey($credentialData);
+      if ($offset < $bufferLength) {
+        $publicKeyData = $this->decode(substr($buffer, $offset));
+        $this->publicKey = new PublicKey($publicKeyData);
+        // TODO: we should add $publicKeyData->length to $offset, but it's not implemented yet?;
+      }
+    }
+
+    if ($this->hasExtensionData()) {
+      // not supported yet
     }
   }
 
@@ -38,7 +54,7 @@ class AuthenticationData extends ApiObject {
     return [
       "rpIDHash" => base64_encode($this->rpIDHash),
       "flags" => $this->flags,
-      "counter" => $this->counter,
+      "signCount" => $this->signCount,
       "aaguid" => base64_encode($this->aaguid),
       "credentialID" => base64_encode($this->credentialID),
       "publicKey" => $this->publicKey->jsonSerialize()
@@ -54,26 +70,26 @@ class AuthenticationData extends ApiObject {
   }
 
   public function isUserPresent(): bool {
-    return boolval($this->flags & (1 << 0));
+    return boolval($this->flags & self::FLAG_USER_PRESENT);
   }
 
   public function isUserVerified(): bool {
-		return boolval($this->flags & (1 << 2));
+		return boolval($this->flags & self::FLAG_USER_VERIFIED);
 	}
 
   public function attestedCredentialData(): bool {
-		return boolval($this->flags & (1 << 6));
+		return boolval($this->flags & self::FLAG_ATTESTED_DATA_INCLUDED);
 	}
 
   public function hasExtensionData(): bool {
-		return boolval($this->flags & (1 << 7));
+		return boolval($this->flags & self::FLAG_EXTENSION_DATA_INCLUDED);
 	}
 
   public function getPublicKey(): PublicKey {
     return $this->publicKey;
   }
 
-  public function getCredentialID() {
+  public function getCredentialID(): string {
     return $this->credentialID;
   }
 }

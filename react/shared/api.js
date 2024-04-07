@@ -47,10 +47,14 @@ export default class API {
         }
 
         let res = await response.json();
-        if (!res.success && res.loggedIn === false) {
-            this.loggedIn = false;
-            this.user = null;
-            this.session = null;
+        if (!res.success) {
+            if (res.loggedIn === false) {
+                this.loggedIn = false;
+                this.user = null;
+                this.session = null;
+            } else if (res.twoFactorToken === true) {
+                this.user.twoFactorToken = res.twoFactorToken;
+            }
         }
 
         return res;

@@ -61,7 +61,6 @@ namespace Core\API\TFA {
 
   use Core\API\Parameter\StringType;
   use Core\API\TfaAPI;
-  use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\TwoFactor\AttestationObject;
@@ -265,10 +264,7 @@ namespace Core\API\TFA {
       $settings = $this->context->getSettings();
       $relyingParty = $settings->getSiteName();
       $sql = $this->context->getSQL();
-
-      // TODO: for react development, localhost / HTTP_HOST is required, otherwise a DOMException is thrown
       $domain = parse_url($settings->getBaseUrl(),  PHP_URL_HOST);
-      // $domain = "localhost";
 
       if (!$clientDataJSON || !$attestationObjectRaw) {
         $challenge = null;
@@ -329,12 +325,13 @@ namespace Core\API\TFA {
           return $this->createError("Unsupported key type. Expected: -7");
         }
 
+        $twoFactorToken->authenticate();
         $this->success = $twoFactorToken->confirmKeyBased($sql, base64_encode($authData->getCredentialID()), $publicKey) !== false;
         $this->lastError = $sql->getLastError();
 
         if ($this->success) {
           $this->result["twoFactorToken"] = $twoFactorToken->jsonSerialize();
-          $this->context->invalidateSessions();
+          $this->context->invalidateSessions(true);
         }
       }
 

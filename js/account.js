@@ -51,7 +51,7 @@ $(document).ready(function () {
                 btn.prop("disabled", false);
                 $("#password").val("");
                 createdDiv.hide();
-                if (res.emailConfirmed === false) {
+                if (res.user.confirmed === false) {
                     showAlert("danger", res.msg + ' <a href="/resendConfirmEmail">Click here</a> to resend the confirmation mail.', true);
                 } else {
                     showAlert("danger", res.msg);

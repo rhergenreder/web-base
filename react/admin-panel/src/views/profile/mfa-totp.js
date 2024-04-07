@@ -4,7 +4,7 @@ import {LocaleContext} from "shared/locale";
 
 export default function MfaTotp(props) {
 
-    const {setDialogData, api, showDialog, ...other} = props;
+    const {setDialogData, api, showDialog, set2FA, ...other} = props;
     const {translate: L} = useContext(LocaleContext);
 
     const onConfirmTOTP = useCallback((code) => {
@@ -14,10 +14,11 @@ export default function MfaTotp(props) {
             } else {
                 setDialogData({show: false});
                 showDialog(L("account.confirm_totp_success"), L("general.success"));
+                set2FA({ confirmed: true, type: "totp", authenticated: true });
             }
         });
         return false;
-    }, [api, showDialog]);
+    }, [api, showDialog, set2FA, setDialogData]);
 
     const openDialog = useCallback(() => {
         if (api.hasPermission("tfa/generateQR")) {
@@ -28,8 +29,8 @@ export default function MfaTotp(props) {
                     "On Android, you can use the Google Authenticator."),
                 inputs: [
                     {
-                        type: "custom", element: Box, textAlign: "center", children:
-                            <img src={"/api/tfa/generateQR?nocache=" + Math.random()} alt={"[QR-Code]"}/>
+                        type: "custom", element: Box, textAlign: "center", key: "qr-code",
+                        children: <img src={"/api/tfa/generateQR?nocache=" + Math.random()} alt={"[QR-Code]"} />
                     },
                     {
                         type: "number", placeholder: L("account.6_digit_code"),
@@ -37,6 +38,7 @@ export default function MfaTotp(props) {
                         sx: { "& input": { textAlign: "center", fontFamily: "monospace" } },
                     }
                 ],
+                options: [L("general.ok"), L("general.cancel")],
                 onOption: (option, data) => option === 0 ? onConfirmTOTP(data.code) : true
             })
         }

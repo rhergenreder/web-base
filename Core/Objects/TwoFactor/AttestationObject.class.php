@@ -2,6 +2,7 @@
 
 namespace Core\Objects\TwoFactor;
 
+use CBOR\MapObject;
 use Core\Objects\ApiObject;
 
 class AttestationObject extends ApiObject {
@@ -9,14 +10,14 @@ class AttestationObject extends ApiObject {
   use CBORDecoder;
 
   private string $format;
-  private array $statement;
+  private MapObject $statement;
   private AuthenticationData $authData;
 
   public function __construct(string $buffer) {
-    $data = $this->decode($buffer)->getNormalizedData();
+    $data = $this->decode($buffer);
     $this->format = $data["fmt"];
     $this->statement = $data["attStmt"];
-    $this->authData = new AuthenticationData($data["authData"]);
+    $this->authData = new AuthenticationData($data["authData"]->getValue());
   }
 
   public function jsonSerialize(): array {

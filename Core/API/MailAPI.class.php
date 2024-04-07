@@ -55,7 +55,6 @@ namespace Core\API\Mail {
   use Core\External\PHPMailer\PHPMailer;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\GpgKey;
-  use PhpParser\Node\Param;
 
   class Test extends MailAPI {
 

@@ -17,6 +17,7 @@ return [
   "no" => "No",
   "create_new" => "Create",
   "unchanged" => "Unchanged",
+  "click_to_copy" => "Click to copy",
 
   # dialog / actions
   "action" => "Action",

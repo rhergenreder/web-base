@@ -201,7 +201,7 @@ export default function RouteListView(props) {
                                                     { type: "text", name: "pattern", value: route.pattern, disabled: true}
                                                 ],
                                                 options: [L("general.ok"), L("general.cancel")],
-                                                onOption: btn => btn === 0 && onDeleteRoute(route.id)
+                                                onOption: btn => btn === 0 ? onDeleteRoute(route.id) : true
                                             })}>
                                     <Delete />
                                 </IconButton>

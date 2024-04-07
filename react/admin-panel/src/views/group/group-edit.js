@@ -3,11 +3,12 @@ import {Link, useNavigate, useParams} from "react-router-dom";
 import {LocaleContext} from "shared/locale";
 import SearchField from "shared/elements/search-field";
 import React from "react";
-import {ControlsColumn, DataTable, NumericColumn, StringColumn} from "shared/elements/data-table";
+import {sprintf} from "sprintf-js";
+import {DataTable, ControlsColumn, NumericColumn, StringColumn} from "shared/elements/data-table";
 import EditIcon from "@mui/icons-material/Edit";
 import usePagination from "shared/hooks/pagination";
 import Dialog from "shared/elements/dialog";
-import {FormControl, FormGroup, FormLabel, styled, TextField, Button, CircularProgress} from "@mui/material";
+import {FormControl, FormGroup, FormLabel, TextField, Button, CircularProgress, Box} from "@mui/material";
 import {Add, Delete, KeyboardArrowLeft, Save} from "@mui/icons-material";
 import {MuiColorInput} from "mui-color-input";
 import ButtonBar from "../../elements/button-bar";
@@ -27,6 +28,7 @@ export default function EditGroupView(props) {
     const isNewGroup = groupId === "new";
     const pagination = usePagination();
     const api = props.api;
+    const showDialog = props.showDialog;
 
     // data
     const [fetchGroup, setFetchGroup] = useState(!isNewGroup);
@@ -41,7 +43,7 @@ export default function EditGroupView(props) {
     useEffect(() => {
         requestModules(props.api, ["general", "account"], currentLocale).then(data => {
             if (!data.success) {
-                props.showDialog(data.msg, "Error fetching localization");
+                showDialog(data.msg, "Error fetching localization");
             }
         });
     }, [currentLocale]);
@@ -51,7 +53,7 @@ export default function EditGroupView(props) {
             setFetchGroup(false);
             api.getGroup(groupId).then(res => {
                if (!res.success) {
-                   props.showDialog(res.msg, "Error fetching group");
+                   showDialog(res.msg, "Error fetching group");
                    navigate("/admin/groups");
                } else {
                    setGroup(res.group);
@@ -66,11 +68,11 @@ export default function EditGroupView(props) {
                 setMembers(res.users);
                 pagination.update(res.pagination);
             } else {
-                props.showDialog(res.msg, L("account.fetch_group_members_error"));
+                showDialog(res.msg, L("account.fetch_group_members_error"));
                 return null;
             }
         });
-    }, [groupId, api, pagination]);
+    }, [api, showDialog, pagination, groupId]);
 
     const onRemoveMember = useCallback(userId => {
         api.removeGroupMember(groupId, userId).then(data => {
@@ -78,16 +80,16 @@ export default function EditGroupView(props) {
                 let newMembers = members.filter(u => u.id !== userId);
                 setMembers(newMembers);
             } else {
-                props.showDialog(data.msg, L("account.remove_group_member_error"));
+                showDialog(data.msg, L("account.remove_group_member_error"));
             }
         });
-    }, [api, groupId, members]);
+    }, [api, showDialog, groupId, members]);
 
     const onAddMember = useCallback(() => {
         if (selectedUser) {
             api.addGroupMember(groupId, selectedUser.id).then(data => {
                 if (!data.success) {
-                    props.showDialog(data.msg, L("account.add_group_member_error"));
+                    showDialog(data.msg, L("account.add_group_member_error"));
                 } else {
                     let newMembers = [...members];
                     newMembers.push(selectedUser);
@@ -96,7 +98,7 @@ export default function EditGroupView(props) {
                 setSelectedUser(null);
             });
         }
-    }, [api, groupId, selectedUser])
+    }, [api, showDialog, groupId, selectedUser, members])
 
     const onSave = useCallback(() => {
         setSaving(true);
@@ -104,7 +106,7 @@ export default function EditGroupView(props) {
             api.createGroup(group.name, group.color).then(data => {
                 setSaving(false);
                 if (!data.success) {
-                   props.showDialog(data.msg, L("account.create_group_error"));
+                   showDialog(data.msg, L("account.create_group_error"));
                } else {
                    navigate(`/admin/group/${data.id}`)
                }
@@ -113,31 +115,31 @@ export default function EditGroupView(props) {
             api.updateGroup(groupId, group.name, group.color).then(data => {
                 setSaving(false);
                 if (!data.success) {
-                    props.showDialog(data.msg, L("account.update_group_error"));
+                    showDialog(data.msg, L("account.update_group_error"));
                 }
             });
         }
-    }, [api, groupId, isNewGroup, group]);
+    }, [api, showDialog, groupId, isNewGroup, group]);
 
     const onSearchUser = useCallback((async (query) => {
         let data = await api.searchUser(query);
         if (!data.success) {
-            props.showDialog(data.msg, L("account.search_users_error"));
+            showDialog(data.msg, L("account.search_users_error"));
             return [];
         }
 
         return data.users;
-    }), [api]);
+    }), [api, showDialog]);
 
     const onDeleteGroup = useCallback(() => {
         api.deleteGroup(groupId).then(data => {
            if (!data.success) {
-               props.showDialog(data.msg, L("account.delete_group_error"));
+               showDialog(data.msg, L("account.delete_group_error"));
            } else {
                navigate("/admin/groups");
            }
         });
-    }, [api, groupId]);
+    }, [api, showDialog, groupId]);
 
     const onOpenMemberDialog = useCallback(() => {
         setDialogData({
@@ -146,29 +148,23 @@ export default function EditGroupView(props) {
             message: L("account.add_group_member_text"),
             inputs: [
                 {
-                    type: "custom", name: "search", element: SearchField,
+                    type: "custom", name: "search",
                     size: "small", key: "search",
+                    element: SearchField,
                     onSearch: v => onSearchUser(v),
                     onSelect: u => setSelectedUser(u),
-                    displayText: u => u.fullName || u.name
+                    getOptionLabel: u => u.fullName || u.name
                 }
             ],
-            onOption: (option) => option === 0 ? onAddMember() : setSelectedUser(null)
+            onOption: (option) => option === 0 ?
+                onAddMember() :
+                setSelectedUser(null)
         });
-    }, []);
+    }, [onAddMember, onSearchUser, setSelectedUser, setDialogData]);
 
     useEffect(() => {
         onFetchGroup();
     }, []);
-
-    const complementaryColor = (color) => {
-        if (color.startsWith("#")) {
-            color = color.substring(1);
-        }
-
-        let numericValue = parseInt(color, 16);
-        return "#" + (0xFFFFFF - numericValue).toString(16);
-    }
 
     if (group === null) {
         return <CircularProgress />
@@ -243,7 +239,7 @@ export default function EditGroupView(props) {
                                         open: true,
                                         title: L("account.delete_group_title"),
                                         message: L("account.delete_group_text"),
-                                        onOption: option => option === 0 && onDeleteGroup()
+                                        onOption: option => option === 0 ? onDeleteGroup() : true
                                     })}>
                                 {L("general.delete")}
                             </Button>
@@ -252,7 +248,7 @@ export default function EditGroupView(props) {
                 </div>
             </div>
             {!isNewGroup && api.hasPermission("groups/getMembers") ?
-                <div className={"m-3 col-6"}>
+                <Box m={3} className={"col-6"}>
                     <h4>{L("account.members")}</h4>
                     <DataTable
                         data={members}
@@ -281,7 +277,7 @@ export default function EditGroupView(props) {
                                         open: true,
                                         title: L("account.remove_group_member_title"),
                                         message: sprintf(L("account.remove_group_member_text"), entry.fullName || entry.name),
-                                        onOption: (option) => option === 0 && onRemoveMember(entry.id)
+                                        onOption: (option) => option === 0 ? onRemoveMember(entry.id) : true
                                     })
                                 }
                             ]),
@@ -295,7 +291,7 @@ export default function EditGroupView(props) {
                             onClick: onOpenMemberDialog
                         }]}
                     />
-                </div>
+                </Box>
                 : <></>
             }
         </div>

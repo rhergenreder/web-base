@@ -1,7 +1,6 @@
 <?php
 
 use Base32\Base32;
-use Core\Objects\Context;
 use Core\Objects\TwoFactor\TimeBasedTwoFactorToken;
 
 class TimeBasedTwoFactorTokenTest extends PHPUnit\Framework\TestCase {

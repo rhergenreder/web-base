@@ -35,6 +35,7 @@ return [
   "no" => "Nein",
   "create_new" => "Erstellen",
   "unchanged" => "Unverändert",
+  "click_to_copy" => "Klicken zum Kopieren",
 
   # dialog / actions
   "action" => "Aktion",

@@ -171,7 +171,7 @@ export default function LoginForm(props) {
                         autoComplete={"code"}
                         required fullWidth autoFocus
                         value={tfaCode} onChange={(e) => set2FACode(e.target.value)}
-                    />
+                        onKeyDown={e => e.key === "Enter" && onSubmit2FA()} />
                     {
                         tfaToken.error ? <ResponseAlert severity="error">{tfaToken.error}</ResponseAlert> : <></>
                     }

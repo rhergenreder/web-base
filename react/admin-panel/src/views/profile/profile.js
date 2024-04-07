@@ -7,7 +7,7 @@ import {
     CircularProgress,
     FormControl,
     FormGroup,
-    FormLabel, styled,
+    FormLabel, Paper, styled,
     TextField
 } from "@mui/material";
 import {
@@ -23,6 +23,9 @@ import {
 } from "@mui/icons-material";
 import CollapseBox from "./collapse-box";
 import ButtonBar from "../../elements/button-bar";
+import MfaTotp from "./mfa-totp";
+import MfaFido from "./mfa-fido";
+import Dialog from "shared/elements/dialog";
 
 const GpgKeyField = styled(TextField)((props) => ({
     "& > div": {
@@ -44,6 +47,29 @@ const GpgFingerprintBox = styled(Box)((props) => ({
 
 const ProfileFormGroup = styled(FormGroup)((props) =>  ({
     marginBottom: props.theme.spacing(2)
+}));
+
+const MFAOptions = styled(Box)((props) => ({
+    "& > div": {
+        borderColor: props.theme.palette.divider,
+        borderStyle: "solid",
+        borderWidth: 1,
+        borderRadius: 5,
+        maxWidth: 150,
+        cursor: "pointer",
+        textAlign: "center",
+        display: "inline-grid",
+        gridTemplateRows: "130px 50px",
+        alignItems: "center",
+        padding: props.theme.spacing(1),
+        marginRight: props.theme.spacing(1),
+        "&:hover": {
+            backgroundColor: "lightgray",
+        },
+        "& img": {
+            width: "100%",
+        },
+    }
 }));
 
 const VisuallyHiddenInput = styled('input')({
@@ -78,12 +104,15 @@ export default function ProfileView(props) {
     const [changePassword, setChangePassword] = useState({ old: "", new: "", confirm: "" });
     const [gpgKey, setGpgKey] = useState("");
     const [gpgKeyPassword, setGpgKeyPassword] = useState("");
+    const [mfaPassword, set2FAPassword] = useState("");
 
     // ui
     const [openedTab, setOpenedTab] = useState(null);
     const [isSaving, setSaving] = useState(false);
     const [isGpgKeyUploading, setGpgKeyUploading] = useState(false);
     const [isGpgKeyRemoving, setGpgKeyRemoving] = useState(false);
+    const [is2FARemoving, set2FARemoving] = useState(false);
+    const [dialogData, setDialogData] = useState({show: false});
 
     const onUpdateProfile = useCallback(() => {
 
@@ -147,7 +176,22 @@ export default function ProfileView(props) {
                 }
             });
         }
-    }, [api, showDialog, isGpgKeyRemoving, gpgKeyPassword]);
+    }, [api, showDialog, isGpgKeyRemoving, gpgKeyPassword, profile]);
+
+    const onRemove2FA = useCallback(() => {
+        if (!is2FARemoving) {
+            set2FARemoving(true);
+            api.remove2FA(mfaPassword).then(data => {
+                set2FARemoving(false);
+                set2FAPassword("");
+                if (!data.success) {
+                    showDialog(data.msg, L("account.remove_2fa_error"));
+                } else {
+                    setProfile({...profile, twoFactorToken: null});
+                }
+            });
+        }
+    }, [api, showDialog, is2FARemoving, mfaPassword, profile]);
 
     const getFileContents = useCallback((file, callback) => {
         let reader = new FileReader();
@@ -166,6 +210,8 @@ export default function ProfileView(props) {
         setGpgKey("");
         reader.readAsText(file);
     }, [showDialog]);
+
+    console.log("SELECTED USER:", profile.twoFactorToken);
 
     return <>
         <div className={"content-header"}>
@@ -315,7 +361,37 @@ export default function ProfileView(props) {
             <CollapseBox title={L("account.2fa_token")} open={openedTab === "2fa"}
                          onToggle={() => setOpenedTab(openedTab === "2fa" ? "" : "2fa")}
                          icon={<Fingerprint />}>
-                <b>test</b>
+                {profile.twoFactorToken && profile.twoFactorToken.confirmed ?
+                    <Box>
+                        <GpgFingerprintBox mb={2}>
+                            { profile.twoFactorToken.confirmed ?
+                                <CheckCircle color={"info"} title={L("account.gpg_key_confirmed")} /> :
+                                <ErrorOutline color={"secondary"} title={L("account.gpg_key_pending")}  />
+                            }
+                            {L("account.2fa_type_" + profile.twoFactorToken.type)}
+                        </GpgFingerprintBox>
+                        <ProfileFormGroup>
+                            <FormLabel>{L("account.password")}</FormLabel>
+                            <FormControl>
+                                <TextField variant={"outlined"} size={"small"}
+                                           value={mfaPassword} type={"password"}
+                                           onChange={e => set2FAPassword(e.target.value)}
+                                           placeholder={L("account.password")}
+                                />
+                            </FormControl>
+                        </ProfileFormGroup>
+                        <Button startIcon={is2FARemoving ? <CircularProgress size={12} /> : <Remove />}
+                                color={"secondary"} onClick={onRemove2FA}
+                                variant={"outlined"} size={"small"}
+                                disabled={is2FARemoving || !api.hasPermission("tfa/remove")}>
+                            {is2FARemoving ? L("general.removing") + "…" : L("general.remove")}
+                        </Button>
+                    </Box> :
+                    <MFAOptions>
+                        <MfaTotp api={api} showDialog={showDialog} setDialogData={setDialogData}/>
+                        <MfaFido api={api} showDialog={showDialog} setDialogData={setDialogData}/>
+                    </MFAOptions>
+                }
             </CollapseBox>
 
             <Box mt={2}>
@@ -327,5 +403,13 @@ export default function ProfileView(props) {
                 </Button>
             </Box>
         </div>
+
+        <Dialog show={dialogData.show}
+                title={dialogData.title}
+                message={dialogData.message}
+                inputs={dialogData.inputs}
+                onClose={() => setDialogData({show: false})}
+                options={[L("general.ok"), L("general.cancel")]}
+                onOption={dialogData.onOption} />
     </>
 }

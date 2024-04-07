@@ -169,8 +169,7 @@ export default function AccessControlList(props) {
                                                     { type: "label", value: L("permissions.description") + ":" },
                                                     { type: "text", name: "description", value: permission.description, maxLength: 128 }
                                                 ],
-                                                onOption: (option, inputData) => option === 0 && onUpdatePermission(inputData, permission.groups)
-                                            })} >
+                                                onOption: (option, inputData) => option === 0 ? onUpdatePermission(inputData, permission.groups) : true                                            })} >
                                     <Edit />
                                 </IconButton>
                                 <IconButton style={{padding: 0}} size={"small"} color={"secondary"}
@@ -179,7 +178,7 @@ export default function AccessControlList(props) {
                                                 open: true,
                                                 title: L("permissions.delete_permission_confirm"),
                                                 message: L("permissions.method") + ": " + permission.method,
-                                                onOption: (option) => option === 0 && onDeletePermission(permission.method)
+                                                onOption: (option) => option === 0 ? onDeletePermission(permission.method) : true
                                             })} >
                                     <Delete />
                                 </IconButton>
@@ -253,7 +252,7 @@ export default function AccessControlList(props) {
                                     { type: "label", value: L("permissions.description") + ":" },
                                     { type: "text", name: "description", maxLength: 128, placeholder: L("permissions.description") }
                                 ],
-                                onOption: (option, inputData) => option === 0 && onUpdatePermission(inputData, [])
+                                onOption: (option, inputData) => option === 0 ? onUpdatePermission(inputData, []) : true
                             })} >
                         {L("general.add")}
                     </Button>

@@ -12,7 +12,7 @@ import {
 
 export default function Dialog(props) {
 
-    const show = props.show;
+    const show = !!props.show;
     const onClose = props.onClose || function() { };
     const onOption = props.onOption || function() { };
     const options = props.options || ["Close"];
@@ -36,7 +36,13 @@ export default function Dialog(props) {
     for (const [index, name] of options.entries()) {
         buttons.push(
             <Button variant={"outlined"} size={"small"} key={"button-" + name}
-                    onClick={() => { onClose(); onOption(index, inputData); setInputData({}); }}>
+                    onClick={() => {
+                        let res = onOption(index, inputData);
+                        if (res || res === undefined) {
+                            onClose();
+                            setInputData({});
+                        }
+                    }}>
                 {name}
             </Button>
         )
@@ -54,16 +60,21 @@ export default function Dialog(props) {
                 inputElements.push(<span {...inputProps}>{input.value}</span>);
                 break;
             case 'text':
-            case 'password':
+            case 'number':
+            case 'password': {
+                let onChange = (input.type === "number") ?
+                    e => setInputData({ ...inputData, [input.name]: e.target.value.replace(/[^0-9,.]/, '') }) :
+                    e => setInputData({ ...inputData, [input.name]: e.target.value });
+
                 inputElements.push(<TextField
                     {...inputProps}
-                    type={input.type}
+                    type={input.type === "number" ? "text" : input.type}
                     size={"small"} fullWidth={true}
                     key={"input-" + input.name}
                     value={inputData[input.name] || ""}
-                    onChange={e => setInputData({ ...inputData, [input.name]: e.target.value })}
+                    onChange={onChange}
                 />)
-                break;
+            } break;
             case 'list':
                 delete inputProps.items;
                 let listItems = input.items.map((item, index) => <ListItem key={"item-" + index}>{item}</ListItem>);

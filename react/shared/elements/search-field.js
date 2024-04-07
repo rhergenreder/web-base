@@ -4,12 +4,11 @@ import useAsyncSearch from "../hooks/async-search";
 
 export default function SearchField(props) {
 
-    const { onSearch, displayText, onSelect, ...other } = props;
+    const { onSearch, onSelect, ...other } = props;
 
     const [searchString, setSearchString, results] = useAsyncSearch(props.onSearch, 3);
 
     return <Autocomplete {...other}
-         getOptionLabel={r => displayText(r)}
          options={Object.values(results ?? {})}
          onChange={(e, n) => onSelect(n)}
          renderInput={(params) => (

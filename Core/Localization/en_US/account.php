@@ -90,6 +90,8 @@ return [
   "gpg_key_placeholder_text" => "Paste or drag'n'drop your GPG-Key in ASCII format...",
 
   # 2fa
+  "2fa_type_totp" => "Time-Based 2FA (TOTP)",
+  "2fa_type_fido" => "Key-Based 2FA",
   "register_2fa_device" => "Register a 2FA-Device",
   "register_2fa_totp_text" => "Scan the QR-Code with a device you want to use for Two-Factor-Authentication (2FA). " .
     "On Android, you can use the Google Authenticator.",

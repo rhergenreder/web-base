@@ -1,7 +1,7 @@
 import React, {lazy, Suspense, useCallback, useState} from "react";
 import {BrowserRouter, Route, Routes} from "react-router-dom";
+import Dialog from "shared/elements/dialog";
 import Sidebar from "./elements/sidebar";
-import Dialog from "./elements/dialog";
 import Footer from "./elements/footer";
 import {useContext, useEffect} from "react";
 import {LocaleContext} from "shared/locale";

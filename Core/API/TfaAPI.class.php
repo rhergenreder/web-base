@@ -62,6 +62,7 @@ namespace Core\API\TFA {
   use Core\API\Parameter\StringType;
   use Core\API\TfaAPI;
   use Core\Driver\SQL\Condition\Compare;
+  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\TwoFactor\AttestationObject;
   use Core\Objects\TwoFactor\AuthenticationData;
@@ -131,6 +132,10 @@ namespace Core\API\TFA {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to remove their 2FA-Tokens", true);
+    }
   }
 
   // TOTP
@@ -167,11 +172,16 @@ namespace Core\API\TFA {
       $this->disableCache();
       die($twoFactorToken->generateQRCode($this->context));
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users generate a QR-code to add a time-based 2FA-Token", true);
+    }
   }
 
   class ConfirmTotp extends VerifyTotp {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall);
+      $this->loginRequired = true;
     }
 
     public function _execute(): bool {
@@ -196,6 +206,10 @@ namespace Core\API\TFA {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to confirm their time-based 2FA-Token", true);
+    }
   }
 
   class VerifyTotp extends TfaAPI {
@@ -211,10 +225,6 @@ namespace Core\API\TFA {
     public function _execute(): bool {
 
       $currentUser = $this->context->getUser();
-      if (!$currentUser) {
-        return $this->createError("You are not logged in.");
-      }
-
       $twoFactorToken = $currentUser->getTwoFactorToken();
       if (!$twoFactorToken) {
         return $this->createError("You did not add a two factor token yet.");
@@ -229,6 +239,10 @@ namespace Core\API\TFA {
 
       $twoFactorToken->authenticate();
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to verify time-based 2FA-Tokens", true);
     }
   }
 
@@ -326,6 +340,10 @@ namespace Core\API\TFA {
 
       return $this->success;
     }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to register a 2FA hardware-key", true);
+    }
   }
 
   class VerifyKey extends TfaAPI {
@@ -383,6 +401,10 @@ namespace Core\API\TFA {
       }
 
       return $this->success;
+    }
+
+    public static function getDefaultACL(Insert $insert): void {
+      $insert->addRow(self::getEndpoint(), [], "Allows users to verify a 2FA hardware-key", true);
     }
   }
 }

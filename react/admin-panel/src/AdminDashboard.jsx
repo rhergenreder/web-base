@@ -1,5 +1,5 @@
 import React, {lazy, Suspense, useCallback, useState} from "react";
-import {BrowserRouter, Route, Routes} from "react-router-dom";
+import {BrowserRouter, Navigate, Route, Routes} from "react-router-dom";
 import Dialog from "shared/elements/dialog";
 import Sidebar from "./elements/sidebar";
 import Footer from "./elements/footer";
@@ -73,7 +73,7 @@ export default function AdminDashboard(props) {
                 <section className={"content"}>
                     <Suspense fallback={<div>{L("general.loading")}... </div>}>
                         <Routes>
-                            <Route path={"/admin"} element={<Overview {...controlObj} />}/>
+                            <Route path={"/admin"} element={<Navigate to={"/admin/dashboard"} />}/>
                             <Route path={"/admin/dashboard"} element={<Overview {...controlObj} />}/>
                             <Route path={"/admin/users"} element={<UserListView {...controlObj} />}/>
                             <Route path={"/admin/user/:userId"} element={<UserEditView {...controlObj} />}/>

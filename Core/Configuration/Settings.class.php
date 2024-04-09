@@ -84,15 +84,8 @@ class Settings {
   }
 
   public static function loadDefaults(): Settings {
-    $hostname = $_SERVER["SERVER_NAME"] ?? null;
-    if (empty($hostname)) {
-      $hostname = $_SERVER["HTTP_HOST"] ?? null;
-      if (empty($hostname)) {
-        $hostname = "localhost";
-      }
-    }
-
     $protocol = getProtocol();
+    $hostname = getHostName();
     $settings = new Settings();
 
     // General

@@ -36,6 +36,18 @@ function getProtocol(): string {
   return $isSecure ? 'https' : 'http';
 }
 
+function getCurrentHostName(): string {
+  $hostname = $_SERVER["SERVER_NAME"] ?? null;
+  if (empty($hostname)) {
+    $hostname = $_SERVER["HTTP_HOST"] ?? null;
+    if (empty($hostname)) {
+      $hostname = gethostname();
+    }
+  }
+
+  return $hostname;
+}
+
 function uuidv4(): string {
   $data = random_bytes(16);
   $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // set version to 0100

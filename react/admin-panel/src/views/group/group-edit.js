@@ -1,4 +1,4 @@
-import {useCallback, useContext, useEffect, useState} from "react";
+import {useCallback, useContext, useEffect, useRef, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router-dom";
 import {LocaleContext} from "shared/locale";
 import SearchField from "shared/elements/search-field";
@@ -34,7 +34,7 @@ export default function EditGroupView(props) {
     const [fetchGroup, setFetchGroup] = useState(!isNewGroup);
     const [group, setGroup] = useState(isNewGroup ? defaultGroupData : null);
     const [members, setMembers] = useState([]);
-    const [selectedUser, setSelectedUser] = useState(null);
+    const selectedUserRef = useRef(null);
 
     // ui
     const [dialogData, setDialogData] = useState({open: false});
@@ -86,19 +86,19 @@ export default function EditGroupView(props) {
     }, [api, showDialog, groupId, members]);
 
     const onAddMember = useCallback(() => {
-        if (selectedUser) {
-            api.addGroupMember(groupId, selectedUser.id).then(data => {
+        if (selectedUserRef.current) {
+            api.addGroupMember(groupId, selectedUserRef.current.id).then(data => {
                 if (!data.success) {
                     showDialog(data.msg, L("account.add_group_member_error"));
                 } else {
                     let newMembers = [...members];
-                    newMembers.push(selectedUser);
+                    newMembers.push(selectedUserRef.current);
                     setMembers(newMembers);
                 }
-                setSelectedUser(null);
+                selectedUserRef.current = null;
             });
         }
-    }, [api, showDialog, groupId, selectedUser, members])
+    }, [api, showDialog, groupId, selectedUserRef, members])
 
     const onSave = useCallback(() => {
         setSaving(true);
@@ -152,15 +152,19 @@ export default function EditGroupView(props) {
                     size: "small", key: "search",
                     element: SearchField,
                     onSearch: v => onSearchUser(v),
-                    onSelect: u => setSelectedUser(u),
+                    onSelect: u => { selectedUserRef.current = u },
                     getOptionLabel: u => u.fullName || u.name
                 }
             ],
-            onOption: (option) => option === 0 ?
-                onAddMember() :
-                setSelectedUser(null)
+            onOption: (option) => {
+                if(option === 0) {
+                    onAddMember()
+                    } else {
+                    selectedUserRef.current = null
+                }
+            }
         });
-    }, [onAddMember, onSearchUser, setSelectedUser, setDialogData]);
+    }, [onAddMember, onSearchUser, selectedUserRef, setDialogData]);
 
     useEffect(() => {
         onFetchGroup();

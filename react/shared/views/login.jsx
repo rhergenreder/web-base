@@ -129,6 +129,7 @@ export default function LoginForm(props) {
             return;
         }
 
+        console.log("navigator.credentials.get")
         set2FAToken({ ...tfaToken, step: 1, error: "" });
         navigator.credentials.get({
             publicKey: {

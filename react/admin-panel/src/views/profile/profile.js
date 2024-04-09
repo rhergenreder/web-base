@@ -7,7 +7,7 @@ import {
     CircularProgress,
     FormControl,
     FormGroup,
-    FormLabel, Paper, styled,
+    FormLabel, styled,
     TextField
 } from "@mui/material";
 import {
@@ -26,6 +26,7 @@ import ButtonBar from "../../elements/button-bar";
 import MfaTotp from "./mfa-totp";
 import MfaFido from "./mfa-fido";
 import Dialog from "shared/elements/dialog";
+import PasswordStrength from "shared/elements/password-strength";
 
 const GpgKeyField = styled(TextField)((props) => ({
     "& > div": {
@@ -211,8 +212,6 @@ export default function ProfileView(props) {
         reader.readAsText(file);
     }, [showDialog]);
 
-    console.log("SELECTED USER:", profile.twoFactorToken);
-
     return <>
         <div className={"content-header"}>
             <div className={"container-fluid"}>
@@ -285,6 +284,9 @@ export default function ProfileView(props) {
                                    onChange={e => setChangePassword({...changePassword, confirm: e.target.value })} />
                     </FormControl>
                 </ProfileFormGroup>
+                <Box className={"w-50"}>
+                    <PasswordStrength password={changePassword.new} minLength={6} />
+                </Box>
             </CollapseBox>
 
             <CollapseBox title={L("account.gpg_key")} open={openedTab === "gpg"}

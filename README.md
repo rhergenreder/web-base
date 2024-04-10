@@ -33,6 +33,11 @@ I actually don't know what i want to implement here. There are quite to many CMS
 1. `docker-compose build`
 2. `docker-compose up`
 3. Open the webapp in your browser and follow the installation guide
+3a. Since the docker runs as user www-data (33), the following permissions are recommended and at least necessary for the installation process:
+```
+chown -R :33 .
+chmod -R 775 .
+```
 
 ### Afterwards
 

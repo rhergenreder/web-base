@@ -85,7 +85,7 @@ class Settings {
 
   public static function loadDefaults(): Settings {
     $protocol = getProtocol();
-    $hostname = getHostName();
+    $hostname = getCurrentHostName();
     $settings = new Settings();
 
     // General

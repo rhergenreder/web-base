@@ -585,4 +585,9 @@ abstract class Request {
 
     return $classes;
   }
+
+  protected function logUserId(): string {
+    $currentUser = $this->context->getUser();
+    return $currentUser ? "userId='" . $currentUser->getId() . "'" : "SYSTEM";
+  }
 }

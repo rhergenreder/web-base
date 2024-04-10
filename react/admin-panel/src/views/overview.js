@@ -9,7 +9,7 @@ import {CircularProgress} from "@mui/material";
 const StatBox = (props) => <div className={"col-lg-3 col-6"}>
     <div className={"small-box bg-" + props.color}>
         <div className={"inner"}>
-            {props.count ?
+            {!isNaN(props.count) ?
                 <>
                     <h3>{props.count}</h3>
                     <p>{props.text}</p>

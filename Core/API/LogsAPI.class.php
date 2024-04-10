@@ -29,6 +29,7 @@ namespace Core\API\Logs {
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\SystemLog;
 
+  // TODO: how to handle pagination here for log entries stored in files?
   class Get extends LogsAPI {
 
     use Pagination;

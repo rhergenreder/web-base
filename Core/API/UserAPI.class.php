@@ -185,7 +185,6 @@ namespace Core\API\User {
       $groups = [];
       $sql = $this->context->getSQL();
       $currentUser = $this->context->getUser();
-      $currentUserId = $currentUser->getId();
 
       $requestedGroups = array_unique($this->getParam("groups"));
       if (!empty($requestedGroups)) {
@@ -193,8 +192,10 @@ namespace Core\API\User {
         foreach ($requestedGroups as $groupId) {
           if (!isset($availableGroups[$groupId])) {
             return $this->createError("Group with id=$groupId does not exist.");
-          } else if ($groupId === Group::ADMIN && !$currentUser->hasGroup(Group::ADMIN)) {
+          } else if ($this->externalCall && $groupId === Group::ADMIN && !$currentUser->hasGroup(Group::ADMIN)) {
             return $this->createError("You cannot create users with administrator groups.");
+          } else {
+            $groups[] = $groupId;
           }
         }
       }
@@ -205,7 +206,7 @@ namespace Core\API\User {
       if ($user !== false) {
         $this->user = $user;
         $this->result["userId"] = $user->getId();
-        $this->logger->info("A new user with username='$username' and email='$email' was created by userId='$currentUserId'");
+        $this->logger->info("A new user with username='$username' and email='$email' was created by " . $this->logUserId());
       }
 
       return $this->success;
@@ -354,7 +355,7 @@ namespace Core\API\User {
     }
 
     public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), "Allows users to search other users", [Group::ADMIN, Group::SUPPORT], true);
+      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to search other users", true);
     }
   }
 
@@ -433,8 +434,7 @@ namespace Core\API\User {
         return false;
       }
 
-      $currentUserId = $this->context->getUser()->getId();
-      $this->logger->info("A new user with username='$username' and email='$email' was invited by userId='$currentUserId'");
+      $this->logger->info("A new user with username='$username' and email='$email' was invited by " . $this->logUserId());
 
       // Create Token
       $token = generateRandomString(36);

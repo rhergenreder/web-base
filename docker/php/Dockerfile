@@ -20,7 +20,7 @@ RUN mkdir -p /usr/local/etc/php/extra/ && \
     curl -s "https://browscap.org/stream?q=Full_PHP_BrowsCapINI" -o /usr/local/etc/php/extra/browscap.ini
 
 # NodeJS
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
+RUN curl -sL https://deb.nodesource.com/setup_21.x | bash - && \
     apt-get update && \
     apt-get -y install nodejs && \
     curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarnkey.gpg >/dev/null && \

@@ -12,7 +12,9 @@ import {
     TableHead,
     TableContainer,
     TableRow,
-    Tabs, TextField
+    Tabs, TextField,
+    Autocomplete,
+    Chip
 } from "@mui/material";
 import {Link} from "react-router-dom";
 import {
@@ -69,6 +71,7 @@ export default function SettingsView(props) {
     // data
     const [fetchSettings, setFetchSettings] = useState(true);
     const [settings, setSettings] = useState(null);
+    const [extra, setExtra] = useState({});
     const [uncategorizedKeys, setUncategorizedKeys] = useState([]);
 
     // ui
@@ -194,11 +197,8 @@ export default function SettingsView(props) {
         setFetchSettings(true);
         setNewKey("");
         setChanged(false);
+        setExtra({});
     }, []);
-
-    if (settings === null) {
-        return <CircularProgress />
-    }
 
     const parseBool = (v) => v !== undefined && (v === true || v === 1 || ["true", "1", "yes"].includes(v.toString().toLowerCase()));
 
@@ -271,14 +271,54 @@ export default function SettingsView(props) {
         </SettingsFormGroup>
     }
 
+    const renderTextValuesInput = (key_name, disabled=false, props={}) => {
+
+        const finishTyping = () => {
+            console.log("finishTyping", key_name);
+            setExtra({...extra, [key_name]: ""});
+            if (extra[key_name]) {
+                setSettings({...settings, [key_name]: [...settings[key_name], extra[key_name]]});
+            }
+        }
+
+        return <SettingsFormGroup key={"form-" + key_name} {...props}>
+            <FormLabel disabled={disabled}>{L("settings." + key_name)}</FormLabel>
+            <Autocomplete
+                clearIcon={false}
+                options={[]}
+                freeSolo
+                multiple
+                value={settings[key_name]}
+                onChange={(e, v) => setSettings({...settings, [key_name]: v})}
+                renderTags={(values, props) =>
+                    values.map((option, index) => (
+                        <Chip label={option} {...props({ index })} />
+                    ))
+                }
+                renderInput={(params) => <TextField
+                    {...params}
+                    value={extra[key_name] ?? ""}
+                    onChange={e => setExtra({...extra, [key_name]: e.target.value.trim()})}
+                    onKeyDown={e => {
+                        if (["Enter", "Tab", " "].includes(e.key)) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            finishTyping();
+                        }
+                    }}
+                    onBlur={finishTyping} />}
+            />
+        </SettingsFormGroup>
+    }
+
     const renderTab = () => {
         if (selectedTab === "general") {
             return [
                 renderTextInput("site_name"),
                 renderTextInput("base_url"),
-                renderTextInput("trusted_domains"),
+                renderTextValuesInput("trusted_domains"),
                 renderCheckBox("user_registration_enabled"),
-                renderTextInput("allowed_extensions"),
+                renderTextValuesInput("allowed_extensions"),
                 renderSelection("time_zone", TIME_ZONES),
             ];
         } else if (selectedTab === "mail") {
@@ -371,6 +411,10 @@ export default function SettingsView(props) {
         } else {
             return <i>Invalid tab: {selectedTab}</i>
         }
+    }
+
+    if (settings === null) {
+        return <CircularProgress />
     }
 
     return <>

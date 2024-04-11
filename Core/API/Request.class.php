@@ -171,6 +171,8 @@ abstract class Request {
     if ($this->externalCall) {
       $trustedDomains = $this->getCORS();
       if (!empty($trustedDomains)) {
+        // TODO: origins require a protocol, e.g. https:// or http:// as prefix. 
+        // should we force https for all origins? or make exceptions for localhost?
         header("Access-Control-Allow-Origin: " . implode(", ", $trustedDomains));
       }
     }

@@ -29,8 +29,8 @@ class Stats extends Request {
 
     if ($this->success) {
       $settings = $req->getResult()["settings"];
-      $this->mailConfigured = ($settings["mail_enabled"] ?? "0") === "1";
-      $this->recaptchaConfigured = ($settings["recaptcha_enabled"] ?? "0") === "1";
+      $this->mailConfigured = $settings["mail_enabled"];
+      $this->recaptchaConfigured = $settings["recaptcha_enabled"];
     }
 
     return $this->success;

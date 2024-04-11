@@ -25,7 +25,7 @@ return [
   "base_url" => "Basis URL",
   "user_registration_enabled" => "Benutzerregistrierung erlauben",
   "allowed_extensions" => "Erlaubte Dateierweiterungen",
-  "trusted_domains" => "Vertraute Ursprungs-Domains (Komma getrennt, * als Subdomain-Wildcard)",
+  "trusted_domains" => "Vertraute Ursprungs-Domains (* als Subdomain-Wildcard)",
   "time_zone" => "Zeitzone",
 
   # mail settings

@@ -472,7 +472,7 @@ namespace Documents\Install {
 
       if ($this->getParameter("skip") === "true") {
         $req = new \Core\API\Settings\Set($context);
-        $success = $req->execute(array("settings" => array("mail_enabled" => "0")));
+        $success = $req->execute(["settings" => ["mail_enabled" => false]]);
         $msg = $req->getLastError();
       } else {
 
@@ -538,13 +538,13 @@ namespace Documents\Install {
 
           if ($success) {
             $req = new \Core\API\Settings\Set($context);
-            $success = $req->execute(array("settings" => array(
-              "mail_enabled" => "1",
-              "mail_host" => "$address",
-              "mail_port" => "$port",
-              "mail_username" => "$username",
-              "mail_password" => "$password",
-            )));
+            $success = $req->execute(["settings" => [
+              "mail_enabled" => true,
+              "mail_host" => $address,
+              "mail_port" => $port,
+              "mail_username" => $username,
+              "mail_password" => $password,
+            ]]);
             $msg = $req->getLastError();
           }
         }

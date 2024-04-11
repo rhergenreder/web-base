@@ -3,10 +3,27 @@
 namespace Core\API {
 
   use Core\Objects\Context;
+  use Core\API\Parameter\ArrayType;
+  use Core\API\Parameter\Parameter;
+  use Core\API\Parameter\StringType;
 
   abstract class SettingsAPI extends Request {
+
+    protected array $predefinedKeys;
+
     public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
       parent::__construct($context, $externalCall, $params);
+
+      // TODO: improve this, additional validation for allowed chars etc.
+      // API parameters should be more configurable, e.g. allow regexes, min/max values for numbers, etc.
+      $this->predefinedKeys = [
+        "allowed_extensions" => new ArrayType("allowed_extensions", Parameter::TYPE_STRING),
+        "trusted_domains" => new ArrayType("allowed_extensions", Parameter::TYPE_STRING),
+        "user_registration_enabled" => new Parameter("user_registration_enabled", Parameter::TYPE_BOOLEAN),
+        "recaptcha_enabled" => new Parameter("recaptcha_enabled", Parameter::TYPE_BOOLEAN),
+        "mail_enabled" => new Parameter("mail_enabled", Parameter::TYPE_BOOLEAN),
+        "mail_port" => new Parameter("mail_port", Parameter::TYPE_INT)
+      ];
     }
   }
 }
@@ -53,7 +70,6 @@ namespace Core\API\Settings {
     }
   }
 
-  // TODO: we need additional validation for built-in settings here, e.g. csv-values, bool values, etc.
   class Set extends SettingsAPI {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, array(
@@ -68,14 +84,16 @@ namespace Core\API\Settings {
       }
 
       $paramKey = new StringType('key', 32);
-      $paramValue = new StringType('value', 1024, true, NULL);
+      $paramValueDefault = new StringType('value', 1024, true, NULL);
 
       $sql = $this->context->getSQL();
-      $query = $sql->insert("Settings", array("name", "value"));
+      $query = $sql->insert("Settings", ["name", "value"]);
       $keys = array();
       $deleteKeys = array();
 
       foreach ($values as $key => $value) {
+        $paramValue = $this->predefinedKeys[$key] ?? $paramValueDefault;
+
         if (!$paramKey->parseParam($key)) {
           $key = print_r($key, true);
           return $this->createError("Invalid Type for key in parameter settings: '$key' (Required: " . $paramKey->getTypeName() . ")");
@@ -86,7 +104,7 @@ namespace Core\API\Settings {
           return $this->createError("The property key should only contain alphanumeric characters, underscores and dashes");
         } else {
           if (!is_null($paramValue->value)) {
-            $query->addRow($paramKey->value, $paramValue->value);
+            $query->addRow($paramKey->value, json_encode($paramValue->value));
           } else {
             $deleteKeys[] = $paramKey->value;
           }
@@ -111,8 +129,8 @@ namespace Core\API\Settings {
 
       if (count($deleteKeys) !== count($keys)) {
         $query->onDuplicateKeyStrategy(new UpdateStrategy(
-          array("name"),
-          array("value" => new Column("value")))
+          ["name"],
+          ["value" => new Column("value")])
         );
 
 

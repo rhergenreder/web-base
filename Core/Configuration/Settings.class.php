@@ -60,7 +60,7 @@ class Settings {
     if ($res !== false && $res !== null) {
       $settings = array();
       foreach($res as $row) {
-        $settings[$row["name"]] = $row["value"];
+        $settings[$row["name"]] = json_decode($row["value"], true);
       }
       return $settings;
     } else {
@@ -76,7 +76,7 @@ class Settings {
     if ($res === false || $res === null) {
       return null;
     } else {
-      return (empty($res)) ? $defaultValue : $res[0]["value"];
+      return (empty($res)) ? $defaultValue : json_decode($res[0]["value"], true);
     }
   }
 
@@ -131,8 +131,8 @@ class Settings {
       $this->mailSender = $result["mail_from"] ?? $this->mailSender;
       $this->mailFooter = $result["mail_footer"] ?? $this->mailFooter;
       $this->mailAsync = $result["mail_async"] ?? $this->mailAsync;
-      $this->allowedExtensions = explode(",", $result["allowed_extensions"] ?? strtolower(implode(",", $this->allowedExtensions)));
-      $this->trustedDomains = explode(",", $result["trusted_domains"] ?? strtolower(implode(",", $this->trustedDomains)));
+      $this->allowedExtensions = $result["allowed_extensions"] ?? $this->allowedExtensions;
+      $this->trustedDomains = $result["trusted_domains"] ?? $this->trustedDomains;
       date_default_timezone_set($this->timeZone);
     }
 
@@ -140,23 +140,23 @@ class Settings {
   }
 
   public function addRows(Insert $query): void {
-    $query->addRow("site_name", $this->siteName, false, false)
-      ->addRow("base_url", $this->baseUrl, false, false)
-      ->addRow("trusted_domains", implode(",", $this->trustedDomains), false, false)
-      ->addRow("user_registration_enabled", $this->registrationAllowed ? "1" : "0", false, false)
-      ->addRow("installation_completed", $this->installationComplete ? "1" : "0", true, true)
-      ->addRow("time_zone", $this->timeZone, false, false)
-      ->addRow("recaptcha_enabled", $this->recaptchaEnabled ? "1" : "0", false, false)
-      ->addRow("recaptcha_public_key", $this->recaptchaPublicKey, false, false)
-      ->addRow("recaptcha_private_key", $this->recaptchaPrivateKey, true, false)
-      ->addRow("allowed_extensions", implode(",", $this->allowedExtensions), false, false)
-      ->addRow("mail_host", "", false, false)
-      ->addRow("mail_port", "", false, false)
-      ->addRow("mail_username", "", false, false)
-      ->addRow("mail_password", "", true, false)
-      ->addRow("mail_from", "", false, false)
-      ->addRow("mail_last_sync", "", false, false)
-      ->addRow("mail_footer", "", false, false)
+    $query->addRow("site_name", json_encode($this->siteName), false, false)
+      ->addRow("base_url", json_encode($this->baseUrl), false, false)
+      ->addRow("trusted_domains", json_encode($this->trustedDomains), false, false)
+      ->addRow("user_registration_enabled", json_encode($this->registrationAllowed), false, false)
+      ->addRow("installation_completed", json_encode($this->installationComplete), true, true)
+      ->addRow("time_zone", json_encode($this->timeZone), false, false)
+      ->addRow("recaptcha_enabled", json_encode($this->recaptchaEnabled), false, false)
+      ->addRow("recaptcha_public_key", json_encode($this->recaptchaPublicKey), false, false)
+      ->addRow("recaptcha_private_key", json_encode($this->recaptchaPrivateKey), true, false)
+      ->addRow("allowed_extensions", json_encode($this->allowedExtensions), false, false)
+      ->addRow("mail_host", '""', false, false)
+      ->addRow("mail_port", '587', false, false)
+      ->addRow("mail_username", '""', false, false)
+      ->addRow("mail_password", '""', true, false)
+      ->addRow("mail_from", '""', false, false)
+      ->addRow("mail_last_sync", '""', false, false)
+      ->addRow("mail_footer", '""', false, false)
       ->addRow("mail_async", false, false, false);
   }
 

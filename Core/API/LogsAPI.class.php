@@ -105,6 +105,8 @@ namespace Core\API\Logs {
                 "message" => $content,
                 "timestamp" => $date->format(Parameter::DATE_TIME_FORMAT)
               ];
+
+              $this->result["pagination"]["total"] += 1;
             }
           }
         }
@@ -139,6 +141,7 @@ namespace Core\API\Logs {
             "timestamp" => (new \DateTime())->format(Parameter::DATE_TIME_FORMAT)
           ]
         ];
+        $this->result["pagination"]["total"] += 1;
       }
 
       $this->loadFromFileSystem($this->result["logs"]);

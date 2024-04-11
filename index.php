@@ -18,13 +18,16 @@ use Core\Objects\Router\Router;
 
 if (!is_readable(getClassPath(Configuration::class))) {
   header("Content-Type: application/json");
-  die(json_encode([ "success" => false, "msg" => "Configuration class is not readable, check permissions before proceeding." ]));
+  http_response_code(500);
+  die(json_encode(createError("Configuration class is not readable, check permissions before proceeding.")));
 }
 
 $context = Context::instance();
 $sql = $context->initSQL();
 $settings = $context->getSettings();
 $context->parseCookies();
+
+$currentHostName = getCurrentHostName();
 
 $installation = !$sql || ($sql->isConnected() && !$settings->isInstalled());
 $requestedUri = $_GET["site"] ?? $_GET["api"] ?? $_SERVER["REQUEST_URI"];
@@ -61,12 +64,27 @@ if ($installation) {
   }
 
   if ($router !== null) {
+
     if ((!isset($_GET["site"]) || $_GET["site"] === "/") && isset($_GET["error"]) &&
       is_string($_GET["error"]) && preg_match("/^\d+$/", $_GET["error"])) {
       $response = $router->returnStatusCode(intval($_GET["error"]));
     } else {
       try {
-        $response = $router->run($requestedUri);
+        $pathParams = [];
+        $route = $router->run($requestedUri, $pathParams);
+        if ($route === null) {
+          $response = $router->returnStatusCode(404);
+        } else if (!$settings->isTrustedDomain($currentHostName)) {
+          if ($route instanceof \Core\Objects\Router\ApiRoute) {
+            header("Content-Type: application/json");
+            http_response_code(403);
+            $response = json_encode(createError("Untrusted Origin"));
+          } else {
+            $response = $router->returnStatusCode(403, ["message" => "Untrusted Origin"]);
+          }
+        } else {
+          $response = $route->call($router, $pathParams);
+        }
       } catch (\Throwable $e) {
         http_response_code(500);
         $router->getLogger()->error($e->getMessage());

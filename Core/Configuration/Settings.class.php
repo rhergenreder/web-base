@@ -22,6 +22,7 @@ class Settings {
   // general settings
   private string $siteName;
   private string $baseUrl;
+  private array $trustedDomains;
   private bool $registrationAllowed;
   private array $allowedExtensions;
   private string $timeZone;
@@ -45,7 +46,7 @@ class Settings {
   }
 
   public static function getAll(?SQL $sql, ?string $pattern = null, bool $external = false): ?array {
-    $query = $sql->select("name", "value") ->from("Settings");
+    $query = $sql->select("name", "value")->from("Settings");
 
     if ($pattern) {
       $query->where(new CondRegex(new Column("name"), $pattern));
@@ -91,6 +92,7 @@ class Settings {
     // General
     $settings->siteName = "WebBase";
     $settings->baseUrl = "$protocol://$hostname";
+    $settings->trustedDomains = [$hostname];
     $settings->allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'htm', 'html'];
     $settings->installationComplete = false;
     $settings->registrationAllowed = false;
@@ -130,6 +132,7 @@ class Settings {
       $this->mailFooter = $result["mail_footer"] ?? $this->mailFooter;
       $this->mailAsync = $result["mail_async"] ?? $this->mailAsync;
       $this->allowedExtensions = explode(",", $result["allowed_extensions"] ?? strtolower(implode(",", $this->allowedExtensions)));
+      $this->trustedDomains = explode(",", $result["trusted_domains"] ?? strtolower(implode(",", $this->trustedDomains)));
       date_default_timezone_set($this->timeZone);
     }
 
@@ -139,13 +142,14 @@ class Settings {
   public function addRows(Insert $query): void {
     $query->addRow("site_name", $this->siteName, false, false)
       ->addRow("base_url", $this->baseUrl, false, false)
+      ->addRow("trusted_domains", implode(",", $this->trustedDomains), false, false)
       ->addRow("user_registration_enabled", $this->registrationAllowed ? "1" : "0", false, false)
       ->addRow("installation_completed", $this->installationComplete ? "1" : "0", true, true)
       ->addRow("time_zone", $this->timeZone, false, false)
       ->addRow("recaptcha_enabled", $this->recaptchaEnabled ? "1" : "0", false, false)
       ->addRow("recaptcha_public_key", $this->recaptchaPublicKey, false, false)
       ->addRow("recaptcha_private_key", $this->recaptchaPrivateKey, true, false)
-      ->addRow("allowed_extensions", implode(",", $this->allowedExtensions), true, false)
+      ->addRow("allowed_extensions", implode(",", $this->allowedExtensions), false, false)
       ->addRow("mail_host", "", false, false)
       ->addRow("mail_port", "", false, false)
       ->addRow("mail_username", "", false, false)
@@ -210,5 +214,27 @@ class Settings {
 
   public function getLogger(): Logger {
     return $this->logger;
+  }
+
+  public function isTrustedDomain(string $domain): bool {
+    $domain = strtolower($domain);
+    foreach ($this->trustedDomains as $trustedDomain) {
+      $trustedDomain = trim(strtolower($trustedDomain));
+      if ($trustedDomain === $domain) {
+        return true;
+      }
+
+
+      // *.def.com <-> abc.def.com
+      if (startsWith($trustedDomain, "*.") && endsWith($domain, substr($trustedDomain, 1))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public function getTrustedDomains(): array {
+    return $this->trustedDomains;
   }
 }

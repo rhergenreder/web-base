@@ -21,7 +21,6 @@ abstract class Document {
   private bool $cspEnabled;
   private ?string $cspNonce;
   private array $cspWhitelist;
-  private string $domain;
   protected bool $searchable;
   protected array $languageModules;
 
@@ -31,7 +30,6 @@ abstract class Document {
     $this->cspNonce = null;
     $this->databaseRequired = true;
     $this->cspWhitelist = [];
-    $this->domain = $this->getSettings()->getBaseUrl();
     $this->logger = new Logger("Document", $this->getSQL());
     $this->searchable = false;
     $this->languageModules = ["general"];
@@ -83,7 +81,7 @@ abstract class Document {
   public function addCSPWhitelist(string $path) {
     $urlParts = parse_url($path);
     if (!$urlParts || !isset($urlParts["host"])) {
-      $this->cspWhitelist[] = $this->domain . $path;
+      $this->cspWhitelist[] = getProtocol() . "://" . getCurrentHostName() . $path;
     } else {
       $this->cspWhitelist[] = $path;
     }

@@ -53,6 +53,7 @@ namespace Core\API\Settings {
     }
   }
 
+  // TODO: we need additional validation for built-in settings here, e.g. csv-values, bool values, etc.
   class Set extends SettingsAPI {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, array(

@@ -959,7 +959,7 @@ $registeredCommands = [
   "mail" => ["handler" => "onMail", "description" => "send mails and process the pipeline", "requiresDocker" => true],
   "settings" => ["handler" => "onSettings", "description" => "change and view settings"],
   "impersonate" => ["handler" => "onImpersonate", "description" => "create a session and print cookies and csrf tokens", "requiresDocker" => true],
-  "frontend" => ["handler" => "onFrontend", "description" => "build and manage frontend modules", "requiresDocker" => true],
+  "frontend" => ["handler" => "onFrontend", "description" => "build and manage frontend modules"],
   "api" => ["handler" => "onAPI", "description" => "view and create API endpoints"],
 ];
 

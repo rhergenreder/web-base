@@ -46,6 +46,7 @@ export default function SettingsView(props) {
           "user_registration_enabled",
           "time_zone",
           "allowed_extensions",
+          "trusted_domains",
       ],
       "mail": [
           "mail_enabled",
@@ -275,6 +276,7 @@ export default function SettingsView(props) {
             return [
                 renderTextInput("site_name"),
                 renderTextInput("base_url"),
+                renderTextInput("trusted_domains"),
                 renderCheckBox("user_registration_enabled"),
                 renderTextInput("allowed_extensions"),
                 renderSelection("time_zone", TIME_ZONES),

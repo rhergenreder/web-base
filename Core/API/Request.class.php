@@ -161,7 +161,19 @@ abstract class Request {
     return true;
   }
 
+  protected function getCORS(): array {
+    $settings = $this->context->getSettings();
+    return $settings->getTrustedDomains();
+  }
+
   public final function execute($values = array()): bool {
+
+    if ($this->externalCall) {
+      $trustedDomains = $this->getCORS();
+      if (!empty($trustedDomains)) {
+        header("Access-Control-Allow-Origin: " . implode(", ", $trustedDomains));
+      }
+    }
 
     $this->params = array_merge([], $this->defaultParams);
     $this->success = false;

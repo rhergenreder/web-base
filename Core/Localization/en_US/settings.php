@@ -25,6 +25,7 @@ return [
   "base_url" => "Base URL",
   "user_registration_enabled" => "Allow user registration",
   "allowed_extensions" => "Allowed file extensions",
+  "trusted_domains" => "Trusted origin domains (comma separated, * as subdomain-wildcard)",
   "time_zone" => "Time zone",
 
   # mail settings

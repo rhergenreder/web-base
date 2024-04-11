@@ -13,9 +13,12 @@ class Swagger extends Request {
     $this->csrfTokenRequired = false;
   }
 
+  protected function getCORS(): array {
+    return ["*"];
+  }
+
   public function _execute(): bool {
     header("Content-Type: application/x-yaml");
-    header("Access-Control-Allow-Origin: *");
     die($this->getDocumentation());
   }
 

@@ -64,7 +64,7 @@ if ($installation) {
   }
 
   if ($router !== null) {
-
+    $logger = $router->getLogger();
     if ((!isset($_GET["site"]) || $_GET["site"] === "/") && isset($_GET["error"]) &&
       is_string($_GET["error"]) && preg_match("/^\d+$/", $_GET["error"])) {
       $response = $router->returnStatusCode(intval($_GET["error"]));
@@ -84,12 +84,13 @@ if ($installation) {
           } else {
             $response = $router->returnStatusCode(403, ["message" => $error]);
           }
+          $logger->warning("The site was accessed by an untrusted domain: $currentHostName");
         } else {
           $response = $route->call($router, $pathParams);
         }
       } catch (\Throwable $e) {
         http_response_code(500);
-        $router->getLogger()->error($e->getMessage());
+        $logger->error($e->getMessage());
         $response = $router->returnStatusCode(500);
       }
     }
@@ -97,8 +98,6 @@ if ($installation) {
     http_response_code(500);
     $response = "Router could not be instantiated.";
   }
-
-  $context->processVisit();
 }
 
 $context->sendCookies();

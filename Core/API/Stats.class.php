@@ -36,40 +36,11 @@ class Stats extends Request {
     return $this->success;
   }
 
-  private function getVisitorCount() {
-    $sql = $this->context->getSQL();
-    $date = new DateTime();
-    $monthStart = $date->format("Ym00");
-    $monthEnd = $date->modify("+1 month")->format("Ym00");
-    $res = $sql->select(new Count(new Distinct("cookie")))
-      ->from("Visitor")
-      ->where(new Compare("day", $monthStart, ">="))
-      ->where(new Compare("day", $monthEnd, "<"))
-      ->where(new Compare("count", 2, ">="))
-      ->execute();
-
-    $this->success = ($res !== false);
-    $this->lastError = $sql->getLastError();
-    return ($this->success ? $res[0]["count"] : $this->success);
-  }
-
   public function _execute(): bool {
     $sql = $this->context->getSQL();
     $userCount = User::count($sql);
     $pageCount = Route::count($sql, new CondBool("active"));
     $groupCount = Group::count($sql);
-    $req = new \Core\API\Visitors\Stats($this->context);
-    $this->success = $req->execute(array("type"=>"monthly"));
-    $this->lastError = $req->getLastError();
-    if (!$this->success) {
-      return false;
-    }
-
-    $visitorStatistics = $req->getResult()["visitors"];
-    $visitorCount = $this->getVisitorCount();
-    if (!$this->success) {
-      return false;
-    }
 
     $req = new \Core\API\Logs\Get($this->context, false);
     $success = $req->execute([
@@ -96,8 +67,6 @@ class Stats extends Request {
       "userCount" => $userCount,
       "pageCount" => $pageCount,
       "groupCount" => $groupCount,
-      "visitors" => $visitorStatistics,
-      "visitorsTotal" => $visitorCount,
       "errorCount" => $errorCount,
       "server" => [
         "version" => WEBBASE_VERSION,

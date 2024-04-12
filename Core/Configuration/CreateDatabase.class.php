@@ -18,12 +18,6 @@ class CreateDatabase extends DatabaseScript {
 
     self::loadEntities($queries, $sql);
 
-    $queries[] = $sql->createTable("Visitor")
-      ->addInt("day")
-      ->addInt("count", false, 1)
-      ->addString("cookie", 26)
-      ->unique("day", "cookie");
-
     $queries[] = $sql->createTable("Settings")
       ->addString("name", 32)
       ->addString("value", 1024, true)

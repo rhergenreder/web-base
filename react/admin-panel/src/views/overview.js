@@ -1,6 +1,5 @@
 import * as React from "react";
 import {Link} from "react-router-dom";
-import {format, getDaysInMonth} from "date-fns";
 import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
 import {ArrowCircleRight, BugReport, Groups, LibraryBooks, People} from "@mui/icons-material";
@@ -57,41 +56,6 @@ export default function Overview(props) {
         onFetchStats();
     }, []);
 
-    const today = new Date();
-    const numDays = getDaysInMonth(today);
-
-    let colors =  [ '#ff4444', '#ffbb33', '#00C851', '#33b5e5' ];
-    while (colors.length < numDays) {
-        colors = colors.concat(colors);
-    }
-
-    let data = new Array(numDays).fill(0);
-    let visitorCount = 0;
-    /*
-    for (let date in this.state.visitors) {
-        if (this.state.visitors.hasOwnProperty(date)) {
-            let day = parseInt(date.split("/")[2]) - 1;
-            if (day >= 0 && day < numDays) {
-                let count = parseInt(this.state.visitors[date]);
-                data[day] = count;
-                visitorCount += count;
-            }
-        }
-    }
-     */
-
-    let labels = Array.from(Array(numDays), (_, i) => i + 1);
-    let chartOptions = {};
-    let chartData = {
-        labels: labels,
-        datasets: [{
-            label: 'Unique Visitors ' + format(today, "MMMM"),
-            borderWidth: 1,
-            data: data,
-            backgroundColor: colors,
-        }]
-    };
-
     /*
     let loadAvg = this.state.server.load_avg;
     if (Array.isArray(this.state.server.load_avg)) {
@@ -125,7 +89,7 @@ export default function Overview(props) {
                     <StatBox color={"success"} count={stats?.groupCount}
                              text={L("admin.available_groups")}
                              icon={<Groups />}
-                             link={"/admin/users"} />
+                             link={"/admin/groups"} />
                     <StatBox color={"warning"} count={stats?.pageCount}
                              text={L("admin.routes_defined")}
                              icon={<LibraryBooks />}

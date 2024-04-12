@@ -314,11 +314,6 @@ export default class API {
         return this.apiCall("permission/delete", { method: method });
     }
 
-    /** VisitorsAPI **/
-    async getVisitors(type, date) {
-        return this.apiCall("visitors/stats", { type: type, date: date });
-    }
-
     /** LanguageAPI **/
     async getLanguages() {
         return this.apiCall("language/get");

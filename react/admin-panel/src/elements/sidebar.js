@@ -40,10 +40,6 @@ export default function Sidebar(props) {
             "name": "admin.dashboard",
             "icon": "tachometer-alt"
         },
-        "visitors": {
-            "name": "admin.visitor_statistics",
-            "icon": "chart-bar",
-        },
         "users": {
             "name": "admin.users",
             "icon": "users"

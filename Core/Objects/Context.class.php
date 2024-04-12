@@ -139,18 +139,6 @@ class Context {
     return false;
   }
 
-  public function processVisit(): void {
-    if (isset($_COOKIE["PHPSESSID"]) && !empty($_COOKIE["PHPSESSID"])) {
-      if ($this->isBot()) {
-        return;
-      }
-
-      $cookie = $_COOKIE["PHPSESSID"];
-      $req = new \Core\API\Visitors\ProcessVisit($this);
-      $req->execute(["cookie" => $cookie]);
-    }
-  }
-
   private function isBot(): bool {
     if (empty($_SERVER["HTTP_USER_AGENT"])) {
       return false;

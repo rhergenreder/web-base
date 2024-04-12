@@ -41,10 +41,7 @@ class Router {
   }
 
   public function run(string $url, array &$pathParams): ?Route {
-
-    // TODO: do we want a global try cache and return status page 500 on any error?
     $this->requestedUri = $url;
-
     $url = strtok($url, "?");
     foreach ($this->routes as $route) {
       $match = $route->match($url);

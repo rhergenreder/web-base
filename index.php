@@ -75,12 +75,14 @@ if ($installation) {
         if ($route === null) {
           $response = $router->returnStatusCode(404);
         } else if (!$settings->isTrustedDomain($currentHostName)) {
+          $error = "Untrusted Origin. Adjust the 'trusted_domains' setting " .
+            "to include the current host '$currentHostName' or contact the administrator to resolve this issue";
           if ($route instanceof \Core\Objects\Router\ApiRoute) {
             header("Content-Type: application/json");
             http_response_code(403);
-            $response = json_encode(createError("Untrusted Origin"));
+            $response = json_encode(createError($error));
           } else {
-            $response = $router->returnStatusCode(403, ["message" => "Untrusted Origin"]);
+            $response = $router->returnStatusCode(403, ["message" => $error]);
           }
         } else {
           $response = $route->call($router, $pathParams);

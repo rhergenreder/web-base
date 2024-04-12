@@ -91,8 +91,6 @@ class Context {
   }
 
   public function sendCookies(): void {
-    // TODO: what will we do, when there is a domain mismatch? forbid access or just send cookies for the current domain? or should we send a redirect?
-    // $domain = $this->getSettings()->getDomain();
     $domain = getCurrentHostName();
     $this->language->sendCookie($domain);
     $this->session?->sendCookie($domain);

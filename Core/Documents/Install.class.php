@@ -180,8 +180,6 @@ namespace Documents\Install {
         }
       }
 
-      // TODO: check
-
       $context = $this->getDocument()->getContext();
       $config = $context->getConfig();
 

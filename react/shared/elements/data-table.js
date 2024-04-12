@@ -356,7 +356,6 @@ export class ControlsColumn extends DataColumn {
                 key: "button-" + index,
             }
 
-            // TODO: icon button!
             if (button.hasOwnProperty("disabled")) {
                 props.disabled = typeof button.disabled === 'function'
                     ? button.disabled(entry, index)

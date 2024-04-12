@@ -1,10 +1,10 @@
 import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
 import {
-    Box, Button, Checkbox,
-    CircularProgress, FormControl, FormControlLabel,
+    Box, Button,
+    CircularProgress, FormControl,
     FormGroup, FormLabel, Grid, IconButton,
-    Paper, Select, styled,
+    Paper,
     Tab,
     Table,
     TableBody,
@@ -13,8 +13,6 @@ import {
     TableContainer,
     TableRow,
     Tabs, TextField,
-    Autocomplete,
-    Chip
 } from "@mui/material";
 import {Link} from "react-router-dom";
 import {
@@ -29,11 +27,14 @@ import {
     SettingsApplications
 } from "@mui/icons-material";
 import TIME_ZONES from "shared/time-zones";
-import ButtonBar from "../elements/button-bar";
-
-const SettingsFormGroup = styled(FormGroup)((props) => ({
-    marginBottom: props.theme.spacing(1),
-}));
+import ButtonBar from "../../elements/button-bar";
+import {parseBool} from "shared/util";
+import SettingsTextValues from "./input-text-values";
+import SettingsCheckBox from "./input-check-box";
+import SettingsNumberInput from "./input-number";
+import SettingsPasswordInput from "./input-password";
+import SettingsTextInput from "./input-text";
+import SettingsSelection from "./input-selection";
 
 export default function SettingsView(props) {
 
@@ -71,7 +72,6 @@ export default function SettingsView(props) {
     // data
     const [fetchSettings, setFetchSettings] = useState(true);
     const [settings, setSettings] = useState(null);
-    const [extra, setExtra] = useState({});
     const [uncategorizedKeys, setUncategorizedKeys] = useState([]);
 
     // ui
@@ -197,118 +197,41 @@ export default function SettingsView(props) {
         setFetchSettings(true);
         setNewKey("");
         setChanged(false);
-        setExtra({});
     }, []);
 
-    const parseBool = (v) => v !== undefined && (v === true || v === 1 || ["true", "1", "yes"].includes(v.toString().toLowerCase()));
+    const getInputProps = (key_name, disabled = false, props = {}) => {
+        return {
+            key: "form-" + key_name,
+            key_name: key_name,
+            value: settings[key_name],
+            disabled: disabled,
+            onChangeValue: v => setSettings({...settings, [key_name]: v}),
+            ...props
+        };
+    }
 
     const renderTextInput = (key_name, disabled=false, props={}) => {
-        return <SettingsFormGroup key={"form-" + key_name} {...props}>
-            <FormLabel disabled={disabled}>{L("settings." + key_name)}</FormLabel>
-            <FormControl>
-                <TextField size={"small"} variant={"outlined"}
-                           disabled={disabled}
-                           value={settings[key_name]}
-                           onChange={e => onChangeValue(key_name, e.target.value)} />
-            </FormControl>
-        </SettingsFormGroup>
+        return <SettingsTextInput {...getInputProps(key_name, disabled, props)} />
     }
 
     const renderPasswordInput = (key_name, disabled=false, props={}) => {
-        return <SettingsFormGroup key={"form-" + key_name} {...props}>
-            <FormLabel disabled={disabled}>{L("settings." + key_name)}</FormLabel>
-            <FormControl>
-                <TextField size={"small"} variant={"outlined"}
-                           type={"password"}
-                           disabled={disabled}
-                           placeholder={"(" + L("general.unchanged") + ")"}
-                           value={settings[key_name]}
-                           onChange={e => onChangeValue(key_name, e.target.value)} />
-            </FormControl>
-        </SettingsFormGroup>
+        return <SettingsPasswordInput {...getInputProps(key_name, disabled, props)} />
     }
 
     const renderNumberInput = (key_name, minValue, maxValue, disabled=false, props={}) => {
-        return <SettingsFormGroup key={"form-" + key_name} {...props}>
-            <FormLabel disabled={disabled}>{L("settings." + key_name)}</FormLabel>
-            <FormControl>
-                <TextField size={"small"} variant={"outlined"}
-                           type={"number"}
-                           disabled={disabled}
-                           inputProps={{min: minValue, max: maxValue}}
-                           value={settings[key_name]}
-                           onChange={e => onChangeValue(key_name, e.target.value)} />
-            </FormControl>
-        </SettingsFormGroup>
+        return <SettingsNumberInput minValue={minValue} maxValue={maxValue} {...getInputProps(key_name, disabled, props)} />
     }
 
     const renderCheckBox = (key_name, disabled=false, props={}) => {
-        return <SettingsFormGroup key={"form-" + key_name} {...props}>
-            <FormControlLabel
-                disabled={disabled}
-                control={<Checkbox
-                    disabled={disabled}
-                    checked={parseBool(settings[key_name])}
-                    onChange={(e, v) => onChangeValue(key_name, v)} />}
-                label={L("settings." + key_name)} />
-        </SettingsFormGroup>
+        return <SettingsCheckBox {...getInputProps(key_name, disabled, props)} />
     }
 
     const renderSelection = (key_name, options, disabled=false, props={}) => {
-        return <SettingsFormGroup key={"form-" + key_name} {...props}>
-            <FormLabel disabled={disabled}>{L("settings." + key_name)}</FormLabel>
-            <FormControl>
-                <Select native value={settings[key_name]}
-                        disabled={disabled}
-                        size={"small"} onChange={e => onChangeValue(key_name, e.target.value)}>
-                        {options.map(option => <option
-                            key={"option-" + option}
-                            value={option}>
-                                {option}
-                        </option>)}
-                </Select>
-            </FormControl>
-        </SettingsFormGroup>
+        return <SettingsSelection options={options} {...getInputProps(key_name, disabled, props)} />
     }
 
     const renderTextValuesInput = (key_name, disabled=false, props={}) => {
-
-        const finishTyping = () => {
-            console.log("finishTyping", key_name);
-            setExtra({...extra, [key_name]: ""});
-            if (extra[key_name]) {
-                setSettings({...settings, [key_name]: [...settings[key_name], extra[key_name]]});
-            }
-        }
-
-        return <SettingsFormGroup key={"form-" + key_name} {...props}>
-            <FormLabel disabled={disabled}>{L("settings." + key_name)}</FormLabel>
-            <Autocomplete
-                clearIcon={false}
-                options={[]}
-                freeSolo
-                multiple
-                value={settings[key_name]}
-                onChange={(e, v) => setSettings({...settings, [key_name]: v})}
-                renderTags={(values, props) =>
-                    values.map((option, index) => (
-                        <Chip label={option} {...props({ index })} />
-                    ))
-                }
-                renderInput={(params) => <TextField
-                    {...params}
-                    value={extra[key_name] ?? ""}
-                    onChange={e => setExtra({...extra, [key_name]: e.target.value.trim()})}
-                    onKeyDown={e => {
-                        if (["Enter", "Tab", " "].includes(e.key)) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            finishTyping();
-                        }
-                    }}
-                    onBlur={finishTyping} />}
-            />
-        </SettingsFormGroup>
+        return <SettingsTextValues {...getInputProps(key_name, disabled, props)} />
     }
 
     const renderTab = () => {

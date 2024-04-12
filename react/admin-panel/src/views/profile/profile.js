@@ -27,6 +27,7 @@ import MfaTotp from "./mfa-totp";
 import MfaFido from "./mfa-fido";
 import Dialog from "shared/elements/dialog";
 import PasswordStrength from "shared/elements/password-strength";
+import SpacedFormGroup from "../../elements/form-group";
 
 const GpgKeyField = styled(TextField)((props) => ({
     "& > div": {
@@ -44,10 +45,6 @@ const GpgFingerprintBox = styled(Box)((props) => ({
     "& > code": {
         cursor: "pointer"
     }
-}));
-
-const ProfileFormGroup = styled(FormGroup)((props) =>  ({
-    marginBottom: props.theme.spacing(2)
 }));
 
 const MFAOptions = styled(Box)((props) => ({
@@ -231,7 +228,7 @@ export default function ProfileView(props) {
             </div>
         </div>
         <div className={"content"}>
-            <ProfileFormGroup>
+            <SpacedFormGroup>
                 <FormLabel>{L("account.username")}</FormLabel>
                 <FormControl>
                     <TextField variant={"outlined"}
@@ -239,8 +236,8 @@ export default function ProfileView(props) {
                         value={profile.name}
                         onChange={e => setProfile({...profile, name: e.target.value })} />
                 </FormControl>
-            </ProfileFormGroup>
-            <ProfileFormGroup>
+            </SpacedFormGroup>
+            <SpacedFormGroup>
                 <FormLabel>{L("account.full_name")}</FormLabel>
                 <FormControl>
                     <TextField variant={"outlined"}
@@ -248,12 +245,12 @@ export default function ProfileView(props) {
                                value={profile.fullName ?? ""}
                                onChange={e => setProfile({...profile, fullName: e.target.value })} />
                 </FormControl>
-            </ProfileFormGroup>
+            </SpacedFormGroup>
 
             <CollapseBox title={L("account.change_password")} open={openedTab === "password"}
                          onToggle={() => setOpenedTab(openedTab === "password" ? "" : "password")}
                          icon={<Password />}>
-                <ProfileFormGroup>
+                <SpacedFormGroup>
                     <FormLabel>{L("account.password_old")}</FormLabel>
                     <FormControl>
                         <TextField variant={"outlined"}
@@ -263,8 +260,8 @@ export default function ProfileView(props) {
                                    value={changePassword.old}
                                    onChange={e => setChangePassword({...changePassword, old: e.target.value })} />
                     </FormControl>
-                </ProfileFormGroup>
-                <ProfileFormGroup>
+                </SpacedFormGroup>
+                <SpacedFormGroup>
                     <FormLabel>{L("account.password_new")}</FormLabel>
                     <FormControl>
                         <TextField variant={"outlined"}
@@ -273,8 +270,8 @@ export default function ProfileView(props) {
                                    value={changePassword.new}
                                    onChange={e => setChangePassword({...changePassword, new: e.target.value })} />
                     </FormControl>
-                </ProfileFormGroup>
-                <ProfileFormGroup>
+                </SpacedFormGroup>
+                <SpacedFormGroup>
                     <FormLabel>{L("account.password_confirm")}</FormLabel>
                     <FormControl>
                         <TextField variant={"outlined"}
@@ -283,7 +280,7 @@ export default function ProfileView(props) {
                                    value={changePassword.confirm}
                                    onChange={e => setChangePassword({...changePassword, confirm: e.target.value })} />
                     </FormControl>
-                </ProfileFormGroup>
+                </SpacedFormGroup>
                 <Box className={"w-50"}>
                     <PasswordStrength password={changePassword.new} minLength={6} />
                 </Box>
@@ -303,7 +300,7 @@ export default function ProfileView(props) {
                                     {profile.gpgKey.fingerprint}
                                 </code>
                             </GpgFingerprintBox>
-                            <ProfileFormGroup>
+                            <SpacedFormGroup>
                                 <FormLabel>{L("account.password")}</FormLabel>
                                 <FormControl>
                                     <TextField variant={"outlined"} size={"small"}
@@ -312,7 +309,7 @@ export default function ProfileView(props) {
                                                placeholder={L("account.password")}
                                     />
                                 </FormControl>
-                            </ProfileFormGroup>
+                            </SpacedFormGroup>
                             <Button startIcon={isGpgKeyRemoving ? <CircularProgress size={12} /> : <Remove />}
                                     color={"secondary"} onClick={onRemoveGpgKey}
                                     variant={"outlined"} size={"small"}
@@ -321,7 +318,7 @@ export default function ProfileView(props) {
                             </Button>
                     </Box> :
                     <Box>
-                        <ProfileFormGroup>
+                        <SpacedFormGroup>
                             <FormLabel>{L("account.gpg_key")}</FormLabel>
                             <GpgKeyField value={gpgKey} multiline={true} rows={8}
                                          disabled={isGpgKeyUploading || !api.hasPermission("user/importGPG")}
@@ -334,7 +331,7 @@ export default function ProfileView(props) {
                                              });
                                              return false;
                                          }}/>
-                        </ProfileFormGroup>
+                        </SpacedFormGroup>
                         <ButtonBar>
                             <Button size={"small"}
                                 variant={"outlined"}
@@ -372,7 +369,7 @@ export default function ProfileView(props) {
                             }
                             {L("account.2fa_type_" + profile.twoFactorToken.type)}
                         </GpgFingerprintBox>
-                        <ProfileFormGroup>
+                        <SpacedFormGroup>
                             <FormLabel>{L("account.password")}</FormLabel>
                             <FormControl>
                                 <TextField variant={"outlined"} size={"small"}
@@ -381,7 +378,7 @@ export default function ProfileView(props) {
                                            placeholder={L("account.password")}
                                 />
                             </FormControl>
-                        </ProfileFormGroup>
+                        </SpacedFormGroup>
                         <Button startIcon={is2FARemoving ? <CircularProgress size={12} /> : <Remove />}
                                 color={"secondary"} onClick={onRemove2FA}
                                 variant={"outlined"} size={"small"}

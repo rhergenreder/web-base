@@ -21,7 +21,7 @@ const LogView = lazy(() => import("./views/log-view"));
 const AccessControlList = lazy(() => import("./views/access-control-list"));
 const RouteListView = lazy(() => import("./views/route/route-list"));
 const RouteEditView = lazy(() => import("./views/route/route-edit"));
-const SettingsView = lazy(() => import("./views/settings"));
+const SettingsView = lazy(() => import("./views/settings/settings"));
 const ProfileView = lazy(() => import("./views/profile/profile"));
 
 export default function AdminDashboard(props) {

@@ -109,7 +109,12 @@ const isInt = (value) => {
         !isNaN(parseInt(value, 10));
 }
 
+
+const parseBool = (v) => v !== undefined &&
+    (v === true || v === 1 || ["true", "1", "yes"].includes(v.toString().toLowerCase()));
+
+
 export { humanReadableSize, removeParameter, getParameter, getCookie,
     encodeText, decodeText, getBaseUrl,
     formatDate, formatDateTime, formatDistance,
-    upperFirstChars, isInt, createDownload };
+    upperFirstChars, isInt, parseBool, createDownload };

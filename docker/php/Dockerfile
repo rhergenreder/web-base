@@ -11,7 +11,7 @@ RUN mkdir -p /application/Core/Configuration /var/www/.gnupg && \
 
 # YAML + dev dependencies + additional packages
 RUN apt-get update -y &&  \
-    apt-get install -y libyaml-dev libzip-dev libgmp-dev libpng-dev libmagickwand-dev gnupg2 $ADDITIONAL_PACKAGES && \
+    apt-get install -y libyaml-dev libzip-dev libgmp-dev libpng-dev libmagickwand-dev gnupg2 git $ADDITIONAL_PACKAGES && \
     printf "\n" | pecl install yaml imagick && docker-php-ext-enable yaml imagick && \
     docker-php-ext-install gd
 

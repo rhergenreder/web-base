@@ -38,11 +38,15 @@ export default function MfaFido(props) {
                     challenge: encodeText(window.atob(res.data.challenge)),
                     rp: res.data.relyingParty,
                     user: {
-                        id: encodeText(res.data.id),
+                        id: encodeText(api.user.id),
                         name: api.user.name,
                         displayName: api.user.fullName
                     },
-                    userVerification: "discouraged",
+                    authenticatorSelection: {
+                        authenticatorAttachment: "cross-platform",
+                        requireResidentKey: false,
+                        userVerification: "discouraged"
+                    },
                     attestation: "direct",
                     pubKeyCredParams: [{
                         type: "public-key",

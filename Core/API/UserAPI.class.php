@@ -192,7 +192,7 @@ namespace Core\API\User {
         foreach ($requestedGroups as $groupId) {
           if (!isset($availableGroups[$groupId])) {
             return $this->createError("Group with id=$groupId does not exist.");
-          } else if ($this->externalCall && $groupId === Group::ADMIN && !$currentUser->hasGroup(Group::ADMIN)) {
+          } else if ($this->isExternalCall() && $groupId === Group::ADMIN && !$currentUser->hasGroup(Group::ADMIN)) {
             return $this->createError("You cannot create users with administrator groups.");
           } else {
             $groups[] = $groupId;
@@ -1311,38 +1311,43 @@ namespace Core\API\User {
         return $this->createError("Error saving user token: " . $sql->getLastError());
       }
 
-      $name = htmlspecialchars($currentUser->getFullName());
-      if (!$name) {
-        $name = htmlspecialchars($currentUser->getUsername());
-      }
-
+      $validHours = 1;
       $settings = $this->context->getSettings();
-      $siteName = htmlspecialchars($settings->getSiteName());
-      $baseUrl = htmlspecialchars($settings->getBaseUrl());
-      $token = htmlspecialchars(urlencode($token));
-      $url = "$baseUrl/confirmGPG?token=$token";
-      $mailBody = "Hello $name,<br><br>" .
-        "you imported a GPG public key for end-to-end encrypted mail communication. " .
-        "To confirm the key and verify, you own the corresponding private key, please click on the following link. " .
-        "The link is active for one hour.<br><br>" .
-        "<a href='$url'>$url</a><br>Best Regards<br>$siteName Administration";
+      $baseUrl = $settings->getBaseUrl();
+      $siteName = $settings->getSiteName();
+      $req = new Render($this->context);
+      $this->success = $req->execute([
+        "file" => "mail/gpg_import.twig",
+        "parameters" => [
+          "link" => "$baseUrl/resetPassword?token=$token",
+          "site_name" => $siteName,
+          "base_url" => $baseUrl,
+          "username" => $currentUser->getDisplayName(),
+          "valid_time" => $this->formatDuration($validHours, "hour")
+        ]
+      ]);
 
-      $sendMail = new \Core\API\Mail\Send($this->context);
-      $this->success = $sendMail->execute(array(
-        "to" => $currentUser->getEmail(),
-        "subject" => "[$siteName] Confirm GPG-Key",
-        "body" => $mailBody,
-        "gpgFingerprint" => $gpgKey->getFingerprint()
-      ));
-
-      $this->lastError = $sendMail->getLastError();
+      $this->lastError = $req->getLastError();
 
       if ($this->success) {
-        $currentUser->gpgKey = $gpgKey;
-        if ($currentUser->save($sql, ["gpgKey"])) {
-          $this->result["gpgKey"] = $gpgKey->jsonSerialize();
-        } else {
-          return $this->createError("Error updating user details: " . $sql->getLastError());
+        $messageBody = $req->getResult()["html"];
+        $sendMail = new \Core\API\Mail\Send($this->context);
+        $this->success = $sendMail->execute(array(
+          "to" => $currentUser->getEmail(),
+          "subject" => "[$siteName] Confirm GPG-Key",
+          "body" => $messageBody,
+          "gpgFingerprint" => $gpgKey->getFingerprint()
+        ));
+
+        $this->lastError = $sendMail->getLastError();
+
+        if ($this->success) {
+          $currentUser->gpgKey = $gpgKey;
+          if ($currentUser->save($sql, ["gpgKey"])) {
+            $this->result["gpgKey"] = $gpgKey->jsonSerialize();
+          } else {
+            return $this->createError("Error updating user details: " . $sql->getLastError());
+          }
         }
       }
 
@@ -1505,6 +1510,7 @@ namespace Core\API\User {
 
   class UploadPicture extends UserAPI {
     public function __construct(Context $context, bool $externalCall = false) {
+      // TODO: we should optimize the process here, we need an offset and size parameter to get a quadratic crop of the uploaded image
       parent::__construct($context, $externalCall, [
         "scale" => new Parameter("scale", Parameter::TYPE_FLOAT, true, NULL),
       ]);
@@ -1515,7 +1521,7 @@ namespace Core\API\User {
     /**
      * @throws ImagickException
      */
-    protected function onTransform(\Imagick $im, $uploadDir) {
+    protected function onTransform(\Imagick $im, $uploadDir): bool|string {
 
       $minSize = 75;
       $maxSize = 500;

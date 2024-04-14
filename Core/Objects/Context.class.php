@@ -4,6 +4,7 @@ namespace Core\Objects;
 
 use Core\Configuration\Configuration;
 use Core\Configuration\Settings;
+use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondLike;
 use Core\Driver\SQL\Condition\CondOr;
@@ -125,9 +126,9 @@ class Context {
     if ($this->sql) {
       $language = Language::findBy(Language::createBuilder($this->sql, true)
         ->where(new CondOr(
-            new CondLike("name", "%$lang%"), // english
+            new CondLike(new Column("name"), "%$lang%"), // english
             new Compare("code", $lang), // de_DE
-            new CondLike("code", "{$lang}_%") // de -> de_%
+            new CondLike(new Column("code"), "{$lang}_%") // de -> de_%
         ))
       );
       if ($language) {

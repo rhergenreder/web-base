@@ -78,16 +78,19 @@ export default function LogView(props) {
         let column = new DataColumn(L("logs.message"), "message");
         column.sortable = false;
         column.renderData = (L, entry) => {
+            let lines = entry.message.trim().split("\n");
             return <Box display={"grid"} gridTemplateColumns={"40px auto"}>
                     <Box alignSelf={"top"} textAlign={"center"}>
-                        <IconButton size={"small"} onClick={() => onToggleDetails(entry)}
-                                    title={L(entry.showDetails ? "logs.hide_details" : "logs.show_details")}>
-                            {entry.showDetails ? <ExpandLess /> : <ExpandMore />}
-                        </IconButton>
+                        {lines.length > 1 &&
+                            <IconButton size={"small"} onClick={() => onToggleDetails(entry)}
+                                        title={L(entry.showDetails ? "logs.hide_details" : "logs.show_details")}>
+                                {entry.showDetails ? <ExpandLess /> : <ExpandMore />}
+                            </IconButton>
+                        }
                     </Box>
                     <Box alignSelf={"center"}>
                         <pre>
-                            {entry.showDetails ? entry.message : entry.message.split("\n")[0]}
+                            {entry.showDetails ? entry.message : lines[0]}
                         </pre>
                     </Box>
                 </Box>

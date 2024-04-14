@@ -18,11 +18,7 @@ namespace Core\API {
     }
 
     protected function verifyAuthData(AuthenticationData $authData): bool {
-      $settings = $this->context->getSettings();
-      // $relyingParty = $settings->getSiteName();
-      $domain = parse_url($settings->getBaseUrl(),  PHP_URL_HOST);
-      // $domain = "localhost";
-
+      $domain = getCurrentHostName();
       if (!$authData->verifyIntegrity($domain)) {
         return $this->createError("mismatched rpIDHash. expected: " . hash("sha256", $domain) . " got: " . bin2hex($authData->getHash()));
       } else if (!$authData->isUserPresent()) {
@@ -264,7 +260,7 @@ namespace Core\API\TFA {
       $settings = $this->context->getSettings();
       $relyingParty = $settings->getSiteName();
       $sql = $this->context->getSQL();
-      $domain = parse_url($settings->getBaseUrl(),  PHP_URL_HOST);
+      $domain = getCurrentHostName();
 
       if (!$clientDataJSON || !$attestationObjectRaw) {
         $challenge = null;
@@ -297,7 +293,6 @@ namespace Core\API\TFA {
 
         $this->result["data"] = [
           "challenge" => $challenge,
-          "id" => $currentUser->getId() . "@" . $domain, // <userId>@<domain>
           "relyingParty" => [
             "name" => $relyingParty,
             "id" => $domain

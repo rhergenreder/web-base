@@ -52,22 +52,28 @@ class MySQL extends SQL {
       return true;
     }
 
-    $this->connection = @mysqli_connect(
-      $this->connectionData->getHost(),
-      $this->connectionData->getLogin(),
-      $this->connectionData->getPassword(),
-      $this->connectionData->getProperty('database'),
-      $this->connectionData->getPort()
-    );
+    try {
+      $this->connection = @mysqli_connect(
+        $this->connectionData->getHost(),
+        $this->connectionData->getLogin(),
+        $this->connectionData->getPassword(),
+        $this->connectionData->getProperty('database'),
+        $this->connectionData->getPort()
+      );
 
-    if (mysqli_connect_errno()) {
+      if (mysqli_connect_errno()) {
+        $this->lastError = $this->logger->severe("Failed to connect to MySQL: " . mysqli_connect_error());
+        $this->connection = NULL;
+        return false;
+      }
+
+      mysqli_set_charset($this->connection, $this->connectionData->getProperty('encoding', 'UTF8'));
+      return true;
+    } catch (\Exception $ex) {
       $this->lastError = $this->logger->severe("Failed to connect to MySQL: " . mysqli_connect_error());
       $this->connection = NULL;
       return false;
     }
-
-    mysqli_set_charset($this->connection, $this->connectionData->getProperty('encoding', 'UTF8'));
-    return true;
   }
 
   public function disconnect() {

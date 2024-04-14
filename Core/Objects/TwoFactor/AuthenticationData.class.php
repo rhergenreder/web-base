@@ -38,8 +38,9 @@ class AuthenticationData extends ApiObject {
       $credentialIdLength = unpack("n",  substr($buffer, $offset, 4))[1]; $offset += 2;
       $this->credentialID = substr($buffer, $offset, $credentialIdLength); $offset += $credentialIdLength;
 
-      if ($offset < $bufferLength) {
+      if ($bufferLength > $offset) {
         $publicKeyData = $this->decode(substr($buffer, $offset));
+        var_dump($publicKeyData);
         $this->publicKey = new PublicKey($publicKeyData);
         // TODO: we should add $publicKeyData->length to $offset, but it's not implemented yet?;
       }

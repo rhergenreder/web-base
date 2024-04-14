@@ -18,7 +18,7 @@ export default class API {
         return this.loggedIn ? this.session.csrfToken : null;
     }
 
-    async apiCall(method, params, expectBinary=false) {
+    async apiCall(method, params = {}, expectBinary=false) {
         params = params || { };
         const csrfToken = this.csrfToken();
         const config = {method: 'post'};

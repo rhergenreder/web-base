@@ -139,7 +139,6 @@ export default function LoginForm(props) {
                     type: "public-key",
                 }],
                 userVerification: "discouraged",
-                attestation: "direct",
             },
             signal: abortSignal
         }).then((res) => {

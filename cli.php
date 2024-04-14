@@ -268,12 +268,15 @@ function onMaintenance(array $argv): void {
   $action = $argv[2] ?? "status";
   $maintenanceFile = "MAINTENANCE";
   $isMaintenanceEnabled = file_exists($maintenanceFile);
+  $sql = connectSQL();
+  $logger = new \Core\Driver\Logger\Logger("CLI", $sql);
 
   if ($action === "status") {
     _exit("Maintenance: " . ($isMaintenanceEnabled ? "on" : "off"));
   } else if ($action === "on") {
     $file = fopen($maintenanceFile, 'w') or _exit("Unable to create maintenance file");
     fclose($file);
+    $logger->info("Maintenance mode enabled");
     _exit("Maintenance enabled");
   } else if ($action === "off") {
     if (file_exists($maintenanceFile)) {
@@ -281,13 +284,15 @@ function onMaintenance(array $argv): void {
         _exit("Unable to delete maintenance file");
       }
     }
+    $logger->info("Maintenance mode disabled");
     _exit("Maintenance disabled");
   } else if ($action === "update") {
-
+    $logger->info("Update started");
     $oldPatchFiles = glob('Core/Configuration/Patch/*.php');
     printLine("$ git remote -v");
     exec("git remote -v", $gitRemote, $ret);
     if ($ret !== 0) {
+      $logger->warning("Update stopped. git remote returned:\n" . implode("\n", $gitRemote));
       die();
     }
 
@@ -304,12 +309,14 @@ function onMaintenance(array $argv): void {
     printLine("$ git fetch " . str_replace("/", " ", $pullBranch));
     exec("git fetch " . str_replace("/", " ", $pullBranch), $gitFetch, $ret);
     if ($ret !== 0) {
+      $logger->warning("Update stopped. git fetch returned:\n" . implode("\n", $gitFetch));
       die();
     }
 
     printLine("$ git log HEAD..$pullBranch --oneline");
     exec("git log HEAD..$pullBranch --oneline", $gitLog, $ret);
     if ($ret !== 0) {
+      $logger->warning("Update stopped. git log returned:\n" . implode("\n", $gitLog));
       die();
     } else if (count($gitLog) === 0) {
       _exit("Already up to date.");
@@ -319,12 +326,14 @@ function onMaintenance(array $argv): void {
     printLine("$ git diff-index --quiet HEAD --"); // check for any uncommitted changes
     exec("git diff-index --quiet HEAD --", $gitDiff, $ret);
     if ($ret !== 0) {
+      $logger->warning("Update stopped due to uncommitted changes");
       _exit("You have uncommitted changes. Please commit them before updating.");
     }
 
     // enable maintenance mode if it wasn't turned on before
     if (!$isMaintenanceEnabled) {
       printLine("Turning on maintenance mode");
+      $logger->info("Maintenance mode enabled");
       $file = fopen($maintenanceFile, 'w') or _exit("Unable to create maintenance file");
       fclose($file);
     }
@@ -338,6 +347,7 @@ function onMaintenance(array $argv): void {
       printLine("Follow the instructions and afterwards turn off the maintenance mode again using:");
       printLine("cli.php maintenance off");
       printLine("Also don't forget to apply new database patches using: cli.php db migrate");
+      $logger->error("Update stopped. git pull returned:\n" . implode("\n", $gitPull));
       die();
     }
 
@@ -345,15 +355,17 @@ function onMaintenance(array $argv): void {
     $newPatchFiles = glob('Core/Configuration/Patch/*.php');
     $newPatchFiles = array_diff($newPatchFiles, $oldPatchFiles);
     if (count($newPatchFiles) > 0) {
-      printLine("Applying new database patches");
-      $sql = connectSQL();
       if ($sql) {
+        printLine("Applying new database patches");
         foreach ($newPatchFiles as $patchFile) {
           if (preg_match("/Core\/Configuration\/(Patch\/.*)\.class\.php/", $patchFile, $match)) {
             $patchName = $match[1];
             applyPatch($sql, $patchName);
           }
         }
+      } else {
+        printLine("Cannot apply database patches, since the database connection failed.");
+        $logger->warning("Cannot apply database patches, since the database connection failed.");
       }
     }
 
@@ -363,9 +375,13 @@ function onMaintenance(array $argv): void {
       if (file_exists($maintenanceFile)) {
         if (!unlink($maintenanceFile)) {
           _exit("Unable to delete maintenance file");
+        } else {
+          $logger->info("Maintenance mode disabled");
         }
       }
     }
+
+    $logger->info("Update completed.");
   } else {
     _exit("Usage: cli.php maintenance <status|on|off|update>");
   }
@@ -953,8 +969,8 @@ $argv = $_SERVER['argv'];
 $registeredCommands = [
   "help" => ["handler" => "printHelp", "description" => "prints this help page"],
   "db" => ["handler" => "handleDatabase", "description" => "database actions like importing, exporting and shell"],
-  "routes" => ["handler" => "onRoutes", "description" => "view and modify routes"],
-  "maintenance" => ["handler" => "onMaintenance", "description" => "toggle maintenance mode"],
+  "routes" => ["handler" => "onRoutes", "description" => "view and modify routes", "requiresDocker" => true],
+  "maintenance" => ["handler" => "onMaintenance", "description" => "toggle maintenance mode", "requiresDocker" => true],
   "test" => ["handler" => "onTest", "description" => "run unit and integration tests", "requiresDocker" => true],
   "mail" => ["handler" => "onMail", "description" => "send mails and process the pipeline", "requiresDocker" => true],
   "settings" => ["handler" => "onSettings", "description" => "change and view settings"],

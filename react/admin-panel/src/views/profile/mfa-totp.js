@@ -24,9 +24,8 @@ export default function MfaTotp(props) {
         if (api.hasPermission("tfa/generateQR")) {
             setDialogData({
                 show: true,
-                title: L("Register a 2FA-Device"),
-                message: L("Scan the QR-Code with a device you want to use for Two-Factor-Authentication (2FA). " +
-                    "On Android, you can use the Google Authenticator."),
+                title: L("account.register_2fa_device"),
+                message: L("account.register_2fa_totp_text"),
                 inputs: [
                     {
                         type: "custom", element: Box, textAlign: "center", key: "qr-code",

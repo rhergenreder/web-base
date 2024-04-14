@@ -2,7 +2,8 @@ import React, {useCallback, useContext} from 'react';
 import {Link, NavLink} from "react-router-dom";
 import Icon from "shared/elements/icon";
 import {LocaleContext} from "shared/locale";
-import {Avatar, styled} from "@mui/material";
+import {styled} from "@mui/material";
+import ProfilePicture from "shared/elements/profile-picture";
 
 const ProfileLink = styled(Link)((props) => ({
     "& > div": {
@@ -114,7 +115,7 @@ export default function Sidebar(props) {
                                 <div className="info">
                                     <div className={"d-block text-light"}>{L("account.logged_in_as")}:</div>
                                     <ProfileLink to={"/admin/profile"}>
-                                        <Avatar fontSize={"small"} />
+                                        <ProfilePicture user={api.user} />
                                         <span>{api.user?.name || L("account.not_logged_in")}</span>
                                     </ProfileLink>
                                 </div>

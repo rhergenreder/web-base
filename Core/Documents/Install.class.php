@@ -235,6 +235,9 @@ namespace Documents\Install {
       $success = true;
       $failedRequirements = array();
 
+      // TODO: rather give a list of directories which have to be writable
+      // this should be: /Site/Cache, /Site/Logs, /Core/External/vendor, /react/dist/
+      // also likely: /react and /Site/API for cli.php
       if (!is_writeable(WEBROOT)) {
         $failedRequirements[] = sprintf("<b>%s</b> is not writeable. Try running <b>chmod 700 %s</b>", WEBROOT, WEBROOT);
         $success = false;

@@ -3,7 +3,7 @@
 Web-Base is a php framework which provides basic web functionalities and a modern ReactJS Admin Dashboard.
 
 ### Requirements
-- PHP >= 8.1
+- PHP >= 8.2
 - One of these php extensions: mysqli, postgres
 - Apache/nginx or docker
 

@@ -235,11 +235,31 @@ namespace Documents\Install {
       $success = true;
       $failedRequirements = array();
 
-      // TODO: rather give a list of directories which have to be writable
-      // this should be: /Site/Cache, /Site/Logs, /Core/External/vendor, /react/dist/
-      // also likely: /react and /Site/API for cli.php
-      if (!is_writeable(WEBROOT)) {
-        $failedRequirements[] = sprintf("<b>%s</b> is not writeable. Try running <b>chmod 700 %s</b>", WEBROOT, WEBROOT);
+      $requiredDirectories = [
+        "/Site/Cache",
+        "/Site/Logs",
+        "/Site/Configuration",
+        "/Core/External/vendor",
+        "/files/uploaded",
+      ];
+
+      $nonWritableDirectories = [];
+      foreach ($requiredDirectories as $directory) {
+        if (!is_writeable(WEBROOT . $directory)) {
+          $nonWritableDirectories[] = $directory;
+        }
+      }
+
+      if (!empty($nonWritableDirectories)) {
+        $currentUser = getCurrentUsername();
+        if (function_exists("posix_getuid")) {
+          $currentUser .= " (uid: " . posix_getuid() . ")";
+        }
+
+        $failedRequirements[] = "One or more directories are not writable. " .
+          "Make sure the current user $currentUser has write-access to following locations:" .
+          $this->createUnorderedList($nonWritableDirectories);
+
         $success = false;
       }
 

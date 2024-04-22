@@ -298,6 +298,14 @@ function isClass(string $str): bool {
   return is_file($path) && class_exists($str);
 }
 
+function getCurrentUsername(): string {
+  if (function_exists("posix_getpwuid") && function_exists("posix_geteuid")) {
+    return posix_getpwuid(posix_geteuid())['name'];
+  }
+
+  return exec('whoami') ?? "Unknown";
+}
+
 function rrmdir(string $dir): void {
   if (is_dir($dir)) {
     $objects = scandir($dir);

@@ -7,7 +7,8 @@ class StringType extends Parameter {
   const UNLIMITED = -1;
 
   public int $maxLength;
-  public function __construct(string $name, int $maxLength = self::UNLIMITED, bool $optional = FALSE, ?string $defaultValue = NULL, ?array $choices = NULL) {
+  public function __construct(string $name, int $maxLength = self::UNLIMITED, bool $optional = FALSE,
+                              ?string $defaultValue = NULL, ?array $choices = NULL) {
     $this->maxLength = $maxLength;
     parent::__construct($name, Parameter::TYPE_STRING, $optional, $defaultValue, $choices);
   }

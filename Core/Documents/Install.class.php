@@ -268,7 +268,7 @@ namespace Documents\Install {
         $success = false;
       }
 
-      $requiredVersion = '8.1';
+      $requiredVersion = "8.2";
       if (version_compare(PHP_VERSION, $requiredVersion, '<')) {
         $failedRequirements[] = "PHP Version <b>>= $requiredVersion</b> is required. Got: <b>" . PHP_VERSION . "</b>";
         $success = false;
@@ -290,7 +290,7 @@ namespace Documents\Install {
         $this->errorString = $msg;
       }
 
-      return array("success" => $success, "msg" => $msg);
+      return ["success" => $success, "msg" => $msg];
     }
 
     private function installDependencies(): array {
@@ -348,7 +348,7 @@ namespace Documents\Install {
         $missingInputs[] = "Type";
       }
 
-      $supportedTypes = array("mysql", "postgres");
+      $supportedTypes = ["mysql", "postgres"];
       if (!$success) {
         $msg = "Please fill out the following inputs:<br>" .
           $this->createUnorderedList($missingInputs);

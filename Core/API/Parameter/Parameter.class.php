@@ -17,12 +17,10 @@ class Parameter {
   // only internal access
   const TYPE_RAW = 8;
 
-  // only json will work here I guess
-  // nope. also name[]=value
   const TYPE_ARRAY = 9;
   const TYPE_MIXED = 10;
 
-  const names = array('Integer', 'Float', 'Boolean', 'String', 'Date', 'Time', 'DateTime', 'E-Mail', 'Raw', 'Array', 'Mixed');
+  const names = ['Integer', 'Float', 'Boolean', 'String', 'Date', 'Time', 'DateTime', 'E-Mail', 'Raw', 'Array', 'Mixed'];
 
   const DATE_FORMAT = "Y-m-d";
   const TIME_FORMAT = "H:i:s";
@@ -47,12 +45,12 @@ class Parameter {
     $this->typeName = $this->getTypeName();
   }
 
-  public function reset() {
+  public function reset(): void {
     $this->value = $this->defaultValue;
   }
 
   public function getSwaggerTypeName(): string {
-    $typeName = strtolower(($this->type >= 0 && $this->type < count(Parameter::names)) ? Parameter::names[$this->type] : "invalid");
+    $typeName = strtolower(Parameter::names[$this->type] ?? "invalid");
     if ($typeName === "mixed" || $typeName === "raw") {
       return "object";
     }

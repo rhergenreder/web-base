@@ -102,7 +102,8 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
     $this->assertFalse($this->simulateRequest($allMethodsAllowed, "NONEXISTENT"), $allMethodsAllowed->getLastError());
     $this->assertTrue($this->simulateRequest($allMethodsAllowed, "OPTIONS"), $allMethodsAllowed->getLastError());
     $this->assertEquals(204, self::$SENT_STATUS_CODE);
-    $this->assertEquals(["Allow" => "OPTIONS, GET, POST"], self::$SENT_HEADERS);
+    $this->assertArrayHasKey("Allow", self::$SENT_HEADERS);
+    $this->assertEquals(["OPTIONS", "GET", "POST"], explode(", ", self::$SENT_HEADERS["Allow"]));
   }
 
   public function testOnlyPost() {
@@ -114,7 +115,8 @@ class RequestTest extends \PHPUnit\Framework\TestCase {
     $this->assertTrue($this->simulateRequest($onlyPostAllowed, "POST"), $onlyPostAllowed->getLastError());
     $this->assertTrue($this->simulateRequest($onlyPostAllowed, "OPTIONS"), $onlyPostAllowed->getLastError());
     $this->assertEquals(204, self::$SENT_STATUS_CODE);
-    $this->assertEquals(["Allow" => "OPTIONS, POST"], self::$SENT_HEADERS);
+    $this->assertArrayHasKey("Allow", self::$SENT_HEADERS);
+    $this->assertEquals(["OPTIONS", "POST"], explode(", ", self::$SENT_HEADERS["Allow"]));
   }
 
   public function testPrivate() {

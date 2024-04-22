@@ -29,12 +29,16 @@ class ParameterTest extends \PHPUnit\Framework\TestCase {
     $this->assertTrue($random->parseParam($data));
     $this->assertEquals($data, $random->value);
 
-    // test data types
+    // test data types: we cast the values to string
+    $this->assertTrue($random->parseParam(1));
+    $this->assertTrue($random->parseParam(2.5));
+    $this->assertTrue($random->parseParam(true));
+    $this->assertTrue($random->parseParam(false));
+
+    // null values only allowed, when parameter is optional
     $this->assertFalse($random->parseParam(null));
-    $this->assertFalse($random->parseParam(1));
-    $this->assertFalse($random->parseParam(2.5));
-    $this->assertFalse($random->parseParam(true));
-    $this->assertFalse($random->parseParam(false));
+
+    // arrays cannot be cast to string (easily)
     $this->assertFalse($random->parseParam(["key" => 1]));
   }
 
@@ -64,12 +68,6 @@ class ParameterTest extends \PHPUnit\Framework\TestCase {
   }
 
   public function testParseType() {
-    // int
-    $this->assertEquals(Parameter::TYPE_INT, Parameter::parseType(1));
-    $this->assertEquals(Parameter::TYPE_INT, Parameter::parseType(1.0));
-    $this->assertEquals(Parameter::TYPE_INT, Parameter::parseType("1"));
-    $this->assertEquals(Parameter::TYPE_INT, Parameter::parseType("1.0"));
-
     // array
     $this->assertEquals(Parameter::TYPE_ARRAY, Parameter::parseType([1, true]));
 
@@ -105,5 +103,54 @@ class ParameterTest extends \PHPUnit\Framework\TestCase {
 
     // string, everything else
     $this->assertEquals(Parameter::TYPE_STRING, Parameter::parseType("test"));
+  }
+
+  public function testIntegerType() {
+    // int
+    $this->assertEquals(Parameter::TYPE_INT, Parameter::parseType(1));
+    $this->assertEquals(Parameter::TYPE_INT, Parameter::parseType(1.0));
+    $this->assertEquals(Parameter::TYPE_INT, Parameter::parseType("1"));
+    $this->assertEquals(Parameter::TYPE_INT, Parameter::parseType("1.0"));
+
+    // test min value
+    $min = new \Core\API\Parameter\IntegerType("test_has_min_value", 10);
+    $this->assertTrue($min->parseParam(10));
+    $this->assertTrue($min->parseParam(11));
+    $this->assertFalse($min->parseParam(9));
+
+    // test max value
+    $max = new \Core\API\Parameter\IntegerType("test_has_min_value", PHP_INT_MIN, 100);
+    $this->assertTrue($max->parseParam(99));
+    $this->assertTrue($max->parseParam(100));
+    $this->assertFalse($max->parseParam(101));
+
+    // test min and max value
+    $minmax = new \Core\API\Parameter\IntegerType("test_has_min_value", 10, 100);
+    $this->assertTrue($minmax->parseParam(10));
+    $this->assertTrue($minmax->parseParam(11));
+    $this->assertFalse($minmax->parseParam(9));
+    $this->assertTrue($minmax->parseParam(99));
+    $this->assertTrue($minmax->parseParam(100));
+    $this->assertFalse($minmax->parseParam(101));
+  }
+
+  public function testRegexType() {
+    $onlyLowercase = new \Core\API\Parameter\RegexType("only_lowercase", "/[a-z]+/");
+    $this->assertTrue($onlyLowercase->parseParam("abcdefghiklmnopqrstuvwxyz"));
+    $this->assertFalse($onlyLowercase->parseParam("0123456789"));
+
+    $onlyLowercaseOneChar = new \Core\API\Parameter\RegexType("only_lowercase_one_char", "/^[a-z]$/");
+    $this->assertFalse($onlyLowercaseOneChar->parseParam("abcdefghiklmnopqrstuvwxyz"));
+    $this->assertTrue($onlyLowercaseOneChar->parseParam("a"));
+
+    $regexWithoutSlashes = new \Core\API\Parameter\RegexType("regex_no_slash", "[a-z]+");
+    $this->assertTrue($regexWithoutSlashes->parseParam("abcdefghiklmnopqrstuvwxyz"));
+    $this->assertFalse($regexWithoutSlashes->parseParam("0123456789"));
+
+    $integerRegex = new \Core\API\Parameter\RegexType("integer_regex", "[1-9][0-9]*");
+    $this->assertTrue($integerRegex->parseParam("12"));
+    $this->assertTrue($integerRegex->parseParam(12));
+    $this->assertFalse($integerRegex->parseParam("012"));
+    $this->assertFalse($integerRegex->parseParam("1.2"));
   }
 }

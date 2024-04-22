@@ -2,10 +2,10 @@
 
 namespace Core\API {
 
+  use Core\API\Parameter\IntegerType;
   use Core\Objects\Context;
   use Core\API\Parameter\ArrayType;
   use Core\API\Parameter\Parameter;
-  use Core\API\Parameter\StringType;
 
   abstract class SettingsAPI extends Request {
 
@@ -18,11 +18,11 @@ namespace Core\API {
       // API parameters should be more configurable, e.g. allow regexes, min/max values for numbers, etc.
       $this->predefinedKeys = [
         "allowed_extensions" => new ArrayType("allowed_extensions", Parameter::TYPE_STRING),
-        "trusted_domains" => new ArrayType("allowed_extensions", Parameter::TYPE_STRING),
+        "trusted_domains" => new ArrayType("trusted_domains", Parameter::TYPE_STRING),
         "user_registration_enabled" => new Parameter("user_registration_enabled", Parameter::TYPE_BOOLEAN),
         "recaptcha_enabled" => new Parameter("recaptcha_enabled", Parameter::TYPE_BOOLEAN),
         "mail_enabled" => new Parameter("mail_enabled", Parameter::TYPE_BOOLEAN),
-        "mail_port" => new Parameter("mail_port", Parameter::TYPE_INT)
+        "mail_port" => new IntegerType("mail_port", 1, 65535)
       ];
     }
   }
@@ -32,6 +32,7 @@ namespace Core\API\Settings {
 
   use Core\API\Parameter\ArrayType;
   use Core\API\Parameter\Parameter;
+  use Core\API\Parameter\RegexType;
   use Core\API\Parameter\StringType;
   use Core\API\SettingsAPI;
   use Core\Configuration\Settings;
@@ -83,7 +84,7 @@ namespace Core\API\Settings {
         return $this->createError("No values given.");
       }
 
-      $paramKey = new StringType('key', 32);
+      $paramKey = new RegexType('key', "[a-zA-Z_][a-zA-Z_0-9-]*");
       $paramValueDefault = new StringType('value', 1024, true, NULL);
 
       $sql = $this->context->getSQL();
@@ -100,8 +101,6 @@ namespace Core\API\Settings {
         } else if (!is_null($value) && !$paramValue->parseParam($value)) {
           $value = print_r($value, true);
           return $this->createError("Invalid Type for value in parameter settings for key '$key': '$value' (Required: " . $paramValue->getTypeName() . ")");
-        } else if(preg_match("/^[a-zA-Z_][a-zA-Z_0-9-]*$/", $paramKey->value) !== 1) {
-          return $this->createError("The property key should only contain alphanumeric characters, underscores and dashes");
         } else {
           if (!is_null($paramValue->value)) {
             $query->addRow($paramKey->value, json_encode($paramValue->value));

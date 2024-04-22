@@ -55,6 +55,7 @@ namespace Core\API\Groups {
 
   use Core\API\GroupsAPI;
   use Core\API\Parameter\Parameter;
+  use Core\API\Parameter\RegexType;
   use Core\API\Parameter\StringType;
   use Core\API\Traits\Pagination;
   use Core\Driver\SQL\Column\Column;
@@ -181,22 +182,14 @@ namespace Core\API\Groups {
   class Create extends GroupsAPI {
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, [
-        'name' => new StringType('name', 32),
-        'color' => new StringType('color', 10),
+        'name' => new RegexType('name', "[a-zA-Z][a-zA-Z0-9_-]{0,31}"),
+        'color' => new RegexType('color', "#[a-fA-F0-9]{3,6}"),
       ]);
     }
 
     public function _execute(): bool {
       $name = $this->getParam("name");
-      if (preg_match("/^[a-zA-Z][a-zA-Z0-9_-]*$/", $name) !== 1) {
-        return $this->createError("Invalid name");
-      }
-
       $color = $this->getParam("color");
-      if (preg_match("/^#[a-fA-F0-9]{3,6}$/", $color) !== 1) {
-        return $this->createError("Invalid color");
-      }
-
       $exists = $this->groupExists($name);
       if (!$this->success) {
         return false;
@@ -226,8 +219,8 @@ namespace Core\API\Groups {
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, [
         "id" => new Parameter("id", Parameter::TYPE_INT),
-        'name' => new StringType('name', 32),
-        'color' => new StringType('color', 10),
+        "name" => new RegexType("name", "[a-zA-Z][a-zA-Z0-9_-]{0,31}"),
+        "color" => new RegexType("color", "#[a-fA-F0-9]{3,6}"),
       ]);
     }
 
@@ -235,14 +228,7 @@ namespace Core\API\Groups {
       $sql = $this->context->getSQL();
       $groupId = $this->getParam("id");
       $name = $this->getParam("name");
-      if (preg_match("/^[a-zA-Z][a-zA-Z0-9_-]*$/", $name) !== 1) {
-        return $this->createError("Invalid name");
-      }
-
       $color = $this->getParam("color");
-      if (preg_match("/^#[a-fA-F0-9]{3,6}$/", $color) !== 1) {
-        return $this->createError("Invalid color");
-      }
 
       $group = $this->getGroup($groupId);
       if ($group === false) {

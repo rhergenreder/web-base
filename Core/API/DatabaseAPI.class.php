@@ -11,6 +11,7 @@ namespace Core\API {
 namespace Core\API\Database {
 
   use Core\API\DatabaseAPI;
+  use Core\API\Parameter\RegexType;
   use Core\API\Parameter\StringType;
   use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
@@ -40,16 +41,12 @@ namespace Core\API\Database {
   class Migrate extends DatabaseAPI {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, [
-        "className" => new StringType("className", 256)
+        "className" => new RegexType("className", "[a-zA-Z][a-zA-Z0-9]{0,256}")
       ]);
     }
 
     protected function _execute(): bool {
       $className = $this->getParam("className");
-      if (!preg_match("/[a-zA-Z0-9]+/", $className)) {
-        return $this->createError("Invalid class name");
-      }
-
       $class = null;
       foreach (["Site", "Core"] as $baseDir) {
         $classPath = "\\$baseDir\\Objects\\DatabaseEntity\\$className";

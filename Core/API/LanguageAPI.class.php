@@ -16,6 +16,7 @@ namespace Core\API\Language {
   use Core\API\LanguageAPI;
   use Core\API\Parameter\ArrayType;
   use Core\API\Parameter\Parameter;
+  use Core\API\Parameter\RegexType;
   use Core\API\Parameter\StringType;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Condition\CondOr;
@@ -113,7 +114,7 @@ namespace Core\API\Language {
   class GetEntries extends LanguageAPI {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, [
-        "code" => new StringType("code", 5, true, NULL),
+        "code" => new RegexType("code", Language::LANG_CODE_PATTERN, true, NULL),
         "modules" => new ArrayType("modules", Parameter::TYPE_STRING, true, false),
         "compression" => new StringType("compression", -1, true, NULL, ["gzip", "zlib"])
       ]);
@@ -125,10 +126,6 @@ namespace Core\API\Language {
       $code = $this->getParam("code");
       if ($code === null) {
         $code = $this->context->getLanguage()->getCode();
-      }
-
-      if (!preg_match(Language::LANG_CODE_PATTERN, $code)) {
-        return $this->createError("Invalid lang code format: $code");
       }
 
       $entries = [];

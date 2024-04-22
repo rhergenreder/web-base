@@ -83,6 +83,7 @@ class DocumentRoute extends Route {
 
     try {
       if (!$this->loadClass()) {
+        $router->getLogger()->warning("Error loading class: $className");
         return $router->returnStatusCode(500, [ "message" =>  "Error loading class: $className"]);
       }
 
@@ -90,6 +91,7 @@ class DocumentRoute extends Route {
       $document = $this->reflectionClass->newInstanceArgs($args);
       return $document->load($params);
     } catch (\ReflectionException $e) {
+      $router->getLogger()->error("Error loading class: $className: " . $e->getMessage());
       return $router->returnStatusCode(500, [ "message" =>  "Error loading class $className: " . $e->getMessage()]);
     }
   }

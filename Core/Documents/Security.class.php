@@ -45,6 +45,7 @@ class Security extends Document {
         "# This project is based on the open-source framework hosted on https://github.com/rhergenreder/web-base",
         "# Any non site-specific issues can be reported via the github security reporting feature:",
         "# https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing/privately-reporting-a-security-vulnerability",
+        "# or by contacting me directly: mail(at)romanh(dot)de",
         "",
         "Canonical: $baseUrl/.well-known/security.txt",
         "Preferred-Languages: $languageCodes",

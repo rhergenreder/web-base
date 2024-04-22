@@ -63,6 +63,9 @@ class Swagger extends Request {
 
     $definitions = [];
     $paths = [];
+    $tags = [];
+
+    // TODO: consumes and produces is not always the same, but it's okay for now
     foreach (self::getApiEndpoints() as $endpoint => $apiClass) {
       $body = null;
       $requiredProperties = [];
@@ -70,6 +73,17 @@ class Swagger extends Request {
       $apiObject = $apiClass->newInstance($this->context, false);
       if (!$this->canView($permissions[strtolower($endpoint)] ?? [], $apiObject)) {
         continue;
+      }
+
+      $tag = null;
+      if ($apiClass->getParentClass()->getName() !== Request::class) {
+        $parentClass = $apiClass->getParentClass()->getShortName();
+        if (endsWith($parentClass, "API")) {
+          $tag = substr($parentClass, 0, strlen($parentClass) - 3);
+          if (!in_array($tag, $tags)) {
+            $tags[] = $tag;
+          }
+        }
       }
 
       $parameters = $apiObject->getDefaultParams();
@@ -107,6 +121,7 @@ class Swagger extends Request {
 
       $endPointDefinition = [
         "post" => [
+          "tags" => [$tag ?? "Global"],
           "produces" => ["application/json"],
           "responses" => [
             "200" => ["description" => "OK!"],
@@ -123,7 +138,7 @@ class Swagger extends Request {
       }
 
       if ($body) {
-        $endPointDefinition["post"]["consumes"] = ["application/json"];
+        $endPointDefinition["post"]["consumes"] = ["application/json", "application/x-www-form-urlencoded"];
         $endPointDefinition["post"]["parameters"] = [[
           "in" => "body",
           "name" => "body",
@@ -149,6 +164,7 @@ class Swagger extends Request {
       "host" => $domain,
       "basePath" => "/api",
       "schemes" => ["$protocol"],
+      "tags" => $tags,
       "paths" => $paths,
       "definitions" => $definitions
     ];

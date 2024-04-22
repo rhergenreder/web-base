@@ -604,4 +604,12 @@ abstract class Request {
     $currentUser = $this->context->getUser();
     return $currentUser ? "userId='" . $currentUser->getId() . "'" : "SYSTEM";
   }
+
+  protected function formatDuration(int $count, string $string): string {
+    if ($count === 1) {
+      return $string;
+    } else {
+      return "the next $count {$string}s";
+    }
+  }
 }

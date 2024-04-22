@@ -62,7 +62,7 @@ class ApiRoute extends Route {
             http_response_code(400);
             $response = createError("Invalid Method");
           } else {
-            $request = $apiClass->newInstanceArgs(array($router->getContext(), true));
+            $request = $apiClass->newInstanceArgs([$router->getContext(), true]);
             $success = $request->execute();
             $response = $request->getResult();
             $response["success"] = $success;
@@ -74,6 +74,7 @@ class ApiRoute extends Route {
         }
       } catch (ReflectionException $e) {
         http_response_code(500);
+        $router->getLogger()->error("Error instantiating class: $e");
         $response = createError("Error instantiating class: $e");
       }
     }

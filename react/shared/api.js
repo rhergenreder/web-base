@@ -387,7 +387,7 @@ export default class API {
 
     /** GPG API **/
     async uploadGPG(pubkey) {
-        let res = await this.apiCall("user/importGPG", { pubkey: pubkey });
+        let res = await this.apiCall("gpgKey/import", { pubkey: pubkey });
         if (res.success) {
             this.user.gpgKey = res.gpgKey;
         }
@@ -396,7 +396,7 @@ export default class API {
     }
 
     async confirmGpgToken(token) {
-        let res = await this.apiCall("user/confirmGPG", { token: token });
+        let res = await this.apiCall("gpgKey/confirm", { token: token });
         if (res.success) {
             this.user.gpgKey.confirmed = true;
         }
@@ -405,7 +405,7 @@ export default class API {
     }
 
     async removeGPG(password) {
-        let res = await this.apiCall("user/removeGPG", { password: password });
+        let res = await this.apiCall("gpgKey/remove", { password: password });
         if (res.success) {
             this.user.gpgKey = null;
         }
@@ -414,7 +414,7 @@ export default class API {
     }
 
     async downloadGPG(userId) {
-        return this.apiCall("user/downloadGPG", { id: userId }, true);
+        return this.apiCall("gpgKey/download", { id: userId }, true);
     }
 
     /** Log API **/

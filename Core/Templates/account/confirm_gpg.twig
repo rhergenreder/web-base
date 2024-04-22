@@ -16,7 +16,7 @@
             let token = jsCore.getParameter("token");
             let confirmStatus = $("#confirm-status");
             if (token) {
-                jsCore.apiCall("/user/confirmGPG", { token: token, csrfToken: '{{ user.session.csrfToken }}' }, (res) => {
+                jsCore.apiCall("/gpgKey/confirm", { token: token, csrfToken: '{{ user.session.csrfToken }}' }, (res) => {
                     confirmStatus.removeClass("alert-info");
                     if (!res.success) {
                         confirmStatus.addClass("alert-danger");

@@ -126,7 +126,7 @@ export default function GpgBox(props) {
                     <Button startIcon={isGpgKeyRemoving ? <CircularProgress size={12} /> : <Remove />}
                             color="secondary" onClick={onRemoveGpgKey}
                             variant="outlined" size="small"
-                            disabled={isGpgKeyRemoving || !api.hasPermission("user/removeGPG")}>
+                            disabled={isGpgKeyRemoving || !api.hasPermission("gpgKey/remove")}>
                         {isGpgKeyRemoving ? L("general.removing") + "…" : L("general.remove")}
                     </Button>
                 </Box> :
@@ -134,7 +134,7 @@ export default function GpgBox(props) {
                     <SpacedFormGroup>
                         <FormLabel>{L("account.gpg_key")}</FormLabel>
                         <GpgKeyField value={gpgKey} multiline={true} rows={8}
-                                     disabled={isGpgKeyUploading || !api.hasPermission("user/importGPG")}
+                                     disabled={isGpgKeyUploading || !api.hasPermission("gpgKey/import")}
                                      placeholder={L("account.gpg_key_placeholder_text")}
                                      onChange={e => setGpgKey(e.target.value)}
                                      onDrop={e => {
@@ -162,7 +162,7 @@ export default function GpgBox(props) {
                         <Button startIcon={isGpgKeyUploading ? <CircularProgress size={12} /> : <Upload />}
                                 color="primary" onClick={onUploadGPG}
                                 variant="outlined" size="small"
-                                disabled={isGpgKeyUploading || !api.hasPermission("user/importGPG")}>
+                                disabled={isGpgKeyUploading || !api.hasPermission("gpgKey/import")}>
                             {isGpgKeyUploading ? L("general.uploading") + "…" : L("general.upload")}
                         </Button>
                     </ButtonBar>

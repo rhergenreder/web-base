@@ -45,6 +45,13 @@ return [
   "captcha_site_key" => "Captcha Site Key",
   "captcha_secret_key" => "Secret Captcha Key",
 
+  # redis
+  "rate_limit" => "Rate Limiting",
+  "rate_limiting_enabled" => "Rate Limiting enabled",
+  "redis_host" => "Redis host",
+  "redis_port" => "Redis port",
+  "redis_password" => "Redis password",
+
   # dialog
   "fetch_settings_error" => "Error fetching settings",
   "save_settings_success" => "Settings saved successfully",

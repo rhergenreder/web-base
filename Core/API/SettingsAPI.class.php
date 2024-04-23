@@ -16,7 +16,6 @@ namespace Core\API {
     public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
       parent::__construct($context, $externalCall, $params);
 
-      // TODO: improve this, additional validation for allowed chars etc.
       // API parameters should be more configurable, e.g. allow regexes, min/max values for numbers, etc.
       $this->predefinedKeys = [
         "allowed_extensions" => new ArrayType("allowed_extensions", Parameter::TYPE_STRING),
@@ -24,7 +23,9 @@ namespace Core\API {
         "user_registration_enabled" => new Parameter("user_registration_enabled", Parameter::TYPE_BOOLEAN),
         "captcha_provider" => new StringType("captcha_provider", -1, true, "none", CaptchaProvider::PROVIDERS),
         "mail_enabled" => new Parameter("mail_enabled", Parameter::TYPE_BOOLEAN),
-        "mail_port" => new IntegerType("mail_port", 1, 65535)
+        "mail_port" => new IntegerType("mail_port", 1, 65535),
+        "rate_limiting_enabled" => new Parameter("rate_limiting_enabled", Parameter::TYPE_BOOLEAN),
+        "redis_port" => new IntegerType("redis_port", 1, 65535),
       ];
     }
   }

@@ -30,7 +30,6 @@ namespace Core\API {
         $password = $settings["mail_password"] ?? "";
         $connectionData = new ConnectionData($host, $port, $login, $password);
         $connectionData->setProperty("from", $settings["mail_from"] ?? "");
-        $connectionData->setProperty("last_sync", $settings["mail_last_sync"] ?? "");
         $connectionData->setProperty("mail_footer", $settings["mail_footer"] ?? "");
         $connectionData->setProperty("mail_async", $settings["mail_async"] ?? false);
         return $connectionData;

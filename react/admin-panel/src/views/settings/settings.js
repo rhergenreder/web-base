@@ -23,11 +23,10 @@ import {
     RestartAlt,
     Save,
     Send,
-    SettingsApplications, SmartToy
+    SettingsApplications, SmartToy, Storage
 } from "@mui/icons-material";
 import TIME_ZONES from "shared/time-zones";
 import ButtonBar from "../../elements/button-bar";
-import {parseBool} from "shared/util";
 import SettingsTextValues from "./input-text-values";
 import SettingsCheckBox from "./input-check-box";
 import SettingsNumberInput from "./input-number";
@@ -67,7 +66,12 @@ export default function SettingsView(props) {
           "captcha_secret_key",
           "captcha_site_key",
       ],
-      "hidden": ["installation_completed", "mail_last_sync"]
+      "redis": [
+          "rate_limiting_enabled",
+          "redis_host",
+          "redis_port",
+          "redis_password"
+      ]
     };
 
     // data
@@ -105,7 +109,6 @@ export default function SettingsView(props) {
                     showDialog(data.msg, L("settings.fetch_settings_error"));
                 } else {
                     setSettings(Object.keys(data.settings)
-                        .filter(key => !KNOWN_SETTING_KEYS.hidden.includes(key))
                         .reduce((obj, key) => {
                             obj[key] = data.settings[key];
                             return obj;
@@ -248,27 +251,27 @@ export default function SettingsView(props) {
         } else if (selectedTab === "mail") {
             return [
                 renderCheckBox("mail_enabled"),
-                renderTextInput("mail_from", !parseBool(settings.mail_enabled)),
-                renderTextInput("mail_host", !parseBool(settings.mail_enabled)),
-                renderNumberInput("mail_port", 1, 65535, !parseBool(settings.mail_enabled)),
-                renderTextInput("mail_username", !parseBool(settings.mail_enabled)),
-                renderPasswordInput("mail_password", !parseBool(settings.mail_enabled)),
-                renderTextInput("mail_footer", !parseBool(settings.mail_enabled)),
-                renderCheckBox("mail_async", !parseBool(settings.mail_enabled)),
+                renderTextInput("mail_from", !settings.mail_enabled),
+                renderTextInput("mail_host", !settings.mail_enabled),
+                renderNumberInput("mail_port", 1, 65535, !settings.mail_enabled),
+                renderTextInput("mail_username", !settings.mail_enabled),
+                renderPasswordInput("mail_password", !settings.mail_enabled),
+                renderTextInput("mail_footer", !settings.mail_enabled),
+                renderCheckBox("mail_async", !settings.mail_enabled),
                 <FormGroup key={"mail-test"}>
                     <FormLabel>{L("settings.send_test_email")}</FormLabel>
-                    <FormControl disabled={!parseBool(settings.mail_enabled)}>
+                    <FormControl disabled={!settings.mail_enabled}>
                         <Grid container spacing={1}>
                             <Grid item xs={1}>
                                 <Button startIcon={isSending ? <CircularProgress size={14} /> : <Send />}
                                         variant={"outlined"} onClick={onSendTestMail}
                                         fullWidth={true}
-                                        disabled={!parseBool(settings.mail_enabled) || isSending || !api.hasPermission("mail/test")}>
+                                        disabled={!settings.mail_enabled || isSending || !api.hasPermission("mail/test")}>
                                     {isSending ? L("general.sending") + "…" : L("general.send")}
                                 </Button>
                             </Grid>
                             <Grid item xs={11}>
-                                <TextField disabled={!parseBool(settings.mail_enabled)}
+                                <TextField disabled={!settings.mail_enabled}
                                            fullWidth={true}
                                            variant={"outlined"} value={testMailAddress}
                                            onChange={e => setTestMailAddress(e.target.value)}
@@ -284,6 +287,13 @@ export default function SettingsView(props) {
                 renderSelection("captcha_provider", ["none", "recaptcha", "hcaptcha"]),
                 renderTextInput("captcha_site_key", settings.captcha_provider === "none"),
                 renderPasswordInput("captcha_secret_key", settings.captcha_provider === "none"),
+            ];
+        } else if (selectedTab === "redis") {
+            return [
+                renderCheckBox("rate_limiting_enabled"),
+                renderTextInput("redis_host", !settings.rate_limiting_enabled),
+                renderNumberInput("redis_port", 1, 65535, !settings.rate_limiting_enabled),
+                renderPasswordInput("redis_password", !settings.rate_limiting_enabled),
             ];
         } else if (selectedTab === "uncategorized") {
             return <TableContainer component={Paper}>
@@ -365,6 +375,8 @@ export default function SettingsView(props) {
                      icon={<Mail />} iconPosition={"start"} />
                 <Tab value={"captcha"} label={L("settings.captcha")}
                      icon={<SmartToy />} iconPosition={"start"} />
+                <Tab value={"redis"} label={L("settings.rate_limit")}
+                     icon={<Storage />} iconPosition={"start"} />
                 <Tab value={"uncategorized"} label={L("settings.uncategorized")}
                      icon={<LibraryBooks />} iconPosition={"start"} />
             </Tabs>

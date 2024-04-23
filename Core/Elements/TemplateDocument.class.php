@@ -80,6 +80,7 @@ class TemplateDocument extends Document {
       $session = $context->getSession();
       $settings = $this->getSettings();
       $language = $context->getLanguage();
+      $captchaProvider = $settings->getCaptchaProvider();
 
       $urlParts = parse_url($this->getRouter()->getRequestedUri());
 
@@ -102,9 +103,10 @@ class TemplateDocument extends Document {
           "lastModified" => date(L('Y-m-d H:i:s'), @filemtime(self::getTemplatePath($name))),
           "registrationEnabled" => $settings->isRegistrationAllowed(),
           "title" => $this->title,
-          "recaptcha" => [
-            "key" => $settings->isRecaptchaEnabled() ? $settings->getRecaptchaSiteKey() : null,
-            "enabled" => $settings->isRecaptchaEnabled(),
+          "captcha" => [
+            "provider" => $captchaProvider?->getName(),
+            "site_key" => $captchaProvider?->getSiteKey(),
+            "enabled" => $captchaProvider !== null,
           ],
           "csp" => [
             "nonce" => $this->getCSPNonce(),

@@ -15,7 +15,8 @@ Web-Base is a php framework which provides basic web functionalities and a moder
 - [Localization](#localization)
 - [Command Line Interface (CLI)](#cli)
 - [Account & User functions](#access-control)
-- Admin Dashboard
+- [Google reCaptcha](https://developers.google.com/recaptcha/) and [hCaptcha](https://docs.hcaptcha.com/) Integration
+- modern ReactJS Admin Dashboard
 - Docker Support
 
 ### Upcoming:

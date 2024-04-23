@@ -9,8 +9,15 @@
     <link rel="stylesheet" href="/css/fontawesome.min.css" nonce="{{ site.csp.nonce }}">
     <link rel="stylesheet" href="/css/account.css" nonce="{{ site.csp.nonce }}">
     <title>{{ L("account.title")}} - {{ L(view_title) }}</title>
-    {% if site.recaptcha.enabled %}
-        <script src="https://www.google.com/recaptcha/api.js?render={{ site.recaptcha.key }}" nonce="{{ site.csp.nonce }}"></script>
+    {% if site.captcha.enabled %}
+        <script nonce="{{ site.csp.nonce }}">
+            window.captchaProvider = {{ site.captcha|json_encode()|raw }};
+        </script>
+        {% if site.captcha.provider == 'recaptcha' %}
+            <script src="https://www.google.com/recaptcha/api.js?render={{ site.captcha.site_key }}" nonce="{{ site.csp.nonce }}"></script>
+        {% elseif site.captcha.provider == 'hcaptcha' %}
+            <script src="https://js.hcaptcha.com/1/api.js" nonce="{{ site.csp.nonce }}"></script>
+        {% endif %}
     {% endif %}
 {% endblock %}
 
@@ -30,7 +37,4 @@
             </div>
         </div>
     </div>
-    {% if site.recaptcha.enabled %}
-        <input type='hidden' value='{{ site.recaptcha.key }}' id='siteKey' />
-    {% endif %}
 {% endblock %}

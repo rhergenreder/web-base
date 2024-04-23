@@ -10,28 +10,12 @@ use Core\Objects\Context;
 
 class Stats extends Request {
 
-  private bool $mailConfigured;
-  private bool $recaptchaConfigured;
-
   public function __construct(Context $context, $externalCall = false) {
     parent::__construct($context, $externalCall, array());
   }
 
-  private function checkSettings(): bool {
-    $req = new \Core\API\Settings\Get($this->context);
-    $this->success = $req->execute(array("key" => "^(mail_enabled|recaptcha_enabled)$"));
-    $this->lastError = $req->getLastError();
-
-    if ($this->success) {
-      $settings = $req->getResult()["settings"];
-      $this->mailConfigured = $settings["mail_enabled"];
-      $this->recaptchaConfigured = $settings["recaptcha_enabled"];
-    }
-
-    return $this->success;
-  }
-
   public function _execute(): bool {
+    $settings = $this->context->getSettings();
     $sql = $this->context->getSQL();
     $userCount = User::count($sql);
     $pageCount = Route::count($sql, new CondBool("active"));
@@ -54,10 +38,6 @@ class Stats extends Request {
       $loadAvg = sys_getloadavg();
     }
 
-    if (!$this->checkSettings()) {
-      return false;
-    }
-
     $this->result["data"] = [
       "userCount" => $userCount,
       "pageCount" => $pageCount,
@@ -69,8 +49,8 @@ class Stats extends Request {
         "memory_usage" => memory_get_usage(),
         "load_avg" => $loadAvg,
         "database" => $this->context->getSQL()->getStatus(),
-        "mail" => $this->mailConfigured,
-        "reCaptcha" => $this->recaptchaConfigured
+        "mail" => $settings->isMailEnabled(),
+        "captcha" => $settings->getCaptchaProvider()?->jsonSerialize()
       ],
     ];
     

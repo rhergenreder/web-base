@@ -727,7 +727,7 @@ namespace Core\API\User {
       );
 
       $settings = $context->getSettings();
-      if ($settings->isRecaptchaEnabled()) {
+      if ($settings->isCaptchaEnabled()) {
         $parameters["captcha"] = new StringType("captcha");
       }
 
@@ -747,7 +747,7 @@ namespace Core\API\User {
         return $this->createError("User Registration is not enabled.");
       }
 
-      if ($settings->isRecaptchaEnabled()) {
+      if ($settings->isCaptchaEnabled()) {
         $captcha = $this->getParam("captcha");
         $req = new VerifyCaptcha($this->context);
         if (!$req->execute(array("captcha" => $captcha, "action" => "register"))) {
@@ -1003,7 +1003,7 @@ namespace Core\API\User {
       );
 
       $settings = $context->getSettings();
-      if ($settings->isRecaptchaEnabled()) {
+      if ($settings->isCaptchaEnabled()) {
         $parameters["captcha"] = new StringType("captcha");
       }
 
@@ -1021,7 +1021,7 @@ namespace Core\API\User {
         return $this->createError("The mail service is not enabled, please contact the server administration.");
       }
 
-      if ($settings->isRecaptchaEnabled()) {
+      if ($settings->isCaptchaEnabled()) {
         $captcha = $this->getParam("captcha");
         $req = new VerifyCaptcha($this->context);
         if (!$req->execute(array("captcha" => $captcha, "action" => "resetPassword"))) {
@@ -1096,7 +1096,7 @@ namespace Core\API\User {
       );
 
       $settings = $context->getSettings();
-      if ($settings->isRecaptchaEnabled()) {
+      if ($settings->isCaptchaEnabled()) {
         $parameters["captcha"] = new StringType("captcha");
       }
 
@@ -1110,7 +1110,7 @@ namespace Core\API\User {
       }
 
       $settings = $this->context->getSettings();
-      if ($settings->isRecaptchaEnabled()) {
+      if ($settings->isCaptchaEnabled()) {
         $captcha = $this->getParam("captcha");
         $req = new VerifyCaptcha($this->context);
         if (!$req->execute(array("captcha" => $captcha, "action" => "resendConfirmation"))) {

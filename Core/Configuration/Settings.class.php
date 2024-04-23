@@ -12,6 +12,9 @@ use Core\Driver\SQL\Condition\CondNot;
 use Core\Driver\SQL\Condition\CondRegex;
 use Core\Driver\SQL\Query\Insert;
 use Core\Driver\SQL\SQL;
+use Core\Objects\Captcha\CaptchaProvider;
+use Core\Objects\Captcha\GoogleRecaptchaProvider;
+use Core\Objects\Captcha\HCaptchaProvider;
 use Core\Objects\Context;
 
 class Settings {
@@ -27,10 +30,10 @@ class Settings {
   private array $allowedExtensions;
   private string $timeZone;
 
-  // recaptcha
-  private bool $recaptchaEnabled;
-  private string $recaptchaPublicKey;
-  private string $recaptchaPrivateKey;
+  // captcha
+  private string $captchaProvider;
+  private string $captchaSiteKey;
+  private string $captchaSecretKey;
 
   // mail
   private bool $mailEnabled;
@@ -98,10 +101,10 @@ class Settings {
     $settings->registrationAllowed = false;
     $settings->timeZone = date_default_timezone_get();
 
-    // Recaptcha
-    $settings->recaptchaEnabled = false;
-    $settings->recaptchaPublicKey = "";
-    $settings->recaptchaPrivateKey = "";
+    // captcha
+    $settings->captchaProvider = "none";
+    $settings->captchaSiteKey = "";
+    $settings->captchaSecretKey = "";
 
     // Mail
     $settings->mailEnabled = false;
@@ -124,9 +127,9 @@ class Settings {
       $this->registrationAllowed = $result["user_registration_enabled"] ?? $this->registrationAllowed;
       $this->installationComplete = $result["installation_completed"] ?? $this->installationComplete;
       $this->timeZone = $result["time_zone"] ?? $this->timeZone;
-      $this->recaptchaEnabled = $result["recaptcha_enabled"] ?? $this->recaptchaEnabled;
-      $this->recaptchaPublicKey = $result["recaptcha_public_key"] ?? $this->recaptchaPublicKey;
-      $this->recaptchaPrivateKey = $result["recaptcha_private_key"] ?? $this->recaptchaPrivateKey;
+      $this->captchaProvider = $result["captcha_provider"] ?? $this->captchaProvider;
+      $this->captchaSiteKey = $result["captcha_site_key"] ?? $this->captchaSiteKey;
+      $this->captchaSecretKey = $result["captcha_secret_key"] ?? $this->captchaSecretKey;
       $this->mailEnabled = $result["mail_enabled"] ?? $this->mailEnabled;
       $this->mailSender = $result["mail_from"] ?? $this->mailSender;
       $this->mailFooter = $result["mail_footer"] ?? $this->mailFooter;
@@ -146,9 +149,9 @@ class Settings {
       ->addRow("user_registration_enabled", json_encode($this->registrationAllowed), false, false)
       ->addRow("installation_completed", json_encode($this->installationComplete), true, true)
       ->addRow("time_zone", json_encode($this->timeZone), false, false)
-      ->addRow("recaptcha_enabled", json_encode($this->recaptchaEnabled), false, false)
-      ->addRow("recaptcha_public_key", json_encode($this->recaptchaPublicKey), false, false)
-      ->addRow("recaptcha_private_key", json_encode($this->recaptchaPrivateKey), true, false)
+      ->addRow("captcha_provider", json_encode($this->captchaProvider), false, false)
+      ->addRow("captcha_site_key", json_encode($this->captchaSiteKey), false, false)
+      ->addRow("captcha_secret_key", json_encode($this->captchaSecretKey), true, false)
       ->addRow("allowed_extensions", json_encode($this->allowedExtensions), false, false)
       ->addRow("mail_host", '""', false, false)
       ->addRow("mail_port", '587', false, false)
@@ -176,16 +179,16 @@ class Settings {
     return $this->baseUrl;
   }
 
-  public function isRecaptchaEnabled(): bool {
-    return $this->recaptchaEnabled;
+  public function isCaptchaEnabled(): bool {
+    return CaptchaProvider::isValid($this->captchaProvider);
   }
 
-  public function getRecaptchaSiteKey(): string {
-    return $this->recaptchaPublicKey;
-  }
-
-  public function getRecaptchaSecretKey(): string {
-    return $this->recaptchaPrivateKey;
+  public function getCaptchaProvider(): ?CaptchaProvider  {
+    return match ($this->captchaProvider) {
+      CaptchaProvider::RECAPTCHA => new GoogleRecaptchaProvider($this->captchaSiteKey, $this->captchaSecretKey),
+      CaptchaProvider::HCAPTCHA => new HCaptchaProvider($this->captchaSiteKey, $this->captchaSecretKey),
+      default => null,
+    };
   }
 
   public function isRegistrationAllowed(): bool {

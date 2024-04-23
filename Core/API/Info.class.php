@@ -16,7 +16,7 @@ class Info extends Request {
     $settings = $this->context->getSettings();
     $this->result["info"] = [
       "registrationAllowed" => $settings->isRegistrationAllowed(),
-      "recaptchaEnabled" => $settings->isRecaptchaEnabled(),
+      "captchaEnabled" => $settings->isCaptchaEnabled(),
       "version" => WEBBASE_VERSION,
       "siteName" => $settings->getSiteName(),
     ];

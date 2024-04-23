@@ -18,13 +18,12 @@ import {Link} from "react-router-dom";
 import {
     Add,
     Delete,
-    Google,
     LibraryBooks,
     Mail,
     RestartAlt,
     Save,
     Send,
-    SettingsApplications
+    SettingsApplications, SmartToy
 } from "@mui/icons-material";
 import TIME_ZONES from "shared/time-zones";
 import ButtonBar from "../../elements/button-bar";
@@ -63,10 +62,10 @@ export default function SettingsView(props) {
           "mail_password",
           "mail_async",
       ],
-      "recaptcha": [
-          "recaptcha_enabled",
-          "recaptcha_private_key",
-          "recaptcha_public_key",
+      "captcha": [
+          "captcha_provider",
+          "captcha_secret_key",
+          "captcha_site_key",
       ],
       "hidden": ["installation_completed", "mail_last_sync"]
     };
@@ -280,11 +279,11 @@ export default function SettingsView(props) {
                     </FormControl>
                 </FormGroup>
             ];
-        } else if (selectedTab === "recaptcha") {
+        } else if (selectedTab === "captcha") {
             return [
-                renderCheckBox("recaptcha_enabled"),
-                renderTextInput("recaptcha_public_key", !parseBool(settings.recaptcha_enabled)),
-                renderPasswordInput("recaptcha_private_key", !parseBool(settings.recaptcha_enabled)),
+                renderSelection("captcha_provider", ["none", "recaptcha", "hcaptcha"]),
+                renderTextInput("captcha_site_key", settings.captcha_provider === "none"),
+                renderPasswordInput("captcha_secret_key", settings.captcha_provider === "none"),
             ];
         } else if (selectedTab === "uncategorized") {
             return <TableContainer component={Paper}>
@@ -364,8 +363,8 @@ export default function SettingsView(props) {
                      icon={<SettingsApplications />} iconPosition={"start"} />
                 <Tab value={"mail"} label={L("settings.mail")}
                      icon={<Mail />} iconPosition={"start"} />
-                <Tab value={"recaptcha"} label={L("settings.recaptcha")}
-                     icon={<Google />} iconPosition={"start"} />
+                <Tab value={"captcha"} label={L("settings.captcha")}
+                     icon={<SmartToy />} iconPosition={"start"} />
                 <Tab value={"uncategorized"} label={L("settings.uncategorized")}
                      icon={<LibraryBooks />} iconPosition={"start"} />
             </Tabs>

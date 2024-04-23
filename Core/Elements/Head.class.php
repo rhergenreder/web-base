@@ -28,7 +28,7 @@ abstract class Head extends View {
   protected abstract function initRawFields(): array;
   protected abstract function initTitle(): string;
 
-  protected function init() {
+  protected function init(): void {
     $this->keywords = array();
     $this->description = "";
     $this->baseUrl = "";
@@ -51,19 +51,15 @@ abstract class Head extends View {
   public function addJS($url) { $this->sources[] = new Script(Script::MIME_TEXT_JAVASCRIPT, $url, ""); }
   public function addJSCode($code) { $this->sources[] = new Script(Script::MIME_TEXT_JAVASCRIPT, "", $code); }
 
-  public function loadFontawesome() {
+  public function loadFontawesome(): void {
     $this->addCSS(Link::FONTAWESOME);
   }
 
-  public function loadGoogleRecaptcha($siteKey) {
-    $this->addJS("https://www.google.com/recaptcha/api.js?render=$siteKey");
-  }
-
-  public function loadJQuery() {
+  public function loadJQuery(): void {
     $this->addJS(Script::JQUERY);
   }
 
-  public function loadBootstrap() {
+  public function loadBootstrap(): void {
     $this->addCSS(Link::BOOTSTRAP);
     $this->addJS(Script::BOOTSTRAP);
   }

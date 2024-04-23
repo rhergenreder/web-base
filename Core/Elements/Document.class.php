@@ -5,6 +5,8 @@ namespace Core\Elements;
 use Core\Configuration\Settings;
 use Core\Driver\Logger\Logger;
 use Core\Driver\SQL\SQL;
+use Core\Objects\Captcha\GoogleRecaptchaProvider;
+use Core\Objects\Captcha\HCaptchaProvider;
 use Core\Objects\Context;
 use Core\Objects\Router\DocumentRoute;
 use Core\Objects\Router\Router;
@@ -78,7 +80,7 @@ abstract class Document {
     return $this->router;
   }
 
-  public function addCSPWhitelist(string $path) {
+  public function addCSPWhitelist(string $path): void {
     $urlParts = parse_url($path);
     if (!$urlParts || !isset($urlParts["host"])) {
       $this->cspWhitelist[] = getProtocol() . "://" . getCurrentHostName() . $path;
@@ -89,7 +91,23 @@ abstract class Document {
 
   public function sendHeaders(): void {
     if ($this->cspEnabled) {
+      $frameSrc = [];
+
+      $captchaProvider = $this->getSettings()->getCaptchaProvider();
+      if ($captchaProvider instanceof GoogleRecaptchaProvider) {
+        $frameSrc[] = "https://www.google.com/recaptcha/";
+        $frameSrc[] = "https://recaptcha.google.com/recaptcha/";
+        $this->cspWhitelist[] = "https://www.google.com/recaptcha/";
+        $this->cspWhitelist[] = "https://www.gstatic.com/recaptcha/";
+      } else if ($captchaProvider instanceof HCaptchaProvider) {
+        $frameSrc[] = "https://hcaptcha.com";
+        $frameSrc[] = "https://*.hcaptcha.com";
+        $this->cspWhitelist[] = "https://hcaptcha.com";
+        $this->cspWhitelist[] = "https://*.hcaptcha.com";
+      }
+
       $cspWhiteList = implode(" ", $this->cspWhitelist);
+      $frameSrc = implode(" ", $frameSrc);
       $csp = [
         "default-src $cspWhiteList 'self'",
         "object-src 'none'",
@@ -98,10 +116,8 @@ abstract class Document {
         "img-src 'self' 'unsafe-inline' data: https:;",
         "script-src $cspWhiteList 'nonce-$this->cspNonce'",
         "frame-ancestors 'self'",
+        "frame-src $frameSrc 'self'",
       ];
-      if ($this->getSettings()->isRecaptchaEnabled()) {
-        $csp[] = "frame-src https://www.google.com/ 'self'";
-      }
 
       $compiledCSP = implode("; ", $csp);
       header("Content-Security-Policy: $compiledCSP;");

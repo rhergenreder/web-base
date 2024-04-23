@@ -40,6 +40,9 @@
                 <input type="password" autocomplete='new-password' name='confirmPassword'
                        id='confirmPassword' class="form-control" placeholder="{{ L('account.password_confirm') }}">
             </div>
+            {% if site.captcha.enabled and site.captcha.provider == 'hcaptcha' %}
+                <div class="h-captcha mt-2" data-sitekey="{{ site.captcha.site_key }}"></div>
+            {% endif %}
             <div class="input-group mt-3">
             <button type="button" class="btn btn-primary" id='btnRegister'>
                 {{ L('general.submit') }}

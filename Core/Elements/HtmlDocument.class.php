@@ -60,7 +60,6 @@ class HtmlDocument extends Document {
     return $code;
   }
 
-
   public function getTitle(): string {
     if ($this->head !== null) {
       return $this->head->getTitle();

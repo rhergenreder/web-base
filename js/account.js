@@ -14,7 +14,6 @@ $(document).ready(function () {
     function hideAlert() {
         $("#alertMessage").hide();
     }
-
     function submitForm(btn, method, params, onSuccess) {
         let textBefore = btn.text();
         btn.prop("disabled", true);
@@ -26,6 +25,12 @@ $(document).ready(function () {
                 showAlert("danger", res.msg);
             } else {
                 onSuccess();
+            }
+
+            // reset captcha
+            let captchaProvider = jsCore.getCaptchaProvider();
+            if (captchaProvider?.provider === "hcaptcha") {
+                hcaptcha.reset();
             }
         });
     }
@@ -75,11 +80,11 @@ $(document).ready(function () {
         } else if(password !== confirmPassword) {
             showAlert("danger", L("register.passwords_do_not_match"));
         } else {
+            let captchaProvider = jsCore.getCaptchaProvider();
             let params = { username: username, email: email, password: password, confirmPassword: confirmPassword };
-            if (jsCore.isRecaptchaEnabled()) {
-                let siteKey = $("#siteKey").val().trim();
+            if (captchaProvider?.provider === "recaptcha") {
                 grecaptcha.ready(function() {
-                    grecaptcha.execute(siteKey, {action: 'register'}).then(function(captcha) {
+                    grecaptcha.execute(captchaProvider.site_key, {action: 'register'}).then(function(captcha) {
                         params["captcha"] = captcha;
                         submitForm(btn, "user/register", params, () => {
                             showAlert("success", "Account successfully created, check your emails.");
@@ -88,6 +93,10 @@ $(document).ready(function () {
                     });
                 });
             } else {
+                if (captchaProvider?.provider === "hcaptcha") {
+                    params.captcha = hcaptcha.getResponse();
+                }
+
                 submitForm(btn, "user/register", params, () => {
                     showAlert("success", "Account successfully created, check your emails.");
                     $("input:not([id='siteKey'])").val("");
@@ -132,12 +141,11 @@ $(document).ready(function () {
 
         let btn = $(this);
         let email = $("#email").val();
-
+        let captchaProvider = jsCore.getCaptchaProvider();
         let params = { email: email };
-        if (jsCore.isRecaptchaEnabled()) {
-            let siteKey = $("#siteKey").val().trim();
+        if (captchaProvider?.provider === "recaptcha") {
             grecaptcha.ready(function() {
-                grecaptcha.execute(siteKey, {action: 'resetPassword'}).then(function(captcha) {
+                grecaptcha.execute(captchaProvider.site_key, {action: 'resetPassword'}).then(function(captcha) {
                     params["captcha"] = captcha;
                     submitForm(btn, "user/requestPasswordReset", params, () => {
                         showAlert("success", "If the e-mail address exists and is linked to a account, you will receive a password reset token.");
@@ -146,6 +154,9 @@ $(document).ready(function () {
                 });
             });
         } else {
+            if (captchaProvider?.provider === "hcaptcha") {
+                params.captcha = hcaptcha.getResponse();
+            }
             submitForm(btn, "user/requestPasswordReset", params, () => {
                 showAlert("success", "If the e-mail address exists and is linked to a account, you will receive a password reset token.");
                 $("input:not([id='siteKey'])").val("");
@@ -191,11 +202,11 @@ $(document).ready(function () {
 
         let btn = $(this);
         let email = $("#email").val();
+        let captchaProvider = jsCore.getCaptchaProvider();
         let params = { email: email };
-        if (jsCore.isRecaptchaEnabled()) {
-            let siteKey = $("#siteKey").val().trim();
+        if (captchaProvider?.provider === "recaptcha") {
             grecaptcha.ready(function() {
-                grecaptcha.execute(siteKey, {action: 'resendConfirmation'}).then(function(captcha) {
+                grecaptcha.execute(captchaProvider.site_key, {action: 'resendConfirmation'}).then(function(captcha) {
                     params["captcha"] = captcha;
                     submitForm(btn, "user/resendConfirmEmail", params, () => {
                         showAlert("success", "If the e-mail address exists and is linked to a account, you will receive a new confirmation email.");
@@ -204,6 +215,10 @@ $(document).ready(function () {
                 });
             });
         } else {
+            if (captchaProvider?.provider === "hcaptcha") {
+                params.captcha = hcaptcha.getResponse();
+            }
+
             submitForm(btn, "user/resendConfirmEmail", params, () => {
                 showAlert("success", "\"If the e-mail address exists and is linked to a account, you will receive a new confirmation email.");
                 $("input:not([id='siteKey'])").val("");

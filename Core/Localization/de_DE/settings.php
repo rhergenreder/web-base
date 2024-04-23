@@ -17,7 +17,7 @@ return [
   "value" => "Wert",
   "general" => "Allgemein",
   "mail" => "Mail",
-  "recaptcha" => "reCaptcha",
+  "captcha" => "Captcha",
   "uncategorized" => "Unkategorisiert",
 
   # general settings
@@ -40,10 +40,10 @@ return [
   "mail_address" => "E-Mail Adresse",
   "send_test_email" => "Test E-Mail senden",
 
-  # recaptcha
-  "recaptcha_enabled" => "Aktiviere Google reCaptcha",
-  "recaptcha_public_key" => "reCaptcha öffentlicher Schlüssel",
-  "recaptcha_private_key" => "reCaptcha privater Schlüssel",
+  # captcha
+  "captcha_provider" => "Captcha Anbieter",
+  "captcha_site_key" => "Öffentlicher Captcha Schlüssel",
+  "captcha_secret_key" => "Geheimer Captcha Schlüssel",
 
   # dialog
   "fetch_settings_error" => "Fehler beim Holen der Einstellungen",

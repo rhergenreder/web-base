@@ -162,8 +162,8 @@ let Core = function () {
     return this.getJsonDateTime(date).split(' ')[1];
   };
 
-  this.isRecaptchaEnabled = function () {
-    return (typeof grecaptcha !== 'undefined');
+  this.getCaptchaProvider = function () {
+    return window.captchaProvider || null;
   }
 
   this.__construct();

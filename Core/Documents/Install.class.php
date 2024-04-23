@@ -93,10 +93,6 @@ namespace Documents\Install {
       $this->steps = array();
     }
 
-    function isDocker(): bool {
-      return file_exists("/.dockerenv");
-    }
-
     private function getParameter($name): ?string {
       if (isset($_REQUEST[$name]) && is_string($_REQUEST[$name])) {
         return trim($_REQUEST[$name]);
@@ -263,6 +259,11 @@ namespace Documents\Install {
         $success = false;
       }
 
+      if (!class_exists("Redis")) {
+        $failedRequirements[] = "<b>redis</b> extension is not installed.";
+        $success = false;
+      }
+
       if (!function_exists("yaml_emit")) {
         $failedRequirements[] = "<b>YAML</b> extension is not installed.";
         $success = false;
@@ -363,7 +364,7 @@ namespace Documents\Install {
         $connectionData->setProperty('database', $database);
         $connectionData->setProperty('encoding', $encoding);
         $connectionData->setProperty('type', $type);
-        $connectionData->setProperty('isDocker', $this->isDocker());
+        $connectionData->setProperty('isDocker', isDocker());
         $sql = SQL::createConnection($connectionData);
         $success = false;
         if (is_string($sql)) {
@@ -706,11 +707,17 @@ namespace Documents\Install {
 
     private function createProgressMainview(): string {
 
-      $isDocker = $this->isDocker();
-      $defaultHost = ($isDocker ? "db" : "localhost");
-      $defaultUsername = ($isDocker ? "root" : "");
-      $defaultPassword = ($isDocker ? "webbasedb" : "");
-      $defaultDatabase = ($isDocker ? "webbase" : "");
+      if (isDocker()) {
+        $defaultHost = "db";
+        $defaultUsername = "root";
+        $defaultPassword = "webbasedb";
+        $defaultDatabase = "webbase";
+      } else {
+        $defaultHost = "localhost";
+        $defaultUsername = "";
+        $defaultPassword = "";
+        $defaultDatabase = "";
+      }
 
       $views = array(
         self::CHECKING_REQUIREMENTS => array(

@@ -137,6 +137,8 @@ namespace Core\API\User {
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Condition\CondIn;
   use Core\Driver\SQL\Expression\JsonArrayAgg;
+  use Core\Objects\RateLimiting;
+  use Core\Objects\RateLimitRule;
   use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
   use ImagickException;
   use Core\Objects\Context;
@@ -563,6 +565,9 @@ namespace Core\API\User {
         'token' => new StringType('token', 36)
       ));
       $this->csrfTokenRequired = false;
+      $this->rateLimiting = new RateLimiting(
+        new RateLimitRule(5, 1, RateLimitRule::MINUTE)
+      );
     }
 
     public function _execute(): bool {
@@ -601,8 +606,6 @@ namespace Core\API\User {
 
   class Login extends UserAPI {
 
-    private int $startedAt;
-
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, array(
         'username' => new StringType('username'),
@@ -610,13 +613,9 @@ namespace Core\API\User {
         'stayLoggedIn' => new Parameter('stayLoggedIn', Parameter::TYPE_BOOLEAN, true, false)
       ));
       $this->forbidMethod("GET");
-    }
-
-    private function wrongCredentials(): bool {
-      $runtime = microtime(true) - $this->startedAt;
-      $sleepTime = round(3e6 - $runtime);
-      if ($sleepTime > 0) usleep($sleepTime);
-      return $this->createError(L('Wrong username or password'));
+      $this->rateLimiting = new RateLimiting(
+        new RateLimitRule(10, 30, RateLimitRule::SECOND)
+      );
     }
 
     public function _execute(): bool {
@@ -635,7 +634,6 @@ namespace Core\API\User {
         return true;
       }
 
-      $this->startedAt = microtime(true);
       $this->success = false;
       $username = $this->getParam('username');
       $password = $this->getParam('password');
@@ -648,7 +646,7 @@ namespace Core\API\User {
 
       if ($user !== false) {
         if ($user === null) {
-          return $this->wrongCredentials();
+          return $this->createError(L('Wrong username or password'));
         } else if (!$user->isActive()) {
           return $this->createError("This user is currently disabled. Contact the server administrator, if you believe this is a mistake.");
         } else if (password_verify($password, $user->password)) {
@@ -668,7 +666,7 @@ namespace Core\API\User {
             $this->success = true;
           }
         } else {
-          return $this->wrongCredentials();
+          return $this->createError(L('Wrong username or password'));
         }
       } else {
         return $this->createError("Error fetching user details: " . $sql->getLastError());
@@ -1190,14 +1188,18 @@ namespace Core\API\User {
   class ResetPassword extends UserAPI {
 
     public function __construct(Context $context, $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
+      parent::__construct($context, $externalCall, [
         'token' => new StringType('token', 36),
         'password' => new StringType('password'),
         'confirmPassword' => new StringType('confirmPassword'),
-      ));
+      ]);
 
+      $this->forbidMethod("GET");
       $this->csrfTokenRequired = false;
       $this->apiKeyAllowed = false;
+      $this->rateLimiting = new RateLimiting(
+        new RateLimitRule(5, 1, RateLimitRule::MINUTE)
+      );
     }
 
     public function _execute(): bool {

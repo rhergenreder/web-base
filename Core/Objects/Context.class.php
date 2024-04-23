@@ -4,6 +4,7 @@ namespace Core\Objects;
 
 use Core\Configuration\Configuration;
 use Core\Configuration\Settings;
+use Core\Driver\Redis\RedisConnection;
 use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondLike;
@@ -25,6 +26,7 @@ class Context {
   private Configuration $configuration;
   private Language $language;
   public ?Router $router;
+  private ?RedisConnection $redis;
 
   private function __construct() {
 
@@ -32,6 +34,7 @@ class Context {
     $this->session = null;
     $this->user = null;
     $this->router = null;
+    $this->redis = null;
     $this->configuration = new Configuration();
     $this->setLanguage(Language::DEFAULT_LANGUAGE());
 
@@ -51,6 +54,11 @@ class Context {
     if ($this->sql && $this->sql->isConnected()) {
       $this->sql->close();
       $this->sql = null;
+    }
+
+    if ($this->redis && $this->redis->isConnected()) {
+      $this->redis->close();
+      $this->redis = null;
     }
   }
 
@@ -200,5 +208,19 @@ class Context {
     }
 
     return $query->execute();
+  }
+
+  public function getRedis(): ?RedisConnection {
+
+    if ($this->redis === null) {
+      $settings = $this->getSettings();
+      $connectionData = $settings->getRedisConfiguration();
+      $this->redis = new RedisConnection($this->sql);
+      if (!$this->redis->connect($connectionData)) {
+        $this->redis = null;
+      }
+    }
+
+    return $this->redis;
   }
 }

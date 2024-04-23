@@ -259,6 +259,10 @@ function getClassName($class, bool $short = true): string {
   }
 }
 
+function isDocker(): bool {
+  return file_exists("/.dockerenv");
+}
+
 function createError($msg): array {
   return ["success" => false, "msg" => $msg];
 }

@@ -58,6 +58,8 @@ namespace Core\API\TFA {
   use Core\API\Parameter\StringType;
   use Core\API\TfaAPI;
   use Core\Objects\Context;
+  use Core\Objects\RateLimiting;
+  use Core\Objects\RateLimitRule;
   use Core\Objects\TwoFactor\AttestationObject;
   use Core\Objects\TwoFactor\AuthenticationData;
   use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
@@ -214,6 +216,10 @@ namespace Core\API\TFA {
       ]);
       $this->loginRequired = true;
       $this->csrfTokenRequired = false;
+      $this->rateLimiting = new RateLimiting(
+        null,
+        new RateLimitRule(5, 30, RateLimitRule::SECOND)
+      );
     }
 
     public function _execute(): bool {
@@ -347,6 +353,10 @@ namespace Core\API\TFA {
       ]);
       $this->loginRequired = true;
       $this->csrfTokenRequired = false;
+      $this->rateLimiting = new RateLimiting(
+        null,
+        new RateLimitRule(20, 60, RateLimitRule::SECOND)
+      );
     }
 
     public function _execute(): bool {

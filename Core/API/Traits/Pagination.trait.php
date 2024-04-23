@@ -29,6 +29,7 @@ trait Pagination {
     $this->paginationCondition = $condition;
     $this->entityCount = call_user_func("$this->paginationClass::count", $sql, $condition, $joins);
     $this->pageSize = $this->getParam("count");
+    $this->page = $this->getParam("page");
     if ($this->entityCount === false) {
       return $this->createError("Error fetching $this->paginationClass::count: " . $sql->getLastError());
     }

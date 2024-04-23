@@ -5,6 +5,7 @@ namespace Core\API;
 use Core\Driver\Logger\Logger;
 use Core\Objects\Context;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
+use Core\Objects\RateLimiting;
 use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
 use PhpMqtt\Client\MqttClient;
 
@@ -23,6 +24,7 @@ abstract class Request {
   protected bool $isDisabled;
   protected bool $apiKeyAllowed;
   protected bool $csrfTokenRequired;
+  protected ?RateLimiting $rateLimiting;
 
   private array $defaultParams;
   private array $allowedMethods;
@@ -47,6 +49,7 @@ abstract class Request {
     $this->apiKeyAllowed = true;
     $this->allowedMethods = array("GET", "POST");
     $this->csrfTokenRequired = true;
+    $this->rateLimiting = null;
   }
 
   public function getAPIName(): string {
@@ -192,7 +195,26 @@ abstract class Request {
       $this->result['logoutIn'] = $session->getExpiresSeconds();
     }
 
+    if ($this->isDisabled) {
+      $this->lastError = "This function is currently disabled.";
+      http_response_code(503);
+      return false;
+    }
+
+    $sql = $this->context->getSQL();
+    if ($sql === null || !$sql->isConnected()) {
+      $this->lastError = $sql ? $sql->getLastError() : "Database not connected yet.";
+      http_response_code(503);
+      return false;
+    }
+
     if ($this->externalCall) {
+      if (!$this->isPublic) {
+        $this->lastError = 'This function is private.';
+        http_response_code(403);
+        return false;
+      }
+
       $values = $_REQUEST;
       if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array("application/json", explode(";", $_SERVER["CONTENT_TYPE"] ?? ""))) {
         $jsonData = json_decode(file_get_contents('php://input'), true);
@@ -204,21 +226,6 @@ abstract class Request {
           return false;
         }
       }
-    }
-
-    if ($this->isDisabled) {
-      $this->lastError = "This function is currently disabled.";
-      http_response_code(503);
-      return false;
-    }
-
-    if ($this->externalCall && !$this->isPublic) {
-      $this->lastError = 'This function is private.';
-      http_response_code(403);
-      return false;
-    }
-
-    if ($this->externalCall) {
 
       if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         http_response_code(204); # No content
@@ -292,10 +299,15 @@ abstract class Request {
       $this->parseVariableParams($values);
     }
 
-    $sql = $this->context->getSQL();
-    if ($sql === null || !$sql->isConnected()) {
-      $this->lastError = $sql ? $sql->getLastError() : "Database not connected yet.";
-      return false;
+    if ($this->externalCall && $this->rateLimiting) {
+      $settings = $this->context->getSettings();
+      if ($settings->isRateLimitingEnabled()) {
+        if (!$this->rateLimiting->check($this->context, self::getEndpoint())) {
+          http_response_code(429);
+          $this->lastError = "Rate limit exceeded";
+          return false;
+        }
+      }
     }
 
     $this->success = true;

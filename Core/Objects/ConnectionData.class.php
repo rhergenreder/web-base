@@ -10,12 +10,12 @@ class ConnectionData {
   private string $password;
   private array $properties;
 
-  public function __construct($host, $port, $login, $password) {
+  public function __construct(string $host, int $port, string $login, string $password) {
     $this->host = $host;
     $this->port = $port;
     $this->login = $login;
     $this->password = $password;
-    $this->properties = array();
+    $this->properties = [];
   }
 
   public function getProperties(): array {

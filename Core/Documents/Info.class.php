@@ -19,8 +19,11 @@ class InfoBody extends SimpleBody {
   protected function getContent(): string {
     $user = $this->getContext()->getUser();
     if ($user && $user->hasGroup(Group::ADMIN)) {
+      ob_start();
       phpinfo();
-      return "";
+      $content = ob_get_contents();
+      ob_end_clean();
+      return $content;
     } else {
       $message = "You are not logged in or do not have the proper privileges to access this page.";
       return $this->getDocument()->getRouter()->returnStatusCode(403, [ "message" => $message] );

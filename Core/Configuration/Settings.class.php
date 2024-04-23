@@ -15,6 +15,7 @@ use Core\Driver\SQL\SQL;
 use Core\Objects\Captcha\CaptchaProvider;
 use Core\Objects\Captcha\GoogleRecaptchaProvider;
 use Core\Objects\Captcha\HCaptchaProvider;
+use Core\Objects\ConnectionData;
 use Core\Objects\Context;
 
 class Settings {
@@ -40,6 +41,12 @@ class Settings {
   private string $mailSender;
   private string $mailFooter;
   private bool $mailAsync;
+
+  // rate limiting
+  private bool $rateLimitingEnabled;
+  private string $redisHost;
+  private int $redisPort;
+  private string $redisPassword;
 
   //
   private Logger $logger;
@@ -112,6 +119,18 @@ class Settings {
     $settings->mailFooter = "";
     $settings->mailAsync = false;
 
+    // rate limiting
+    $settings->redisPort = 6379;
+    if (isDocker()) {
+      $settings->rateLimitingEnabled = true;
+      $settings->redisHost = "webbase-redis";
+      $settings->redisPassword = "webbase-redis";
+    } else {
+      $settings->rateLimitingEnabled = false;
+      $settings->redisHost = "";
+      $settings->redisPassword = "";
+    }
+
     return $settings;
   }
 
@@ -136,6 +155,10 @@ class Settings {
       $this->mailAsync = $result["mail_async"] ?? $this->mailAsync;
       $this->allowedExtensions = $result["allowed_extensions"] ?? $this->allowedExtensions;
       $this->trustedDomains = $result["trusted_domains"] ?? $this->trustedDomains;
+      $this->rateLimitingEnabled = $result["rate_limiting_enabled"] ?? $this->rateLimitingEnabled;
+      $this->redisHost = $result["redis_host"] ?? $this->redisHost;
+      $this->redisPort = $result["redis_port"] ?? $this->redisPort;
+      $this->redisPassword = $result["redis_password"] ?? $this->redisPassword;
       date_default_timezone_set($this->timeZone);
     }
 
@@ -160,7 +183,12 @@ class Settings {
       ->addRow("mail_from", '""', false, false)
       ->addRow("mail_last_sync", '""', false, false)
       ->addRow("mail_footer", '""', false, false)
-      ->addRow("mail_async", false, false, false);
+      ->addRow("mail_async", false, false, false)
+      ->addRow("rate_limiting_enabled", json_encode($this->allowedExtensions), false, false)
+      ->addRow("redis_host", json_encode($this->redisHost), false, false)
+      ->addRow("redis_port", json_encode($this->redisPort), false, false)
+      ->addRow("redis_password", json_encode($this->redisPassword), true, false)
+    ;
   }
 
   public function getSiteName(): string {
@@ -239,5 +267,18 @@ class Settings {
 
   public function getTrustedDomains(): array {
     return $this->trustedDomains;
+  }
+
+  public function isRateLimitingEnabled(): bool {
+    return $this->rateLimitingEnabled;
+  }
+
+  public function getRedisConfiguration(): ConnectionData {
+    return new ConnectionData(
+      $this->redisHost,
+      $this->redisPort,
+      "",
+      $this->redisPassword
+    );
   }
 }

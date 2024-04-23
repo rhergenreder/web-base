@@ -710,14 +710,13 @@ namespace Documents\Install {
       if (isDocker()) {
         $defaultHost = "db";
         $defaultUsername = "root";
-        $defaultPassword = "webbasedb";
         $defaultDatabase = "webbase";
       } else {
         $defaultHost = "localhost";
         $defaultUsername = "";
-        $defaultPassword = "";
         $defaultDatabase = "";
       }
+      $defaultPassword = "";
 
       $views = array(
         self::CHECKING_REQUIREMENTS => array(

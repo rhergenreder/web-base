@@ -18,8 +18,8 @@ services:
     ports:
       -  '3306:3306'
     environment:
-      - "MYSQL_ROOT_PASSWORD=webbasedb"
-      - "MYSQL_DATABASE=webbase"
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: webbase
   php:
     container_name: webbase-php
     volumes:
@@ -35,7 +35,7 @@ services:
     image: redis:latest
     ports:
       - '6379:6379'
-    command: redis-server --save 20 1 --loglevel warning --requirepass webbase-redis
+    command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
     volumes:
       - cache:/data
 volumes:

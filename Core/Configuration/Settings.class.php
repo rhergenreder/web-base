@@ -121,14 +121,13 @@ class Settings {
 
     // rate limiting
     $settings->redisPort = 6379;
+    $settings->redisPassword = "";
     if (isDocker()) {
       $settings->rateLimitingEnabled = true;
       $settings->redisHost = "webbase-redis";
-      $settings->redisPassword = "webbase-redis";
     } else {
       $settings->rateLimitingEnabled = false;
       $settings->redisHost = "";
-      $settings->redisPassword = "";
     }
 
     return $settings;

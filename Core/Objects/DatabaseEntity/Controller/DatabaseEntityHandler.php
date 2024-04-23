@@ -445,7 +445,6 @@ class DatabaseEntityHandler implements Persistable {
       foreach ($this->properties as $property) {
         $propertyName = $property->getName();
         if ($this->getValueFromRow($row, $propertyName, $value, $fetchEntities, $context)) {
-          $property->setAccessible(true);
           $property->setValue($entity, $value);
         }
       }
@@ -459,11 +458,9 @@ class DatabaseEntityHandler implements Persistable {
       // init n:m / 1:n properties with empty arrays
       foreach ($this->nmRelations as $propertyName => $nmRelation) {
         $property = $this->properties[$propertyName];
-        $property->setAccessible(true);
         $property->setValue($entity, []);
       }
 
-      $this->properties["id"]->setAccessible(true);
       $this->properties["id"]->setValue($entity, $row["id"]);
 
       $entity->postFetch($this->sql, $row);
@@ -539,7 +536,6 @@ class DatabaseEntityHandler implements Persistable {
       }
 
       $property = $this->properties[$nmProperty];
-      $property->setAccessible(true);
       $relEntities = $property->getValue($entity);
       if (!empty($relEntities)) {
         if ($nmRelation instanceof NMRelation) {
@@ -559,7 +555,6 @@ class DatabaseEntityHandler implements Persistable {
         } else if ($nmRelation instanceof NMRelationReference) {
           $otherHandler = $nmRelation->getRelHandler();
           $thisIdProperty = $otherHandler->properties[$nmRelation->getThisProperty()];
-          $thisIdProperty->setAccessible(true);
 
           foreach ($relEntities as $relEntity) {
             $thisIdProperty->setValue($relEntity, $entity);
@@ -596,7 +591,6 @@ class DatabaseEntityHandler implements Persistable {
       foreach ($this->nmRelations as $nmProperty => $nmRelation) {
         $nmTable = $nmRelation->getTableName();
         $property = $this->properties[$nmProperty];
-        $property->setAccessible(true);
         if (self::getAttribute($property, NoFetch::class)) {
           continue;
         }
@@ -654,7 +648,6 @@ class DatabaseEntityHandler implements Persistable {
           }
 
           $thisIdProperty = $otherHandler->properties[$nmRelation->getThisProperty()];
-          $thisIdProperty->setAccessible(true);
 
           $relEntities = [];
           foreach ($rows as $row) {
@@ -730,7 +723,6 @@ class DatabaseEntityHandler implements Persistable {
 
     // pre defined values
     $getPredefinedValues = $this->entityClass->getMethod("getPredefinedValues");
-    $getPredefinedValues->setAccessible(true);
     $predefinedValues = $getPredefinedValues->invoke(null);
     if ($predefinedValues) {
       $queries[] = $this->getInsertQuery($predefinedValues);
@@ -738,7 +730,6 @@ class DatabaseEntityHandler implements Persistable {
 
     // Entity Log
     $entityLogConfig = $this->entityClass->getProperty("entityLogConfig");
-    $entityLogConfig->setAccessible(true);
     $entityLogConfig = $entityLogConfig->getValue();
 
     if (isset($entityLogConfig["insert"]) && $entityLogConfig["insert"] === true) {
@@ -798,7 +789,6 @@ class DatabaseEntityHandler implements Persistable {
       }
 
       $property = $this->properties[$propertyName];
-      $property->setAccessible(true);
       if ($property->isInitialized($entity)) {
         $value = $property->getValue($entity);
         if (isset($this->relations[$propertyName])) {

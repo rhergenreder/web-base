@@ -68,7 +68,6 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
 
     $jsonArray = [];
     foreach ($properties as $property) {
-      $property->setAccessible(true);
       $propertyName = $property->getName();
 
       if (in_array($propertyName, $ignoredProperties)) {

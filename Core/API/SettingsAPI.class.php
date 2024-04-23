@@ -57,7 +57,7 @@ namespace Core\API\Settings {
        $key = $this->getParam("key");
        $sql = $this->context->getSQL();
 
-       $settings = Settings::getAll($sql, $key);
+       $settings = Settings::getAll($sql, $key, $this->isExternalCall());
        if ($settings !== null) {
          $this->result["settings"] = $settings;
        } else {

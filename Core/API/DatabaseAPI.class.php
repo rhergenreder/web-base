@@ -2,7 +2,13 @@
 
 namespace Core\API {
 
+  use Core\Objects\Context;
+
   abstract class DatabaseAPI extends Request {
+
+    public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
+      parent::__construct($context, $externalCall, $params);
+    }
 
   }
 
@@ -12,8 +18,6 @@ namespace Core\API\Database {
 
   use Core\API\DatabaseAPI;
   use Core\API\Parameter\RegexType;
-  use Core\API\Parameter\StringType;
-  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
   use Core\Objects\DatabaseEntity\Group;
@@ -27,14 +31,16 @@ namespace Core\API\Database {
     protected function _execute(): bool {
       $sql = $this->context->getSQL();
       $status = $sql->getStatus();
-
       $this->result["status"] = $status;
-
       return true;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to view the database status", true);
+    public static function getDescription(): string {
+      return "Allows users to view the database status";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -102,8 +108,12 @@ namespace Core\API\Database {
       return true;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to migrate the database structure", true);
+    public static function getDescription(): string {
+      return "Allows users to migrate the database structure";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 }

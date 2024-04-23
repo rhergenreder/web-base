@@ -3,7 +3,6 @@
 namespace Core\API;
 
 use Core\Driver\Logger\Logger;
-use Core\Driver\SQL\Query\Insert;
 use Core\Objects\Context;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
 use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
@@ -131,8 +130,14 @@ abstract class Request {
 
   protected abstract function _execute(): bool;
 
-  // TODO: replace this function with two abstract methods: getDefaultPermittedGroups and getDescription
-  public static function getDefaultACL(Insert $insert): void { }
+  public static abstract function getDescription(): string;
+  public static function getDefaultPermittedGroups(): array {
+    return [];
+  }
+
+  public static function hasConfigurablePermissions(): bool {
+    return true;
+  }
 
   protected function check2FA(?TwoFactorToken $tfaToken = null): bool {
 

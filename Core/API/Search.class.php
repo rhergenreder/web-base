@@ -7,6 +7,7 @@ use Core\Objects\Context;
 use Core\Objects\Search\Searchable;
 use Core\Objects\Search\SearchQuery;
 
+// TODO: rework this entirely
 class Search extends Request {
 
   public function __construct(Context $context, bool $externalCall = false) {
@@ -37,5 +38,9 @@ class Search extends Request {
     }
 
     return true;
+  }
+
+  public static function getDescription(): string {
+    return "Searches the site documents and returns a list of matching routes";
   }
 }

@@ -2,9 +2,10 @@
 
 namespace Core\API;
 
+use Core\API\Parameter\IntegerType;
+use Core\API\Parameter\RegexType;
 use Core\API\Parameter\StringType;
 use Core\Objects\Context;
-use Core\Objects\DatabaseEntity\Group;
 
 class Swagger extends Request {
 
@@ -52,6 +53,16 @@ class Swagger extends Request {
     return true;
   }
 
+  private function getBodyName(\ReflectionClass $class): string {
+    $bodyName = $class->getShortName() . "Body";
+    $namespace = explode("\\", $class->getNamespaceName());
+    if (count($namespace) > 2) { // Core\API\XYZ or Site\API\XYZ
+      $bodyName = $namespace[2] . $bodyName;
+    }
+
+    return $bodyName;
+  }
+
   private function getDocumentation(): string {
 
     $settings = $this->context->getSettings();
@@ -86,6 +97,7 @@ class Swagger extends Request {
         }
       }
 
+      $bodyName = $this->getBodyName($apiClass);
       $parameters = $apiObject->getDefaultParams();
       if (!empty($parameters)) {
         $body = [];
@@ -97,6 +109,17 @@ class Swagger extends Request {
 
           if ($param instanceof StringType && $param->maxLength > 0) {
             $body[$param->name]["maxLength"] = $param->maxLength;
+          } else if ($param instanceof IntegerType) {
+            if ($param->minValue > PHP_INT_MIN) {
+              $body[$param->name]["minimum"] = $param->minValue;
+            }
+            if ($param->maxValue < PHP_INT_MAX) {
+              $body[$param->name]["maximum"] = $param->maxValue;
+            }
+          }
+
+          if ($param instanceof RegexType) {
+            $body[$param->name]["pattern"] = $param->pattern;
           }
 
           if ($body[$param->name]["type"] === "string" && ($format = $param->getSwaggerFormat())) {
@@ -108,7 +131,6 @@ class Swagger extends Request {
           }
         }
 
-        $bodyName = $apiClass->getShortName() . "Body";
         $definitions[$bodyName] = [
           "description" => "Body for $endpoint",
           "properties" => $body
@@ -122,6 +144,7 @@ class Swagger extends Request {
       $endPointDefinition = [
         "post" => [
           "tags" => [$tag ?? "Global"],
+          "summary" => $apiObject->getDescription(),
           "produces" => ["application/json"],
           "responses" => [
             "200" => ["description" => "OK!"],
@@ -143,7 +166,7 @@ class Swagger extends Request {
           "in" => "body",
           "name" => "body",
           "required" => !empty($requiredProperties),
-          "schema" => ["\$ref" => "#/definitions/" . $apiClass->getShortName() . "Body"]
+          "schema" => ["\$ref" => "#/definitions/$bodyName"]
         ]];
       } else if ($apiObject->isMethodAllowed("GET")) {
         $endPointDefinition["get"] = $endPointDefinition["post"];
@@ -170,6 +193,13 @@ class Swagger extends Request {
     ];
 
     return \yaml_emit($yamlData);
+  }
 
+  public static function getDescription(): string {
+    return "Returns the API-specification for this site. Endpoints, a user does not have access to, are hidden by default.";
+  }
+
+  public static function getDefaultPermittedGroups(): array {
+    return [];
   }
 }

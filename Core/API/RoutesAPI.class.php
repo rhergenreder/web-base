@@ -70,7 +70,6 @@ namespace Core\API\Routes {
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\API\RoutesAPI;
-  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\Route;
@@ -98,8 +97,12 @@ namespace Core\API\Routes {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch site routing", true);
+    public static function getDescription(): string {
+      return "Allows users to fetch site routing.";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -130,13 +133,12 @@ namespace Core\API\Routes {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(
-        self::getEndpoint(),
-        [Group::ADMIN, Group::MODERATOR],
-        "Allows users to fetch a single route",
-        true
-      );
+    public static function getDescription(): string {
+      return "Allows users to fetch a single route";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::MODERATOR];
     }
   }
 
@@ -177,8 +179,12 @@ namespace Core\API\Routes {
       return $this->success && $this->regenerateCache();
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to add new routes", true);
+    public static function getDescription(): string {
+      return "Allows users to add new routes";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -234,8 +240,12 @@ namespace Core\API\Routes {
       return $this->success && $this->regenerateCache();
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to update existing routes", true);
+    public static function getDescription(): string {
+      return "Allows users to update existing routes";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -264,8 +274,12 @@ namespace Core\API\Routes {
       return $this->success && $this->regenerateCache();
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to remove routes", true);
+    public static function getDescription(): string {
+      return "Allows users to remove routes";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -281,8 +295,12 @@ namespace Core\API\Routes {
       return $this->toggleRoute($id, true);
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to enable a route", true);
+    public static function getDescription(): string {
+      return "Allows users to enable a route";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -298,8 +316,12 @@ namespace Core\API\Routes {
       return $this->toggleRoute($id, false);
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to disable a route", true);
+    public static function getDescription(): string {
+      return "Allows users to disable a route";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -342,11 +364,12 @@ namespace Core\API\Routes {
       return $this->router;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(),
-        [Group::ADMIN, Group::SUPPORT],
-        "Allows users to regenerate the routing cache", true
-      );
+    public static function getDescription(): string {
+      return "Allows users to regenerate the routing cache";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::SUPPORT];
     }
   }
 
@@ -368,12 +391,12 @@ namespace Core\API\Routes {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow("routes/check",
-        [Group::ADMIN, Group::MODERATOR],
-        "Users with this permission can see, if a route pattern is matched with the given path for debugging purposes",
-        true
-      );
+    public static function getDescription(): string {
+      return "This endpoint grants the ability to check, if a route pattern is matched with the given path for debugging purposes";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::MODERATOR];
     }
   }
 }

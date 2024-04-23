@@ -5,10 +5,6 @@ namespace Core\Configuration;
 use Core\API\Request;
 use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
-use Core\Objects\DatabaseEntity\Group;
-use Core\Objects\DatabaseEntity\Route;
-use Core\Objects\Router\DocumentRoute;
-use Core\Objects\Router\StaticFileRoute;
 use PHPUnit\Util\Exception;
 
 class CreateDatabase extends DatabaseScript {
@@ -20,7 +16,7 @@ class CreateDatabase extends DatabaseScript {
 
     $queries[] = $sql->createTable("Settings")
       ->addString("name", 32)
-      ->addString("value", 1024, true)
+      ->addJson("value", true)
       ->addBool("private", false) // these values are not returned from '/api/settings/get', but can be changed
       ->addBool("readonly", false) // these values are neither returned, nor can be changed from outside
       ->primaryKey("name");
@@ -115,13 +111,20 @@ class CreateDatabase extends DatabaseScript {
     }
   }
 
-  public static function loadDefaultACL(array &$queries, SQL $sql) {
+  public static function loadDefaultACL(array &$queries, SQL $sql): void {
     $query = $sql->insert("ApiPermission", ["method", "groups", "description", "is_core"]);
 
     foreach (Request::getApiEndpoints() as $reflectionClass) {
-      $method = $reflectionClass->getName() . "::getDefaultACL";
-      $method($query);
+      $className = $reflectionClass->getName();
+      if (("$className::hasConfigurablePermissions")()) {
+        $method = ("$className::getEndpoint")();
+        $groups = ("$className::getDefaultPermittedGroups")();
+        $description = ("$className::getDescription")();
+        $isCore = startsWith($className, "Core\\API\\");
+        $query->addRow($method, $groups, $description, $isCore);
+      }
     }
+
     if ($query->hasRows()) {
       $queries[] = $query;
     }

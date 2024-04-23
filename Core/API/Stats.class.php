@@ -2,14 +2,9 @@
 
 namespace Core\API;
 
-use Core\Driver\SQL\Expression\Count;
-use Core\Driver\SQL\Expression\Distinct;
-use Core\Driver\SQL\Query\Insert;
 use Core\Objects\DatabaseEntity\Group;
 use Core\Objects\DatabaseEntity\Route;
 use Core\Objects\DatabaseEntity\User;
-use DateTime;
-use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondBool;
 use Core\Objects\Context;
 
@@ -82,7 +77,11 @@ class Stats extends Request {
     return $this->success;
   }
 
-  public static function getDefaultACL(Insert $insert): void {
-    $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to view site statistics", true);
+  public static function getDescription(): string {
+    return "Allows users to view site statistics";
+  }
+
+  public static function getDefaultPermittedGroups(): array {
+    return [Group::ADMIN, Group::SUPPORT];
   }
 }

@@ -38,6 +38,8 @@ import SettingsSelection from "./input-selection";
 
 export default function SettingsView(props) {
 
+    // TODO: website-logo (?), mail_contact, mail_contact_gpg_key_id
+
     // meta
     const api = props.api;
     const showDialog = props.showDialog;
@@ -205,7 +207,7 @@ export default function SettingsView(props) {
             key_name: key_name,
             value: settings[key_name],
             disabled: disabled,
-            onChangeValue: v => setSettings({...settings, [key_name]: v}),
+            onChangeValue: v => { setChanged(true); setSettings({...settings, [key_name]: v}) },
             ...props
         };
     }

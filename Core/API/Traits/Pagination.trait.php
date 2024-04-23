@@ -2,7 +2,7 @@
 
 namespace Core\API\Traits;
 
-use Core\API\Parameter\Parameter;
+use Core\API\Parameter\IntegerType;
 use Core\API\Parameter\StringType;
 use Core\Driver\SQL\Condition\Condition;
 use Core\Driver\SQL\SQL;
@@ -11,26 +11,24 @@ use Core\Objects\DatabaseEntity\Controller\DatabaseEntityQuery;
 
 trait Pagination {
 
-  function getPaginationParameters(array $orderColumns, string $defaultOrderBy = null, string $defaultSortOrder = "asc"): array {
+  function getPaginationParameters(array $orderColumns, string $defaultOrderBy = null,
+                                   string $defaultSortOrder = "asc", int $maxPageSize = 100): array {
     $this->paginationOrderColumns = $orderColumns;
     $defaultOrderBy = $defaultOrderBy ?? current($orderColumns);
 
     return [
-      'page' => new Parameter('page', Parameter::TYPE_INT, true, 1),
-      'count' => new Parameter('count', Parameter::TYPE_INT, true, 25),
+      'page' => new IntegerType('page', 1,PHP_INT_MAX, true, 1),
+      'count' => new IntegerType('count', 1, $maxPageSize, true, 25),
       'orderBy' => new StringType('orderBy', -1, true, $defaultOrderBy, array_values($orderColumns)),
       'sortOrder' => new StringType('sortOrder', -1, true, $defaultSortOrder, ['asc', 'desc']),
     ];
   }
 
-  function initPagination(SQL $sql, string $class, ?Condition $condition = null, int $maxPageSize = 100, ?array $joins = null): bool {
+  function initPagination(SQL $sql, string $class, ?Condition $condition = null, ?array $joins = null): bool {
     $this->paginationClass = $class;
     $this->paginationCondition = $condition;
-    if (!$this->validateParameters($maxPageSize)) {
-      return false;
-    }
-
     $this->entityCount = call_user_func("$this->paginationClass::count", $sql, $condition, $joins);
+    $this->pageSize = $this->getParam("count");
     if ($this->entityCount === false) {
       return $this->createError("Error fetching $this->paginationClass::count: " . $sql->getLastError());
     }
@@ -44,20 +42,6 @@ trait Pagination {
       "pageCount" => $pageCount,
       "total" => $this->entityCount
     ];
-
-    return true;
-  }
-
-  function validateParameters(int $maxCount = 100): bool {
-    $this->page = $this->getParam("page");
-    if ($this->page < 1) {
-      return $this->createError("Invalid page count");
-    }
-
-    $this->pageSize = $this->getParam("count");
-    if ($this->pageSize < 1 || $this->pageSize > $maxCount) {
-      return $this->createError("Invalid fetch count");
-    }
 
     return true;
   }

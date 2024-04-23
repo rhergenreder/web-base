@@ -131,7 +131,6 @@ namespace Core\API\User {
   use Core\Driver\SQL\Condition\CondLike;
   use Core\Driver\SQL\Condition\CondOr;
   use Core\Driver\SQL\Expression\Alias;
-  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\UserToken;
   use Core\Driver\SQL\Column\Column;
@@ -141,7 +140,6 @@ namespace Core\API\User {
   use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
   use ImagickException;
   use Core\Objects\Context;
-  use Core\Objects\DatabaseEntity\GpgKey;
   use Core\Objects\DatabaseEntity\User;
 
   class Create extends UserAPI {
@@ -208,8 +206,12 @@ namespace Core\API\User {
       return $this->user;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to create new users", true);
+    public static function getDescription(): string {
+      return "Allows users to create new users";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -270,8 +272,12 @@ namespace Core\API\User {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch all users", true);
+    public static function getDescription(): string {
+      return "Allows users to fetch all users";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::SUPPORT];
     }
   }
 
@@ -313,8 +319,12 @@ namespace Core\API\User {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to get details about a user", true);
+    public static function getDescription(): string {
+      return "Allows users to get details about a user";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::SUPPORT];
     }
   }
 
@@ -346,8 +356,12 @@ namespace Core\API\User {
       return true;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to search other users", true);
+    public static function getDescription(): string {
+      return "Allows users to search other users";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::SUPPORT];
     }
   }
 
@@ -398,6 +412,14 @@ namespace Core\API\User {
       }
 
       return $this->success;
+    }
+
+    public static function getDescription(): string {
+      return "Retrieves information about the current session";
+    }
+
+    public static function hasConfigurablePermissions(): bool {
+      return false;
     }
   }
 
@@ -476,8 +498,12 @@ namespace Core\API\User {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to invite new users", true);
+    public static function getDescription(): string {
+      return "Allows users to invite new users";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::SUPPORT, Group::MODERATOR];
     }
   }
 
@@ -524,6 +550,10 @@ namespace Core\API\User {
         }
       }
     }
+
+    public static function getDescription(): string {
+      return "Allows users to accept invitations and register an account";
+    }
   }
 
   class ConfirmEmail extends UserAPI {
@@ -562,6 +592,10 @@ namespace Core\API\User {
           return $this->createError("Unable to update user details: " . $sql->getLastError());
         }
       }
+    }
+
+    public static function getDescription(): string {
+      return "Allows users to confirm their email";
     }
   }
 
@@ -642,6 +676,14 @@ namespace Core\API\User {
 
       return $this->success;
     }
+
+    public static function getDescription(): string {
+      return "Creates a new session identified by the session cookie";
+    }
+
+    public static function hasConfigurablePermissions(): bool {
+      return false;
+    }
   }
 
   class Logout extends UserAPI {
@@ -663,6 +705,14 @@ namespace Core\API\User {
       $this->success = $session->destroy();
       $this->lastError = $this->context->getSQL()->getLastError();
       return $this->success;
+    }
+
+    public static function getDescription(): string {
+      return "Destroys the current session and logs the user out";
+    }
+
+    public static function hasConfigurablePermissions(): bool {
+      return false;
     }
   }
 
@@ -775,6 +825,10 @@ namespace Core\API\User {
 
       $this->logger->info("Registered new user with id=" . $user->getId());
       return $this->success;
+    }
+
+    public static function getDescription(): string {
+      return "Allows users to register a new account";
     }
   }
 
@@ -892,8 +946,12 @@ namespace Core\API\User {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to modify other user's details", true);
+    public static function getDescription(): string {
+      return "Allows users to modify other user's details";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -929,8 +987,12 @@ namespace Core\API\User {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to delete other users", true);
+    public static function getDescription(): string {
+      return "Allows users to delete other users";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -1020,6 +1082,10 @@ namespace Core\API\User {
       }
 
       return $this->success;
+    }
+
+    public static function getDescription(): string {
+      return "Allows users to request a password reset link";
     }
   }
 
@@ -1115,6 +1181,10 @@ namespace Core\API\User {
 
       return $this->success;
     }
+
+    public static function getDescription(): string {
+      return "Allows users to request a new e-mail confirmation link";
+    }
   }
 
   class ResetPassword extends UserAPI {
@@ -1127,6 +1197,7 @@ namespace Core\API\User {
       ));
 
       $this->csrfTokenRequired = false;
+      $this->apiKeyAllowed = false;
     }
 
     public function _execute(): bool {
@@ -1161,6 +1232,10 @@ namespace Core\API\User {
         }
       }
     }
+
+    public static function getDescription(): string {
+      return "Allows users to reset their password with a token received by a password reset email";
+    }
   }
 
   class UpdateProfile extends UserAPI {
@@ -1175,6 +1250,7 @@ namespace Core\API\User {
       ));
       $this->loginRequired = true;
       $this->csrfTokenRequired = true;
+      $this->apiKeyAllowed = false; // prevent account takeover when an API-key is stolen
       $this->forbidMethod("GET");
     }
 
@@ -1231,8 +1307,8 @@ namespace Core\API\User {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to update their profiles.", true);
+    public static function getDescription(): string {
+      return "Allows users to update their profiles.";
     }
   }
 
@@ -1343,6 +1419,10 @@ namespace Core\API\User {
 
       return $this->success;
     }
+
+    public static function getDescription(): string {
+      return "Allows users to upload and change their profile pictures.";
+    }
   }
 
   class RemovePicture extends UserAPI {
@@ -1373,6 +1453,10 @@ namespace Core\API\User {
 
       return $this->success;
     }
+
+    public static function getDescription(): string {
+      return "Allows users to remove their profile pictures.";
+    }
   }
 
   class CheckToken extends UserAPI {
@@ -1401,6 +1485,10 @@ namespace Core\API\User {
       $this->userToken = $userToken;
       $this->result["token"] = $userToken->jsonSerialize();
       return $this->success;
+    }
+
+    public static function getDescription(): string {
+      return "Allows users to validate a token received in an e-mail for various purposes";
     }
   }
 }

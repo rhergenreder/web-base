@@ -56,18 +56,14 @@ namespace Core\API\Groups {
   use Core\API\GroupsAPI;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\RegexType;
-  use Core\API\Parameter\StringType;
   use Core\API\Traits\Pagination;
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\Compare;
-  use Core\Driver\SQL\Condition\CondAnd;
   use Core\Driver\SQL\Expression\Alias;
   use Core\Driver\SQL\Expression\Count;
   use Core\Driver\SQL\Join\InnerJoin;
-  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
-  use Core\Objects\DatabaseEntity\Route;
   use Core\Objects\DatabaseEntity\User;
 
   class Fetch extends GroupsAPI {
@@ -113,8 +109,12 @@ namespace Core\API\Groups {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch available groups", true);
+    public static function getDescription(): string {
+      return "Allows users to fetch available groups";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::SUPPORT];
     }
   }
 
@@ -135,8 +135,12 @@ namespace Core\API\Groups {
       return true;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to get details about a group", true);
+    public static function getDescription(): string {
+      return "Allows users to get details about a group";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::SUPPORT];
     }
   }
 
@@ -155,7 +159,7 @@ namespace Core\API\Groups {
       $nmTable = User::getHandler($sql)->getNMRelation("groups")->getTableName();
       $condition = new Compare("group_id", $this->getParam("id"));
       $nmJoin = new InnerJoin($nmTable, "$nmTable.user_id", "User.id");
-      if (!$this->initPagination($sql, User::class, $condition, 100, [$nmJoin])) {
+      if (!$this->initPagination($sql, User::class, $condition, [$nmJoin])) {
         return false;
       }
 
@@ -174,8 +178,12 @@ namespace Core\API\Groups {
       return true;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN, Group::SUPPORT], "Allows users to fetch members of a group", true);
+    public static function getDescription(): string {
+      return "Allows users to fetch members of a group";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::SUPPORT];
     }
   }
 
@@ -210,8 +218,12 @@ namespace Core\API\Groups {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to create a new group", true);
+    public static function getDescription(): string {
+      return "Allows users to create a new group";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -252,8 +264,12 @@ namespace Core\API\Groups {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to update existing groups", true);
+    public static function getDescription(): string {
+      return "Allows users to update existing groups";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -280,8 +296,12 @@ namespace Core\API\Groups {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to delete a group", true);
+    public static function getDescription(): string {
+      return "Allows users to delete a group";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -321,8 +341,12 @@ namespace Core\API\Groups {
       }
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to add members to a group", true);
+    public static function getDescription(): string {
+      return "Allows users to add members to a group";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -362,8 +386,12 @@ namespace Core\API\Groups {
       }
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to remove members from a group", true);
+    public static function getDescription(): string {
+      return "Allows users to remove members from a group";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 }

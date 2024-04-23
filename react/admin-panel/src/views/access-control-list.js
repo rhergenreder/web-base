@@ -136,7 +136,7 @@ export default function AccessControlList(props) {
     }, [acl]);
 
     const isRestricted = (method) => {
-        return ["permissions/update", "permissions/delete"].includes(method.toLowerCase()) &&
+        return ["permission/update", "permission/delete"].includes(method.toLowerCase()) ||
                 !props.api.hasGroup(USER_GROUP_ADMIN);
     }
 

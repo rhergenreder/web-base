@@ -57,7 +57,6 @@ namespace Core\API\TFA {
 
   use Core\API\Parameter\StringType;
   use Core\API\TfaAPI;
-  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\TwoFactor\AttestationObject;
   use Core\Objects\TwoFactor\AuthenticationData;
@@ -128,8 +127,8 @@ namespace Core\API\TFA {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to remove their 2FA-Tokens", true);
+    public static function getDescription(): string {
+      return "Allows users to remove their 2FA-Tokens";
     }
   }
 
@@ -168,8 +167,8 @@ namespace Core\API\TFA {
       die($twoFactorToken->generateQRCode($this->context));
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users generate a QR-code to add a time-based 2FA-Token", true);
+    public static function getDescription(): string {
+      return "Allows users generate a QR-code to add a time-based 2FA-Token";
     }
   }
 
@@ -202,8 +201,8 @@ namespace Core\API\TFA {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to confirm their time-based 2FA-Token", true);
+    public static function getDescription(): string {
+      return "Allows users to confirm their time-based 2FA-Token";
     }
   }
 
@@ -236,8 +235,8 @@ namespace Core\API\TFA {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to verify time-based 2FA-Tokens", true);
+    public static function getDescription(): string {
+      return "Allows users to verify time-based 2FA-Tokens";
     }
   }
 
@@ -333,8 +332,8 @@ namespace Core\API\TFA {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to register a 2FA hardware-key", true);
+    public static function getDescription(): string {
+      return "Allows users to register a 2FA hardware-key";
     }
   }
 
@@ -395,8 +394,8 @@ namespace Core\API\TFA {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to verify a 2FA hardware-key", true);
+    public static function getDescription(): string {
+      return "Allows users to verify a 2FA hardware-key";
     }
   }
 }

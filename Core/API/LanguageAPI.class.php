@@ -48,6 +48,10 @@ namespace Core\API\Language {
 
       return $this->success;
     }
+
+    public static function getDescription(): string {
+      return "Allows users to retrieve a list of built-in languages";
+    }
   }
 
   class Set extends LanguageAPI {
@@ -108,6 +112,10 @@ namespace Core\API\Language {
       $this->context->setLanguage($this->language);
       $this->result["language"] = $this->language->jsonSerialize();
       return $this->success;
+    }
+
+    public static function getDescription(): string {
+      return "Allows users to set their preferred language";
     }
   }
 
@@ -171,6 +179,10 @@ namespace Core\API\Language {
         $this->result["entries"] = $entries;
       }
       return true;
+    }
+
+    public static function getDescription(): string {
+      return "Returns a set of translations for the given language and module";
     }
   }
 }

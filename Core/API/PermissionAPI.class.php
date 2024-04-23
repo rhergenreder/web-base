@@ -23,6 +23,7 @@ namespace Core\API {
 
     protected function isRestricted(string $method): bool {
       return in_array(strtolower($method), ["permission/update", "permission/delete"]);
+      // TODO: access the "hasConfigurablePermissions" here.
     }
   }
 }
@@ -36,7 +37,6 @@ namespace Core\API\Permission {
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\CondIn;
   use Core\Driver\SQL\Condition\CondLike;
-  use Core\Driver\SQL\Query\Insert;
   use Core\Driver\SQL\Strategy\UpdateStrategy;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
@@ -93,6 +93,14 @@ namespace Core\API\Permission {
 
       return $this->success;
     }
+
+    public static function getDescription(): string {
+      return "Checks whether a user is permitted to access a given API-method";
+    }
+
+    public static function hasConfigurablePermissions(): bool {
+      return false;
+    }
   }
 
   class Fetch extends PermissionAPI {
@@ -146,8 +154,12 @@ namespace Core\API\Permission {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch API permissions", true);
+    public static function getDescription(): string {
+      return "Allows users to fetch API permissions";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -199,12 +211,16 @@ namespace Core\API\Permission {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(
-        self::getEndpoint(), [Group::ADMIN],
-        "Allows users to modify API permissions. This is restricted to the administrator and cannot be changed",
-        true
-      );
+    public static function getDescription(): string {
+      return "Allows users to modify API permissions. This is restricted to the administrator and cannot be changed";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
+    }
+
+    public static function hasConfigurablePermissions(): bool {
+      return false;
     }
   }
 
@@ -250,12 +266,16 @@ namespace Core\API\Permission {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(
-        self::getEndpoint(), [Group::ADMIN],
-        "Allows users to delete API permissions. This is restricted to the administrator and cannot be changed",
-        true
-      );
+    public static function getDescription(): string {
+      return "Allows users to delete API permissions. This is restricted to the administrator and cannot be changed";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
+    }
+
+    public static function hasConfigurablePermissions(): bool {
+      return false;
     }
   }
 }

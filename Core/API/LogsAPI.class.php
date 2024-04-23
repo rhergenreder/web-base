@@ -24,7 +24,6 @@ namespace Core\API\Logs {
   use Core\Driver\SQL\Condition\CondIn;
   use Core\Driver\SQL\Condition\CondLike;
   use Core\Driver\SQL\Condition\CondOr;
-  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\SystemLog;
@@ -148,8 +147,12 @@ namespace Core\API\Logs {
       return true;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch system logs", true);
+    public static function getDescription(): string {
+      return "Allows users to fetch system logs";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 }

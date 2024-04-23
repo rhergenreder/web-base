@@ -21,7 +21,6 @@ namespace Core\API\GpgKey {
   use Core\API\Parameter\StringType;
   use Core\API\Template\Render;
   use Core\Driver\SQL\Condition\Compare;
-  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\GpgKey;
   use Core\Objects\DatabaseEntity\User;
@@ -137,8 +136,8 @@ namespace Core\API\GpgKey {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to import gpg keys for a secure e-mail communication", true);
+    public static function getDescription(): string {
+      return "Allows users to import gpg keys for a secure e-mail communication";
     }
   }
 
@@ -170,8 +169,8 @@ namespace Core\API\GpgKey {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [], "Allows users to unlink gpg keys from their profile", true);
+    public static function getDescription(): string {
+      return "Allows users to unlink gpg keys from their profile";
     }
   }
 
@@ -218,6 +217,10 @@ namespace Core\API\GpgKey {
       }
 
       return $this->success;
+    }
+
+    public static function getDescription(): string {
+      return "Allows users to confirm their imported gpg key";
     }
   }
 
@@ -289,7 +292,9 @@ namespace Core\API\GpgKey {
       header("Content-Disposition: attachment; filename=\"$fileName\"");
       die($key);
     }
+
+    public static function getDescription(): string {
+      return "Allows users to download any gpg public key";
+    }
   }
-
-
 }

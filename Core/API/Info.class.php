@@ -23,4 +23,8 @@ class Info extends Request {
 
     return true;
   }
+
+  public static function getDescription(): string {
+    return "Returns general information about the Site";
+  }
 }

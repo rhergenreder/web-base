@@ -79,6 +79,12 @@ namespace Core\API\Template {
       return true;
     }
 
-  }
+    public static function getDescription(): string {
+      return "Renders a given template with a set of parameters. This API is for internal use only";
+    }
 
+    public static function hasConfigurablePermissions(): bool {
+      return false;
+    }
+  }
 }

@@ -39,7 +39,6 @@ namespace Core\API\Settings {
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\CondBool;
   use Core\Driver\SQL\Condition\CondIn;
-  use Core\Driver\SQL\Query\Insert;
   use Core\Driver\SQL\Strategy\UpdateStrategy;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\Group;
@@ -66,8 +65,12 @@ namespace Core\API\Settings {
        return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to fetch site settings", true);
+    public static function getDescription(): string {
+      return "Allows users to fetch site settings";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -174,8 +177,12 @@ namespace Core\API\Settings {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to modify site settings", true);
+    public static function getDescription(): string {
+      return "Allows users to modify site settings";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 }

@@ -59,4 +59,8 @@ class VerifyCaptcha extends Request {
 
     return $this->success;
   }
+
+  public static function getDescription(): string {
+    return "Verifies a captcha response. This API is for internal use only.";
+  }
 }

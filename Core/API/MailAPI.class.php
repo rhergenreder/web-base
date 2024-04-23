@@ -46,7 +46,6 @@ namespace Core\API\Mail {
   use Core\API\MailAPI;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
-  use Core\Driver\SQL\Query\Insert;
   use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\MailQueueItem;
   use DateTimeInterface;
@@ -83,8 +82,12 @@ namespace Core\API\Mail {
       return $this->success;
     }
 
-    public static function getDefaultACL(Insert $insert): void {
-      $insert->addRow(self::getEndpoint(), [Group::ADMIN], "Allows users to send a test email to verify configuration", true);
+    public static function getDescription(): string {
+      return "Allows users to send a test email to verify configuration";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
     }
   }
 
@@ -223,6 +226,14 @@ namespace Core\API\Mail {
 
       return $this->success;
     }
+
+    public static function getDescription(): string {
+      return "Sends an email or puts it into an asynchronous queue. This function is for internal use only.";
+    }
+
+    public static function hasConfigurablePermissions(): bool {
+      return false;
+    }
   }
 
   class SendQueue extends MailAPI {
@@ -281,6 +292,14 @@ namespace Core\API\Mail {
       }
 
       return $this->success;
+    }
+
+    public static function getDescription(): string {
+      return "Processes the asynchronous mailing queue. This function is for internal use only.";
+    }
+
+    public static function hasConfigurablePermissions(): bool {
+      return false;
     }
   }
 }

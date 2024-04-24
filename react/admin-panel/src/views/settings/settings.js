@@ -284,7 +284,7 @@ export default function SettingsView(props) {
             ];
         } else if (selectedTab === "captcha") {
             return [
-                renderSelection("captcha_provider", ["none", "recaptcha", "hcaptcha"]),
+                renderSelection("captcha_provider", {"none": L("settings.none"), "recaptcha": "Google reCaptcha", "hcaptcha": "hCaptcha"}),
                 renderTextInput("captcha_site_key", settings.captcha_provider === "none"),
                 renderPasswordInput("captcha_secret_key", settings.captcha_provider === "none"),
             ];

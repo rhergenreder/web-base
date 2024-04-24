@@ -163,6 +163,10 @@ abstract class TestRequest extends Request {
   public static function getEndpoint(string $prefix = ""): ?string {
     return "test";
   }
+
+  public static function getDescription(): string {
+    return "test description";
+  }
 }
 
 class RequestAllMethods extends TestRequest {

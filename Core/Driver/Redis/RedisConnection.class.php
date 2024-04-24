@@ -17,6 +17,10 @@ class RedisConnection {
     $this->link = new \Redis();
   }
 
+  public function getLogger(): Logger {
+    return $this->logger;
+  }
+
   public function connect(ConnectionData $connectionData): bool {
     try {
       $this->link->connect($connectionData->getHost(), $connectionData->getPort());

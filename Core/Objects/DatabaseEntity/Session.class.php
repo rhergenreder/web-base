@@ -20,7 +20,7 @@ class Session extends DatabaseEntity {
   private User $user;
   private DateTime $expires;
   #[MaxLength(45)] private string $ipAddress;
-  #[MaxLength(36)] private string $uuid;
+  #[MaxLength(36)] protected string $uuid;
   #[DefaultValue(true)] private bool $active;
   #[MaxLength(64)] private ?string $os;
   #[MaxLength(64)] private ?string $browser;

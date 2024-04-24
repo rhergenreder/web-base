@@ -21,14 +21,14 @@ class Context {
   private static Context $instance;
 
   private ?SQL $sql;
-  private ?Session $session;
+  protected ?Session $session;
   private ?User $user;
   private Configuration $configuration;
   private Language $language;
   public ?Router $router;
-  private ?RedisConnection $redis;
+  protected ?RedisConnection $redis;
 
-  private function __construct() {
+  protected function __construct() {
 
     $this->sql = null;
     $this->session = null;

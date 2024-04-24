@@ -3,6 +3,8 @@
 return [
   "title" => "Settings",
   "information" => "Information",
+  "disabled" => "Disabled",
+  "enabled" => "Enabled",
 
   # API Key
   "api_key" => "API Key",
@@ -44,6 +46,8 @@ return [
   "captcha_provider" => "Captcha Provider",
   "captcha_site_key" => "Captcha Site Key",
   "captcha_secret_key" => "Secret Captcha Key",
+  "recaptcha" => "Google reCaptcha",
+  "hcaptcha" => "hCaptcha",
 
   # redis
   "rate_limit" => "Rate Limiting",

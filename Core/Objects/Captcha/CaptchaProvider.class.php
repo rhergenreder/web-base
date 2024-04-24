@@ -6,11 +6,11 @@ use Core\Objects\ApiObject;
 
 abstract class CaptchaProvider extends ApiObject {
 
-  const NONE = "none";
+  const DISABLED = "disabled";
   const RECAPTCHA = "recaptcha";
   const HCAPTCHA = "hcaptcha";
 
-  const PROVIDERS = [self::NONE, self::RECAPTCHA, self::HCAPTCHA];
+  const PROVIDERS = [self::DISABLED, self::RECAPTCHA, self::HCAPTCHA];
 
   private string $siteKey;
   private string $secretKey;

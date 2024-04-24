@@ -109,7 +109,7 @@ class Settings {
     $settings->timeZone = date_default_timezone_get();
 
     // captcha
-    $settings->captchaProvider = "none";
+    $settings->captchaProvider = "disabled";
     $settings->captchaSiteKey = "";
     $settings->captchaSecretKey = "";
 

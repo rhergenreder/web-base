@@ -46,11 +46,12 @@ class Stats extends Request {
       "server" => [
         "version" => WEBBASE_VERSION,
         "server" => $_SERVER["SERVER_SOFTWARE"] ?? "Unknown",
-        "memory_usage" => memory_get_usage(),
-        "load_avg" => $loadAvg,
+        "memoryUsage" => memory_get_usage(),
+        "loadAverage" => $loadAvg,
         "database" => $this->context->getSQL()->getStatus(),
         "mail" => $settings->isMailEnabled(),
-        "captcha" => $settings->getCaptchaProvider()?->jsonSerialize()
+        "captcha" => $settings->getCaptchaProvider()?->jsonSerialize(),
+        "rateLimiting" => $settings->isRateLimitingEnabled()
       ],
     ];
     

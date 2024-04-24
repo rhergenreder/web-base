@@ -2,8 +2,18 @@ import * as React from "react";
 import {Link} from "react-router-dom";
 import {useCallback, useContext, useEffect, useState} from "react";
 import {LocaleContext} from "shared/locale";
-import {ArrowCircleRight, BugReport, Groups, LibraryBooks, People} from "@mui/icons-material";
-import {CircularProgress} from "@mui/material";
+import {humanReadableSize} from "shared/util";
+import {sprintf} from "sprintf-js";
+import {
+    ArrowCircleRight,
+    BugReport,
+    CheckCircle,
+    Groups,
+    HighlightOff,
+    LibraryBooks,
+    People
+} from "@mui/icons-material";
+import {Box, CircularProgress, Paper, Table, TableBody, TableCell, TableRow} from "@mui/material";
 
 const StatBox = (props) => <div className={"col-lg-3 col-6"}>
     <div className={"small-box bg-" + props.color}>
@@ -24,6 +34,19 @@ const StatBox = (props) => <div className={"col-lg-3 col-6"}>
     </div>
 </div>
 
+const StatusLine = (props) => {
+    const {enabled, text, ...other} = props;
+    if (enabled) {
+        return <Box display="grid" gridTemplateColumns={"30px auto"}>
+            <CheckCircle color={"primary"} title={text} /> {text}
+        </Box>
+    } else {
+        return <Box display="grid" gridTemplateColumns={"30px auto"}>
+            <HighlightOff color={"secondary"} title={text} /> {text}
+        </Box>
+    }
+}
+
 export default function Overview(props) {
 
     const [fetchStats, setFetchStats] = useState(true);
@@ -32,7 +55,7 @@ export default function Overview(props) {
 
 
     useEffect(() => {
-        requestModules(props.api, ["general", "admin"], currentLocale).then(data => {
+        requestModules(props.api, ["general", "admin", "settings"], currentLocale).then(data => {
             if (!data.success) {
                 props.showDialog("Error fetching translations: " + data.msg);
             }
@@ -56,12 +79,10 @@ export default function Overview(props) {
         onFetchStats();
     }, []);
 
-    /*
-    let loadAvg = this.state.server.load_avg;
-    if (Array.isArray(this.state.server.load_avg)) {
-        loadAvg = this.state.server.load_avg.join(" ");
+    let loadAvg = stats ? stats.server.loadAverage : null;
+    if (Array.isArray(loadAvg)) {
+        loadAvg = loadAvg.map(v => sprintf("%.1f", v)).join(", ");
     }
-     */
 
     return <>
         <div className={"content-header"}>
@@ -100,6 +121,59 @@ export default function Overview(props) {
                              link={"/admin/logs"} />
                 </div>
             </div>
+            <Box m={2} p={2} component={Paper}>
+                <h4>Server Stats</h4><hr />
+                {stats === null ? <CircularProgress /> :
+                    <Table>
+                        <TableBody>
+                            <TableRow>
+                                <TableCell>Web-Base Version</TableCell>
+                                <TableCell>{stats.server.version}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>Server</TableCell>
+                                <TableCell>{stats.server.server ?? "Unknown"}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>Load Average</TableCell>
+                                <TableCell>{loadAvg}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>Memory Usage</TableCell>
+                                <TableCell>{humanReadableSize(stats.server.memoryUsage)}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>Database</TableCell>
+                                <TableCell>{stats.server.database}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>Captcha</TableCell>
+                                <TableCell>
+                                    <StatusLine enabled={!!stats.server.captcha}
+                                                text={L("settings." + (stats.server.captcha ? stats.server.captcha.name : "disabled"))}
+                                    />
+                                </TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>Mail</TableCell>
+                                <TableCell>
+                                    <StatusLine enabled={!!stats.server.mail}
+                                                text={L("settings." + (stats.server.mail ? "enabled" : "disabled"))}
+                                    />
+                                </TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>Rate-Limiting</TableCell>
+                                <TableCell>
+                                    <StatusLine enabled={!!stats.server.rateLimiting}
+                                                text={L("settings." + (stats.server.rateLimiting ? "enabled" : "disabled"))}
+                                    />
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                }
+            </Box>
         </section>
     </>
 }

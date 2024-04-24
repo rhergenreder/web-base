@@ -21,7 +21,7 @@ namespace Core\API {
         "allowed_extensions" => new ArrayType("allowed_extensions", Parameter::TYPE_STRING),
         "trusted_domains" => new ArrayType("trusted_domains", Parameter::TYPE_STRING),
         "user_registration_enabled" => new Parameter("user_registration_enabled", Parameter::TYPE_BOOLEAN),
-        "captcha_provider" => new StringType("captcha_provider", -1, true, "none", CaptchaProvider::PROVIDERS),
+        "captcha_provider" => new StringType("captcha_provider", -1, true, "disabled", CaptchaProvider::PROVIDERS),
         "mail_enabled" => new Parameter("mail_enabled", Parameter::TYPE_BOOLEAN),
         "mail_port" => new IntegerType("mail_port", 1, 65535),
         "rate_limiting_enabled" => new Parameter("rate_limiting_enabled", Parameter::TYPE_BOOLEAN),

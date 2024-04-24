@@ -1470,6 +1470,10 @@ namespace Core\API\User {
         'token' => new StringType('token', 36),
       ));
       $this->userToken = null;
+      $this->rateLimiting = new RateLimiting(
+        new RateLimitRule(10, 30, RateLimitRule::SECOND),
+        new RateLimitRule(30, 1, RateLimitRule::MINUTE),
+      );
     }
 
     public function getToken(): ?UserToken {

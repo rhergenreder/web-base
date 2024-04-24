@@ -283,10 +283,16 @@ export default function SettingsView(props) {
                 </FormGroup>
             ];
         } else if (selectedTab === "captcha") {
+            let captchaOptions = {};
+            ["disabled", "recaptcha", "hcaptcha"].reduce((map, key) => {
+                map[key] = L("settings." + key);
+                return map;
+            }, captchaOptions);
+
             return [
-                renderSelection("captcha_provider", {"none": L("settings.none"), "recaptcha": "Google reCaptcha", "hcaptcha": "hCaptcha"}),
-                renderTextInput("captcha_site_key", settings.captcha_provider === "none"),
-                renderPasswordInput("captcha_secret_key", settings.captcha_provider === "none"),
+                renderSelection("captcha_provider", captchaOptions),
+                renderTextInput("captcha_site_key", settings.captcha_provider === "disabled"),
+                renderPasswordInput("captcha_secret_key", settings.captcha_provider === "disabled"),
             ];
         } else if (selectedTab === "redis") {
             return [

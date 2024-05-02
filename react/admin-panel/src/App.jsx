@@ -62,37 +62,6 @@ export default function App() {
         onInit();
     }, []);
 
-    /*
-    const onTotp2FA = useCallback((code, callback) => {
-        this.setState({ ...this.state, error: "" });
-        return this.api.verifyTotp2FA(code).then((res) => {
-            if (res.success) {
-                this.api.fetchUser().then(() => {
-                    this.setState({ ...this.state, user: res });
-                    callback(res);
-                })
-            } else {
-                callback(res);
-            }
-        });
-    }, [api]);
-
-    onKey2FA(credentialID, clientDataJson, authData, signature, callback) {
-        this.setState({ ...this.state, error: "" });
-        return this.api.verifyKey2FA(credentialID, clientDataJson, authData, signature).then((res) => {
-            if (res.success) {
-                this.api.fetchUser().then(() => {
-                    this.setState({ ...this.state, user: res });
-                    callback(res);
-                })
-            } else {
-                callback(res);
-            }
-        });
-    }
-
-     */
-
     if (!loaded) {
         if (error) {
             return <Alert severity={"error"} title={L("general.error_occurred")}>

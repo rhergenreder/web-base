@@ -2,10 +2,10 @@ import React, {useCallback, useContext, useEffect, useState} from 'react';
 import {Link, useNavigate} from "react-router-dom";
 import {LocaleContext} from "shared/locale";
 import {
-    Box, CssBaseline, Divider,
+    Box, Divider,
     IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
     Select, Drawer,
-    styled, MenuItem, Menu, useTheme,
+    styled, MenuItem, Menu, ThemeProvider, CssBaseline,
 } from "@mui/material";
 import { Dropdown } from '@mui/base/Dropdown';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -93,14 +93,13 @@ const StyledDrawer = styled(Drawer, { shouldForwardProp: (prop) => prop !== 'ope
 
 export default function Sidebar(props) {
 
-    const api = props.api;
-    const showDialog = props.showDialog;
+    const {api, showDialog, theme, children, ...other} = props;
+
     const {translate: L, currentLocale, setLanguageByCode} = useContext(LocaleContext);
     const [languages, setLanguages] = useState(null);
     const [fetchLanguages, setFetchLanguages] = useState(true);
     const [drawerOpen, setDrawerOpen] = useState(window.screen.width >= 1000);
     const [anchorEl, setAnchorEl] = useState(null);
-    const theme = useTheme();
     const navigate = useNavigate();
     const currentPath = useCurrentPath();
 
@@ -197,73 +196,75 @@ export default function Sidebar(props) {
 
     li.push(<NavbarItem key={"logout"} name={"general.logout"} icon={<ArrowBack />} onClick={onLogout}/>);
 
-    return <Box sx={{ display: 'flex' }}>
+    return <ThemeProvider theme={theme}>
         <CssBaseline />
-        <StyledDrawer variant={"permanent"} open={drawerOpen}>
-            <DrawerHeader>
-                {drawerOpen && <>
-                    <img src={"/img/icons/logo.png"} alt={"Logo"} />
-                    <span>WebBase</span>
-                </>}
-                <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
-                    {drawerOpen ? <ChevronLeftIcon/> : <ChevronRightIcon/>}
-                </IconButton>
-            </DrawerHeader>
-            <Divider/>
-            <ListItem sx={{display: 'block'}}>
-                <Box sx={{opacity: drawerOpen ? 1 : 0}}>{L("account.logged_in_as")}:</Box>
-                <ProfileLink to={"/admin/profile"}>
-                    <ProfilePicture user={api.user}/>
-                    {drawerOpen && <span>{api.user?.name || L("account.not_logged_in")}</span>}
-                </ProfileLink>
-            </ListItem>
-            <Divider/>
-            <List>
-                {li}
-            </List>
-            <Divider/>
-            <ListItem sx={{display: 'block'}}>
-                { drawerOpen ?
-                    <Select native value={currentLocale} size={"small"} fullWidth={true}
-                            onChange={e => onSetLanguage(e.target.value)}>
-                        {Object.values(languages || {}).map(language =>
-                            <option key={language.code} value={language.code}>
-                                {language.name}
-                            </option>)
-                        }
-                    </Select>
-                    : <ListItemButton sx={{
-                        minHeight: 48,
-                        justifyContent: 'center',
-                        px: 2.5,
-                    }}>
-                        <Dropdown>
-                            <ListItemIcon onClick={e => setAnchorEl(e.currentTarget)} sx={{
-                                minWidth: 0,
-                                mr: 'auto',
-                                justifyContent: 'center',
-                            }}>
-                                <Translate />
-                            </ListItemIcon>
-                            <Menu open={!!anchorEl}
-                                  anchorEl={anchorEl}
-                                  onClose={() => setAnchorEl(null)}
-                                  onClick={() => setAnchorEl(null)}
-                                  transformOrigin={{ horizontal: 'left', vertical: 'bottom' }}
-                                  anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}>
-                                {Object.values(languages || {}).map(language =>
-                                    <MenuItem key={language.code} onClick={() => onSetLanguage(language.code)}>
-                                        {language.name}
-                                    </MenuItem>)
-                                }
-                            </Menu>
-                        </Dropdown>
-                    </ListItemButton>
-                }
-            </ListItem>
-        </StyledDrawer>
-        <Box component="main" sx={{flexGrow: 1, p: 1}}>
-            {props.children}
+        <Box sx={{ display: 'flex' }} {...other}>
+            <StyledDrawer variant={"permanent"} open={drawerOpen}>
+                <DrawerHeader>
+                    {drawerOpen && <>
+                        <img src={"/img/icons/logo.png"} alt={"Logo"} />
+                        <span>WebBase</span>
+                    </>}
+                    <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
+                        {drawerOpen ? <ChevronLeftIcon/> : <ChevronRightIcon/>}
+                    </IconButton>
+                </DrawerHeader>
+                <Divider/>
+                <ListItem sx={{display: 'block'}}>
+                    <Box sx={{opacity: drawerOpen ? 1 : 0}}>{L("account.logged_in_as")}:</Box>
+                    <ProfileLink to={"/admin/profile"}>
+                        <ProfilePicture user={api.user}/>
+                        {drawerOpen && <span>{api.user?.name || L("account.not_logged_in")}</span>}
+                    </ProfileLink>
+                </ListItem>
+                <Divider/>
+                <List>
+                    {li}
+                </List>
+                <Divider/>
+                <ListItem sx={{display: 'block'}}>
+                    { drawerOpen ?
+                        <Select native value={currentLocale} size={"small"} fullWidth={true}
+                                onChange={e => onSetLanguage(e.target.value)}>
+                            {Object.values(languages || {}).map(language =>
+                                <option key={language.code} value={language.code}>
+                                    {language.name}
+                                </option>)
+                            }
+                        </Select>
+                        : <ListItemButton sx={{
+                            minHeight: 48,
+                            justifyContent: 'center',
+                            px: 2.5,
+                        }}>
+                            <Dropdown>
+                                <ListItemIcon onClick={e => setAnchorEl(e.currentTarget)} sx={{
+                                    minWidth: 0,
+                                    mr: 'auto',
+                                    justifyContent: 'center',
+                                }}>
+                                    <Translate />
+                                </ListItemIcon>
+                                <Menu open={!!anchorEl}
+                                      anchorEl={anchorEl}
+                                      onClose={() => setAnchorEl(null)}
+                                      onClick={() => setAnchorEl(null)}
+                                      transformOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+                                      anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}>
+                                    {Object.values(languages || {}).map(language =>
+                                        <MenuItem key={language.code} onClick={() => onSetLanguage(language.code)}>
+                                            {language.name}
+                                        </MenuItem>)
+                                    }
+                                </Menu>
+                            </Dropdown>
+                        </ListItemButton>
+                    }
+                </ListItem>
+            </StyledDrawer>
+            <Box component="main" sx={{flexGrow: 1, p: 1}}>
+                {children}
+            </Box>
         </Box>
-    </Box>
+    </ThemeProvider>
 }

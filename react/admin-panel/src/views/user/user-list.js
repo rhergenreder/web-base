@@ -83,7 +83,7 @@ export default function UserListView(props) {
             columns={columnDefinitions}
             buttons={[{
                 key: "btn-create",
-                color: "primary",
+                color: "success",
                 startIcon: <Add />,
                 children: L("general.create_new"),
                 disabled: !api.hasPermission("user/create") && !api.hasPermission("user/invite"),

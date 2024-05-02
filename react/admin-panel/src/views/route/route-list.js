@@ -129,12 +129,12 @@ export default function RouteListView(props) {
                         startIcon={<Refresh />} onClick={() => onFetchRoutes(true)}>
                     {L("general.reload")}
                 </Button>
-                <Button variant={"outlined"} startIcon={<Add />} size={"small"}
+                <Button variant={"outlined"} color={"success"} startIcon={<Add />} size={"small"}
                         disabled={!props.api.hasPermission("routes/add")}
                         onClick={() => navigate("/admin/routes/new")} >
                     {L("general.add")}
                 </Button>
-                <Button variant={"outlined"} startIcon={<Cached />} size={"small"}
+                <Button variant={"outlined"} color={"info"} startIcon={<Cached />} size={"small"}
                         disabled={!props.api.hasPermission("routes/generateCache") || isGeneratingCache}
                         onClick={onRegenerateCache} >
                     {isGeneratingCache ? L("routes.regenerating_cache") + "…" : L("routes.regenerate_cache")}

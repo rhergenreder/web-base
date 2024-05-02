@@ -61,7 +61,7 @@ export default function GroupListView(props) {
             columns={columnDefinitions}
             buttons={[{
                 key: "btn-create-group",
-                color: "primary",
+                color: "success",
                 startIcon: <Add />,
                 onClick: () => navigate("/admin/group/new"),
                 disabled: !api.hasPermission("groups/create"),

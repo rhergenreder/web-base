@@ -8,7 +8,7 @@ import {LocaleContext} from "shared/locale";
 
 // views
 import View404 from "./views/404";
-import clsx from "clsx";
+import {createTheme, CssBaseline, ThemeProvider} from "@mui/material";
 const Overview = lazy(() => import('./views/overview'));
 const UserListView = lazy(() => import('./views/user/user-list'));
 const UserEditView = lazy(() => import('./views/user/user-edit'));
@@ -58,25 +58,43 @@ export default function AdminDashboard(props) {
         hideDialog: hideDialog
     };
 
+    const lightTheme = createTheme({
+        palette: {
+            mode: 'light',
+        },
+    });
+
+    const darkTheme = createTheme({
+        palette: {
+            mode: 'dark',
+            background: {
+                paper: '#343a40',
+            },
+        },
+    });
+
     return <BrowserRouter>
-        <Sidebar {...controlObj}>
-            <Suspense fallback={<div>{L("general.loading")}... </div>}>
-                <Routes>
-                    <Route path={"/admin"} element={<Navigate to={"/admin/dashboard"} />}/>
-                    <Route path={"/admin/dashboard"} element={<Overview {...controlObj} />}/>
-                    <Route path={"/admin/users"} element={<UserListView {...controlObj} />}/>
-                    <Route path={"/admin/user/:userId"} element={<UserEditView {...controlObj} />}/>
-                    <Route path={"/admin/groups"} element={<GroupListView {...controlObj} />}/>
-                    <Route path={"/admin/group/:groupId"} element={<EditGroupView {...controlObj} />}/>
-                    <Route path={"/admin/logs"} element={<LogView {...controlObj} />}/>
-                    <Route path={"/admin/permissions"} element={<AccessControlList {...controlObj} />}/>
-                    <Route path={"/admin/routes"} element={<RouteListView {...controlObj} />}/>
-                    <Route path={"/admin/routes/:routeId"} element={<RouteEditView {...controlObj} />}/>
-                    <Route path={"/admin/settings"} element={<SettingsView {...controlObj} />}/>
-                    <Route path={"/admin/profile"} element={<ProfileView {...controlObj} />}/>
-                    <Route path={"*"} element={<View404 />} />
-                </Routes>
-            </Suspense>
+        <Sidebar theme={darkTheme} {...controlObj}>
+            <ThemeProvider theme={lightTheme}>
+                <CssBaseline />
+                <Suspense fallback={<div>{L("general.loading")}... </div>}>
+                    <Routes>
+                        <Route path={"/admin"} element={<Navigate to={"/admin/dashboard"} />}/>
+                        <Route path={"/admin/dashboard"} element={<Overview {...controlObj} />}/>
+                        <Route path={"/admin/users"} element={<UserListView {...controlObj} />}/>
+                        <Route path={"/admin/user/:userId"} element={<UserEditView {...controlObj} />}/>
+                        <Route path={"/admin/groups"} element={<GroupListView {...controlObj} />}/>
+                        <Route path={"/admin/group/:groupId"} element={<EditGroupView {...controlObj} />}/>
+                        <Route path={"/admin/logs"} element={<LogView {...controlObj} />}/>
+                        <Route path={"/admin/permissions"} element={<AccessControlList {...controlObj} />}/>
+                        <Route path={"/admin/routes"} element={<RouteListView {...controlObj} />}/>
+                        <Route path={"/admin/routes/:routeId"} element={<RouteEditView {...controlObj} />}/>
+                        <Route path={"/admin/settings"} element={<SettingsView {...controlObj} />}/>
+                        <Route path={"/admin/profile"} element={<ProfileView {...controlObj} />}/>
+                        <Route path={"*"} element={<View404 />} />
+                    </Routes>
+                </Suspense>
+            </ThemeProvider>
             <Footer info={info} />
         </Sidebar>
         <Dialog {...dialog}/>

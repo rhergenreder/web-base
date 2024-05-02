@@ -274,7 +274,7 @@ export default function EditGroupView(props) {
                         ]}
                         buttons={[{
                             key: "btn-add-member",
-                            color: "primary",
+                            color: "success",
                             startIcon: <Add />,
                             disabled: !api.hasPermission("groups/addMember"),
                             children: L("general.add"),

@@ -231,10 +231,10 @@ export default function AccessControlList(props) {
                 </Box>
                 <ButtonBar mb={2}>
                     <Button variant={"outlined"} color={"primary"} size={"small"}
-                            startIcon={<Refresh/>} onClick={() => onFetchACL(true)}>
+                            startIcon={<Refresh />} onClick={() => onFetchACL(true)}>
                         {L("general.reload")}
                     </Button>
-                    <Button variant={"outlined"} startIcon={<Add/>} size={"small"}
+                    <Button variant={"outlined"} startIcon={<Add />} size={"small"} color={"success"}
                             disabled={!props.api.hasGroup(USER_GROUP_ADMIN)}
                             onClick={() => setDialogData({
                                 open: true,

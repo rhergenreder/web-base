@@ -18,6 +18,7 @@ import ChangePasswordBox from "./change-password-box";
 import GpgBox from "./gpg-box";
 import MultiFactorBox from "./mfa-box";
 import EditProfilePicture from "./edit-picture";
+import ViewContent from "../../elements/view-content";
 
 export default function ProfileView(props) {
 
@@ -78,24 +79,10 @@ export default function ProfileView(props) {
     }, [profile, changePassword, api, showDialog, isSaving]);
 
     return <>
-        <div className={"content-header"}>
-            <div className={"container-fluid"}>
-                <div className={"row mb-2"}>
-                    <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>
-                            {L("account.edit_profile")}
-                        </h1>
-                    </div>
-                    <div className={"col-sm-6"}>
-                        <ol className={"breadcrumb float-sm-right"}>
-                            <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">{L("account.profile")}</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <Box>
+        <ViewContent title={L("account.edit_profile")} path={[
+            <Link key={"home"} to={"/admin/dashboard"}>Home</Link>,
+            <span key={"profile"}>{L("account.profile")}</span>
+        ]}>
             <Box display={"grid"} gridTemplateColumns={"300px auto"}>
                 <EditProfilePicture api={api} showDialog={showDialog} setProfile={setProfile}
                                     profile={profile} setDialogData={setDialogData} />
@@ -104,9 +91,9 @@ export default function ProfileView(props) {
                         <FormLabel>{L("account.username")}</FormLabel>
                         <FormControl>
                             <TextField variant={"outlined"}
-                                size={"small"}
-                                value={profile.name}
-                                onChange={e => setProfile({...profile, name: e.target.value })} />
+                                       size={"small"}
+                                       value={profile.name}
+                                       onChange={e => setProfile({...profile, name: e.target.value })} />
                         </FormControl>
                     </SpacedFormGroup>
                     <SpacedFormGroup>
@@ -148,14 +135,13 @@ export default function ProfileView(props) {
 
             <Box mt={2}>
                 <Button variant={"outlined"} color={"primary"}
-                    disabled={isSaving || !api.hasPermission("user/updateProfile")}
-                    startIcon={isSaving ? <CircularProgress size={12} /> : <Save />}
-                    onClick={onUpdateProfile}>
-                        {isSaving ? L("general.saving") + "…" : L("general.save")}
+                        disabled={isSaving || !api.hasPermission("user/updateProfile")}
+                        startIcon={isSaving ? <CircularProgress size={12} /> : <Save />}
+                        onClick={onUpdateProfile}>
+                    {isSaving ? L("general.saving") + "…" : L("general.save")}
                 </Button>
             </Box>
-        </Box>
-
+        </ViewContent>
         <Dialog show={dialogData.show}
                 title={dialogData.title}
                 message={dialogData.message}

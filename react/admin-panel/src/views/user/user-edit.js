@@ -3,7 +3,7 @@ import {useCallback, useContext, useEffect, useState} from "react";
 import {CircularProgress} from "@mui/material";
 import {LocaleContext} from "shared/locale";
 import * as React from "react";
-
+import ViewContent from "../../elements/view-content";
 
 export default function UserEditView(props) {
 
@@ -56,34 +56,11 @@ export default function UserEditView(props) {
         return <CircularProgress />
     }
 
-    return <div className={"content-header"}>
-        <div className={"container-fluid"}>
-            <ol className={"breadcrumb"}>
-                <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                <li className="breadcrumb-item active"><Link to={"/admin/users"}>User</Link></li>
-                <li className="breadcrumb-item active">{ isNewUser ? "New" : "Edit" }</li>
-            </ol>
-        </div>
-        <div className={"content"}>
-            <div className={"container-fluid"}>
-                <h3>{L(isNewUser ? "Create new User" : "Edit User")}</h3>
-                <div className={"col-sm-12 col-lg-6"}>
-                    <div className={"row"}>
-                        <div className={"col-sm-6 form-group"}>
-                            <label htmlFor={"username"}>{L("account.username")}</label>
-                            <input type={"text"} className={"form-control"} placeholder={L("account.username")}
-                                   name={"username"} id={"username"} maxLength={32} value={user.name}
-                                   onChange={(e) => setUser({...user, name: e.target.value})}/>
-                        </div>
-                        <div className={"col-sm-6 form-group"}>
-                            <label htmlFor={"fullName"}>{L("account.full_name")}</label>
-                            <input type={"text"} className={"form-control"} placeholder={L("account.full_name")}
-                                   name={"fullName"} id={"fullName"} maxLength={32} value={user.fullName}
-                                   onChange={(e) => setUser({...user, fullName: e.target.value})}/>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    return <ViewContent title={L(isNewUser ? "account.new_user" : "account.edit_user")} path={[
+        <Link key={"dashboard"} to={"/admin/dashboard"}>Home</Link>,
+        <Link key={"users"} to={"/admin/users"}>User</Link>,
+        <span key={"action"}>{isNewUser ? "New" : "Edit"}</span>
+    ]}>
+
+    </ViewContent>
 }

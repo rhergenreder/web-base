@@ -6,6 +6,7 @@ import {Box, Button, Select, TextField, Table, TableBody, TableCell, TableHead, 
 import {formatDate, formatDateTime} from "../util";
 import {isNumber} from "chart.js/helpers";
 import {ArrowUpward, ArrowDownward, Refresh} from "@mui/icons-material";
+import TableBodyStriped from "./table-body-striped";
 
 
 export function DataTable(props) {
@@ -135,9 +136,9 @@ export function DataTable(props) {
                         { headerRow }
                     </TableRow>
                 </TableHead>
-                <TableBody>
+                <TableBodyStriped>
                     { rows }
-                </TableBody>
+                </TableBodyStriped>
             </Table>
         {pagination && pagination.renderPagination(L, numRows)}
     </Box>

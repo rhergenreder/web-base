@@ -57,6 +57,7 @@ return [
   "group" => "Group",
   "no_members" => "No members in this group",
   "edit_profile" => "Edit Profile",
+  "user_list_placeholder" => "No users to display",
 
   # profile picture
   "change_picture" => "Change profile picture",

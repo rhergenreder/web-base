@@ -12,7 +12,7 @@ import {
 import {Chip} from "@mui/material";
 import {Edit, Add} from "@mui/icons-material";
 import usePagination from "shared/hooks/pagination";
-
+import ViewContent from "../../elements/view-content";
 
 export default function UserListView(props) {
 
@@ -69,43 +69,25 @@ export default function UserListView(props) {
         ]),
     ];
 
-    return <>
-        <div className={"content-header"}>
-            <div className={"container-fluid"}>
-                <div className={"row mb-2"}>
-                    <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>{L("account.users")}</h1>
-                    </div>
-                    <div className={"col-sm-6"}>
-                        <ol className={"breadcrumb float-sm-right"}>
-                            <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">{L("account.users")}</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div className={"content"}>
-            <div className={"container-fluid"}>
-
-                <DataTable
-                    data={users}
-                    pagination={pagination}
-                    defaultSortOrder={"asc"}
-                    defaultSortColumn={0}
-                    className={"table table-striped"}
-                    fetchData={onFetchUsers}
-                    placeholder={"No users to display"}
-                    columns={columnDefinitions}
-                    buttons={[{
-                        key: "btn-create",
-                        color: "primary",
-                        startIcon: <Add />,
-                        children: L("general.create_new"),
-                        disabled: !api.hasPermission("user/create") && !api.hasPermission("user/invite"),
-                        onClick: () => navigate("/admin/user/new")
-                    }]}/>
-            </div>
-        </div>
-    </>
+    return <ViewContent title={L("account.users")} path={[
+        <Link key={"home"} to={"/admin/dashboard"}>Home</Link>,
+        <span key={"users"}>{L("account.users")}</span>
+    ]}>
+        <DataTable
+            data={users}
+            pagination={pagination}
+            defaultSortOrder={"asc"}
+            defaultSortColumn={0}
+            fetchData={onFetchUsers}
+            placeholder={L("account.user_list_placeholder")}
+            columns={columnDefinitions}
+            buttons={[{
+                key: "btn-create",
+                color: "primary",
+                startIcon: <Add />,
+                children: L("general.create_new"),
+                disabled: !api.hasPermission("user/create") && !api.hasPermission("user/invite"),
+                onClick: () => navigate("/admin/user/new")
+            }]}/>
+    </ViewContent>
 }

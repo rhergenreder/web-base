@@ -46,7 +46,7 @@ export default function ChangePasswordBox(props) {
                            onChange={e => setChangePassword({...changePassword, confirm: e.target.value })} />
             </FormControl>
         </SpacedFormGroup>
-        <Box className={"w-50"}>
+        <Box sx={{width: "30%", minWidth: 300}}>
             <PasswordStrength password={changePassword.new} minLength={6} />
         </Box>
     </CollapseBox>

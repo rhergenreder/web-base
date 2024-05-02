@@ -55,6 +55,9 @@ return [
   "redis_host" => "Redis Host",
   "redis_port" => "Redis Port",
   "redis_password" => "Redis Passwort",
+  "redis_test" => "Verbindung testen",
+  "redis_test_error" => "Redis-Verbindung fehlgeschlagen, überprüfen Sie die Daten.",
+  "redis_test_success" => "Redis-Verbindung erfolgreich aufgebaut.",
 
   # dialog
   "fetch_settings_error" => "Fehler beim Holen der Einstellungen",

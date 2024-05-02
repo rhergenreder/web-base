@@ -17,7 +17,7 @@ import {
 import {Link} from "react-router-dom";
 import {
     Add,
-    Delete,
+    Delete, DownloadDone,
     LibraryBooks,
     Mail,
     RestartAlt,
@@ -33,6 +33,7 @@ import SettingsNumberInput from "./input-number";
 import SettingsPasswordInput from "./input-password";
 import SettingsTextInput from "./input-text";
 import SettingsSelection from "./input-selection";
+import ViewContent from "../../elements/view-content";
 
 export default function SettingsView(props) {
 
@@ -197,6 +198,16 @@ export default function SettingsView(props) {
         }
     }, [api, showDialog, testMailAddress, isSending]);
 
+    const onTestRedis = useCallback(data => {
+        api.testRedis().then(data => {
+            if (!data.success) {
+                showDialog(data.msg, L("settings.redis_test_error"));
+            } else {
+                showDialog(L("settings.redis_test_success"), L("general.success"));
+            }
+        });
+    }, [api, showDialog]);
+
     const onReset = useCallback(() => {
         setFetchSettings(true);
         setNewKey("");
@@ -266,7 +277,8 @@ export default function SettingsView(props) {
                                 <Button startIcon={isSending ? <CircularProgress size={14} /> : <Send />}
                                         variant={"outlined"} onClick={onSendTestMail}
                                         fullWidth={true}
-                                        disabled={!settings.mail_enabled || isSending || !api.hasPermission("mail/test")}>
+                                        disabled={!settings.mail_enabled || isSending || !api.hasPermission("mail/test") || hasChanged}
+                                        title={hasChanged ? L("general.unsaved_changes") : ""}>
                                     {isSending ? L("general.sending") + "…" : L("general.send")}
                                 </Button>
                             </Grid>
@@ -300,6 +312,12 @@ export default function SettingsView(props) {
                 renderTextInput("redis_host", !settings.rate_limiting_enabled),
                 renderNumberInput("redis_port", 1, 65535, !settings.rate_limiting_enabled),
                 renderPasswordInput("redis_password", !settings.rate_limiting_enabled),
+                <Button startIcon={<DownloadDone />}
+                        variant={"outlined"} onClick={onTestRedis}
+                        disabled={!settings.rate_limiting_enabled || !api.hasPermission("testRedis") || hasChanged}
+                        title={hasChanged ? L("general.unsaved_changes") : ""}>
+                    {L("settings.redis_test")}
+                </Button>
             ];
         } else if (selectedTab === "uncategorized") {
             return <TableContainer component={Paper}>
@@ -357,57 +375,42 @@ export default function SettingsView(props) {
         return <CircularProgress />
     }
 
-    return <>
-        <div className={"content-header"}>
-            <div className={"container-fluid"}>
-                <div className={"row mb-2"}>
-                    <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>{L("settings.title")}</h1>
-                    </div>
-                    <div className={"col-sm-6"}>
-                        <ol className={"breadcrumb float-sm-right"}>
-                            <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">{L("settings.title")}</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div className={"content"}>
-            <Tabs value={selectedTab} onChange={(e, v) => setSelectedTab(v)} component={Paper}>
-                <Tab value={"general"} label={L("settings.general")}
-                     icon={<SettingsApplications />} iconPosition={"start"} />
-                <Tab value={"mail"} label={L("settings.mail")}
-                     icon={<Mail />} iconPosition={"start"} />
-                <Tab value={"captcha"} label={L("settings.captcha")}
-                     icon={<SmartToy />} iconPosition={"start"} />
-                <Tab value={"redis"} label={L("settings.rate_limit")}
-                     icon={<Storage />} iconPosition={"start"} />
-                <Tab value={"uncategorized"} label={L("settings.uncategorized")}
-                     icon={<LibraryBooks />} iconPosition={"start"} />
-            </Tabs>
-            <Box p={2}>
+    return <ViewContent title={L("settings.title")} path={[
+        <Link key={"home"} to={"/admin/dashboard"}>Home</Link>,
+        <span key={"settings"}>{L("settings.title")}</span>,
+    ]}>
+        <Tabs value={selectedTab} onChange={(e, v) => setSelectedTab(v)} component={Paper}>
+            <Tab value={"general"} label={L("settings.general")}
+                 icon={<SettingsApplications />} iconPosition={"start"} />
+            <Tab value={"mail"} label={L("settings.mail")}
+                 icon={<Mail />} iconPosition={"start"} />
+            <Tab value={"captcha"} label={L("settings.captcha")}
+                 icon={<SmartToy />} iconPosition={"start"} />
+            <Tab value={"redis"} label={L("settings.rate_limit")}
+                 icon={<Storage />} iconPosition={"start"} />
+            <Tab value={"uncategorized"} label={L("settings.uncategorized")}
+                 icon={<LibraryBooks />} iconPosition={"start"} />
+        </Tabs>
+        <Box p={2}>
             {
                 renderTab()
             }
-            </Box>
-            <ButtonBar>
-                <Button color={"primary"}
-                        onClick={onSaveSettings}
-                        disabled={isSaving || !api.hasPermission("settings/set")}
-                        startIcon={isSaving ? <CircularProgress size={14} /> : <Save />}
-                        variant={"outlined"} title={L(hasChanged ? "general.unsaved_changes" : "general.save")}>
-                    {isSaving ? L("general.saving") + "…" : (L("general.save") + (hasChanged ? " *" : ""))}
-                </Button>
-                <Button color={"secondary"}
-                        onClick={onReset}
-                        disabled={isSaving}
-                        startIcon={<RestartAlt />}
-                        variant={"outlined"} title={L("general.reset")}>
-                    {L("general.reset")}
-                </Button>
-            </ButtonBar>
-        </div>
-    </>
-
+        </Box>
+        <ButtonBar>
+            <Button color={"primary"}
+                    onClick={onSaveSettings}
+                    disabled={isSaving || !api.hasPermission("settings/set")}
+                    startIcon={isSaving ? <CircularProgress size={14} /> : <Save />}
+                    variant={"outlined"} title={L(hasChanged ? "general.unsaved_changes" : "general.save")}>
+                {isSaving ? L("general.saving") + "…" : (L("general.save") + (hasChanged ? " *" : ""))}
+            </Button>
+            <Button color={"secondary"}
+                    onClick={onReset}
+                    disabled={isSaving}
+                    startIcon={<RestartAlt />}
+                    variant={"outlined"} title={L("general.reset")}>
+                {L("general.reset")}
+            </Button>
+        </ButtonBar>
+    </ViewContent>
 }

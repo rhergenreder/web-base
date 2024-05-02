@@ -11,6 +11,7 @@ import * as React from "react";
 import RouteForm from "./route-form";
 import {KeyboardArrowLeft, Save} from "@mui/icons-material";
 import ButtonBar from "../../elements/button-bar";
+import ViewContent from "../../elements/view-content";
 
 const MonoSpaceTextField = styled(TextField)((props) => ({
     "& input": {
@@ -113,42 +114,35 @@ export default function RouteEditView(props) {
         return <CircularProgress/>
     }
 
-    return <div className={"content-header"}>
-        <div className={"container-fluid"}>
-            <ol className={"breadcrumb"}>
-                <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                <li className="breadcrumb-item active"><Link to={"/admin/routes"}>{L("routes.title")}</Link></li>
-                <li className="breadcrumb-item active">{isNewRoute ? L("general.new") : L("general.edit")}</li>
-            </ol>
-        </div>
-        <div className={"content"}>
-            <div className={"container-fluid"}>
-                <h3>{L(isNewRoute ? "routes.create_route_title" : "routes.edit_route_title")}</h3>
-            </div>
-        </div>
-        <RouteForm route={route} setRoute={setRoute} />
-        <ButtonBar mt={2}>
-            <Button startIcon={<KeyboardArrowLeft />}
-                    variant={"outlined"}
-                    onClick={() => navigate("/admin/routes")}>
-                {L("general.cancel")}
-            </Button>
-            <Button startIcon={isSaving ? <CircularProgress size={14} /> : <Save />}
-                    color={"primary"}
-                    variant={"outlined"}
-                    disabled={isSaving}
-                    onClick={onSave}>
-                {isSaving ? L("general.saving") + "…" : L("general.save")}
-            </Button>
-        </ButtonBar>
-        <Box mt={3}>
-            <h5>{L("routes.validate_route")}</h5>
-            <MonoSpaceTextField value={routeTest} onChange={e => setRouteTest(e.target.value)}
-                variant={"outlined"} size={"small"} fullWidth={true}
-                placeholder={L("routes.validate_route_placeholder") + "…"} />
-            <pre>
-                Match: {JSON.stringify(routeTestResult)}
-            </pre>
-        </Box>
-    </div>
+    return <ViewContent title={L(isNewRoute ? "routes.create_route_title" : "routes.edit_route_title")}
+        path={[
+            <Link key={"home"} to={"/admin/dashboard"}>Home</Link>,
+            <Link key={"routes"} to={"/admin/routes"}>{L("routes.title")}</Link>,
+            <span key={"action"}>{isNewRoute ? L("general.new") : L("general.edit")}</span>,
+        ]}>
+            <RouteForm route={route} setRoute={setRoute} />
+            <ButtonBar mt={2}>
+                <Button startIcon={<KeyboardArrowLeft />}
+                        variant={"outlined"}
+                        onClick={() => navigate("/admin/routes")}>
+                    {L("general.cancel")}
+                </Button>
+                <Button startIcon={isSaving ? <CircularProgress size={14} /> : <Save />}
+                        color={"primary"}
+                        variant={"outlined"}
+                        disabled={isSaving}
+                        onClick={onSave}>
+                    {isSaving ? L("general.saving") + "…" : L("general.save")}
+                </Button>
+            </ButtonBar>
+            <Box mt={3}>
+                <h5>{L("routes.validate_route")}</h5>
+                <MonoSpaceTextField value={routeTest} onChange={e => setRouteTest(e.target.value)}
+                                    variant={"outlined"} size={"small"} fullWidth={true}
+                                    placeholder={L("routes.validate_route_placeholder") + "…"} />
+                <pre>
+                    Match: {JSON.stringify(routeTestResult)}
+                </pre>
+            </Box>
+    </ViewContent>
 }

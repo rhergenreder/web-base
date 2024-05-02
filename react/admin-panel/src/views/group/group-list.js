@@ -4,6 +4,7 @@ import {LocaleContext} from "shared/locale";
 import {ControlsColumn, DataTable, NumericColumn, StringColumn} from "shared/elements/data-table";
 import {Add, Edit} from "@mui/icons-material";
 import usePagination from "shared/hooks/pagination";
+import ViewContent from "../../elements/view-content";
 
 
 export default function GroupListView(props) {
@@ -46,42 +47,25 @@ export default function GroupListView(props) {
         ]),
     ];
 
-    return <>
-        <div className={"content-header"}>
-            <div className={"container-fluid"}>
-                <div className={"row mb-2"}>
-                    <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>{L("account.groups")}</h1>
-                    </div>
-                    <div className={"col-sm-6"}>
-                        <ol className={"breadcrumb float-sm-right"}>
-                            <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">{L("account.groups")}</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-            <div className={"content"}>
-                <div className={"container-fluid"}>
-                    <DataTable
-                        data={groups}
-                        pagination={pagination}
-                        defaultSortOrder={"asc"}
-                        defaultSortColumn={0}
-                        className={"table table-striped"}
-                        fetchData={onFetchGroups}
-                        placeholder={"No groups to display"}
-                        columns={columnDefinitions}
-                        buttons={[{
-                            key: "btn-create-group",
-                            color: "primary",
-                            startIcon: <Add />,
-                            onClick: () => navigate("/admin/group/new"),
-                            disabled: !api.hasPermission("groups/create"),
-                            children: L("general.create_new")
-                        }]}/>
-                </div>
-            </div>
-        </div>
-    </>
+    return <ViewContent title={L("account.groups")} path={[
+        <Link key={"home"} to={"/admin/dashboard"}>Home</Link>,
+        <span key={"groups"} >{L("account.groups")}</span>,
+    ]}>
+        <DataTable
+            data={groups}
+            pagination={pagination}
+            defaultSortOrder={"asc"}
+            defaultSortColumn={0}
+            fetchData={onFetchGroups}
+            placeholder={"No groups to display"}
+            columns={columnDefinitions}
+            buttons={[{
+                key: "btn-create-group",
+                color: "primary",
+                startIcon: <Add />,
+                onClick: () => navigate("/admin/group/new"),
+                disabled: !api.hasPermission("groups/create"),
+                children: L("general.create_new")
+            }]}/>
+    </ViewContent>
 }

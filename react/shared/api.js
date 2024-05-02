@@ -425,4 +425,9 @@ export default class API {
             since: since, severity: severity, query: query
         });
     }
+
+    /** Redis **/
+    async testRedis() {
+        return this.apiCall("testRedis");
+    }
 };

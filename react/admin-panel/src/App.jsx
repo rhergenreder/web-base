@@ -1,9 +1,8 @@
 import React, {useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import API from "shared/api";
-import Icon from "shared/elements/icon";
 import LoginForm from "shared/views/login";
 import {Alert} from "@mui/lab";
-import {Button} from "@mui/material";
+import {Button, CircularProgress} from "@mui/material";
 import {LocaleContext} from "shared/locale";
 import AdminDashboard from "./AdminDashboard";
 
@@ -103,7 +102,7 @@ export default function App() {
                 </Button>
             </Alert>
         } else {
-            return <b>{L("general.loading")}… <Icon icon={"spinner"}/></b>
+            return <b>{L("general.loading")}… <CircularProgress /></b>
         }
     } else if (!user || !api.loggedIn || (api.user.twoFactorToken?.confirmed && !api.user.twoFactorToken.authenticated)) {
         return <LoginForm api={api} info={info} onLogin={fetchUser} onLogout={onLogout} />

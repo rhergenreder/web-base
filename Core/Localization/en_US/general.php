@@ -83,4 +83,8 @@ return [
   "datefns_time_format_precise" => "pp",
   "datefns_datetime_format" => "MM/dd/yyyy p",
   "datefns_datetime_format_precise" => "MM/dd/yyyy pp",
+
+  # localization
+  "error_language_fetch" => "Error fetching languages",
+  "error_language_set" => "Error setting language",
 ];

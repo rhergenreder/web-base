@@ -55,6 +55,9 @@ return [
   "redis_host" => "Redis host",
   "redis_port" => "Redis port",
   "redis_password" => "Redis password",
+  "redis_test" => "Test Connection",
+  "redis_test_error" => "Redis Connection failed, check your credentials.",
+  "redis_test_success" => "Redis Connection successfully established.",
 
   # dialog
   "fetch_settings_error" => "Error fetching settings",

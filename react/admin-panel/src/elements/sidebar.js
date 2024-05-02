@@ -1,30 +1,107 @@
-import React, {useCallback, useContext} from 'react';
-import {Link, NavLink} from "react-router-dom";
-import Icon from "shared/elements/icon";
+import React, {useCallback, useContext, useEffect, useState} from 'react';
+import {Link, useNavigate} from "react-router-dom";
 import {LocaleContext} from "shared/locale";
-import {styled} from "@mui/material";
+import {
+    Box, CssBaseline, Divider,
+    IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
+    Select, Drawer,
+    styled, MenuItem, Menu,
+} from "@mui/material";
+import { Dropdown } from '@mui/base/Dropdown';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ProfilePicture from "shared/elements/profile-picture";
+import {Dns, Groups, People, QueryStats, Security, Settings, Route, ArrowBack, Translate} from "@mui/icons-material";
+import useCurrentPath from "shared/hooks/current-path";
+
+const drawerWidth = 240;
 
 const ProfileLink = styled(Link)((props) => ({
     "& > div": {
-        padding: 3,
+        width: 30,
+        height: 30,
+        justifySelf: "center",
+    },
+    color: "inherit",
+    fontWeight: "bold",
+    marginTop: props.theme.spacing(1),
+    display: "grid",
+    gridTemplateColumns: "35px auto",
+    "& > span": {
+        alignSelf: "center",
+        marginLeft: props.theme.spacing(1)
+    },
+}));
+
+const DrawerHeader = styled('div')(({ theme }) => ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: "flex-start",
+    padding: theme.spacing(0, 1),
+    ...theme.mixins.toolbar,
+    "& > button": {
+        display: 'flex',
+        marginLeft: "auto",
+    },
+    "& > img": {
         width: 30,
         height: 30,
     },
-    marginLeft: props.theme.spacing(1),
-    marginTop: props.theme.spacing(1),
-    display: "grid",
-    gridTemplateColumns: "45px auto",
     "& > span": {
-        alignSelf: "center"
+        marginLeft: theme.spacing(2),
+        fontSize: "1.5em",
     }
 }));
+
+const openedMixin = (theme) => ({
+    width: drawerWidth,
+    transition: theme.transitions.create('width', {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.enteringScreen,
+    }),
+    overflowX: 'hidden',
+});
+
+const closedMixin = (theme) => ({
+    transition: theme.transitions.create('width', {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.leavingScreen,
+    }),
+    overflowX: 'hidden',
+    width: `calc(${theme.spacing(7)} + 1px)`,
+    [theme.breakpoints.up('sm')]: {
+        width: `calc(${theme.spacing(8)} + 1px)`,
+    },
+});
+
+const StyledDrawer = styled(Drawer, { shouldForwardProp: (prop) => prop !== 'open' })(
+    ({ theme, open }) => ({
+        width: drawerWidth,
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+        boxSizing: 'border-box',
+        ...(open && {
+            ...openedMixin(theme),
+            '& .MuiDrawer-paper': openedMixin(theme),
+        }),
+        ...(!open && {
+            ...closedMixin(theme),
+            '& .MuiDrawer-paper': closedMixin(theme),
+        }),
+    }),
+);
 
 export default function Sidebar(props) {
 
     const api = props.api;
     const showDialog = props.showDialog;
-    const {translate: L} = useContext(LocaleContext);
+    const {translate: L, currentLocale, setLanguageByCode} = useContext(LocaleContext);
+    const [languages, setLanguages] = useState(null);
+    const [fetchLanguages, setFetchLanguages] = useState(true);
+    const [drawerOpen, setDrawerOpen] = useState(window.screen.width >= 1000);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const navigate = useNavigate();
+    const currentPath = useCurrentPath();
 
     const onLogout = useCallback(() => {
         api.logout().then(obj => {
@@ -36,99 +113,156 @@ export default function Sidebar(props) {
         });
     }, [api, showDialog]);
 
+    const onSetLanguage = useCallback((code) => {
+        setLanguageByCode(api, code).then((res) => {
+            if (!res.success) {
+                showDialog(res.msg, L("general.error_language_set"));
+            }
+        });
+    }, [api, showDialog]);
+
+    const onFetchLanguages = useCallback((force = false) => {
+        if (force || fetchLanguages) {
+            setFetchLanguages(false);
+            api.getLanguages().then((res) => {
+                if (res.success) {
+                    setLanguages(res.languages);
+                } else {
+                    setLanguages({});
+                    showDialog(res.msg, L("general.error_language_fetch"));
+                }
+            });
+        }
+    }, [api, fetchLanguages, showDialog]);
+
+    useEffect(() => {
+        onFetchLanguages();
+    }, []);
+
     const menuItems = {
         "dashboard": {
             "name": "admin.dashboard",
-            "icon": "tachometer-alt"
+            "icon": <QueryStats />
         },
         "users": {
             "name": "admin.users",
-            "icon": "users"
+            "icon": <People />
         },
         "groups": {
             "name": "admin.groups",
-            "icon": "users-cog"
+            "icon": <Groups />
         },
         "routes": {
             "name": "admin.page_routes",
-            "icon": "copy",
+            "icon": <Route />
         },
         "settings": {
             "name": "admin.settings",
-            "icon": "tools"
+            "icon": <Settings />
         },
         "permissions": {
             "name": "admin.acl",
-            "icon": "door-open"
+            "icon": <Security />
         },
         "logs": {
             "name": "admin.logs",
-            "icon": "file-medical-alt"
-        },
-        "help": {
-            "name": "admin.help",
-            "icon": "question-circle"
+            "icon": <Dns />
         },
     };
-    
-    let li = [];
-    for (let id in menuItems) {
-        let obj = menuItems[id];
-        const badge = (obj.badge ? <span className={"right badge badge-" + obj.badge.type}>{obj.badge.value}</span> : <></>);
 
-        li.push(
-            <li key={id} className={"nav-item"}>
-                <NavLink to={"/admin/" + id} className={"nav-link"}>
-                    <Icon icon={obj.icon} className={"nav-icon"} /><p>{L(obj.name)}{badge}</p>
-                </NavLink>
-            </li>
-        );
+    const NavbarItem = (props) => <ListItem disablePadding sx={{ display: 'block' }}>
+        <ListItemButton onClick={props.onClick} selected={props.active} sx={{
+                    minHeight: 48,
+                    justifyContent: drawerOpen ? 'initial' : 'center',
+                    px: 2.5,
+                }}>
+            <ListItemIcon sx={{
+                    minWidth: 0,
+                    mr: drawerOpen ? 2 : 'auto',
+                    justifyContent: 'center',
+                }}>
+                {props.icon}
+            </ListItemIcon>
+            <ListItemText primary={L(props.name)} sx={{ display: drawerOpen ? "block" : "none" }} />
+        </ListItemButton>
+    </ListItem>
+
+    let li = [];
+    for (const [id, menuItem] of Object.entries(menuItems)) {
+        const match= /^\/admin\/(.*)$/.exec(currentPath);
+        const active = match?.length >= 2 && match[1] === id;
+        li.push(<NavbarItem key={id} {...menuItem} active={active} onClick={() => navigate(`/admin/${id}`)} />);
     }
 
-    li.push(<li className={"nav-item"} key={"logout"}>
-        <a href={"#"} onClick={() => onLogout()} className={"nav-link"}>
-            <Icon icon={"arrow-left"} className={"nav-icon"} />
-            <p>{L("general.logout")}</p>
-        </a>
-    </li>);
+    li.push(<NavbarItem key={"logout"} name={"general.logout"} icon={<ArrowBack />} onClick={onLogout}/>);
 
-    return <>
-        <aside className={"main-sidebar sidebar-dark-primary elevation-4"}>
-            <Link href={"#"} className={"brand-link"} to={"/admin/dashboard"}>
-                <img src={"/img/icons/logo.png"} alt={"Logo"} className={"brand-image img-circle elevation-3"} style={{opacity: ".8"}} />
-                <span className={"brand-text font-weight-light ml-2"}>WebBase</span>
-            </Link>
-
-            <div className={"sidebar os-host os-theme-light os-host-overflow os-host-overflow-y os-host-resize-disabled os-host-scrollbar-horizontal-hidden os-host-transition"}>
-                {/* IDK what this is */}
-                <div className={"os-resize-observer-host"}>
-                    <div className={"os-resize-observer observed"} style={{left: "0px", right: "auto"}}/>
-                </div>
-                <div className={"os-size-auto-observer"} style={{height: "calc(100% + 1px)", float: "left"}}>
-                    <div className={"os-resize-observer observed"}/>
-                </div>
-                <div className={"os-content-glue"} style={{margin: "0px -8px"}}/>
-                <div className={"os-padding"}>
-                    <div className={"os-viewport os-viewport-native-scrollbars-invisible"} style={{right: "0px", bottom: "0px"}}>
-                        <div className={"os-content"} style={{padding: "0px 0px", height: "100%", width: "100%"}}>
-                            <div className="user-panel mt-3 pb-3 mb-3 d-flex">
-                                <div className="info">
-                                    <div className={"d-block text-light"}>{L("account.logged_in_as")}:</div>
-                                    <ProfileLink to={"/admin/profile"}>
-                                        <ProfilePicture user={api.user} />
-                                        <span>{api.user?.name || L("account.not_logged_in")}</span>
-                                    </ProfileLink>
-                                </div>
-                            </div>
-                            <nav className={"mt-2"}>
-                                <ul className={"nav nav-pills nav-sidebar flex-column"} data-widget={"treeview"} role={"menu"} data-accordion={"false"}>
-                                    {li}
-                                </ul>
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </aside>
-    </>
+    return <Box sx={{ display: 'flex' }}>
+        <CssBaseline />
+        <StyledDrawer variant={"permanent"} open={drawerOpen}>
+            <DrawerHeader>
+                {drawerOpen && <>
+                    <img src={"/img/icons/logo.png"} alt={"Logo"} />
+                    <span>WebBase</span>
+                </>}
+                <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
+                    {drawerOpen ? <ChevronLeftIcon/> : <ChevronRightIcon/>}
+                </IconButton>
+            </DrawerHeader>
+            <Divider/>
+            <ListItem sx={{display: 'block'}}>
+                <Box sx={{opacity: drawerOpen ? 1 : 0}}>{L("account.logged_in_as")}:</Box>
+                <ProfileLink to={"/admin/profile"}>
+                    <ProfilePicture user={api.user}/>
+                    {drawerOpen && <span>{api.user?.name || L("account.not_logged_in")}</span>}
+                </ProfileLink>
+            </ListItem>
+            <Divider/>
+            <List>
+                {li}
+            </List>
+            <Divider/>
+            <ListItem sx={{display: 'block'}}>
+                { drawerOpen ?
+                    <Select native value={currentLocale} size={"small"} fullWidth={true}
+                            onChange={e => onSetLanguage(e.target.value)}>
+                        {Object.values(languages || {}).map(language =>
+                            <option key={language.code} value={language.code}>
+                                {language.name}
+                            </option>)
+                        }
+                    </Select>
+                    : <ListItemButton sx={{
+                        minHeight: 48,
+                        justifyContent: 'center',
+                        px: 2.5,
+                    }}>
+                        <Dropdown>
+                            <ListItemIcon onClick={e => setAnchorEl(e.currentTarget)} sx={{
+                                minWidth: 0,
+                                mr: 'auto',
+                                justifyContent: 'center',
+                            }}>
+                                <Translate />
+                            </ListItemIcon>
+                            <Menu open={!!anchorEl}
+                                  anchorEl={anchorEl}
+                                  onClose={() => setAnchorEl(null)}
+                                  onClick={() => setAnchorEl(null)}
+                                  transformOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+                                  anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}>
+                                {Object.values(languages || {}).map(language =>
+                                    <MenuItem key={language.code} onClick={() => onSetLanguage(language.code)}>
+                                        {language.name}
+                                    </MenuItem>)
+                                }
+                            </Menu>
+                        </Dropdown>
+                    </ListItemButton>
+                }
+            </ListItem>
+        </StyledDrawer>
+        <Box component="main" sx={{flexGrow: 1, p: 1}}>
+            {props.children}
+        </Box>
+    </Box>
 }

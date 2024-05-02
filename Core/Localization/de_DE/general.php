@@ -83,4 +83,8 @@ return [
   "datefns_time_format_precise" => "HH:mm:ss",
   "datefns_datetime_format" => "dd.MM.yyyy HH:mm",
   "datefns_datetime_format_precise" => "dd.MM.yyyy HH:mm:ss",
+
+  # localization
+  "error_language_fetch" => "Fehler beim Holen der Sprachen",
+  "error_language_set" => "Fehler beim Setzen der Sprache",
 ];

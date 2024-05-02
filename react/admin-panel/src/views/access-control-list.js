@@ -12,11 +12,14 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    IconButton, styled, FormGroup, FormLabel, Box
+    IconButton, styled, FormGroup, FormLabel, Box, Grid
 } from "@mui/material";
 import {Add, Delete, Edit, Refresh} from "@mui/icons-material";
 import {USER_GROUP_ADMIN} from "shared/constants";
 import Dialog from "shared/elements/dialog";
+import ViewContent from "../elements/view-content";
+import ButtonBar from "../elements/button-bar";
+import TableBodyStriped from "shared/elements/table-body-striped";
 
 const BorderedColumn = styled(TableCell)({
     borderLeft: "1px dotted #666",
@@ -206,73 +209,68 @@ export default function AccessControlList(props) {
         return <>{rows}</>
     }
 
-    return <>
-        <div className={"content-header"}>
-            <div className={"container-fluid"}>
-                <div className={"row mb-2"}>
-                    <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>{L("permissions.title")}</h1>
-                    </div>
-                    <div className={"col-sm-6"}>
-                        <ol className={"breadcrumb float-sm-right"}>
-                            <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">{L("permissions.title_short")}</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div className={"row"}>
-            <FormGroup className={"col-6"}>
-                <FormLabel>{L("permissions.search")}</FormLabel>
-                <TextField
-                    placeholder={L("permissions.query") + "…"}
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    variant={"outlined"}
-                    size={"small"} />
-            </FormGroup>
-            <div className={"col-6 text-right"}>
+    return <ViewContent title={L("permissions.title")} path={[
+        <Link key={"home"} to={"/admin/dashboard"}>Home</Link>,
+        <span key={"permissions"}>{L("permissions.title_short")}</span>,
+    ]}>
+        <Grid container>
+            <Grid item xs={6}>
+                <FormGroup>
+                    <FormLabel>{L("permissions.search")}</FormLabel>
+                    <TextField
+                        placeholder={L("permissions.query") + "…"}
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        variant={"outlined"}
+                        size={"small"}/>
+                </FormGroup>
+            </Grid>
+            <Grid item xs={6} textAlign={"end"}>
                 <Box>
                     <FormLabel>{L("general.controls")}</FormLabel>
                 </Box>
-                <Box mb={2}>
-                    <Button variant={"outlined"} color={"primary"} className={"mr-1"} size={"small"}
-                            startIcon={<Refresh />} onClick={() => onFetchACL(true)}>
+                <ButtonBar mb={2}>
+                    <Button variant={"outlined"} color={"primary"} size={"small"}
+                            startIcon={<Refresh/>} onClick={() => onFetchACL(true)}>
                         {L("general.reload")}
                     </Button>
-                    <Button variant={"outlined"} startIcon={<Add />} size={"small"}
+                    <Button variant={"outlined"} startIcon={<Add/>} size={"small"}
                             disabled={!props.api.hasGroup(USER_GROUP_ADMIN)}
                             onClick={() => setDialogData({
                                 open: true,
                                 title: L("permissions.add_permission"),
                                 inputs: [
-                                    { type: "label", value: L("permissions.method") + ":" },
-                                    { type: "text", name: "method", value: "", placeholder: L("permissions.method") },
-                                    { type: "label", value: L("permissions.description") + ":" },
-                                    { type: "text", name: "description", maxLength: 128, placeholder: L("permissions.description") }
+                                    {type: "label", value: L("permissions.method") + ":"},
+                                    {type: "text", name: "method", value: "", placeholder: L("permissions.method")},
+                                    {type: "label", value: L("permissions.description") + ":"},
+                                    {
+                                        type: "text",
+                                        name: "description",
+                                        maxLength: 128,
+                                        placeholder: L("permissions.description")
+                                    }
                                 ],
                                 onOption: (option, inputData) => option === 0 ? onUpdatePermission(inputData, []) : true
-                            })} >
+                            })}>
                         {L("general.add")}
                     </Button>
-                </Box>
-            </div>
-        </div>
+                </ButtonBar>
+            </Grid>
+        </Grid>
         <TableContainer component={Paper} style={{overflowX: "initial"}}>
-            <Table stickyHeader size={"small"} className={"table-striped"}>
+            <Table stickyHeader size={"small"}>
                 <TableHead>
                     <TableRow>
                         <TableCell>{L("permissions.permission")}</TableCell>
                         <BorderedColumn align={"center"}><i>{L("permissions.everyone")}</i></BorderedColumn>
-                        { groups.map(group => <TableCell key={"group-" + group.id} align={"center"}>
+                        {groups.map(group => <TableCell key={"group-" + group.id} align={"center"}>
                             {group.name}
-                        </TableCell>) }
+                        </TableCell>)}
                     </TableRow>
                 </TableHead>
-                <TableBody>
-                    <PermissionList />
-                </TableBody>
+                <TableBodyStriped>
+                    <PermissionList/>
+                </TableBodyStriped>
             </Table>
         </TableContainer>
         <Dialog show={dialogData.open}
@@ -281,6 +279,6 @@ export default function AccessControlList(props) {
                 message={dialogData.message}
                 onOption={dialogData.onOption}
                 inputs={dialogData.inputs}
-                options={[L("general.ok"), L("general.cancel")]} />
-    </>
+                options={[L("general.ok"), L("general.cancel")]}/>
+    </ViewContent>
 }

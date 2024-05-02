@@ -51,6 +51,10 @@ The compiled dist files will be automatically moved to `/js`.
 
 To spawn a temporary development server, run:
 ```bash
+php cli frontend dev <module>
+```
+or directly via yarn:
+```bash
 cd react
 yarn workspace $project run dev
 ```
@@ -97,7 +101,11 @@ An endpoint consists of two important functions:
 To create an API category containing multiple endpoints, a parent class inheriting from `Request`, e.g. `class MultipleAPI extends Request` is required.
 All endpoints inside this category then inherit from the `MultipleAPI` class.
 
-The classes must be present inside the [API](/Core/API) directory according to the other endpoints.
+The classes must be present inside the [API](/Site/API) directory according to the other endpoints.
+You can easily create new classes using the template command:
+```bash
+php cli.php api add
+```
 
 ### Access Control
 
@@ -355,7 +363,7 @@ php cli.php api <add> # interactive wizard
 │   ├── shared              # shared source files, including API and localization
 │   ├── admin-panel         # the admin panel source files
 │   ├── dist                # compiler output
-├── [js/css/img/fonts/files/docs] # static web assets, files, licenses
+├── [js/css/img/fonts/files] # static web assets, files
 ├── docker                  # docker configuration files and build scripts
 └── test                    # php unit & integraton test files
 ```

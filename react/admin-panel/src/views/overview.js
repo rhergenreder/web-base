@@ -13,26 +13,65 @@ import {
     LibraryBooks,
     People
 } from "@mui/icons-material";
-import {Box, CircularProgress, Paper, Table, TableBody, TableCell, TableRow} from "@mui/material";
+import {
+    Box,
+    CircularProgress,
+    Divider,
+    Grid,
+    Paper,
+    styled,
+    Table,
+    TableBody,
+    TableCell,
+    TableRow
+} from "@mui/material";
+import ViewContent from "../elements/view-content";
+import {Alert} from "@mui/lab";
 
-const StatBox = (props) => <div className={"col-lg-3 col-6"}>
-    <div className={"small-box bg-" + props.color}>
-        <div className={"inner"}>
+const StyledStatBox = styled(Alert)((props) => ({
+    position: "relative",
+    padding: 0,
+    "& > div": {
+        padding: 0,
+        width: "100%",
+        "& a": {
+            color: "white",
+        },
+        "& div:nth-of-type(1)": {
+            padding: props.theme.spacing(2),
+        },
+        "& div:nth-of-type(2) > svg": {
+            position: "absolute",
+            top: props.theme.spacing(1),
+            right: props.theme.spacing(1),
+            opacity: 0.6,
+            fontSize: "5em"
+        },
+        "& div:nth-of-type(3)": {
+            backdropFilter: "brightness(70%)",
+            textAlign: "right",
+            padding: props.theme.spacing(0.5),
+        }
+    },
+}));
+
+const StatBox = (props) => <StyledStatBox variant={"filled"} icon={false}
+                                          severity={props.color}>
+        <Box>
             {!isNaN(props.count) ?
                 <>
-                    <h3>{props.count}</h3>
+                    <h2>{props.count}</h2>
                     <p>{props.text}</p>
                 </> : <CircularProgress variant={"determinate"} />
             }
-        </div>
-        <div className={"icon"}>
-            {props.icon}
-        </div>
-        <Link to={props.link} className={"small-box-footer text-right p-1"}>
-            More info <ArrowCircleRight />
-        </Link>
-    </div>
-</div>
+        </Box>
+        <Box>{props.icon}</Box>
+        <Box>
+            <Link to={props.link}>
+                More info <ArrowCircleRight />
+            </Link>
+        </Box>
+    </StyledStatBox>
 
 const StatusLine = (props) => {
     const {enabled, text, ...other} = props;
@@ -84,96 +123,88 @@ export default function Overview(props) {
         loadAvg = loadAvg.map(v => sprintf("%.1f", v)).join(", ");
     }
 
-    return <>
-        <div className={"content-header"}>
-            <div className={"container-fluid"}>
-                <div className={"row mb-2"}>
-                    <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>{L("admin.dashboard")}</h1>
-                    </div>
-                    <div className={"col-sm-6"}>
-                        <ol className={"breadcrumb float-sm-right"}>
-                            <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active">{L("admin.dashboard")}</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <section className={"content"}>
-            <div className={"container-fluid"}>
-                <div className={"row"}>
-                    <StatBox color={"info"} count={stats?.userCount}
-                             text={L("admin.users_registered")}
-                             icon={<People />}
-                             link={"/admin/users"} />
-                    <StatBox color={"success"} count={stats?.groupCount}
-                             text={L("admin.available_groups")}
-                             icon={<Groups />}
-                             link={"/admin/groups"} />
-                    <StatBox color={"warning"} count={stats?.pageCount}
-                             text={L("admin.routes_defined")}
-                             icon={<LibraryBooks />}
-                             link={"/admin/routes"} />
-                    <StatBox color={"danger"} count={stats?.errorCount}
-                             text={L("admin.error_count")}
-                             icon={<BugReport />}
-                             link={"/admin/logs"} />
-                </div>
-            </div>
-            <Box m={2} p={2} component={Paper}>
-                <h4>Server Stats</h4><hr />
-                {stats === null ? <CircularProgress /> :
-                    <Table>
-                        <TableBody>
-                            <TableRow>
-                                <TableCell>Web-Base Version</TableCell>
-                                <TableCell>{stats.server.version}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Server</TableCell>
-                                <TableCell>{stats.server.server ?? "Unknown"}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Load Average</TableCell>
-                                <TableCell>{loadAvg}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Memory Usage</TableCell>
-                                <TableCell>{humanReadableSize(stats.server.memoryUsage)}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Database</TableCell>
-                                <TableCell>{stats.server.database}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Captcha</TableCell>
-                                <TableCell>
-                                    <StatusLine enabled={!!stats.server.captcha}
-                                                text={L("settings." + (stats.server.captcha ? stats.server.captcha.name : "disabled"))}
-                                    />
-                                </TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Mail</TableCell>
-                                <TableCell>
-                                    <StatusLine enabled={!!stats.server.mail}
-                                                text={L("settings." + (stats.server.mail ? "enabled" : "disabled"))}
-                                    />
-                                </TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Rate-Limiting</TableCell>
-                                <TableCell>
-                                    <StatusLine enabled={!!stats.server.rateLimiting}
-                                                text={L("settings." + (stats.server.rateLimiting ? "enabled" : "disabled"))}
-                                    />
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                }
-            </Box>
-        </section>
-    </>
+    return <ViewContent title={L("admin.dashboard")} path={[
+        <Link key={"home"} to={"/admin/dashboard"}>Home</Link>
+    ]}>
+        <Grid container spacing={2}>
+            <Grid item xs={3}>
+                <StatBox color={"info"} count={stats?.userCount}
+                         text={L("admin.users_registered")}
+                         icon={<People/>}
+                         link={"/admin/users"}/>
+            </Grid>
+            <Grid item xs={3}>
+                <StatBox color={"success"} count={stats?.groupCount}
+                         text={L("admin.available_groups")}
+                         icon={<Groups/>}
+                         link={"/admin/groups"}/>
+            </Grid>
+            <Grid item xs={3}>
+                <StatBox color={"warning"} count={stats?.pageCount}
+                         text={L("admin.routes_defined")}
+                         icon={<LibraryBooks/>}
+                         link={"/admin/routes"}/>
+            </Grid>
+            <Grid item xs={3}>
+                <StatBox color={"error"} count={stats?.errorCount}
+                         text={L("admin.error_count")}
+                         icon={<BugReport />}
+                         link={"/admin/logs"}/>
+            </Grid>
+        </Grid>
+        <Box m={2} p={2} component={Paper}>
+            <h4>Server Stats</h4>
+            <Divider />
+            {stats === null ? <CircularProgress/> :
+                <Table>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell>Web-Base Version</TableCell>
+                            <TableCell>{stats.server.version}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>Server</TableCell>
+                            <TableCell>{stats.server.server ?? "Unknown"}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>Load Average</TableCell>
+                            <TableCell>{loadAvg}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>Memory Usage</TableCell>
+                            <TableCell>{humanReadableSize(stats.server.memoryUsage)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>Database</TableCell>
+                            <TableCell>{stats.server.database}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>Captcha</TableCell>
+                            <TableCell>
+                                <StatusLine enabled={!!stats.server.captcha}
+                                            text={L("settings." + (stats.server.captcha ? stats.server.captcha.name : "disabled"))}
+                                />
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>Mail</TableCell>
+                            <TableCell>
+                                <StatusLine enabled={!!stats.server.mail}
+                                            text={L("settings." + (stats.server.mail ? "enabled" : "disabled"))}
+                                />
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>Rate-Limiting</TableCell>
+                            <TableCell>
+                                <StatusLine enabled={!!stats.server.rateLimiting}
+                                            text={L("settings." + (stats.server.rateLimiting ? "enabled" : "disabled"))}
+                                />
+                            </TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            }
+        </Box>
+    </ViewContent>
 }

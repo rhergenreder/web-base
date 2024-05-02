@@ -6,9 +6,6 @@ import Footer from "./elements/footer";
 import {useContext, useEffect} from "react";
 import {LocaleContext} from "shared/locale";
 
-// css
-import './res/adminlte.min.css';
-
 // views
 import View404 from "./views/404";
 import clsx from "clsx";
@@ -61,37 +58,27 @@ export default function AdminDashboard(props) {
         hideDialog: hideDialog
     };
 
-    // add fixed-layout to body, I don't want to rewrite my base.twig template
-    if (!document.body.className.includes("layout-fixed")) {
-        document.body.className = clsx(document.body.className, "layout-fixed");
-    }
-
     return <BrowserRouter>
-        <Sidebar {...controlObj} />
-        <div className={"wrapper"}>
-            <div className={"content-wrapper p-2"}>
-                <section className={"content"}>
-                    <Suspense fallback={<div>{L("general.loading")}... </div>}>
-                        <Routes>
-                            <Route path={"/admin"} element={<Navigate to={"/admin/dashboard"} />}/>
-                            <Route path={"/admin/dashboard"} element={<Overview {...controlObj} />}/>
-                            <Route path={"/admin/users"} element={<UserListView {...controlObj} />}/>
-                            <Route path={"/admin/user/:userId"} element={<UserEditView {...controlObj} />}/>
-                            <Route path={"/admin/groups"} element={<GroupListView {...controlObj} />}/>
-                            <Route path={"/admin/group/:groupId"} element={<EditGroupView {...controlObj} />}/>
-                            <Route path={"/admin/logs"} element={<LogView {...controlObj} />}/>
-                            <Route path={"/admin/permissions"} element={<AccessControlList {...controlObj} />}/>
-                            <Route path={"/admin/routes"} element={<RouteListView {...controlObj} />}/>
-                            <Route path={"/admin/routes/:routeId"} element={<RouteEditView {...controlObj} />}/>
-                            <Route path={"/admin/settings"} element={<SettingsView {...controlObj} />}/>
-                            <Route path={"/admin/profile"} element={<ProfileView {...controlObj} />}/>
-                            <Route path={"*"} element={<View404 />} />
-                        </Routes>
-                    </Suspense>
-                    <Dialog {...dialog}/>
-                </section>
-            </div>
-        </div>
-        <Footer info={info} />
+        <Sidebar {...controlObj}>
+            <Suspense fallback={<div>{L("general.loading")}... </div>}>
+                <Routes>
+                    <Route path={"/admin"} element={<Navigate to={"/admin/dashboard"} />}/>
+                    <Route path={"/admin/dashboard"} element={<Overview {...controlObj} />}/>
+                    <Route path={"/admin/users"} element={<UserListView {...controlObj} />}/>
+                    <Route path={"/admin/user/:userId"} element={<UserEditView {...controlObj} />}/>
+                    <Route path={"/admin/groups"} element={<GroupListView {...controlObj} />}/>
+                    <Route path={"/admin/group/:groupId"} element={<EditGroupView {...controlObj} />}/>
+                    <Route path={"/admin/logs"} element={<LogView {...controlObj} />}/>
+                    <Route path={"/admin/permissions"} element={<AccessControlList {...controlObj} />}/>
+                    <Route path={"/admin/routes"} element={<RouteListView {...controlObj} />}/>
+                    <Route path={"/admin/routes/:routeId"} element={<RouteEditView {...controlObj} />}/>
+                    <Route path={"/admin/settings"} element={<SettingsView {...controlObj} />}/>
+                    <Route path={"/admin/profile"} element={<ProfileView {...controlObj} />}/>
+                    <Route path={"*"} element={<View404 />} />
+                </Routes>
+            </Suspense>
+            <Footer info={info} />
+        </Sidebar>
+        <Dialog {...dialog}/>
     </BrowserRouter>
 }

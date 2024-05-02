@@ -55,6 +55,7 @@ return [
   "active" => "Aktiv",
   "group" => "Gruppe",
   "no_members" => "Keine Mitglieder in dieser Gruppe",
+  "user_list_placeholder" => "Keine Benutzer zum Anzeigen",
 
   # profile picture
   "change_picture" => "Profilbild ändern",

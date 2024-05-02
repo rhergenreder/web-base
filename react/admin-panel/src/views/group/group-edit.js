@@ -8,10 +8,12 @@ import {DataTable, ControlsColumn, NumericColumn, StringColumn} from "shared/ele
 import EditIcon from "@mui/icons-material/Edit";
 import usePagination from "shared/hooks/pagination";
 import Dialog from "shared/elements/dialog";
-import {FormControl, FormGroup, FormLabel, TextField, Button, CircularProgress, Box} from "@mui/material";
+import {FormControl, FormLabel, TextField, Button, CircularProgress, Box, Grid} from "@mui/material";
 import {Add, Delete, KeyboardArrowLeft, Save} from "@mui/icons-material";
 import {MuiColorInput} from "mui-color-input";
 import ButtonBar from "../../elements/button-bar";
+import ViewContent from "../../elements/view-content";
+import FormGroup from "../../elements/form-group";
 
 const defaultGroupData = {
     name: "",
@@ -175,91 +177,75 @@ export default function EditGroupView(props) {
     }
 
     return <>
-        <div className={"content-header"}>
-            <div className={"container-fluid"}>
-                <div className={"row mb-2"}>
-                    <div className={"col-sm-6"}>
-                        <h1 className={"m-0 text-dark"}>
-                            { isNewGroup ? L("account.new_group") : L("account.group") + ": " + group.name }
-                        </h1>
-                    </div>
-                    <div className={"col-sm-6"}>
-                        <ol className={"breadcrumb float-sm-right"}>
-                            <li className={"breadcrumb-item"}><Link to={"/admin/dashboard"}>Home</Link></li>
-                            <li className="breadcrumb-item active"><Link to={"/admin/groups"}>{L("account.group")}</Link></li>
-                            <li className="breadcrumb-item active">{ isNewGroup ? L("general.new") : groupId }</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div className={"content"}>
-            <div className={"row"}>
-                <div className={"col-4 pl-5 pr-5"}>
-                    <FormGroup className={"my-2"}>
-                        <FormLabel htmlFor={"name"}>
-                            {L("account.group_name")}
-                        </FormLabel>
-                        <FormControl>
-                            <TextField maxLength={32} value={group.name}
-                                       size={"small"} name={"name"}
-                                       placeholder={L("account.name")}
-                                       onChange={e => setGroup({...group, name: e.target.value})}/>
-                        </FormControl>
-                    </FormGroup>
+    <ViewContent title={ isNewGroup ? L("account.new_group") : L("account.group") + ": " + group.name }
+        path={[
+            <Link key={"home"} to={"/admin/dashboard"}>Home</Link>,
+            <Link key={"group"} to={"/admin/groups"}>{L("account.group")}</Link>,
+            <span key={"action"} >{isNewGroup ? L("general.new") : groupId}</span>,
+        ]}>
+        <Grid container>
+            <Grid item xs={6}>
+                <FormGroup>
+                    <FormLabel htmlFor={"name"}>
+                        {L("account.group_name")}
+                    </FormLabel>
+                    <FormControl>
+                        <TextField maxLength={32} value={group.name}
+                                   size={"small"} name={"name"}
+                                   placeholder={L("account.name")}
+                                   onChange={e => setGroup({...group, name: e.target.value})}/>
+                    </FormControl>
+                </FormGroup>
 
-                    <FormGroup className={"my-2"}>
-                        <FormLabel htmlFor={"color"}>
-                            {L("account.color")}
-                        </FormLabel>
-                        <FormControl>
-                            <MuiColorInput
-                                format={"hex"}
-                                value={group.color}
-                                size={"small"}
-                                variant={"outlined"}
-                                onChange={color => setGroup({...group, color: color})}
-                            />
-                        </FormControl>
-                    </FormGroup>
+                <FormGroup>
+                    <FormLabel htmlFor={"color"}>
+                        {L("account.color")}
+                    </FormLabel>
+                    <FormControl>
+                        <MuiColorInput
+                            format={"hex"}
+                            value={group.color}
+                            size={"small"}
+                            variant={"outlined"}
+                            onChange={color => setGroup({...group, color: color})}
+                        />
+                    </FormControl>
+                </FormGroup>
 
-                    <ButtonBar mt={2}>
-                        <Button startIcon={<KeyboardArrowLeft />}
-                                variant={"outlined"}
-                                onClick={() => navigate("/admin/groups")}>
-                            {L("general.go_back")}
-                        </Button>
-                        <Button startIcon={isSaving ? <CircularProgress size={14} /> : <Save />}
-                                color={"primary"}
-                                variant={"outlined"}
-                                disabled={isSaving || (!api.hasPermission(isNewGroup ? "groups/create" : "groups/update"))}
-                                onClick={onSave}>
-                            {isSaving ? L("general.saving") + "…" : L("general.save")}
-                        </Button>
-                        { !isNewGroup &&
-                            <Button startIcon={<Delete/>} disabled={!api.hasPermission("groups/delete")}
-                                    variant={"outlined"} color={"secondary"}
-                                    onClick={() => setDialogData({
-                                        open: true,
-                                        title: L("account.delete_group_title"),
-                                        message: L("account.delete_group_text"),
-                                        onOption: option => option === 0 ? onDeleteGroup() : true
-                                    })}>
-                                {L("general.delete")}
-                            </Button>
-                        }
-                    </ButtonBar>
-                </div>
-            </div>
+            <ButtonBar mt={2}>
+                <Button startIcon={<KeyboardArrowLeft />}
+                        variant={"outlined"}
+                        onClick={() => navigate("/admin/groups")}>
+                    {L("general.go_back")}
+                </Button>
+                <Button startIcon={isSaving ? <CircularProgress size={14} /> : <Save />}
+                        color={"primary"}
+                        variant={"outlined"}
+                        disabled={isSaving || (!api.hasPermission(isNewGroup ? "groups/create" : "groups/update"))}
+                        onClick={onSave}>
+                    {isSaving ? L("general.saving") + "…" : L("general.save")}
+                </Button>
+                { !isNewGroup &&
+                    <Button startIcon={<Delete/>} disabled={!api.hasPermission("groups/delete")}
+                            variant={"outlined"} color={"secondary"}
+                            onClick={() => setDialogData({
+                                open: true,
+                                title: L("account.delete_group_title"),
+                                message: L("account.delete_group_text"),
+                                onOption: option => option === 0 ? onDeleteGroup() : true
+                            })}>
+                        {L("general.delete")}
+                    </Button>
+                }
+            </ButtonBar>
             {!isNewGroup && api.hasPermission("groups/getMembers") ?
-                <Box m={3} className={"col-6"}>
+                <Box mt={3}>
                     <h4>{L("account.members")}</h4>
                     <DataTable
                         data={members}
                         pagination={pagination}
                         defaultSortOrder={"asc"}
                         defaultSortColumn={0}
-                        className={"table table-striped"}
                         fetchData={onFetchMembers}
                         placeholder={L("account.no_members")}
                         columns={[
@@ -298,7 +284,9 @@ export default function EditGroupView(props) {
                 </Box>
                 : <></>
             }
-        </div>
+                </Grid>
+            </Grid>
+        </ViewContent>
         <Dialog show={dialogData.open}
                 onClose={() => setDialogData({open: false})}
                 title={dialogData.title}
@@ -306,6 +294,5 @@ export default function EditGroupView(props) {
                 onOption={dialogData.onOption}
                 inputs={dialogData.inputs}
                 options={[L("general.ok"), L("general.cancel")]} />
-    </>
-
+     </>
 }

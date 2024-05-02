@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {FormControl, Box, Select, Pagination as MuiPagination} from "@mui/material";
+import {FormControl, Box, Select, Pagination as MuiPagination, InputLabel} from "@mui/material";
 import {sprintf} from "sprintf-js";
 
 class Pagination {
@@ -55,14 +55,18 @@ class Pagination {
 
     renderPagination(L, numEntries, options = null) {
         options = options || [10, 25, 50, 100];
+        let start = (this.getPage() - 1) * this.data.pageSize + 1;
+        let end = Math.min(this.data.total, start + numEntries - 1);
 
-        return <Box display={"grid"} gridTemplateColumns={"75px auto"} className={"pagination-controls"}>
+        return <Box className={"pagination-controls"}>
             <FormControl>
+                <InputLabel id="page-size-label">{L("general.entries_per_page")}</InputLabel>
                 <Select
                     native
+                    labelId="page-size-label"
+                    label={L("general.entries_per_page")}
                     value={this.data.pageSize}
                     className={"pagination-page-size"}
-                    label={L("general.entries_per_page")}
                     onChange={(e) => this.setPageSize(parseInt(e.target.value))}
                     size={"small"}
                 >
@@ -74,7 +78,7 @@ class Pagination {
                 onChange={(_, page) => this.setPage(page)}
             />
             <Box gridColumn={"1 / 3"} mt={1}>
-                {sprintf(L("general.showing_x_of_y_entries"), numEntries, this.data.total)}
+                {sprintf(L("general.showing_x_to_y_of_z_entries"), start, end, this.data.total)}
             </Box>
         </Box>
     }

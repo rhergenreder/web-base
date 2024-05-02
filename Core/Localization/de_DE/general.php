@@ -64,8 +64,9 @@ return [
   "overwrite" => "Überschreiben",
 
   # data table
-  "showing_x_of_y_entries" => "Zeige %d von %d Einträgen",
+  "showing_x_to_y_of_z_entries" => "Zeige %d bis %d von %d Einträgen",
   "controls" => "Steuerung",
+  "entries_per_page" => "pro Seite",
 
   # date / time
   "date" => "Datum",

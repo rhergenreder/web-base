@@ -33,9 +33,12 @@
 
 .pagination-controls {
     margin-top: 6px;
+    display: grid;
+    grid-template-columns: 75px auto;
+    align-items: center;
 }
 
-.pagination-page-size > div {
+.pagination-controls select {
     padding-top: 5px;
     padding-bottom: 5px;
 }

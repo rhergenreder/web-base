@@ -106,7 +106,7 @@ export default function GpgBox(props) {
                     <GpgFingerprintBox mb={2}>
                         { profile.gpgKey.confirmed ?
                             <CheckCircle color="info" title={L("account.gpg_key_confirmed")} /> :
-                            <ErrorOutline color="secondary" title={L("account.gpg_key_pending")}  />
+                            <ErrorOutline color="error" title={L("account.gpg_key_pending")}  />
                         }
                         GPG-Fingerprint: <code title={L("general.click_to_copy")}
                                                onClick={() => navigator.clipboard.writeText(profile.gpgKey.fingerprint)}>
@@ -124,7 +124,7 @@ export default function GpgBox(props) {
                         </FormControl>
                     </SpacedFormGroup>
                     <Button startIcon={isGpgKeyRemoving ? <CircularProgress size={12} /> : <Remove />}
-                            color="secondary" onClick={onRemoveGpgKey}
+                            color="error" onClick={onRemoveGpgKey}
                             variant="outlined" size="small"
                             disabled={isGpgKeyRemoving || !api.hasPermission("gpgKey/remove")}>
                         {isGpgKeyRemoving ? L("general.removing") + "…" : L("general.remove")}

@@ -341,7 +341,7 @@ export default function SettingsView(props) {
                                 </TableCell>
                                 <TableCell align={"center"}>
                                     <IconButton onClick={() => onDeleteKey(key)}
-                                        color={"secondary"}>
+                                        color={"error"}>
                                         <Delete />
                                     </IconButton>
                                 </TableCell>
@@ -404,7 +404,7 @@ export default function SettingsView(props) {
                     variant={"outlined"} title={L(hasChanged ? "general.unsaved_changes" : "general.save")}>
                 {isSaving ? L("general.saving") + "…" : (L("general.save") + (hasChanged ? " *" : ""))}
             </Button>
-            <Button color={"secondary"}
+            <Button color={"error"}
                     onClick={onReset}
                     disabled={isSaving}
                     startIcon={<RestartAlt />}

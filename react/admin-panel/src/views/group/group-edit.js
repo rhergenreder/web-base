@@ -159,9 +159,9 @@ export default function EditGroupView(props) {
                 }
             ],
             onOption: (option) => {
-                if(option === 0) {
+                if(option === 1) {
                     onAddMember()
-                    } else {
+                } else {
                     selectedUserRef.current = null
                 }
             }
@@ -227,12 +227,12 @@ export default function EditGroupView(props) {
                 </Button>
                 { !isNewGroup &&
                     <Button startIcon={<Delete/>} disabled={!api.hasPermission("groups/delete")}
-                            variant={"outlined"} color={"secondary"}
+                            variant={"outlined"} color={"error"}
                             onClick={() => setDialogData({
                                 open: true,
                                 title: L("account.delete_group_title"),
                                 message: L("account.delete_group_text"),
-                                onOption: option => option === 0 ? onDeleteGroup() : true
+                                onOption: option => option === 1 ? onDeleteGroup() : true
                             })}>
                         {L("general.delete")}
                     </Button>
@@ -262,12 +262,12 @@ export default function EditGroupView(props) {
                                     label: L("general.remove"),
                                     element: Delete,
                                     disabled: !api.hasPermission("groups/removeMember"),
-                                    color: "secondary",
+                                    color: "error",
                                     onClick: (entry) => setDialogData({
                                         open: true,
                                         title: L("account.remove_group_member_title"),
                                         message: sprintf(L("account.remove_group_member_text"), entry.fullName || entry.name),
-                                        onOption: (option) => option === 0 ? onRemoveMember(entry.id) : true
+                                        onOption: (option) => option === 1 ? onRemoveMember(entry.id) : true
                                     })
                                 }
                             ]),
@@ -293,6 +293,6 @@ export default function EditGroupView(props) {
                 message={dialogData.message}
                 onOption={dialogData.onOption}
                 inputs={dialogData.inputs}
-                options={[L("general.ok"), L("general.cancel")]} />
+                options={[L("general.cancel"), L("general.ok")]} />
      </>
 }

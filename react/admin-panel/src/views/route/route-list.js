@@ -178,7 +178,7 @@ export default function RouteListView(props) {
                                     </IconButton>
                                     <IconButton size={"small"} title={L("general.delete")}
                                                 disabled={!api.hasPermission("routes/remove")}
-                                                color={"secondary"}
+                                                color={"error"}
                                                 onClick={() => setDialogData({
                                                     open: true,
                                                     title: L("routes.delete_route_title"),
@@ -186,8 +186,8 @@ export default function RouteListView(props) {
                                                     inputs: [
                                                         { type: "text", name: "pattern", value: route.pattern, disabled: true}
                                                     ],
-                                                    options: [L("general.ok"), L("general.cancel")],
-                                                    onOption: btn => btn === 0 ? onDeleteRoute(route.id) : true
+                                                    options: [L("general.cancel"), L("general.ok")],
+                                                    onOption: btn => btn === 1 ? onDeleteRoute(route.id) : true
                                                 })}>
                                         <Delete />
                                     </IconButton>
@@ -207,6 +207,6 @@ export default function RouteListView(props) {
                 message={dialogData.message}
                 onOption={dialogData.onOption}
                 inputs={dialogData.inputs}
-                options={[L("general.ok"), L("general.cancel")]} />
+                options={[L("general.cancel"), L("general.ok")]} />
     </>
 }

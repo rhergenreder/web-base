@@ -5,7 +5,7 @@ import {
     Box, CssBaseline, Divider,
     IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
     Select, Drawer,
-    styled, MenuItem, Menu,
+    styled, MenuItem, Menu, useTheme,
 } from "@mui/material";
 import { Dropdown } from '@mui/base/Dropdown';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -100,6 +100,7 @@ export default function Sidebar(props) {
     const [fetchLanguages, setFetchLanguages] = useState(true);
     const [drawerOpen, setDrawerOpen] = useState(window.screen.width >= 1000);
     const [anchorEl, setAnchorEl] = useState(null);
+    const theme = useTheme();
     const navigate = useNavigate();
     const currentPath = useCurrentPath();
 

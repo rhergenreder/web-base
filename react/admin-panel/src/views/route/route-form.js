@@ -104,9 +104,9 @@ export default function RouteForm(props) {
                               onChange={e => setRoute({...route, extra: minifyJson(e.target.value)})}/>
                     <Box mt={1} fontStyle={"italic"} display={"grid"} gridTemplateColumns={"30px auto"}>{
                         extraArgs === null ?
-                            <><ErrorRounded color={"secondary"}/><span>{L("routes.json_err")}</span></> :
+                            <><ErrorRounded color={"error"}/><span>{L("routes.json_err")}</span></> :
                                 (type !== "object" ?
-                                    <><ErrorRounded color={"secondary"}/><span>{L("routes.json_not_object")}</span></> :
+                                    <><ErrorRounded color={"error"}/><span>{L("routes.json_not_object")}</span></> :
                                     <><CheckCircle color={"primary"} /><span>{L("routes.json_ok")}</span></>)
                     }</Box>
                 </RouteFormControl>

@@ -76,7 +76,7 @@ export default function EditProfilePicture(props) {
                 },
             ],
             onOption: (option) => {
-                if (option === 0 && file) {
+                if (option === 1 && file) {
                     onUploadPicture(file)
                 }
 
@@ -115,13 +115,13 @@ export default function EditProfilePicture(props) {
             </Button>
             {profile.profilePicture &&
                 <Button variant="outlined" size="small"
-                    startIcon={<Delete />} color="secondary"
+                    startIcon={<Delete />} color={"error"}
                     onClick={() => setDialogData({
                         show: true,
                         title: L("account.picture_remove_title"),
                         message: L("account.picture_remove_text"),
                         options: [L("general.confirm"), L("general.cancel")],
-                        onOption: (option) => option === 0 ? onRemoveImage() : true
+                        onOption: (option) => option === 1 ? onRemoveImage() : true
                     })}>
                     {L("account.remove_picture")}
                 </Button>

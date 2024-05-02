@@ -82,7 +82,7 @@ export default function MultiFactorBox(props) {
                     </FormControl>
                 </SpacedFormGroup>
                 <Button startIcon={is2FARemoving ? <CircularProgress size={12} /> : <Remove />}
-                        color="secondary" onClick={onRemove2FA}
+                        color="danger" onClick={onRemove2FA}
                         variant="outlined" size="small"
                         disabled={is2FARemoving || !api.hasPermission("tfa/remove")}>
                     {is2FARemoving ? L("general.removing") + "…" : L("general.remove")}

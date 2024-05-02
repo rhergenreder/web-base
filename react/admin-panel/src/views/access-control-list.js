@@ -159,9 +159,9 @@ export default function AccessControlList(props) {
             rows.push(
                 <TableRow key={"perm-" + index}>
                     <TableCell>
-                        <div style={{display: "grid", gridTemplateColumns: "60px auto"}}>
-                            <div style={{alignSelf: "center"}}>
-                                <IconButton style={{padding: 0}} size={"small"} color={"primary"}
+                        <Grid container>
+                            <Grid item xs={1} alignContent={"center"}>
+                                <IconButton size={"small"} color={"primary"}
                                             disabled={isRestricted(permission.method)}
                                             onClick={() => setDialogData({
                                                 open: true,
@@ -172,25 +172,25 @@ export default function AccessControlList(props) {
                                                     { type: "label", value: L("permissions.description") + ":" },
                                                     { type: "text", name: "description", value: permission.description, maxLength: 128 }
                                                 ],
-                                                onOption: (option, inputData) => option === 0 ? onUpdatePermission(inputData, permission.groups) : true                                            })} >
+                                                onOption: (option, inputData) => option === 1 ? onUpdatePermission(inputData, permission.groups) : true                                            })} >
                                     <Edit />
                                 </IconButton>
-                                <IconButton style={{padding: 0}} size={"small"} color={"secondary"}
+                                <IconButton size={"small"} color={"error"}
                                             disabled={isRestricted(permission.method)}
                                             onClick={() => setDialogData({
                                                 open: true,
                                                 title: L("permissions.delete_permission_confirm"),
                                                 message: L("permissions.method") + ": " + permission.method,
-                                                onOption: (option) => option === 0 ? onDeletePermission(permission.method) : true
+                                                onOption: (option) => option === 1 ? onDeletePermission(permission.method) : true
                                             })} >
                                     <Delete />
                                 </IconButton>
-                            </div>
-                            <div>
+                            </Grid>
+                            <Grid item>
                                 <b>{permission.method}</b><br />
                                 <i>{permission.description}</i>
-                            </div>
-                        </div>
+                            </Grid>
+                        </Grid>
                     </TableCell>
                     <BorderedColumn key={"perm-" + index + "-everyone"} align={"center"}>
                         <Checkbox checked={!permission.groups.length}
@@ -250,7 +250,7 @@ export default function AccessControlList(props) {
                                         placeholder: L("permissions.description")
                                     }
                                 ],
-                                onOption: (option, inputData) => option === 0 ? onUpdatePermission(inputData, []) : true
+                                onOption: (option, inputData) => option === 1 ? onUpdatePermission(inputData, []) : true
                             })}>
                         {L("general.add")}
                     </Button>
@@ -279,6 +279,6 @@ export default function AccessControlList(props) {
                 message={dialogData.message}
                 onOption={dialogData.onOption}
                 inputs={dialogData.inputs}
-                options={[L("general.ok"), L("general.cancel")]}/>
+                options={[L("general.cancel"), L("general.ok")]}/>
     </ViewContent>
 }

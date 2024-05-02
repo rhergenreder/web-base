@@ -76,12 +76,12 @@ const StatBox = (props) => <StyledStatBox variant={"filled"} icon={false}
 const StatusLine = (props) => {
     const {enabled, text, ...other} = props;
     if (enabled) {
-        return <Box display="grid" gridTemplateColumns={"30px auto"}>
+        return <Box display="grid" gridTemplateColumns={"30px auto"} alignItems={"center"}>
             <CheckCircle color={"primary"} title={text} /> {text}
         </Box>
     } else {
-        return <Box display="grid" gridTemplateColumns={"30px auto"}>
-            <HighlightOff color={"secondary"} title={text} /> {text}
+        return <Box display="grid" gridTemplateColumns={"30px auto"} alignItems={"center"}>
+            <HighlightOff color={"error"} title={text} /> {text}
         </Box>
     }
 }
@@ -127,25 +127,25 @@ export default function Overview(props) {
         <Link key={"home"} to={"/admin/dashboard"}>Home</Link>
     ]}>
         <Grid container spacing={2}>
-            <Grid item xs={3}>
+            <Grid item xs={6} lg={3}>
                 <StatBox color={"info"} count={stats?.userCount}
                          text={L("admin.users_registered")}
                          icon={<People/>}
                          link={"/admin/users"}/>
             </Grid>
-            <Grid item xs={3}>
+            <Grid item xs={6} lg={3}>
                 <StatBox color={"success"} count={stats?.groupCount}
                          text={L("admin.available_groups")}
                          icon={<Groups/>}
                          link={"/admin/groups"}/>
             </Grid>
-            <Grid item xs={3}>
+            <Grid item xs={6} lg={3}>
                 <StatBox color={"warning"} count={stats?.pageCount}
                          text={L("admin.routes_defined")}
                          icon={<LibraryBooks/>}
                          link={"/admin/routes"}/>
             </Grid>
-            <Grid item xs={3}>
+            <Grid item xs={6} lg={3}>
                 <StatBox color={"error"} count={stats?.errorCount}
                          text={L("admin.error_count")}
                          icon={<BugReport />}

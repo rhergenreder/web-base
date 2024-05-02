@@ -37,8 +37,8 @@ export default function MfaTotp(props) {
                         sx: { "& input": { textAlign: "center", fontFamily: "monospace" } },
                     }
                 ],
-                options: [L("general.ok"), L("general.cancel")],
-                onOption: (option, data) => option === 0 ? onConfirmTOTP(data.code) : true
+                options: [L("general.cancel"), L("general.ok")],
+                onOption: (option, data) => option === 1 ? onConfirmTOTP(data.code) : true
             })
         }
     }, [api, onConfirmTOTP]);

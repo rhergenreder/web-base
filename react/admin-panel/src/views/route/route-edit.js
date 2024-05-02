@@ -82,7 +82,8 @@ export default function RouteEditView(props) {
     const onSave = useCallback(() => {
         if (!isSaving) {
             setSaving(true);
-            let args = [route.pattern, route.type, route.target, route.extra, route.exact, route.active];
+            let extra = ["dynamic", "static"].includes(route.type) ? route.extra : "";
+            let args = [route.pattern, route.type, route.target, extra, route.exact, route.active];
             if (isNewRoute) {
                 api.addRoute(...args).then(res => {
                     setSaving(false);
@@ -123,7 +124,7 @@ export default function RouteEditView(props) {
             <RouteForm route={route} setRoute={setRoute} />
             <ButtonBar mt={2}>
                 <Button startIcon={<KeyboardArrowLeft />}
-                        variant={"outlined"}
+                        variant={"outlined"} color={"error"}
                         onClick={() => navigate("/admin/routes")}>
                     {L("general.cancel")}
                 </Button>

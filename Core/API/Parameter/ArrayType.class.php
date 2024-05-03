@@ -16,14 +16,16 @@ class ArrayType extends Parameter {
    * @param bool $optional true if the parameter is optional
    * @param array|null $defaultValue the default value to use, if the parameter is not given
    */
-  public function __construct(string $name, int $elementType = Parameter::TYPE_MIXED, bool $canBeOne = false, bool $optional = FALSE, ?array $defaultValue = NULL) {
+  public function __construct(string $name, int $elementType = Parameter::TYPE_MIXED, bool $canBeOne = false,
+                              bool $optional = FALSE, ?array $defaultValue = NULL, ?array $choices = NULL) {
     $this->elementType = $elementType;
     $this->elementParameter = new Parameter('', $elementType);
     $this->canBeOne = $canBeOne;
-    parent::__construct($name, Parameter::TYPE_ARRAY, $optional, $defaultValue);
+    parent::__construct($name, Parameter::TYPE_ARRAY, $optional, $defaultValue, $choices);
   }
 
   public function parseParam($value): bool {
+
     if (!is_array($value)) {
       if (!$this->canBeOne) {
         return false;
@@ -37,6 +39,14 @@ class ArrayType extends Parameter {
         if ($this->elementParameter->parseParam($element)) {
           $element = $this->elementParameter->value;
         } else {
+          return false;
+        }
+      }
+    }
+
+    if (!is_null($this->choices)) {
+      foreach ($value as $element) {
+        if (!in_array($element, $this->choices)) {
           return false;
         }
       }

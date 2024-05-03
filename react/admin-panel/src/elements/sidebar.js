@@ -10,7 +10,6 @@ import {
 import { Dropdown } from '@mui/base/Dropdown';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ProfilePicture from "shared/elements/profile-picture";
 import {Dns, Groups, People, QueryStats, Security, Settings, Route, ArrowBack, Translate} from "@mui/icons-material";
 import useCurrentPath from "shared/hooks/current-path";
 import ProfileLink from "./profile-link";

@@ -7,17 +7,28 @@ import {
     CircularProgress,
     FormControl,
     FormControlLabel,
-    FormLabel,
-    TextField
+    FormLabel, Grid,
+    TextField,
+    FormGroup as MuiFormGroup
 } from "@mui/material";
 import {LocaleContext} from "shared/locale";
 import * as React from "react";
 import ViewContent from "../../elements/view-content";
 import FormGroup from "../../elements/form-group";
 import ButtonBar from "../../elements/button-bar";
-import {RestartAlt, Save} from "@mui/icons-material";
-import {parseBool} from "shared/util";
-import SpacedFormGroup from "../../elements/form-group";
+import {RestartAlt, Save, Send} from "@mui/icons-material";
+import PasswordStrength from "shared/elements/password-strength";
+
+const initialUser = {
+    name: "",
+    fullName: "",
+    email: "",
+    password: "",
+    passwordConfirm: "",
+    groups: [],
+    confirmed: false,
+    active: true,
+};
 
 export default function UserEditView(props) {
 
@@ -30,19 +41,12 @@ export default function UserEditView(props) {
     const isNewUser = userId === "new";
     const {translate: L, requestModules, currentLocale} = useContext(LocaleContext);
     const [fetchUser, setFetchUser] = useState(!isNewUser);
-    const [user, setUser] = useState(isNewUser ? {
-        name: "",
-        fullName: "",
-        email: "",
-        password: "",
-        groups: [],
-        confirmed: false,
-        active: true,
-    } : null);
+    const [user, setUser] = useState(isNewUser ? initialUser : null);
 
     // ui
     const [hasChanged, setChanged] = useState(isNewUser);
     const [isSaving, setSaving] = useState(false);
+    const [sendInvite, setSetInvite] = useState(isNewUser);
 
     useEffect(() => {
         requestModules(props.api, ["general", "account"], currentLocale).then(data => {
@@ -51,14 +55,6 @@ export default function UserEditView(props) {
             }
         });
     }, [currentLocale]);
-
-    const onReset = useCallback(() => {
-
-    }, []);
-
-    const onSaveUser = useCallback(() => {
-
-    }, []);
 
     const onFetchUser = useCallback((force = false) => {
         if (!isNewUser && (force || fetchUser)) {
@@ -76,9 +72,60 @@ export default function UserEditView(props) {
         }
     }, [api, showDialog, fetchUser, isNewUser, userId, user]);
 
-    const onChangeValue = useCallback((name, value) => {
+    const onReset = useCallback(() => {
+        if (isNewUser) {
+            setUser({...initialUser});
+        } else {
+            onFetchUser(true);
+        }
+    }, [isNewUser, onFetchUser]);
 
-    }, []);
+    const onSaveUser = useCallback(() => {
+        if (!isSaving) {
+            setSaving(true);
+            if (isNewUser) {
+                if (sendInvite) {
+                    api.inviteUser(user.name, user.fullName, user.email).then(res => {
+                        setSaving(false);
+                        if (res.success) {
+                            setChanged(false);
+                            navigate("/admin/user/" + res.userId);
+                        } else {
+                            showDialog(res.msg, L("account.invite_user_error"));
+                        }
+                    });
+                } else {
+                    api.createUser(user.name, user.fullName, user.email, user.password, user.passwordConfirm).then(res => {
+                        setSaving(false);
+                        if (res.success) {
+                            setChanged(false);
+                            navigate("/admin/user/" + res.userId);
+                        } else {
+                            showDialog(res.msg, L("account.create_user_error"));
+                        }
+                    });
+                }
+            } else {
+                api.editUser(
+                    userId, user.name, user.email, user.password,
+                    user.groups, user.confirmed, user.active
+                ).then(res => {
+                    setSaving(false);
+                    if (res.success) {
+                        setChanged(false);
+                    } else {
+                        showDialog(res.msg, L("account.save_user_error"));
+                    }
+                });
+            }
+        }
+
+    }, [isSaving, sendInvite, isNewUser, userId, showDialog]);
+
+    const onChangeValue = useCallback((name, value) => {
+        setUser({...user, [name]: value});
+        setChanged(true);
+    }, [user]);
 
     useEffect(() => {
         if (!isNewUser) {
@@ -95,7 +142,8 @@ export default function UserEditView(props) {
         <Link key={"users"} to={"/admin/users"}>User</Link>,
         <span key={"action"}>{isNewUser ? "New" : "Edit"}</span>
     ]}>
-        <Box>
+        <Grid container>
+            <Grid item xs={12} lg={6}>
             <FormGroup>
                 <FormLabel>{L("account.name")}</FormLabel>
                 <FormControl>
@@ -124,12 +172,22 @@ export default function UserEditView(props) {
             { !isNewUser ?
                 <>
                     <FormGroup>
+                        <FormLabel>{L("account.password")}</FormLabel>
+                        <FormControl>
+                            <TextField size={"small"} variant={"outlined"}
+                                       value={user.password}
+                                       type={"password"}
+                                       placeholder={"(" + L("general.unchanged") + ")"}
+                                       onChange={e => setUser({...user, password: e.target.value})} />
+                        </FormControl>
+                    </FormGroup>
+                    <MuiFormGroup>
                         <FormControlLabel
                             control={<Checkbox
                                 checked={!!user.active}
                                 onChange={(e, v) => onChangeValue("active", v)} />}
                             label={L("account.active")} />
-                    </FormGroup>
+                    </MuiFormGroup>
                     <FormGroup>
                         <FormControlLabel
                             control={<Checkbox
@@ -138,18 +196,52 @@ export default function UserEditView(props) {
                             label={L("account.confirmed")} />
                     </FormGroup>
                 </> : <>
-
-
+                    <FormGroup>
+                        <FormControlLabel
+                            control={<Checkbox
+                                checked={sendInvite}
+                                onChange={(e, v) => setSetInvite(v)} />}
+                            label={L("account.send_invite")} />
+                    </FormGroup>
+                    {!sendInvite && <>
+                        <FormGroup>
+                            <FormLabel>{L("account.password")}</FormLabel>
+                            <FormControl>
+                                <TextField size={"small"} variant={"outlined"}
+                                           value={user.password}
+                                           type={"password"}
+                                           onChange={e => setUser({...user, password: e.target.value})} />
+                            </FormControl>
+                        </FormGroup>
+                        <FormGroup>
+                            <FormLabel>{L("account.password_confirm")}</FormLabel>
+                            <FormControl>
+                                <TextField size={"small"} variant={"outlined"}
+                                           value={user.passwordConfirm}
+                                           type={"password"}
+                                           onChange={e => setUser({...user, passwordConfirm: e.target.value})} />
+                            </FormControl>
+                        </FormGroup>
+                        <Box mb={2}>
+                            <PasswordStrength password={user.password} />
+                        </Box>
+                    </>
+                    }
                 </>
             }
-        </Box>
+            </Grid>
+        </Grid>
         <ButtonBar>
             <Button color={"primary"}
                     onClick={onSaveUser}
                     disabled={isSaving || !(isNewUser ? api.hasPermission("user/create") : api.hasPermission("user/edit"))}
-                    startIcon={isSaving ? <CircularProgress size={14} /> : <Save />}
+                    startIcon={isSaving ?
+                        <CircularProgress size={14} /> :
+                        (sendInvite ? <Send /> : <Save /> )}
                     variant={"outlined"} title={L(hasChanged ? "general.unsaved_changes" : "general.save")}>
-                {isSaving ? L("general.saving") + "…" : (L("general.save") + (hasChanged ? " *" : ""))}
+                {isSaving ?
+                    L(sendInvite ? "general.sending" : "general.saving") + "…" :
+                    (L(sendInvite ? "general.send" : "general.save") + (hasChanged ? " *" : ""))}
             </Button>
             <Button color={"error"}
                     onClick={onReset}

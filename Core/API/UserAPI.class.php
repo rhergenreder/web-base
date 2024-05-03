@@ -2,8 +2,11 @@
 
 namespace Core\API {
 
+  use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\Compare;
+  use Core\Driver\SQL\Condition\CondIn;
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\Group;
   use Core\Objects\DatabaseEntity\Language;
   use Core\Objects\DatabaseEntity\User;
   use Core\Objects\DatabaseEntity\UserToken;
@@ -73,6 +76,26 @@ namespace Core\API {
     protected function checkRequirements($username, $password, $confirmPassword): bool {
       return $this->checkUsernameRequirements($username) &&
         $this->checkPasswordRequirements($password, $confirmPassword);
+    }
+
+    protected function checkGroups(array &$groups): bool {
+      $sql = $this->context->getSQL();
+      $currentUser = $this->context->getUser();
+      $requestedGroups = array_unique($this->getParam("groups"));
+      if (!empty($requestedGroups)) {
+        $availableGroups = Group::findAll($sql, new CondIn(new Column("id"), $requestedGroups));
+        foreach ($requestedGroups as $groupId) {
+          if (!isset($availableGroups[$groupId])) {
+            return $this->createError("Group with id=$groupId does not exist.");
+          } else if ($this->isExternalCall() && $groupId === Group::ADMIN && !$currentUser->hasGroup(Group::ADMIN)) {
+            return $this->createError("You cannot create users with administrator groups.");
+          } else {
+            $groups[] = $groupId;
+          }
+        }
+      }
+
+      return true;
     }
 
     protected function insertUser(string $username, ?string $email, string $password, bool $confirmed, string $fullName = "", array $groups = []): bool|User {
@@ -153,6 +176,7 @@ namespace Core\API\User {
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, array(
         'username' => new StringType('username', 32),
+        'fullName' => new StringType('fullName', 64, true, ""),
         'email' => new Parameter('email', Parameter::TYPE_EMAIL, true, NULL),
         'password' => new StringType('password'),
         'confirmPassword' => new StringType('confirmPassword'),
@@ -165,6 +189,7 @@ namespace Core\API\User {
     public function _execute(): bool {
 
       $username = $this->getParam('username');
+      $fullName = $this->getParam('fullName');
       $email = $this->getParam('email');
       $password = $this->getParam('password');
       $confirmPassword = $this->getParam('confirmPassword');
@@ -172,31 +197,18 @@ namespace Core\API\User {
         return false;
       }
 
+      $groups = [];
+      if (!$this->checkGroups($groups)) {
+        return false;
+      }
+
       if (!$this->checkUserExists($username, $email)) {
         return false;
       }
 
-      $groups = [];
-      $sql = $this->context->getSQL();
-      $currentUser = $this->context->getUser();
-
-      $requestedGroups = array_unique($this->getParam("groups"));
-      if (!empty($requestedGroups)) {
-        $availableGroups = Group::findAll($sql, new CondIn(new Column("id"), $requestedGroups));
-        foreach ($requestedGroups as $groupId) {
-          if (!isset($availableGroups[$groupId])) {
-            return $this->createError("Group with id=$groupId does not exist.");
-          } else if ($this->isExternalCall() && $groupId === Group::ADMIN && !$currentUser->hasGroup(Group::ADMIN)) {
-            return $this->createError("You cannot create users with administrator groups.");
-          } else {
-            $groups[] = $groupId;
-          }
-        }
-      }
-
       // prevent duplicate keys
       $email = (!is_null($email) && empty($email)) ? null : $email;
-      $user = $this->insertUser($username, $email, $password, true, "", $groups);
+      $user = $this->insertUser($username, $email, $password, true, $fullName, $groups);
       if ($user !== false) {
         $this->user = $user;
         $this->result["userId"] = $user->getId();
@@ -432,7 +444,9 @@ namespace Core\API\User {
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall, array(
         'username' => new StringType('username', 32),
+        'fullName' => new StringType('fullName', 64, true, ""),
         'email' => new StringType('email', 64),
+        'groups' => new ArrayType("groups", Parameter::TYPE_INT, true, true, [])
       ));
 
       $this->loginRequired = true;
@@ -440,24 +454,38 @@ namespace Core\API\User {
 
     public function _execute(): bool {
 
+      $sql = $this->context->getSQL();
+      $settings = $this->context->getSettings();
+      $currentUser = $this->context->getUser();
+      if (!$settings->isMailEnabled()) {
+        return $this->createError("An invitation cannot be sent because mailing is not enabled.");
+      }
+
       $username = $this->getParam('username');
+      $fullName = $this->getParam('fullName');
       $email = $this->getParam('email');
+      $groups = [];
+
+      if (!$this->checkGroups($groups)) {
+        return false;
+      }
+
       if (!$this->checkUserExists($username, $email)) {
         return false;
       }
 
       // Create user
-      $user = $this->insertUser($username, $email, "", false);
+      $user = $this->insertUser($username, $email, "", false, $fullName, $groups);
       if ($user === false) {
         return false;
       }
 
+      $this->result["userId"] = $user->getId();
       $this->logger->info("A new user with username='$username' and email='$email' was invited by " . $this->logUserId());
 
       // Create Token
       $token = generateRandomString(36);
       $validDays = 7;
-      $sql = $this->context->getSQL();
       $userToken = new UserToken($user, $token, UserToken::TYPE_INVITE, $validDays * 24);
 
       if ($userToken->save($sql)) {

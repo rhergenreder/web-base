@@ -127,10 +127,11 @@ export default class API {
         return res;
     }
 
-    async editUser(id, username, email, password, groups, confirmed) {
+    async editUser(id, username, email, password, groups, confirmed, active) {
         return this.apiCall("user/edit", {
             id: id, username: username, email: email,
-            password: password, groups: groups, confirmed: confirmed
+            password: password, groups: groups,
+            confirmed: confirmed, active: active
         });
     }
 
@@ -158,12 +159,15 @@ export default class API {
         return this.apiCall("user/fetch", { page: pageNum, count: count, orderBy: orderBy, sortOrder: sortOrder });
     }
 
-    async inviteUser(username, email) {
-        return this.apiCall("user/invite", { username: username, email: email });
+    async inviteUser(username, fullName, email) {
+        return this.apiCall("user/invite", { username: username, fullName: fullName, email: email });
     }
 
-    async createUser(username, email, password, confirmPassword) {
-        return this.apiCall("user/create", { username: username, email: email, password: password, confirmPassword: confirmPassword });
+    async createUser(username, fullName, email, password, confirmPassword) {
+        return this.apiCall("user/create", { username: username, email: email,
+            fullName: fullName,
+            password: password, confirmPassword: confirmPassword
+        });
     }
 
     async searchUser(query) {

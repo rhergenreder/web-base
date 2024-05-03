@@ -107,7 +107,7 @@ export default function EditProfilePicture(props) {
 
                         if (croppedSize < 150) {
                             setImage({ loading: false, file: null, data: null });
-                            showDialog(L("account.profile_picture_invalid_dimensions"), L("general.error"));
+                            showDialog(L("account.profile_picture_invalid_dimensions"), L("general.error_occurred"));
                         } else {
                             setImage({ loading: false, file: file, data: imageData });
                         }

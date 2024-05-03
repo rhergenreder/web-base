@@ -124,9 +124,9 @@ namespace Core\API\User {
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\API\Template\Render;
+  use Core\API\Traits\Captcha;
   use Core\API\Traits\Pagination;
   use Core\API\UserAPI;
-  use Core\API\VerifyCaptcha;
   use Core\Driver\SQL\Condition\CondBool;
   use Core\Driver\SQL\Condition\CondLike;
   use Core\Driver\SQL\Condition\CondOr;
@@ -716,6 +716,8 @@ namespace Core\API\User {
 
   class Register extends UserAPI {
 
+    use Captcha;
+
     public function __construct(Context $context, bool $externalCall = false) {
       $parameters = array(
         "username" => new StringType("username", 32),
@@ -724,10 +726,7 @@ namespace Core\API\User {
         "confirmPassword" => new StringType("confirmPassword"),
       );
 
-      $settings = $context->getSettings();
-      if ($settings->isCaptchaEnabled()) {
-        $parameters["captcha"] = new StringType("captcha");
-      }
+      $this->addCaptchaParameters($parameters);
 
       parent::__construct($context, $externalCall, $parameters);
       $this->csrfTokenRequired = false;
@@ -745,12 +744,8 @@ namespace Core\API\User {
         return $this->createError("User Registration is not enabled.");
       }
 
-      if ($settings->isCaptchaEnabled()) {
-        $captcha = $this->getParam("captcha");
-        $req = new VerifyCaptcha($this->context);
-        if (!$req->execute(array("captcha" => $captcha, "action" => "register"))) {
-          return $this->createError($req->getLastError());
-        }
+      if (!$this->checkCaptcha("register")) {
+        return false;
       }
 
       $username = $this->getParam("username");
@@ -840,7 +835,8 @@ namespace Core\API\User {
         'email' => new Parameter('email', Parameter::TYPE_EMAIL, true, NULL),
         'password' => new StringType('password', -1, true, NULL),
         'groups' => new ArrayType('groups', Parameter::TYPE_INT, true, true, NULL),
-        'confirmed' => new Parameter('confirmed', Parameter::TYPE_BOOLEAN, true, NULL)
+        'confirmed' => new Parameter('confirmed', Parameter::TYPE_BOOLEAN, true, NULL),
+        'active' => new Parameter('active', Parameter::TYPE_BOOLEAN, true, NULL)
       ));
 
       $this->loginRequired = true;
@@ -865,6 +861,7 @@ namespace Core\API\User {
         $password = $this->getParam("password");
         $groups = $this->getParam("groups");
         $confirmed = $this->getParam("confirmed");
+        $active = $this->getParam("active");
 
         $email = (!is_null($email) && empty($email)) ? null : $email;
 
@@ -918,10 +915,19 @@ namespace Core\API\User {
 
         if (!is_null($confirmed)) {
           if ($id === $currentUser->getId() && $confirmed === false) {
-            return $this->createError("Cannot make own account unconfirmed.");
+            return $this->createError("Cannot change confirmed flag on own account.");
           } else {
             $user->confirmed = $confirmed;
             $columnsToUpdate[] = "confirmed";
+          }
+        }
+
+        if (!is_null($active)) {
+          if ($id === $currentUser->getId() && $active === false) {
+            return $this->createError("Cannot change active flag on own account.");
+          } else {
+            $user->active = $active;
+            $columnsToUpdate[] = "active";
           }
         }
 
@@ -995,16 +1001,15 @@ namespace Core\API\User {
   }
 
   class RequestPasswordReset extends UserAPI {
+
+    use Captcha;
+
     public function __construct(Context $context, $externalCall = false) {
-      $parameters = array(
+      $parameters = [
         'email' => new Parameter('email', Parameter::TYPE_EMAIL),
-      );
+      ];
 
-      $settings = $context->getSettings();
-      if ($settings->isCaptchaEnabled()) {
-        $parameters["captcha"] = new StringType("captcha");
-      }
-
+      $this->addCaptchaParameters($parameters);
       parent::__construct($context, $externalCall, $parameters);
     }
 
@@ -1019,12 +1024,8 @@ namespace Core\API\User {
         return $this->createError("The mail service is not enabled, please contact the server administration.");
       }
 
-      if ($settings->isCaptchaEnabled()) {
-        $captcha = $this->getParam("captcha");
-        $req = new VerifyCaptcha($this->context);
-        if (!$req->execute(array("captcha" => $captcha, "action" => "resetPassword"))) {
-          return $this->createError($req->getLastError());
-        }
+      if (!$this->checkCaptcha("resetPassword")) {
+        return false;
       }
 
       $sql = $this->context->getSQL();
@@ -1088,16 +1089,15 @@ namespace Core\API\User {
   }
 
   class ResendConfirmEmail extends UserAPI {
+
+    use Captcha;
+
     public function __construct(Context $context, $externalCall = false) {
       $parameters = array(
         'email' => new Parameter('email', Parameter::TYPE_EMAIL),
       );
 
-      $settings = $context->getSettings();
-      if ($settings->isCaptchaEnabled()) {
-        $parameters["captcha"] = new StringType("captcha");
-      }
-
+      $this->addCaptchaParameters($parameters);
       parent::__construct($context, $externalCall, $parameters);
     }
 
@@ -1108,12 +1108,8 @@ namespace Core\API\User {
       }
 
       $settings = $this->context->getSettings();
-      if ($settings->isCaptchaEnabled()) {
-        $captcha = $this->getParam("captcha");
-        $req = new VerifyCaptcha($this->context);
-        if (!$req->execute(array("captcha" => $captcha, "action" => "resendConfirmation"))) {
-          return $this->createError($req->getLastError());
-        }
+      if (!$this->checkCaptcha("resendConfirmation")) {
+        return false;
       }
 
       $email = $this->getParam("email");

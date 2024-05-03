@@ -9,7 +9,7 @@ return [
   "search" => "Suche",
   "search_query" => "Suchanfrage",
   "no_entries_placeholder" => "Keine Log-Einträge zum Anzeigen",
-  "timestamp_placeholder" => "Datum und Zeitpunk Auswählen zum Filtern",
+  "timestamp_placeholder" => "Datum und Zeitpunkt auswählen zum Filtern",
   "hide_details" => "Details verstecken",
   "show_details" => "Details zeigen",
 

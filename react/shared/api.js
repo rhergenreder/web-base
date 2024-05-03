@@ -187,9 +187,11 @@ export default class API {
         return res;
     }
 
-    async uploadPicture(file, scale=1.0) {
+    async uploadPicture(file, size, x = 0, y = 0) {
         const formData = new FormData();
-        formData.append("scale", scale);
+        formData.append("size", size);
+        formData.append("x", x);
+        formData.append("y", y);
         formData.append("picture", file, file.name);
         let res = await this.apiCall("user/uploadPicture", formData);
         if (res.success) {

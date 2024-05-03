@@ -60,8 +60,13 @@ return [
   "user_list_placeholder" => "No users to display",
 
   # profile picture
+  "remove_picture" => "Remove profile picture",
+  "remove_picture_text" => "Do you really want to remove your current profile picture?",
   "change_picture" => "Change profile picture",
   "profile_picture_of" => "Profile Picture of",
+  "change_picture_title" => "Change Profile picture",
+  "change_picture_text" => "Choose a profile picture and adjust the visible area.",
+  "profile_picture_invalid_dimensions" => "The profile picture must have at least a size of 150x150.",
 
   # dialogs
   "fetch_group_members_error" => "Error fetching group members",

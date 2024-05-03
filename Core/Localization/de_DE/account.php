@@ -58,8 +58,13 @@ return [
   "user_list_placeholder" => "Keine Benutzer zum Anzeigen",
 
   # profile picture
+  "remove_picture" => "Profilbild entfernen",
+  "remove_picture_text" => "Möchten Sie wirklich Ihr aktuelles Profilbild entfernen?",
   "change_picture" => "Profilbild ändern",
   "profile_picture_of" => "Profilbild von",
+  "change_picture_title" => "Profilbild ändern",
+  "change_picture_text" => "Wähle ein Profilbild aus und passe die sichtbare Fläche an.",
+  "profile_picture_invalid_dimensions" => "Das Profilbild muss mindestens 150x150px groß sein.",
 
   # dialogs
   "fetch_group_members_error" => "Fehler beim Holen der Gruppenmitglieder",

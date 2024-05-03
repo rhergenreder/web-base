@@ -13,6 +13,8 @@ const PicturePlaceholderBox = styled(Box)((props) => ({
     alignItems: "center",
     background: "radial-gradient(circle closest-side, gray 98%, transparent 100%);",
     containerType: "inline-size",
+    width: "100%",
+    height: "100%",
     "& > span": {
         textAlign: "center",
         fontSize: "30cqw",

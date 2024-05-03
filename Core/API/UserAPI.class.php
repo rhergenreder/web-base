@@ -121,6 +121,8 @@ namespace Core\API {
 namespace Core\API\User {
 
   use Core\API\Parameter\ArrayType;
+  use Core\API\Parameter\FloatType;
+  use Core\API\Parameter\IntegerType;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\API\Template\Render;
@@ -1311,10 +1313,15 @@ namespace Core\API\User {
   }
 
   class UploadPicture extends UserAPI {
+
+    const MIN_SIZE = 150;
+    const MAX_SIZE = 800;
+
     public function __construct(Context $context, bool $externalCall = false) {
-      // TODO: we should optimize the process here, we need an offset and size parameter to get a quadratic crop of the uploaded image
       parent::__construct($context, $externalCall, [
-        "scale" => new Parameter("scale", Parameter::TYPE_FLOAT, true, NULL),
+        "x" => new FloatType("x", 0, PHP_FLOAT_MAX, true, NULL),
+        "y" => new FloatType("y", 0, PHP_FLOAT_MAX, true, NULL),
+        "size" => new FloatType("size", self::MIN_SIZE, self::MAX_SIZE, true, NULL),
       ]);
       $this->loginRequired = true;
       $this->forbidMethod("GET");
@@ -1325,64 +1332,31 @@ namespace Core\API\User {
      */
     protected function onTransform(\Imagick $im, $uploadDir): bool|string {
 
-      $minSize = 75;
-      $maxSize = 500;
-
       $width = $im->getImageWidth();
       $height = $im->getImageHeight();
-      $doResize = false;
+      $maxPossibleSize = min($width, $height);
 
-      if ($width < $minSize || $height < $minSize) {
-        if ($width < $height) {
-          $newWidth = $minSize;
-          $newHeight = intval(($minSize / $width) * $height);
-        } else {
-          $newHeight = $minSize;
-          $newWidth = intval(($minSize / $height) * $width);
-        }
+      $cropX = $this->getParam("x");
+      $cropY = $this->getParam("y");
+      $cropSize = $this->getParam("size") ?? $maxPossibleSize;
 
-        $doResize = true;
-      } else if ($width > $maxSize || $height > $maxSize) {
-        if ($width > $height) {
-          $newWidth = $maxSize;
-          $newHeight = intval($height * ($maxSize / $width));
-        } else {
-          $newHeight = $maxSize;
-          $newWidth = intval($width * ($maxSize / $height));
-        }
-
-        $doResize = true;
-      } else {
-        $newWidth = $width;
-        $newHeight = $height;
+      if ($maxPossibleSize < self::MIN_SIZE) {
+        return $this->createError("Image must be at least " . self::MIN_SIZE . "x" . self::MIN_SIZE);
+      } else if ($cropSize > self::MAX_SIZE) {
+        return $this->createError("Crop must be at most " . self::MAX_SIZE . "x" . self::MAX_SIZE);
+      } else if ($cropSize > $maxPossibleSize) {
+        return $this->createError("Invalid crop size");
       }
 
-      if ($width < $minSize || $height < $minSize) {
-        return $this->createError("Error processing image. Bad dimensions.");
+      if ($cropX === null) {
+        $cropX = ($width > $height) ? ($width - $height) / 2 : 0;
       }
 
-      if ($doResize) {
-        $width = $newWidth;
-        $height = $newHeight;
-        $im->resizeImage($width, $height, \Imagick::FILTER_SINC, 1);
+      if ($cropY === null) {
+        $cropY = ($height > $width) ? ($height - $width) / 2 : 0;
       }
 
-      $size = $this->getParam("size");
-      if (is_null($size)) {
-        $size = min($width, $height);
-      }
-
-      $offset = [$this->getParam("offsetX"), $this->getParam("offsetY")];
-      if ($size < $minSize or $size > $maxSize) {
-        return $this->createError("Invalid size. Must be in range of $minSize-$maxSize.");
-      }/* else if ($offset[0] < 0 || $offset[1] < 0 || $offset[0]+$size > $width ||  $offset[1]+$size > $height) {
-        return $this->createError("Offsets out of bounds.");
-      }*/
-
-      if ($offset[0] !== 0 || $offset[1] !== 0 || $size !== $width || $size !== $height) {
-        $im->cropImage($size, $size, $offset[0], $offset[1]);
-      }
-
+      $im->cropImage($cropSize, $cropSize, $cropX, $cropY);
       $fileName = uuidv4() . ".jpg";
       $im->writeImage("$uploadDir/$fileName");
       $im->destroy();

@@ -1,16 +1,32 @@
-import {Box, Button, CircularProgress, Slider, styled} from "@mui/material";
-import {useCallback, useContext, useRef, useState} from "react";
+import {
+    Box,
+    Button,
+    CircularProgress,
+    Dialog, DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+    styled, TextField
+} from "@mui/material";
+import {useCallback, useContext, useState} from "react";
 import {LocaleContext} from "shared/locale";
-import PreviewProfilePicture from "./preview-picture";
-import {Delete, Edit} from "@mui/icons-material";
+import {Delete, Edit, Upload} from "@mui/icons-material";
 import ProfilePicture from "shared/elements/profile-picture";
+import ReactCrop from 'react-image-crop'
+
+import 'react-image-crop/dist/ReactCrop.css';
 
 const ProfilePictureBox = styled(Box)((props) => ({
-    padding: props.theme.spacing(2),
+    padding: props.theme.spacing(1),
     display: "grid",
-    gridTemplateRows: "auto 60px",
-    gridGap: props.theme.spacing(2),
+    gridTemplateRows: "auto calc(110px - " + props.theme.spacing(1) + ")",
     textAlign: "center",
+    alignItems: "center",
+    justifyItems: "center",
+    "& img": {
+        maxHeight: 150,
+        width: "auto",
+    }
 }));
 
 const VerticalButtonBar = styled(Box)((props) => ({
@@ -24,66 +40,45 @@ export default function EditProfilePicture(props) {
 
     // meta
     const {translate: L} = useContext(LocaleContext);
-    // const [scale, setScale] = useState(100);
-    const scale = useRef(100);
     const {api, showDialog, setProfile, profile, setDialogData, ...other} = props
 
-    const onUploadPicture = useCallback((data) => {
-        api.uploadPicture(data, scale.current / 100.0).then((res) => {
-            if (!res.success) {
-                showDialog(res.msg, L("Error uploading profile picture"));
-            } else {
-                setProfile({...profile, profilePicture: res.profilePicture});
-            }
-        })
-    }, [api, scale.current, showDialog, profile]);
+    // data
+    const [crop, setCrop] = useState({ unit: 'px' });
+    const [image, setImage] = useState({ loading: false, data: null, file: null });
+
+    // ui
+    const [isUploading, setUploading] = useState(false);
+
+    const onCloseDialog = useCallback((event = null, reason = null) => {
+        if (!reason || !["backdropClick", "escapeKeyDown"].includes(reason)) {
+            setImage({loading: false, data: null, file: null});
+        }
+    }, []);
+
+    const onUploadPicture = useCallback(() => {
+        if (!isUploading) {
+            setUploading(true);
+            api.uploadPicture(image.file, crop.width, crop.x, crop.y).then(res => {
+                setUploading(false);
+                if (res.success) {
+                    onCloseDialog();
+                    setProfile({...profile, profilePicture: res.profilePicture});
+                } else {
+                    showDialog(res.msg, L("account.upload_profile_picture_error"));
+                }
+            })
+        }
+    }, [api, image, crop, isUploading, showDialog, profile, onCloseDialog]);
 
     const onRemoveImage = useCallback(() => {
         api.removePicture().then((res) => {
             if (!res.success) {
-                showDialog(res.msg, L("Error removing profile picture"));
+                showDialog(res.msg, L("account.remove_profile_picture_error"));
             } else {
                 setProfile({...profile, profilePicture: null});
             }
         });
     }, [api, showDialog, profile]);
-
-    const onOpenDialog = useCallback((file = null, data = null) => {
-
-        let img = null;
-        if (data !== null) {
-            img = new Image();
-            img.src = data;
-        }
-
-        setDialogData({
-            show: true,
-            title: L("account.change_picture_title"),
-            text: L("account.change_picture_text"),
-            options: data === null ? [L("general.cancel")] : [L("general.apply"), L("general.cancel")],
-            inputs: data === null ? [{
-                key: "pfp-loading",
-                type: "custom",
-                element: CircularProgress,
-            }] : [
-                {
-                    key: "pfp-preview",
-                    type: "custom",
-                    element: PreviewProfilePicture,
-                    img: img,
-                    scale: scale.current,
-                    setScale: (v) => scale.current = v,
-                },
-            ],
-            onOption: (option) => {
-                if (option === 1 && file) {
-                    onUploadPicture(file)
-                }
-
-                // scale.current = 100;
-            }
-        })
-    }, [setDialogData, onUploadPicture]);
 
     const onSelectImage = useCallback(() => {
         let fileInput = document.createElement("input");
@@ -94,38 +89,91 @@ export default function EditProfilePicture(props) {
             if (file) {
                 let reader = new FileReader();
                 reader.onload = function (e) {
-                    onOpenDialog(file, e.target.result);
+                    const imageData = e.target.result;
+                    const img = new Image();
+                    img.src = imageData;
+                    img.onload = () => {
+                        let croppedSize;
+                        if (img.width > img.height) {
+                            croppedSize = Math.min(800, img.height);
+                            setCrop({ x: (img.width - img.height) / 2, y: 0, unit: "px", width: croppedSize, height: croppedSize });
+                        } else if (img.width < img.height) {
+                            croppedSize = Math.min(800, img.width);
+                            setCrop({ x: 0, y: (img.height - img.width) / 2, unit: "px", width: croppedSize, height: croppedSize });
+                        } else {
+                            croppedSize = Math.min(800, img.width);
+                            setCrop({ x: 0, y: 0, unit: "px", width: croppedSize, height: croppedSize });
+                        }
+
+                        if (croppedSize < 150) {
+                            setImage({ loading: false, file: null, data: null });
+                            showDialog(L("account.profile_picture_invalid_dimensions"), L("general.error"));
+                        } else {
+                            setImage({ loading: false, file: file, data: imageData });
+                        }
+                    }
                 }
 
-                onOpenDialog();
+                setImage({ file: null, data: null, loading: true });
                 reader.readAsDataURL(file);
             }
         };
         fileInput.click();
-    }, [onOpenDialog]);
+    }, [showDialog]);
 
-
-    return <ProfilePictureBox {...other}>
-        <ProfilePicture user={profile} onClick={onSelectImage} />
-        <VerticalButtonBar>
-            <Button variant="outlined" size="small"
-                    startIcon={<Edit />}
-                    onClick={onSelectImage}>
-                {L("account.change_picture")}
-            </Button>
-            {profile.profilePicture &&
+    return <>
+        <ProfilePictureBox {...other}>
+            <ProfilePicture user={profile} onClick={onSelectImage} />
+            <VerticalButtonBar>
                 <Button variant="outlined" size="small"
-                    startIcon={<Delete />} color={"error"}
-                    onClick={() => setDialogData({
-                        show: true,
-                        title: L("account.picture_remove_title"),
-                        message: L("account.picture_remove_text"),
-                        options: [L("general.confirm"), L("general.cancel")],
-                        onOption: (option) => option === 1 ? onRemoveImage() : true
-                    })}>
-                    {L("account.remove_picture")}
+                        startIcon={<Edit />}
+                        onClick={onSelectImage}>
+                    {L("account.change_picture")}
                 </Button>
-            }
-        </VerticalButtonBar>
-    </ProfilePictureBox>
+                {profile.profilePicture &&
+                    <Button variant="outlined" size="small"
+                        startIcon={<Delete />} color={"error"}
+                        onClick={() => setDialogData({
+                            show: true,
+                            title: L("account.remove_picture"),
+                            message: L("account.remove_picture_text"),
+                            options: [L("general.cancel"), L("general.confirm")],
+                            onOption: (option) => option === 1 ? onRemoveImage() : true
+                        })}>
+                        {L("account.remove_picture")}
+                    </Button>
+                }
+            </VerticalButtonBar>
+        </ProfilePictureBox>
+        <Dialog open={image.loading || image.data !== null} maxWidth={"lg"}
+            onClose={onCloseDialog}>
+            <DialogTitle>
+                {L("account.change_picture_title")}
+            </DialogTitle>
+            <DialogContent>
+                <DialogContentText>
+                    {L("account.change_picture_text")}
+                </DialogContentText>
+                {image.data ?
+                    <ReactCrop onChange={c => setCrop(c)} crop={crop} keepSelection={true}
+                               aspect={1} circularCrop={true} disabled={isUploading}
+                               maxWidth={800} maxHeight={800} minWidth={150} minHeight={150}>
+                        <img src={image?.data} alt={"preview"} />
+                    </ReactCrop> :
+                    <CircularProgress />
+                }
+            </DialogContent>
+            <DialogActions>
+                <Button variant={"outlined"} color={"error"} onClick={onCloseDialog}
+                        disabled={isUploading}>
+                    {L("general.cancel")}
+                </Button>
+                <Button variant={"outlined"} type={"submit"} onClick={onUploadPicture}
+                        disabled={isUploading}
+                        startIcon={isUploading ? <CircularProgress size={12} /> : <Upload />}>
+                    {L(isUploading ? "general.uploading" : "general.submit")}
+                </Button>
+            </DialogActions>
+        </Dialog>
+    </>
 }

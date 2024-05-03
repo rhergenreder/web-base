@@ -2,8 +2,9 @@
   "name": "admin-panel",
   "version": "1.0.0",
   "dependencies": {
-    "shared": "link:../shared",
-    "react": "^18.2.0"
+    "react": "^18.2.0",
+    "react-image-crop": "^11.0.5",
+    "shared": "link:../shared"
   },
   "scripts": {
     "dev": "HTTPS=true react-app-rewired start"

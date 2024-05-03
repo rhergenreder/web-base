@@ -9,10 +9,12 @@ import {
     NumericColumn,
     StringColumn
 } from "shared/elements/data-table";
-import {Chip} from "@mui/material";
+import {Box, Chip} from "@mui/material";
 import {Edit, Add} from "@mui/icons-material";
 import usePagination from "shared/hooks/pagination";
 import ViewContent from "../../elements/view-content";
+import ProfilePicture from "shared/elements/profile-picture";
+import ProfileLink from "../../elements/profile-link";
 
 export default function UserListView(props) {
 
@@ -55,9 +57,18 @@ export default function UserListView(props) {
        return column;
     })();
 
+    const nameColumn = (() => {
+       let column = new DataColumn(L("account.username"), "name");
+        column.renderData = (L, entry) => {
+            return <ProfileLink user={entry} text={entry.name} size={30}
+                                onClick={() => navigate("/admin/user/" + entry.id)}/>
+        }
+        return column;
+    })();
+
     const columnDefinitions = [
         new NumericColumn(L("general.id"), "id"),
-        new StringColumn(L("account.username"), "name"),
+        nameColumn,
         new StringColumn(L("account.full_name"), "fullName"),
         new StringColumn(L("account.email"), "email"),
         groupColumn,

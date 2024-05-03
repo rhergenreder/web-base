@@ -24,7 +24,7 @@ const PicturePlaceholderBox = styled(Box)((props) => ({
 
 export default function ProfilePicture(props) {
 
-    const {user, ...other} = props;
+    const {user, size, ...other} = props;
     const {translate: L} = useContext(LocaleContext);
 
     const initials = (user.fullName || user.name)
@@ -34,6 +34,11 @@ export default function ProfilePicture(props) {
 
     const isClickable = !!other.onClick;
     const sx = isClickable ? {cursor: "pointer"} : {};
+
+    if (size) {
+        sx.width = size;
+        sx.height = size;
+    }
 
     if (user.profilePicture) {
         return <PictureBox src={`/img/uploads/user/${user.id}/${user.profilePicture}`} sx={sx}

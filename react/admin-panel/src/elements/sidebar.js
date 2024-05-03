@@ -1,5 +1,5 @@
 import React, {useCallback, useContext, useEffect, useState} from 'react';
-import {Link, useNavigate} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import {LocaleContext} from "shared/locale";
 import {
     Box, Divider,
@@ -13,25 +13,9 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ProfilePicture from "shared/elements/profile-picture";
 import {Dns, Groups, People, QueryStats, Security, Settings, Route, ArrowBack, Translate} from "@mui/icons-material";
 import useCurrentPath from "shared/hooks/current-path";
+import ProfileLink from "./profile-link";
 
 const drawerWidth = 240;
-
-const ProfileLink = styled(Link)((props) => ({
-    "& > div": {
-        width: 30,
-        height: 30,
-        justifySelf: "center",
-    },
-    color: "inherit",
-    fontWeight: "bold",
-    marginTop: props.theme.spacing(1),
-    display: "grid",
-    gridTemplateColumns: "35px auto",
-    "& > span": {
-        alignSelf: "center",
-        marginLeft: props.theme.spacing(1)
-    },
-}));
 
 const DrawerHeader = styled('div')(({ theme }) => ({
     display: 'flex',
@@ -212,10 +196,8 @@ export default function Sidebar(props) {
                 <Divider/>
                 <ListItem sx={{display: 'block'}}>
                     <Box sx={{opacity: drawerOpen ? 1 : 0}}>{L("account.logged_in_as")}:</Box>
-                    <ProfileLink to={"/admin/profile"}>
-                        <ProfilePicture user={api.user}/>
-                        {drawerOpen && <span>{api.user?.name || L("account.not_logged_in")}</span>}
-                    </ProfileLink>
+                    <ProfileLink user={api.user} size={30} sx={{marginTop: 1, gridGap: 16, fontWeight: "bold" }}
+                        onClick={() => navigate("/admin/profile")} />
                 </ListItem>
                 <Divider/>
                 <List>

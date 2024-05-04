@@ -10,7 +10,7 @@ if (is_file($autoLoad)) {
   require_once $autoLoad;
 }
 
-const WEBBASE_VERSION = "2.3.1";
+const WEBBASE_VERSION = "2.4.0";
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function ($class) {
@@ -201,7 +201,8 @@ function intendCode($code, $escape = true): string {
 
 function html_attributes(array $attributes): string {
   return implode(" ", array_map(function ($key) use ($attributes) {
-    $value = htmlspecialchars($attributes[$key]);
+    $value = is_array($attributes[$key]) ? implode(" ", $attributes[$key]) : $attributes[$key];
+    $value = htmlspecialchars($value);
     return "$key=\"$value\"";
   }, array_keys($attributes)));
 }
@@ -325,4 +326,23 @@ function rrmdir(string $dir): void {
     }
     rmdir($dir);
   }
+}
+
+function loadEnv(?string $file = NULL, bool $putEnv = false): array|null {
+  if ($file === NULL) {
+    $file = WEBROOT . DIRECTORY_SEPARATOR . ".env";
+  }
+
+  if (!is_file($file)) {
+    return null;
+  }
+
+  $env = parse_ini_file('.env');
+  if ($putEnv) {
+    foreach ($env as $key => $value) {
+      putenv("$key=$value");
+    }
+  }
+
+  return $env;
 }

@@ -59,7 +59,7 @@ function sendRequest(params, done) {
   let success = false;
   let statusBox = $("#status");
 
-  statusBox.hide();
+  statusBox.addClass("d-none");
   $.post("/index.php", params, function(data) {
     if(data.success || data.step !== getCurrentStep()) {
       success = true;
@@ -68,7 +68,7 @@ function sendRequest(params, done) {
       setState(ERROR);
       statusBox.addClass("alert-danger");
       statusBox.html("An error occurred during installation: " + data.msg);
-      statusBox.show();
+      statusBox.removeClass("d-none");
     }
   }, "json").fail(function() {
     setState(ERROR);

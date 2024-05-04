@@ -20,8 +20,10 @@ class CreateDatabase extends DatabaseScript {
       ->addBool("private", false) // these values are not returned from '/api/settings/get', but can be changed
       ->addBool("readonly", false) // these values are neither returned, nor can be changed from outside
       ->primaryKey("name");
-    $settingsQuery = $sql->insert("Settings", array("name", "value", "private", "readonly"));
-    (Settings::loadDefaults())->addRows($settingsQuery);
+
+    $defaultSettings = Settings::loadDefaults(loadEnv());
+    $settingsQuery = $sql->insert("Settings", ["name", "value", "private", "readonly"]);
+    $defaultSettings->addRows($settingsQuery);
     $queries[] = $settingsQuery;
 
     $queries[] = $sql->createTable("ApiPermission")

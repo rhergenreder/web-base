@@ -94,7 +94,7 @@ class Settings {
     return $this->installationComplete;
   }
 
-  public static function loadDefaults(): Settings {
+  public static function loadDefaults(?array $env = null): Settings {
     $protocol = getProtocol();
     $hostname = getCurrentHostName();
     $settings = new Settings();
@@ -125,6 +125,9 @@ class Settings {
     if (isDocker()) {
       $settings->rateLimitingEnabled = true;
       $settings->redisHost = "webbase-redis";
+      if ($env && array_key_exists("REDIS_PASSWORD", $env)) {
+        $settings->redisPassword = $env["REDIS_PASSWORD"];
+      }
     } else {
       $settings->rateLimitingEnabled = false;
       $settings->redisHost = "";
@@ -180,9 +183,9 @@ class Settings {
       ->addRow("mail_username", '""', false, false)
       ->addRow("mail_password", '""', true, false)
       ->addRow("mail_from", '""', false, false)
-       ->addRow("mail_footer", '""', false, false)
+      ->addRow("mail_footer", '""', false, false)
       ->addRow("mail_async", false, false, false)
-      ->addRow("rate_limiting_enabled", json_encode($this->allowedExtensions), false, false)
+      ->addRow("rate_limiting_enabled", true, false, false)
       ->addRow("redis_host", json_encode($this->redisHost), false, false)
       ->addRow("redis_port", json_encode($this->redisPort), false, false)
       ->addRow("redis_password", json_encode($this->redisPassword), true, false)

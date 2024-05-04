@@ -29,6 +29,7 @@ namespace Documents\Install {
   use Core\External\PHPMailer\PHPMailer;
   use Core\Objects\ConnectionData;
   use Core\Objects\DatabaseEntity\Group;
+  use Core\Objects\DatabaseEntity\User;
 
   class InstallHead extends Head {
 
@@ -46,17 +47,17 @@ namespace Documents\Install {
     }
 
     protected function initMetas(): array {
-      return array(
-        array('name' => 'viewport', 'content' => 'width=device-width, initial-scale=1.0'),
-        array('name' => 'format-detection', 'content' => 'telephone=yes'),
-        array('charset' => 'utf-8'),
-        array("http-equiv" => 'expires', 'content' => '0'),
-        array("name" => 'robots', 'content' => 'noarchive'),
-      );
+      return [
+        ['name' => 'viewport', 'content' => 'width=device-width, initial-scale=1.0'],
+        ['name' => 'format-detection', 'content' => 'telephone=yes'],
+        ['charset' => 'utf-8'],
+        ["http-equiv" => 'expires', 'content' => '0'],
+        ["name" => 'robots', 'content' => 'noarchive'],
+      ];
     }
 
     protected function initRawFields(): array {
-      return array();
+      return [];
     }
 
     protected function initTitle(): string {
@@ -90,7 +91,7 @@ namespace Documents\Install {
       parent::__construct($document);
       $this->errorString = "";
       $this->currentStep = InstallBody::CHECKING_REQUIREMENTS;
-      $this->steps = array();
+      $this->steps = [];
     }
 
     private function getParameter($name): ?string {
@@ -189,11 +190,11 @@ namespace Documents\Install {
         return self::DATABASE_CONFIGURATION;
       }
 
-      $res = $sql->select(new Count())->from("User")->execute();
-      if ($res === FALSE) {
+      $userCount = User::count($sql);
+      if ($userCount === FALSE) {
         return self::DATABASE_CONFIGURATION;
       } else {
-        if ($res[0]["count"] > 0) {
+        if ($userCount > 0) {
           $step = self::ADD_MAIL_SERVICE;
         } else {
           return self::CREATE_USER;
@@ -202,7 +203,7 @@ namespace Documents\Install {
 
       if ($step === self::ADD_MAIL_SERVICE) {
         $req = new \Core\API\Settings\Get($context);
-        $success = $req->execute(array("key" => "^mail_enabled$"));
+        $success = $req->execute(["key" => "^mail_enabled$"]);
         if (!$success) {
           $this->errorString = $req->getLastError();
           return self::DATABASE_CONFIGURATION;
@@ -210,7 +211,7 @@ namespace Documents\Install {
           $step = self::FINISH_INSTALLATION;
 
           $req = new \Core\API\Settings\Set($context);
-          $success = $req->execute(array("settings" => array("installation_completed" => "1")));
+          $success = $req->execute(["settings" => ["installation_completed" => "1"]]);
           if (!$success) {
             $this->errorString = $req->getLastError();
           }
@@ -229,7 +230,7 @@ namespace Documents\Install {
 
       $msg = $this->errorString;
       $success = true;
-      $failedRequirements = array();
+      $failedRequirements = [];
 
       $requiredDirectories = [
         "/Site/Cache",
@@ -318,7 +319,7 @@ namespace Documents\Install {
       $encoding = $this->getParameter("encoding") ?? "UTF8";
       $success = true;
 
-      $missingInputs = array();
+      $missingInputs = [];
       if (empty($host)) {
         $success = false;
         $missingInputs[] = "Host";
@@ -428,16 +429,17 @@ namespace Documents\Install {
         }
       }
 
-      return array("success" => $success, "msg" => $msg);
+      return ["success" => $success, "msg" => $msg];
     }
 
     private function createUser(): array {
 
       $context = $this->getDocument()->getContext();
       if ($this->getParameter("prev") === "true") {
-        $success = $context->getConfig()->delete("Database");
+        // TODO: drop the previous database here?
+        $success = $context->getConfig()->delete("\\Site\\Configuration\\Database");
         $msg = $success ? "" : error_get_last();
-        return array("success" => $success, "msg" => $msg);
+        return ["success" => $success, "msg" => $msg];
       }
 
       $username = $this->getParameter("username");
@@ -446,7 +448,7 @@ namespace Documents\Install {
       $email = $this->getParameter("email") ?? "";
 
       $success = true;
-      $missingInputs = array();
+      $missingInputs = [];
 
       if (empty($username)) {
         $success = false;
@@ -468,18 +470,18 @@ namespace Documents\Install {
           $this->createUnorderedList($missingInputs);
       } else {
         $req = new \Core\API\User\Create($context);
-        $success = $req->execute(array(
+        $success = $req->execute([
           'username' => $username,
           'email' => $email,
           'password' => $password,
           'confirmPassword' => $confirmPassword,
           'groups' => [Group::ADMIN]
-        ));
+        ]);
 
         $msg = $req->getLastError();
       }
 
-      return array("msg" => $msg, "success" => $success);
+      return ["msg" => $msg, "success" => $success];
     }
 
     private function addMailService(): array {
@@ -489,7 +491,7 @@ namespace Documents\Install {
         $sql = $context->getSQL();
         $success = $sql->delete("User")->execute();
         $msg = $sql->getLastError();
-        return array("success" => $success, "msg" => $msg);
+        return ["success" => $success, "msg" => $msg];
       }
 
       if ($this->getParameter("skip") === "true") {
@@ -504,7 +506,7 @@ namespace Documents\Install {
         $password = $this->getParameter("password");
         $success = true;
 
-        $missingInputs = array();
+        $missingInputs = [];
         if (empty($address)) {
           $success = false;
           $missingInputs[] = "SMTP Address";
@@ -572,43 +574,29 @@ namespace Documents\Install {
         }
       }
 
-      return array("success" => $success, "msg" => $msg);
+      return ["success" => $success, "msg" => $msg];
     }
 
     private function performStep(): array {
-
-      switch ($this->currentStep) {
-
-        case self::CHECKING_REQUIREMENTS:
-          return $this->checkRequirements();
-
-        case self::INSTALL_DEPENDENCIES:
-          return $this->installDependencies();
-
-        case self::DATABASE_CONFIGURATION:
-          return $this->databaseConfiguration();
-
-        case self::CREATE_USER:
-          return $this->createUser();
-
-        case self::ADD_MAIL_SERVICE:
-          return $this->addMailService();
-
-        default:
-          return array(
-            "success" => false,
-            "msg" => "Invalid step number"
-          );
-      }
+      return match ($this->currentStep) {
+        self::CHECKING_REQUIREMENTS => $this->checkRequirements(),
+        self::INSTALL_DEPENDENCIES => $this->installDependencies(),
+        self::DATABASE_CONFIGURATION => $this->databaseConfiguration(),
+        self::CREATE_USER => $this->createUser(),
+        self::ADD_MAIL_SERVICE => $this->addMailService(),
+        default => [
+          "success" => false,
+          "msg" => "Invalid step number"
+        ],
+      };
     }
 
-    private function createProgressSidebar(): string {
-      $items = array();
+    private function createProgressSidebar(): array {
+      $items = [];
       foreach ($this->steps as $num => $step) {
 
         $title = $step["title"];
         $status = $step["status"];
-        $currentStep = ($num == $this->currentStep) ? " id=\"currentStep\"" : "";
 
         switch ($status) {
           case self::PENDING:
@@ -637,17 +625,21 @@ namespace Documents\Install {
             break;
         }
 
-        $items[] = "
-          <li class=\"list-group-item d-flex justify-content-between lh-condensed\"$currentStep>
-            <div>
-              <h6 class=\"my-0\">$title</h6>
-              <small class=\"text-$statusColor\">$statusText</small>
-            </div>
-            <span class=\"text-$statusColor\">$statusIcon</span>
-          </li>";
+        $attr = ["class" => "list-group-item d-flex justify-content-between lh-condensed"];
+        if ($num == $this->currentStep) {
+          $attr["id"] = "currentStep";
+        }
+
+        $items[] = html_tag("li", $attr, [
+            html_tag("div", [], [
+              html_tag("h6", ["class" => "my-0"], $title),
+              html_tag("small", ["class" => "text-$statusColor"], $statusText),
+            ], false),
+            html_tag("span", ["class" => "text-$statusColor"], $statusIcon, false)
+          ], false);
       }
 
-      return implode("", $items);
+      return $items;
     }
 
     private function createFormItem($formItem, $inline = false): string {
@@ -656,11 +648,11 @@ namespace Documents\Install {
       $name = $formItem["name"];
       $type = $formItem["type"];
 
-      $attributes = array(
+      $attributes = [
         "name" => $name,
         "id" => $name,
         "class" => "form-control"
-      );
+      ];
 
       if (isset($formItem["required"]) && $formItem["required"]) {
         $attributes["required"] = "";
@@ -687,9 +679,8 @@ namespace Documents\Install {
         }
       }
 
-      // $attributes = html_attributes($attributes);
       if ($type === "select") {
-        $items = $formItem["items"] ?? array();
+        $items = $formItem["items"] ?? [];
         $options = [];
         foreach ($items as $key => $val) {
           $options[] = html_tag_ex("option", ["value" => $key], $val, true, false);
@@ -705,87 +696,89 @@ namespace Documents\Install {
       return html_tag_ex("div", ["class" => $className], $label . $element, false);
     }
 
-    private function createProgressMainview(): string {
+    private function createProgressMainView(): string {
 
       if (isDocker()) {
+        $env = loadEnv();
         $defaultHost = "db";
         $defaultUsername = "root";
         $defaultDatabase = "webbase";
+        $defaultPassword = $env && array_key_exists("MYSQL_ROOT_PASSWORD", $env) ? $env["MYSQL_ROOT_PASSWORD"] : "";
       } else {
         $defaultHost = "localhost";
         $defaultUsername = "";
         $defaultDatabase = "";
+        $defaultPassword = "";
       }
-      $defaultPassword = "";
 
-      $views = array(
-        self::CHECKING_REQUIREMENTS => array(
+      $views = [
+        self::CHECKING_REQUIREMENTS => [
           "title" => "Application Requirements",
           "progressText" => "Checking requirements, please wait a moment…"
-        ),
-        self::INSTALL_DEPENDENCIES => array(
+        ],
+        self::INSTALL_DEPENDENCIES => [
           "title" => "Installing Dependencies",
           "progressText" => "Please wait while required dependencies are being installed…",
-        ),
-        self::DATABASE_CONFIGURATION => array(
+        ],
+        self::DATABASE_CONFIGURATION => [
           "title" => "Database configuration",
-          "form" => array(
-            array("title" => "Database Type", "name" => "type", "type" => "select", "required" => true, "items" => array(
+          "form" => [
+            ["title" => "Database Type", "name" => "type", "type" => "select", "required" => true, "items" => [
               "mysql" => "MySQL", "postgres" => "PostgreSQL"
-            )),
-            array("title" => "Username", "name" => "username", "type" => "text", "required" => true, "default" => $defaultUsername),
-            array("title" => "Password", "name" => "password", "type" => "password", "default" => $defaultPassword),
-            array("title" => "Database", "name" => "database", "type" => "text", "required" => true, "default" => $defaultDatabase),
-            array("type" => "row", "items" => array(
-              array(
+            ]],
+            ["title" => "Username", "name" => "username", "type" => "text", "required" => true, "default" => $defaultUsername],
+            ["title" => "Password", "name" => "password", "type" => "password", "default" => $defaultPassword],
+            ["title" => "Database", "name" => "database", "type" => "text", "required" => true, "default" => $defaultDatabase],
+            ["type" => "row", "items" => [
+              [
                 "title" => "Address", "name" => "host", "type" => "text", "required" => true,
                 "value" => "localhost", "row" => true, "default" => $defaultHost
-              ),
-              array(
+              ],
+              [
                 "title" => "Port", "name" => "port", "type" => "number", "required" => true,
                 "value" => "3306", "min" => "1", "max" => "65535", "row" => true
-              )
-            )),
-            array(
+              ]
+            ]],
+            [
               "title" => "Encoding", "name" => "encoding", "type" => "text", "required" => false,
               "value" => "UTF8"
-            ),
-          )
-        ),
-        self::CREATE_USER => array(
+            ],
+          ]
+        ],
+        self::CREATE_USER => [
           "title" => "Create a User",
-          "form" => array(
-            array("title" => "Username", "name" => "username", "type" => "text", "required" => true),
-            array("title" => "Email", "name" => "email", "type" => "text"),
-            array("title" => "Password", "name" => "password", "type" => "password", "required" => true),
-            array("title" => "Confirm Password", "name" => "confirmPassword", "type" => "password", "required" => true),
-          ),
+          "form" => [
+            ["title" => "Username", "name" => "username", "type" => "text", "required" => true],
+            ["title" => "Email", "name" => "email", "type" => "text"],
+            ["title" => "Password", "name" => "password", "type" => "password", "required" => true],
+            ["title" => "Confirm Password", "name" => "confirmPassword", "type" => "password", "required" => true],
+          ],
           "previousButton" => true
-        ),
-        self::ADD_MAIL_SERVICE => array(
+        ],
+        self::ADD_MAIL_SERVICE => [
           "title" => "Optional: Add Mail Service",
-          "form" => array(
-            array("title" => "Username", "name" => "username", "type" => "text", "required" => true),
-            array("title" => "Password", "name" => "password", "type" => "password"),
-            array("type" => "row", "items" => array(
-              array(
+          "form" => [
+            ["title" => "Username", "name" => "username", "type" => "text", "required" => true],
+            ["title" => "Password", "name" => "password", "type" => "password"],
+            ["type" => "row", "items" => [
+              [
                 "title" => "SMTP Address", "name" => "address", "type" => "text", "required" => true,
                 "value" => "localhost", "row" => true
-              ),
-              array(
+              ],
+              [
                 "title" => "Port", "name" => "port", "type" => "number", "required" => true,
                 "value" => "587", "min" => "1", "max" => "65535", "row" => true
-              )
-            )),
-          ),
+              ]
+            ]],
+          ],
           "skip" => true,
           "previousButton" => true
-        ),
-        self::FINISH_INSTALLATION => array(
+        ],
+        self::FINISH_INSTALLATION => [
           "title" => "Finish Installation",
           "text" => "Installation finished, you can now customize your own website, check the source code and stuff."
-        )
-      );
+        ]
+      ];
 
       if (!isset($views[$this->currentStep])) {
         return "";
@@ -796,81 +789,87 @@ namespace Documents\Install {
       $spinnerIcon = $this->createIcon("spinner");
       $title = $currentView["title"];
 
-      $html = "<h4 class=\"mb-3\">$title</h4><hr class=\"mb-4\" />";
+      $html  = html_tag("h4", ["class" => "mb-3"], $title);
+      $html .= html_tag_short("h4", ["class" => "mb-4"]);
 
       if (isset($currentView["text"])) {
         $text = $currentView["text"];
-        $html .= "<div class=\"my-3\">$text</i></div>";
+        $html .= html_tag("div", ["class" => "my-3"], $text);
       }
 
       if (isset($currentView["progressText"])) {
-        $progressText = $currentView["progressText"];
-        $hidden = (!in_array($this->currentStep, [self::CHECKING_REQUIREMENTS, self::INSTALL_DEPENDENCIES]))
-          ? " hidden" : "";
-        $html .= "<div id=\"progressText\" class=\"my-3$hidden\">$progressText$spinnerIcon</i></div>";
+        $progressText = htmlspecialchars($currentView["progressText"]);
+        $class = ["my-3"];
+        if (!in_array($this->currentStep, [self::CHECKING_REQUIREMENTS, self::INSTALL_DEPENDENCIES])) {
+          $class[] = "hidden";
+        }
+
+        $html .= html_tag("div", ["class" => $class, "id" => "progressText"], [$progressText, $spinnerIcon], false);
       }
 
       if (isset($currentView["form"])) {
-        $html .= "<form id=\"installForm\">";
+        $rows = [];
 
         foreach ($currentView["form"] as $formItem) {
-
           if ($formItem["type"] === "row") {
-            $html .= "<div class=\"row\">";
-            foreach ($formItem["items"] as $item) {
-              $html .= $this->createFormItem($item, true);
-            }
-            $html .= "</div>";
+            $rows[] = html_tag("div", ["class" => "row"], array_map(function ($item) {
+              return $this->createFormItem($item, true);
+            }, $formItem["items"]), false);
           } else {
-            $html .= $this->createFormItem($formItem);
+            $rows[] = $this->createFormItem($formItem);
           }
         }
 
-        $html .= "</form>";
+        $html .= html_tag("form", ["id" => "installForm"], $rows, false);
       }
 
-      $buttons = array(
-        array("title" => "Go Back", "type" => "info", "id" => "btnPrev", "float" => "left", "disabled" => $prevDisabled)
-      );
+      $buttons = [
+        ["title" => "Go Back", "type" => "info", "id" => "btnPrev", "float" => "left", "disabled" => $prevDisabled]
+      ];
 
       if ($this->currentStep != self::FINISH_INSTALLATION) {
         if (in_array($this->currentStep, [self::CHECKING_REQUIREMENTS, self::INSTALL_DEPENDENCIES])) {
-          $buttons[] = array("title" => "Retry", "type" => "success", "id" => "btnRetry", "float" => "right", "hidden" => true);
+          $buttons[] = ["title" => "Retry", "type" => "success", "id" => "btnRetry", "float" => "right", "hidden" => true];
         } else {
-          $buttons[] = array("title" => "Submit", "type" => "success", "id" => "btnSubmit", "float" => "right");
+          $buttons[] = ["title" => "Submit", "type" => "success", "id" => "btnSubmit", "float" => "right"];
         }
       } else {
-        $buttons[] = array("title" => "Finish", "type" => "success", "id" => "btnFinish", "float" => "right");
+        $buttons[] = ["title" => "Finish", "type" => "success", "id" => "btnFinish", "float" => "right"];
       }
 
       if (isset($currentView["skip"])) {
-        $buttons[] = array("title" => "Skip", "type" => "secondary", "id" => "btnSkip", "float" => "right");
+        $buttons[] = ["title" => "Skip", "type" => "secondary", "id" => "btnSkip", "float" => "right"];
       }
 
-      $buttonsLeft = "";
-      $buttonsRight = "";
-
+      $buttonsLeft = [];
+      $buttonsRight = [];
       foreach ($buttons as $button) {
         $title = $button["title"];
         $type = $button["type"];
         $id = $button["id"];
         $float = $button["float"];
-        $disabled = (isset($button["disabled"]) && $button["disabled"]) ? " disabled" : "";
-        $hidden = (isset($button["hidden"]) && $button["hidden"]) ? " hidden" : "";
-        $button = "<button type=\"button\" id=\"$id\" class=\"btn btn-$type m-1$hidden\"$disabled>$title</button>";
 
+        $attrs = ["id" => $id, "class" => ["m-1", "btn", "btn-$type"]];
+        if (isset($button["hidden"]) && $button["hidden"]) {
+          $attrs["class"][] = "hidden";
+        }
+
+        if (isset($button["disabled"]) && $button["disabled"]) {
+          $attrs["class"][] = "disabled";
+        }
+
+        $button = html_tag("button", $attrs, $title, false);
         if ($float === "left") {
-          $buttonsLeft .= $button;
+          $buttonsLeft[] = $button;
         } else {
-          $buttonsRight .= $button;
+          $buttonsRight[] = $button;
         }
       }
 
-      $html .=
-        "<div class=\"row\">
-          <div class=\"col-6 float-left text-left\">$buttonsLeft</div>
-          <div class=\"col-6 float-right text-right\">$buttonsRight</div>
-        </div>";
+      $html .= html_tag("div", ["class" => "row"], [
+        html_tag("div", ["class" => "col-6 float-left text-left"], $buttonsLeft, false),
+        html_tag("div", ["class" => "col-6 float-right text-right"], $buttonsRight, false),
+      ], false);
 
       return $html;
     }
@@ -878,32 +877,32 @@ namespace Documents\Install {
     function getCode(): string {
       $html = parent::getCode();
 
-      $this->steps = array(
-        self::CHECKING_REQUIREMENTS => array(
+      $this->steps = [
+        self::CHECKING_REQUIREMENTS => [
           "title" => "Checking requirements",
           "status" => self::ERROR
-        ),
-        self::INSTALL_DEPENDENCIES => array(
+        ],
+        self::INSTALL_DEPENDENCIES => [
           "title" => "Install dependencies",
           "status" => self::NOT_STARTED
-        ),
-        self::DATABASE_CONFIGURATION => array(
+        ],
+        self::DATABASE_CONFIGURATION => [
           "title" => "Database configuration",
           "status" => self::NOT_STARTED
-        ),
-        self::CREATE_USER => array(
+        ],
+        self::CREATE_USER => [
           "title" => "Create User",
           "status" => self::NOT_STARTED
-        ),
-        self::ADD_MAIL_SERVICE => array(
+        ],
+        self::ADD_MAIL_SERVICE => [
           "title" => "Add Mail Service",
           "status" => self::NOT_STARTED
-        ),
-        self::FINISH_INSTALLATION => array(
+        ],
+        self::FINISH_INSTALLATION => [
           "title" => "Finish Installation",
           "status" => self::NOT_STARTED
-        ),
-      );
+        ],
+      ];
 
       $this->currentStep = $this->getCurrentStep();
 
@@ -928,38 +927,49 @@ namespace Documents\Install {
       }
 
       $progressSidebar = $this->createProgressSidebar();
-      $progressMainView = $this->createProgressMainview();
+      $progressMainView = $this->createProgressMainView();
 
-      $errorStyle = ($this->errorString ? '' : ' style="display:none"');
-      $errorClass = ($this->errorString ? ' alert-danger' : '');
+      $errorAttrs = ["class" => ["alert", "alert-danger", "mt-4"], "id" => "status"];
+      if ($this->errorString) {
+        $errorAttrs["class"][] = "alert-danger";
+      } else {
+        $errorAttrs["class"][] = "d-none";
+      }
 
-      $html .= "
-        <body class=\"bg-light\">
-          <div class=\"container\">
-            <div class=\"py-5 text-center\">
-              <h2>WebBase - Installation</h2>
-              <p class=\"lead\">
-                Process the following steps and fill out the required forms to install your WebBase-Installation.
-              </p>
-            </div>
+      $html .= html_tag("body", ["class" => "bg-light"],
+        html_tag("div", ["class" => "container"], [
 
-          <div class=\"row\">
-            <div class=\"col-md-4 order-md-2 mb-4\">
-              <h4 class=\"d-flex justify-content-between align-items-center mb-3\">
-                <span class=\"text-muted\">Progress</span>
-              </h4>
+          // title
+          html_tag("div", ["class" => "py-5 text-center"], [
+            html_tag("h2", [], "WebBase - Installation"),
+            html_tag("p", ["class" => "lead"],
+              "Process the following steps and fill out the required forms to install your WebBase-Installation."
+            )
+          ], false),
 
-              <ul class=\"list-group mb-3\">
-                $progressSidebar
-              </ul>
-            </div>
-            <div class=\"col-md-8 order-md-1\">
-              $progressMainView
-              <div class=\"alert$errorClass mt-4\" id=\"status\"$errorStyle>$this->errorString</div>
-            </div>
-          </div>
-        </div>
-      </body>";
+          // content
+          html_tag("div", ["class" => "row"], [
+
+            // right column
+            html_tag("div", ["class" => "col-md-4 order-md-2 mb-4"], [
+              html_tag("h4", ["class" => "d-flex justify-content-between align-items-center mb-3"],
+                html_tag("span", ["class" => "text-muted"], "Progress"),
+               false
+              ),
+              html_tag("ul", ["class" => "list-group mb-3"], $progressSidebar, false)
+            ], false),
+
+            // left column
+            html_tag("div", ["class" => "col-md-8 order-md-1"], [
+              $progressMainView,
+              html_tag("div", $errorAttrs, $this->errorString, false)
+            ], false)
+
+          ], false),
+          
+        ], false),
+        false
+      );
 
       return $html;
     }

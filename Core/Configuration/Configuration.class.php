@@ -90,7 +90,7 @@ class Configuration {
   }
 
   public function delete(string $className): bool {
-    $path = getClassPath("\\Configuration\\$className");
+    $path = getClassPath($className);
     if (file_exists($path)) {
       return unlink($path);
     }

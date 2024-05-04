@@ -140,10 +140,10 @@ class Parameter {
         break;
 
       case Parameter::TYPE_BOOLEAN:
-        if (strcasecmp($value, 'true') === 0) {
+        if (strcasecmp($value, 'true') === 0 || $value === 1) {
           $this->value = true;
           $valid = true;
-        } else if (strcasecmp($value, 'false') === 0) {
+        } else if (strcasecmp($value, 'false') === 0 || $value === 0) {
           $this->value = false;
           $valid = true;
         } else if (is_bool($value)) {

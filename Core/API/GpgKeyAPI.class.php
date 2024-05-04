@@ -101,7 +101,7 @@ namespace Core\API\GpgKey {
       $this->success = $req->execute([
         "file" => "mail/gpg_import.twig",
         "parameters" => [
-          "link" => "$baseUrl/resetPassword?token=$token",
+          "link" => "$baseUrl/confirmGPG?token=$token",
           "site_name" => $siteName,
           "base_url" => $baseUrl,
           "username" => $currentUser->getDisplayName(),

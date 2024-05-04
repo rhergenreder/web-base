@@ -885,6 +885,7 @@ namespace Core\API\User {
           return $this->createError("User not found");
         }
 
+        $columnsToUpdate = [];
         $username = $this->getParam("username");
         $fullName = $this->getParam("fullName");
         $email = $this->getParam("email");
@@ -892,10 +893,8 @@ namespace Core\API\User {
         $groups = $this->getParam("groups");
         $confirmed = $this->getParam("confirmed");
         $active = $this->getParam("active");
-
         $email = (!is_null($email) && empty($email)) ? null : $email;
 
-        $groupIds = array();
         if (!is_null($groups)) {
           $groupIds = array_unique($groups);
           if ($id === $currentUser->getId() && !in_array(Group::ADMIN, $groupIds)) {
@@ -910,6 +909,9 @@ namespace Core\API\User {
               return $this->createError("Group with id=$groupId does not exist.");
             }
           }
+
+          $user->groups = $groupIds;
+          $columnsToUpdate[] = "groups";
         }
 
         // Check for duplicate username, email
@@ -922,7 +924,6 @@ namespace Core\API\User {
           }
         }
 
-        $columnsToUpdate = [];
         if ($usernameChanged) {
           $user->name = $username;
           $columnsToUpdate[] = "name";
@@ -961,18 +962,11 @@ namespace Core\API\User {
           }
         }
 
-        if (empty($columnsToUpdate) || $user->save($sql, $columnsToUpdate)) {
-
-          $deleteQuery = $sql->delete("UserGroup")->whereEq("user_id", $id);
-          $insertQuery = $sql->insert("UserGroup", array("user_id", "group_id"));
-
-          foreach ($groupIds as $groupId) {
-            $insertQuery->addRow($id, $groupId);
-          }
-
-          $this->success = ($deleteQuery->execute() !== FALSE) && (empty($groupIds) || $insertQuery->execute() !== FALSE);
+        if (!empty($columnsToUpdate)) {
+          $this->success = $user->save($sql, $columnsToUpdate, in_array("groups", $columnsToUpdate)) !== FALSE;
           $this->lastError = $sql->getLastError();
         }
+
       } else {
         return $this->createError("Error fetching user details: " . $sql->getLastError());
       }
@@ -1402,7 +1396,7 @@ namespace Core\API\User {
       }
 
       $oldPfp = $currentUser->getProfilePicture();
-      if ($oldPfp) {
+      if ($oldPfp && preg_match("/[a-fA-F0-9-]+\.(jpg|jpeg|png|gif)/", $oldPfp)) {
         $path = "$uploadDir/$oldPfp";
         if (is_file($path)) {
           @unlink($path);
@@ -1446,9 +1440,11 @@ namespace Core\API\User {
         return $this->createError("Error updating user details: " . $sql->getLastError());
       }
 
-      $path = WEBROOT . "/img/uploads/user/$userId/$pfp";
-      if (is_file($path)) {
-        @unlink($path);
+      if (preg_match("/[a-fA-F0-9-]+\.(jpg|jpeg|png|gif)/", $pfp)) {
+        $path = WEBROOT . "/img/uploads/user/$userId/$pfp";
+        if (is_file($path)) {
+          @unlink($path);
+        }
       }
 
       return $this->success;

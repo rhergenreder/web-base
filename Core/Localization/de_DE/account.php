@@ -57,6 +57,15 @@ return [
   "no_members" => "Keine Mitglieder in dieser Gruppe",
   "user_list_placeholder" => "Keine Benutzer zum Anzeigen",
 
+  # user edit page
+  "edit_user" => "Benutzer bearbeiten",
+  "new_user" => "Neuer Benutzer",
+  "send_invite" => "Einladung versenden",
+  "get_user_error" => "Fehler beim Holen des Benutzers",
+  "invite_user_error" => "Fehler beim Versenden der Einladung",
+  "create_user_error" => "Fehler beim Erstellen des Benutzers",
+  "save_user_error" => "Fehler beim Speichern des Benutzers",
+
   # profile picture
   "remove_picture" => "Profilbild entfernen",
   "remove_picture_text" => "Möchten Sie wirklich Ihr aktuelles Profilbild entfernen?",
@@ -74,6 +83,7 @@ return [
   "update_group_error" => "Error beim Aktualisieren der Gruppe",
   "delete_group_error" => "Error beim Löschen der Gruppe",
   "search_users_error" => "Fehler beim Suchen des Benutzers",
+  "search_groups_error" => "Fehler beim Suchen der Gruppen",
   "delete_group_title" => "Gruppe löschen",
   "delete_group_text" => "Möchten Sie diese Gruppe wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
   "remove_group_member_title" => "Mitglied entfernen",

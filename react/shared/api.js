@@ -159,13 +159,13 @@ export default class API {
         return this.apiCall("user/fetch", { page: pageNum, count: count, orderBy: orderBy, sortOrder: sortOrder });
     }
 
-    async inviteUser(username, fullName, email) {
-        return this.apiCall("user/invite", { username: username, fullName: fullName, email: email });
+    async inviteUser(username, fullName, email, groups) {
+        return this.apiCall("user/invite", { username: username, fullName: fullName, email: email, groups: groups });
     }
 
-    async createUser(username, fullName, email, password, confirmPassword) {
+    async createUser(username, fullName, email, groups, password, confirmPassword) {
         return this.apiCall("user/create", { username: username, email: email,
-            fullName: fullName,
+            fullName: fullName, groups: groups,
             password: password, confirmPassword: confirmPassword
         });
     }
@@ -217,6 +217,10 @@ export default class API {
     /** Groups API **/
     async fetchGroups(pageNum = 1, count = 20, orderBy = 'id', sortOrder = 'asc') {
         return this.apiCall("groups/fetch", { page: pageNum, count: count, orderBy: orderBy, sortOrder: sortOrder });
+    }
+
+    async searchGroups(query = "", exclude = []) {
+        return this.apiCall("groups/search", { query: query, exclude: exclude });
     }
 
     async fetchGroupMembers(groupId, pageNum = 1, count = 20, orderBy = 'id', sortOrder = 'asc') {

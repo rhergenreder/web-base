@@ -59,6 +59,15 @@ return [
   "edit_profile" => "Edit Profile",
   "user_list_placeholder" => "No users to display",
 
+  # user edit page
+  "edit_user" => "Edit User",
+  "new_user" => "New User",
+  "send_invite" => "Send Invitation",
+  "get_user_error" => "Error fetching user",
+  "invite_user_error" => "Error sending invitation",
+  "create_user_error" => "Error creating user",
+  "save_user_error" => "Error saving user",
+
   # profile picture
   "remove_picture" => "Remove profile picture",
   "remove_picture_text" => "Do you really want to remove your current profile picture?",
@@ -76,6 +85,7 @@ return [
   "update_group_error" => "Error updating group",
   "delete_group_error" => "Error deleting group",
   "search_users_error" => "Error searching users",
+  "search_groups_error" => "Error searching groups",
   "delete_group_title" => "Delete Group",
   "delete_group_text" => "Do you really want to delete this group? This action cannot be undone.",
   "remove_group_member_title" => "Remove member",

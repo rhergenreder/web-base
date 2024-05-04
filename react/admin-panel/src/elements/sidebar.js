@@ -76,7 +76,7 @@ const StyledDrawer = styled(Drawer, { shouldForwardProp: (prop) => prop !== 'ope
 
 export default function Sidebar(props) {
 
-    const {api, showDialog, theme, children, ...other} = props;
+    const {api, showDialog, hideDialog, theme, info, children, ...other} = props;
 
     const {translate: L, currentLocale, setLanguageByCode} = useContext(LocaleContext);
     const [languages, setLanguages] = useState(null);

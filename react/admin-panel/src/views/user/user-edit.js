@@ -9,7 +9,7 @@ import {
     FormControlLabel,
     FormLabel, Grid,
     TextField,
-    FormGroup as MuiFormGroup
+    FormGroup as MuiFormGroup, Autocomplete, Chip
 } from "@mui/material";
 import {LocaleContext} from "shared/locale";
 import * as React from "react";
@@ -42,6 +42,8 @@ export default function UserEditView(props) {
     const {translate: L, requestModules, currentLocale} = useContext(LocaleContext);
     const [fetchUser, setFetchUser] = useState(!isNewUser);
     const [user, setUser] = useState(isNewUser ? initialUser : null);
+    const [groups, setGroups] = useState([]);
+    const [groupInput, setGroupInput] = useState("");
 
     // ui
     const [hasChanged, setChanged] = useState(isNewUser);
@@ -56,17 +58,27 @@ export default function UserEditView(props) {
         });
     }, [currentLocale]);
 
+    const onFetchGroups = useCallback(() => {
+        api.searchGroups(groupInput, user?.groups?.map(group => group.id)).then((res) => {
+           if (res.success) {
+               setGroups(res.groups);
+           } else {
+               showDialog(res.msg, L("account.search_groups_error"));
+           }
+        });
+    }, [api, showDialog, user?.groups, groupInput]);
+
     const onFetchUser = useCallback((force = false) => {
         if (!isNewUser && (force || fetchUser)) {
             setFetchUser(false);
             api.getUser(userId).then((res) => {
                 if (!res.success) {
-                    showDialog(res.msg, L("account.error_user_get"));
+                    showDialog(res.msg, L("account.get_user_error"));
                     if (user === null) {
                         navigate("/admin/users");
                     }
                 } else {
-                    setUser(res.user);
+                    setUser({...res.user, groups: Object.values(res.user.groups)});
                 }
             });
         }
@@ -77,15 +89,17 @@ export default function UserEditView(props) {
             setUser({...initialUser});
         } else {
             onFetchUser(true);
+            setChanged(false);
         }
     }, [isNewUser, onFetchUser]);
 
     const onSaveUser = useCallback(() => {
         if (!isSaving) {
+            let groupIds = user.groups.map(group => group.id);
             setSaving(true);
             if (isNewUser) {
                 if (sendInvite) {
-                    api.inviteUser(user.name, user.fullName, user.email).then(res => {
+                    api.inviteUser(user.name, user.fullName, user.email, groupIds).then(res => {
                         setSaving(false);
                         if (res.success) {
                             setChanged(false);
@@ -95,7 +109,9 @@ export default function UserEditView(props) {
                         }
                     });
                 } else {
-                    api.createUser(user.name, user.fullName, user.email, user.password, user.passwordConfirm).then(res => {
+                    api.createUser(user.name, user.fullName, user.email, groupIds,
+                                   user.password, user.passwordConfirm
+                    ).then(res => {
                         setSaving(false);
                         if (res.success) {
                             setChanged(false);
@@ -108,7 +124,7 @@ export default function UserEditView(props) {
             } else {
                 api.editUser(
                     userId, user.name, user.email, user.password,
-                    user.groups, user.confirmed, user.active
+                    groupIds, user.confirmed, user.active
                 ).then(res => {
                     setSaving(false);
                     if (res.success) {
@@ -120,7 +136,7 @@ export default function UserEditView(props) {
             }
         }
 
-    }, [isSaving, sendInvite, isNewUser, userId, showDialog]);
+    }, [isSaving, sendInvite, isNewUser, userId, showDialog, user]);
 
     const onChangeValue = useCallback((name, value) => {
         setUser({...user, [name]: value});
@@ -133,6 +149,10 @@ export default function UserEditView(props) {
         }
     }, []);
 
+    useEffect(() => {
+        onFetchGroups();
+    }, [groupInput, user?.groups]);
+
     if (user === null) {
         return <CircularProgress />
     }
@@ -140,7 +160,7 @@ export default function UserEditView(props) {
     return <ViewContent title={L(isNewUser ? "account.new_user" : "account.edit_user")} path={[
         <Link key={"dashboard"} to={"/admin/dashboard"}>Home</Link>,
         <Link key={"users"} to={"/admin/users"}>User</Link>,
-        <span key={"action"}>{isNewUser ? "New" : "Edit"}</span>
+        <span key={"action"}>{isNewUser ? L("general.new") : L("general.edit")}</span>
     ]}>
         <Grid container>
             <Grid item xs={12} lg={6}>
@@ -149,7 +169,7 @@ export default function UserEditView(props) {
                 <FormControl>
                     <TextField size={"small"} variant={"outlined"}
                                value={user.name}
-                               onChange={e => setUser({...user, name: e.target.value})} />
+                               onChange={e => onChangeValue("name", e.target.value)} />
                 </FormControl>
             </FormGroup>
             <FormGroup>
@@ -157,17 +177,43 @@ export default function UserEditView(props) {
                 <FormControl>
                     <TextField size={"small"} variant={"outlined"}
                                value={user.fullName}
-                               onChange={e => setUser({...user, fullName: e.target.value})} />
+                               onChange={e => onChangeValue("fullName", e.target.value)} />
                 </FormControl>
             </FormGroup>
             <FormGroup>
                 <FormLabel>{L("account.email")}</FormLabel>
                 <FormControl>
                     <TextField size={"small"} variant={"outlined"}
-                               value={user.email}
+                               value={user.email ?? ""}
                                type={"email"}
-                               onChange={e => setUser({...user, email: e.target.value})} />
+                               onChange={e => onChangeValue("email", e.target.value)} />
                 </FormControl>
+            </FormGroup>
+            <FormGroup>
+                <FormLabel>{L("account.groups")}</FormLabel>
+                <Autocomplete
+                    options={Object.values(groups || {})}
+                    getOptionLabel={group => group.name}
+                    getOptionKey={group => group.id}
+                    filterOptions={(options) => options}
+                    clearOnBlur={true}
+                    clearOnEscape
+                    freeSolo
+                    multiple
+                    value={user.groups}
+                    inputValue={groupInput}
+                    onChange={(e, v) => onChangeValue("groups", v)}
+                    onInputChange={e => setGroupInput((!e || e.target.value === 0) ? "" : e.target.value) }
+                    renderTags={(values, props) =>
+                        values.map((option, index) => {
+                            return <Chip label={option.name}
+                                         style={{backgroundColor: option.color}}
+                                         {...props({index})} />
+                        })
+                    }
+                    renderInput={(params) => <TextField {...params}
+                                                        onBlur={() => setGroupInput("")} />}
+                />
             </FormGroup>
             { !isNewUser ?
                 <>
@@ -178,7 +224,7 @@ export default function UserEditView(props) {
                                        value={user.password}
                                        type={"password"}
                                        placeholder={"(" + L("general.unchanged") + ")"}
-                                       onChange={e => setUser({...user, password: e.target.value})} />
+                                       onChange={e => onChangeValue("password", e.target.value)} />
                         </FormControl>
                     </FormGroup>
                     <MuiFormGroup>
@@ -210,7 +256,7 @@ export default function UserEditView(props) {
                                 <TextField size={"small"} variant={"outlined"}
                                            value={user.password}
                                            type={"password"}
-                                           onChange={e => setUser({...user, password: e.target.value})} />
+                                           onChange={e => onChangeValue("password", e.target.value)} />
                             </FormControl>
                         </FormGroup>
                         <FormGroup>
@@ -219,7 +265,7 @@ export default function UserEditView(props) {
                                 <TextField size={"small"} variant={"outlined"}
                                            value={user.passwordConfirm}
                                            type={"password"}
-                                           onChange={e => setUser({...user, passwordConfirm: e.target.value})} />
+                                           onChange={e => onChangeValue("passwordConfirm", e.target.value)} />
                             </FormControl>
                         </FormGroup>
                         <Box mb={2}>

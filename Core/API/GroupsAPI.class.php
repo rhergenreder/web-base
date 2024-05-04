@@ -54,11 +54,16 @@ namespace Core\API {
 namespace Core\API\Groups {
 
   use Core\API\GroupsAPI;
+  use Core\API\Parameter\ArrayType;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\RegexType;
+  use Core\API\Parameter\StringType;
   use Core\API\Traits\Pagination;
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\Compare;
+  use Core\Driver\SQL\Condition\CondIn;
+  use Core\Driver\SQL\Condition\CondLike;
+  use Core\Driver\SQL\Condition\CondNot;
   use Core\Driver\SQL\Expression\Alias;
   use Core\Driver\SQL\Expression\Count;
   use Core\Driver\SQL\Join\InnerJoin;
@@ -111,6 +116,48 @@ namespace Core\API\Groups {
 
     public static function getDescription(): string {
       return "Allows users to fetch available groups";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN, Group::SUPPORT];
+    }
+  }
+
+  class Search extends GroupsAPI {
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        "query" => new StringType("query", -1, true, NULL),
+        "exclude" => new ArrayType("exclude", Parameter::TYPE_INT, true, true, [])
+      ]);
+    }
+
+    protected function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $query = $this->getParam("query");
+      $exclude = array_unique($this->getParam("exclude"));
+
+      $groupsQuery = Group::createBuilder($sql, false)
+        ->limit(5);
+
+      if (!empty($query)) {
+        $groupsQuery->where(new CondLike(new Column("name"), "%$query%"));
+      }
+
+      if (!empty($exclude)) {
+        $groupsQuery->where(new CondNot(new CondIn(new Column("id"), $exclude)));
+      }
+
+      $groups = Group::findBy($groupsQuery);
+      if ($groups === false) {
+        return $this->createError($sql->getLastError());
+      }
+
+      $this->result["groups"] = $groups;
+      return true;
+    }
+
+    public static function getDescription(): string {
+      return "Returns a list of groups matching the search criteria";
     }
 
     public static function getDefaultPermittedGroups(): array {

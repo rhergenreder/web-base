@@ -321,7 +321,7 @@ abstract class Request {
     } catch (\Throwable $err) {
       http_response_code(500);
       $this->createError($err->getMessage());
-      $this->logger->error($err->getMessage());
+      $this->logger->severe($err);
     }
 
     $sql->setLastError("");

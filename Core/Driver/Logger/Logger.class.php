@@ -40,8 +40,11 @@ class Logger {
     $this->lastLevel = null;
   }
 
-  protected function getStackTrace(int $pop = 2): string {
-    $debugTrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+  protected function getStackTrace(int $pop = 2, ?array $debugTrace = null): string {
+    if ($debugTrace === null) {
+      $debugTrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+    }
+
     if ($pop > 0) {
       array_splice($debugTrace, 0, $pop);
     }
@@ -54,10 +57,17 @@ class Logger {
     }, $debugTrace));
   }
 
-  public function log(string $message, string $severity, bool $appendStackTrace = true): void {
+  public function log(string|\Throwable $logEntry, string $severity, bool $appendStackTrace = true): void {
+
+    $debugTrace = null;
+    $message = $logEntry;
+    if ($message instanceof \Throwable) {
+      $message = $logEntry->getMessage();
+      $debugTrace = $logEntry->getTrace();
+    }
 
     if ($appendStackTrace) {
-      $message .= "\n" . $this->getStackTrace();
+      $message .= "\n" . $this->getStackTrace(2, $debugTrace);
     }
 
     $this->lastMessage = $message;
@@ -87,27 +97,27 @@ class Logger {
     @file_put_contents($logPath, $message);
   }
 
-  public function error(string $message): string {
+  public function error(string|\Throwable $message): string {
     $this->log($message, "error");
     return $message;
   }
 
-  public function severe(string $message): string {
+  public function severe(string|\Throwable $message): string {
     $this->log($message, "severe");
     return $message;
   }
 
-  public function warning(string $message): string {
+  public function warning(string|\Throwable $message): string {
     $this->log($message, "warning", false);
     return $message;
   }
 
-  public function info(string $message): string {
+  public function info(string|\Throwable $message): string {
     $this->log($message, "info", false);
     return $message;
   }
 
-  public function debug(string $message, bool $appendStackTrace = false): string {
+  public function debug(string|\Throwable $message, bool $appendStackTrace = false): string {
     $this->log($message, "debug", $appendStackTrace);
     return $message;
   }

@@ -90,7 +90,7 @@ if ($installation) {
         }
       } catch (\Throwable $e) {
         http_response_code(500);
-        $logger->error($e->getMessage());
+        $logger->severe($e);
         $response = $router->returnStatusCode(500);
       }
     }

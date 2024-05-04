@@ -756,8 +756,7 @@ namespace Core\API\User {
         "confirmPassword" => new StringType("confirmPassword"),
       );
 
-      $this->addCaptchaParameters($parameters);
-
+      $this->addCaptchaParameters($context, $parameters);
       parent::__construct($context, $externalCall, $parameters);
       $this->csrfTokenRequired = false;
     }
@@ -1033,7 +1032,7 @@ namespace Core\API\User {
         'email' => new Parameter('email', Parameter::TYPE_EMAIL),
       ];
 
-      $this->addCaptchaParameters($parameters);
+      $this->addCaptchaParameters($context, $parameters);
       parent::__construct($context, $externalCall, $parameters);
     }
 
@@ -1121,7 +1120,7 @@ namespace Core\API\User {
         'email' => new Parameter('email', Parameter::TYPE_EMAIL),
       );
 
-      $this->addCaptchaParameters($parameters);
+      $this->addCaptchaParameters($context, $parameters);
       parent::__construct($context, $externalCall, $parameters);
     }
 

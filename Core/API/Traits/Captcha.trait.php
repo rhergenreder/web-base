@@ -8,8 +8,8 @@ use Core\Objects\Context;
 
 trait Captcha {
 
-  function addCaptchaParameters(array &$parameters): void {
-    $settings = $this->context->getSettings();
+  function addCaptchaParameters(Context $context, array &$parameters): void {
+    $settings = $context->getSettings();
     if ($settings->isCaptchaEnabled()) {
       $parameters["captcha"] = new StringType("captcha");
     }

@@ -215,15 +215,38 @@ abstract class Request {
         return false;
       }
 
-      $values = $_REQUEST;
-      if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array("application/json", explode(";", $_SERVER["CONTENT_TYPE"] ?? ""))) {
-        $jsonData = json_decode(file_get_contents('php://input'), true);
-        if ($jsonData !== null) {
-          $values = array_merge($values, $jsonData);
-        } else {
-          $this->lastError = 'Invalid request body.';
-          http_response_code(400);
-          return false;
+      if ($this->isMethodAllowed("GET") && $this->isMethodAllowed("POST")) {
+        $values = $_REQUEST;
+      } else if ($this->isMethodAllowed("POST")) {
+        $values = $_POST;
+      } else if ($this->isMethodAllowed("GET")) {
+        $values = $_GET;
+      }
+
+      if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'PATCH'])) {
+        $contentTypeData = explode(";", $_SERVER["CONTENT_TYPE"] ?? "");
+        $charset = "utf-8";
+
+        if ($contentTypeData[0] === "application/json") {
+          for ($i = 1; $i < count($contentTypeData); $i++) {
+            if (preg_match("/charset=(.*)/", $contentTypeData[$i], $match)) {
+              $charset = $match[1];
+            }
+          }
+
+          $body = file_get_contents('php://input');
+          if (strcasecmp($charset, "utf-8") !== 0) {
+            $body = iconv($charset, 'utf-8', $body);
+          }
+
+          $jsonData = json_decode($body, true);
+          if ($jsonData !== null) {
+            $values = array_merge($values, $jsonData);
+          } else {
+            $this->lastError = "Invalid request body.";
+            http_response_code(400);
+            return false;
+          }
         }
       }
 
@@ -339,8 +362,7 @@ abstract class Request {
       $obj = $this->params;
     }
 
-    // I don't know why phpstorm
-    return (isset($obj[$name]) ? $obj[$name]->value : NULL);
+    return $obj[$name]?->value;
   }
 
   public function isMethodAllowed(string $method): bool {

@@ -16,7 +16,9 @@ abstract class TemplateView extends View {
     return [];
   }
 
-  public function loadParameters(array &$parameters) {
+  public function loadParameters(array &$parameters): void {
+
+    $this->loadView();
 
     $siteParameters = [
       "title" => $this->title,

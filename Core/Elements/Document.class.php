@@ -91,23 +91,16 @@ abstract class Document {
 
   public function sendHeaders(): void {
     if ($this->cspEnabled) {
-      $frameSrc = [];
-
       $captchaProvider = $this->getSettings()->getCaptchaProvider();
       if ($captchaProvider instanceof GoogleRecaptchaProvider) {
-        $frameSrc[] = "https://www.google.com/recaptcha/";
-        $frameSrc[] = "https://recaptcha.google.com/recaptcha/";
         $this->cspWhitelist[] = "https://www.google.com/recaptcha/";
         $this->cspWhitelist[] = "https://www.gstatic.com/recaptcha/";
       } else if ($captchaProvider instanceof HCaptchaProvider) {
-        $frameSrc[] = "https://hcaptcha.com";
-        $frameSrc[] = "https://*.hcaptcha.com";
         $this->cspWhitelist[] = "https://hcaptcha.com";
         $this->cspWhitelist[] = "https://*.hcaptcha.com";
       }
 
       $cspWhiteList = implode(" ", $this->cspWhitelist);
-      $frameSrc = implode(" ", $frameSrc);
       $csp = [
         "default-src $cspWhiteList 'self'",
         "object-src 'none'",
@@ -116,7 +109,7 @@ abstract class Document {
         "img-src 'self' 'unsafe-inline' data: https:;",
         "script-src $cspWhiteList 'nonce-$this->cspNonce'",
         "frame-ancestors 'self'",
-        "frame-src $frameSrc 'self'",
+        "frame-src $cspWhiteList 'self'",
       ];
 
       $compiledCSP = implode("; ", $csp);

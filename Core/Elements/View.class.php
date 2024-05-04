@@ -42,7 +42,12 @@ abstract class View extends StaticView {
   }
 
   // Virtual Methods
-  public function loadView() { }
+  public function loadView(): void {
+    $language = $this->getContext()->getLanguage();
+    foreach ($this->langModules as $module) {
+      $language->loadModule($module);
+    }
+  }
 
   public function getCode(): string {
 

@@ -783,6 +783,11 @@ class DatabaseEntityHandler implements Persistable {
 
   private function prepareRow(DatabaseEntity $entity, string $action, ?array $properties = null): bool|array {
     $row = [];
+
+    if ($entity->getId() !== null) {
+      $row["id"] = $entity->getId();
+    }
+
     foreach ($this->columns as $propertyName => $column) {
       if ($properties !== null && !in_array($propertyName, $properties)) {
         continue;

@@ -7,12 +7,12 @@ use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 use PHPUnit\Util\Exception;
 
-class CreateDatabase extends DatabaseScript {
+class CreateDatabase {
 
   public static function createQueries(SQL $sql): array {
     $queries = array();
 
-    self::loadEntities($queries, $sql);
+    self::loadEntities($sql, $queries);
 
     $queries[] = $sql->createTable("Settings")
       ->addString("name", 32)
@@ -33,34 +33,25 @@ class CreateDatabase extends DatabaseScript {
       ->primaryKey("method")
       ->addBool("is_core", false);
 
-    self::loadDefaultACL($queries, $sql);
-    self::loadPatches($queries, $sql);
+    self::loadDefaultACL($sql, $queries);
+    self::loadPatches($sql, $queries);
 
     return $queries;
   }
 
-  private static function loadPatches(&$queries, $sql) {
-    $baseDirs = ["Core", "Site"];
-    foreach ($baseDirs as $baseDir) {
-      $patchDirectory = "./$baseDir/Configuration/Patch/";
-      if (file_exists($patchDirectory) && is_dir($patchDirectory)) {
-        $scan_arr = scandir($patchDirectory);
-        $files_arr = array_diff($scan_arr, array('.', '..'));
-        foreach ($files_arr as $file) {
-          $suffix = ".class.php";
-          if (endsWith($file, $suffix)) {
-            $className = substr($file, 0, strlen($file) - strlen($suffix));
-            $className = "\\$baseDir\\Configuration\\Patch\\$className";
-            $method = "$className::createQueries";
-            $patchQueries = call_user_func($method, $sql);
-            foreach ($patchQueries as $query) $queries[] = $query;
-          }
-        }
-      }
+  private static function loadPatches(SQL $sql, array &$queries): void {
+    $patchFiles = array_merge(
+      glob('Core/Configuration/Patch/*.php'),
+      glob('Site/Configuration/Patch/*.php')
+    );
+
+    sort($patchFiles);
+    foreach ($patchFiles as $file) {
+      @include_once $file;
     }
   }
 
-  private static function loadEntities(&$queries, $sql) {
+  private static function loadEntities(SQL $sql, array &$queries): void {
     $persistables = [];
     $baseDirs = ["Core", "Site"];
     foreach ($baseDirs as $baseDir) {
@@ -113,7 +104,7 @@ class CreateDatabase extends DatabaseScript {
     }
   }
 
-  public static function loadDefaultACL(array &$queries, SQL $sql): void {
+  public static function loadDefaultACL(SQL $sql, array &$queries): void {
     $query = $sql->insert("ApiPermission", ["method", "groups", "description", "is_core"]);
 
     foreach (Request::getApiEndpoints() as $reflectionClass) {

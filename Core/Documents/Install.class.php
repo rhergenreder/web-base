@@ -161,6 +161,7 @@ namespace Documents\Install {
         return self::CHECKING_REQUIREMENTS;
       }
 
+      // TODO: also check the presence of react dist?
       $externalDir = $this->getExternalDirectory();
       $autoload = implode(DIRECTORY_SEPARATOR, [$externalDir, "vendor", "autoload.php"]);
       if (!is_file($autoload)) {
@@ -238,6 +239,7 @@ namespace Documents\Install {
         "/Site/Configuration",
         "/Core/External/vendor",
         "/files/uploaded",
+        "/react",
       ];
 
       $nonWritableDirectories = [];
@@ -801,7 +803,7 @@ namespace Documents\Install {
         $progressText = htmlspecialchars($currentView["progressText"]);
         $class = ["my-3"];
         if (!in_array($this->currentStep, [self::CHECKING_REQUIREMENTS, self::INSTALL_DEPENDENCIES])) {
-          $class[] = "hidden";
+          $class[] = "d-none";
         }
 
         $html .= html_tag("div", ["class" => $class, "id" => "progressText"], [$progressText, $spinnerIcon], false);
@@ -851,7 +853,7 @@ namespace Documents\Install {
 
         $attrs = ["id" => $id, "class" => ["m-1", "btn", "btn-$type"]];
         if (isset($button["hidden"]) && $button["hidden"]) {
-          $attrs["class"][] = "hidden";
+          $attrs["class"][] = "d-none";
         }
 
         if (isset($button["disabled"]) && $button["disabled"]) {

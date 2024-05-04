@@ -8,7 +8,6 @@ require_once 'Core/datetime.php';
 include_once 'Core/constants.php';
 
 use Core\API\Request;
-use Core\Configuration\DatabaseScript;
 use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondIn;
@@ -79,23 +78,9 @@ function printHelp(array $argv): void {
   }
 }
 
-function applyPatch(\Core\Driver\SQL\SQL $sql, string $patchName): bool {
-  $class = str_replace('/', '\\', $patchName);
-  $className = "\\Core\\Configuration\\$class";
-  $classPath = getClassPath($className);
-  if (!file_exists($classPath) || !is_readable($classPath)) {
-    printLine("Database script file does not exist or is not readable");
-    return false;
-  }
-
-  include_once $classPath;
-  $obj = new $className();
-  if (!($obj instanceof DatabaseScript)) {
-    printLine("Not a database script");
-    return false;
-  }
-
-  $queries = $obj->createQueries($sql);
+function applyPatch(SQL $sql, string $patchFile): bool {
+  $queries = [];
+  @include_once $patchFile;
   foreach ($queries as $query) {
     if (!$query->execute($sql)) {
       printLine($sql->getLastError());
@@ -288,7 +273,10 @@ function onMaintenance(array $argv): void {
     _exit("Maintenance disabled");
   } else if ($action === "update") {
     $logger->info("Update started");
-    $oldPatchFiles = glob('Core/Configuration/Patch/*.php');
+    $oldPatchFiles = array_merge(
+      glob('Core/Configuration/Patch/*.php'),
+      glob('Site/Configuration/Patch/*.php')
+    );
     printLine("$ git remote -v");
     exec("git remote -v", $gitRemote, $ret);
     if ($ret !== 0) {
@@ -351,16 +339,19 @@ function onMaintenance(array $argv): void {
       die();
     }
 
-    // TODO: also collect patches from Site/Configuration/Patch ... and what about database entities?
-    $newPatchFiles = glob('Core/Configuration/Patch/*.php');
+    // TODO: how to handle modified database entities?
+    $newPatchFiles = array_merge(
+        glob('Core/Configuration/Patch/*.php'),
+        glob('Site/Configuration/Patch/*.php')
+    );
     $newPatchFiles = array_diff($newPatchFiles, $oldPatchFiles);
     if (count($newPatchFiles) > 0) {
       if ($sql) {
         printLine("Applying new database patches");
+        sort($newPatchFiles);
         foreach ($newPatchFiles as $patchFile) {
-          if (preg_match("/Core\/Configuration\/(Patch\/.*)\.class\.php/", $patchFile, $match)) {
-            $patchName = $match[1];
-            applyPatch($sql, $patchName);
+          if (preg_match("/(Core|Site)\/Configuration\/Patch\/(.*)\.php/", $patchFile, $match)) {
+            applyPatch($sql, $patchFile);
           }
         }
       } else {

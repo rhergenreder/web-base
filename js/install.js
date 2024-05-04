@@ -27,7 +27,7 @@ function setState(state) {
       icon  = 'fas fa-times-circle';
       text  = "Failed";
       color = "danger";
-      $("#btnRetry").show();
+      $("#btnRetry").removeClass("d-none");
       break;
 
     default:
@@ -74,7 +74,7 @@ function sendRequest(params, done) {
     setState(ERROR);
     statusBox.addClass("alert-danger");
     statusBox.html("An error occurred during installation. Try <a href=\"/index.php\">restarting the process</a>.");
-    statusBox.show();
+    statusBox.removeClass("d-none");
   }).always(function() {
     if(done) done(success);
   });
@@ -82,15 +82,15 @@ function sendRequest(params, done) {
 
 function retry() {
   let progressText = $("#progressText");
-  let wasHidden = progressText.hasClass("hidden");
-  $("#btnRetry").hide();
-  progressText.removeClass("hidden");
+  let wasHidden = progressText.hasClass("d-none");
+  $("#btnRetry").addClass("d-none");
+  progressText.removeClass("d-none");
   sendRequest({ }, function(success) {
     if (wasHidden) {
-      $("#progressText").addClass("hidden");
+      $("#progressText").addClass("d-none");
     }
     if(!success) {
-      $("#btnRetry").show();
+      $("#btnRetry").removeClass("d-none");
     }
   });
 }

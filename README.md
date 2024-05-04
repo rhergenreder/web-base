@@ -16,6 +16,7 @@ Web-Base is a php framework which provides basic web functionalities and a moder
 - [Command Line Interface (CLI)](#cli)
 - [Account & User functions](#access-control)
 - [Google reCaptcha](https://developers.google.com/recaptcha/) and [hCaptcha](https://docs.hcaptcha.com/) Integration
+- Rate Limiting using Redis
 - modern ReactJS Admin Dashboard
 - Docker Support
 
@@ -34,12 +35,12 @@ I actually don't know what i want to implement here. There are quite to many CMS
 1. Create an `.env` file with `MYSQL_ROOT_PASSWORD` AND `REDIS_PASSWORD`
 2. `docker-compose build`
 3. `docker-compose up`
-4Open the webapp in your browser and follow the installation guide
-3a. Since the docker runs as user www-data (33), the following permissions are recommended and at least necessary for the installation process:
-```
-chown -R :33 .
-chmod -R 775 .
-```
+   - Since the docker runs as user www-data (33), the following permissions are recommended and at least necessary for the installation process:
+     ```
+     chown -R :33 .
+     chmod -R 775 .
+     ```
+4. Open the webapp in your browser and follow the installation guide
 
 ### Afterwards
 
@@ -362,7 +363,7 @@ php cli.php api <add> # interactive wizard
 ├── react                   # react frontend 
 │   ├── shared              # shared source files, including API and localization
 │   ├── admin-panel         # the admin panel source files
-│   ├── dist                # compiler output
+│   └── dist                # compiler output
 ├── [js/css/img/fonts/files] # static web assets, files
 ├── docker                  # docker configuration files and build scripts
 └── test                    # php unit & integraton test files

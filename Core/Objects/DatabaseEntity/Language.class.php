@@ -6,7 +6,6 @@ namespace Core\Objects\DatabaseEntity {
   use Core\Objects\DatabaseEntity\Attribute\Transient;
   use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 
-  // TODO: language from cookie?
   class Language extends DatabaseEntity {
 
     const AMERICAN_ENGLISH = 1;
@@ -20,7 +19,7 @@ namespace Core\Objects\DatabaseEntity {
 
     #[Transient] protected array $entries = [];
 
-    public function __construct(int $id, string $code, string $name) {
+    public function __construct(?int $id, string $code, string $name) {
       parent::__construct($id);
       $this->code = $code;
       $this->name = $name;
@@ -62,24 +61,7 @@ namespace Core\Objects\DatabaseEntity {
       return $LANGUAGE;
     }
 
-    public static function DEFAULT_LANGUAGE(bool $fromCookie = true): Language {
-      if ($fromCookie && isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
-        $acceptLanguage = $_SERVER['HTTP_ACCEPT_LANGUAGE'];
-        $acceptedLanguages = explode(',', $acceptLanguage);
-        foreach ($acceptedLanguages as $code) {
-          if (strlen($code) == 2) {
-            $code = $code . '_' . strtoupper($code);
-          }
-
-          $code = str_replace("-", "_", $code);
-          if (!preg_match(self::LANG_CODE_PATTERN, $code)) {
-            continue;
-          }
-
-          return new Language(0, $code, "");
-        }
-      }
-
+    public static function DEFAULT_LANGUAGE(): Language {
       return self::getPredefinedValues()[0];
     }
 
@@ -111,7 +93,7 @@ namespace Core\Objects\DatabaseEntity {
       }
     }
 
-    public function loadModule(string $module, bool $forceReload=false): bool {
+    public function loadModule(string $module, bool $forceReload = false): bool {
       if ($this->hasModule($module) && !$forceReload) {
         return true;
       }
@@ -145,6 +127,27 @@ namespace Core\Objects\DatabaseEntity {
         new Language(Language::AMERICAN_ENGLISH, "en_US", 'English (US)'),
         new Language(Language::GERMAN_STANDARD, "de_DE", 'Deutsch (Standard)'),
       ];
+    }
+
+    public static function fromHeader(): ?Language {
+      if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
+        $acceptLanguage = $_SERVER['HTTP_ACCEPT_LANGUAGE'];
+        $acceptedLanguages = explode(',', $acceptLanguage);
+        foreach ($acceptedLanguages as $code) {
+          if (strlen($code) == 2) {
+            $code = $code . '_' . strtoupper($code);
+          }
+
+          $code = str_replace("-", "_", $code);
+          if (!preg_match(self::LANG_CODE_PATTERN, $code)) {
+            continue;
+          }
+
+          return new Language(NULL, $code, "");
+        }
+      }
+
+      return null;
     }
   }
 }

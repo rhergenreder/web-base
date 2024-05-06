@@ -63,6 +63,17 @@ class Context {
   }
 
   public function setLanguage(Language $language): void {
+
+    // 1st: check if the language really exists...
+    if ($language->getId() === null) {
+      $language = Language::findBy(Language::createBuilder($this->sql, true)
+        ->whereEq("code", $language->getCode()));
+      if ($language === false || $language === null) {
+        // if not, load the default language
+        $language = Language::DEFAULT_LANGUAGE();
+      }
+    }
+
     $this->language = $language;
     $this->language->activate();
 
@@ -120,13 +131,15 @@ class Context {
       }
     }
 
-    // set language by priority: 1. GET parameter, 2. cookie, 3. user's settings
+    // set language by priority: 1. GET parameter, 2. cookie, 3. user's settings, 4. accept-language header
     if (isset($_GET['lang']) && is_string($_GET["lang"]) && !empty($_GET["lang"])) {
       $this->updateLanguage($_GET['lang']);
     } else if (isset($_COOKIE['lang']) && is_string($_COOKIE["lang"]) && !empty($_COOKIE["lang"])) {
       $this->updateLanguage($_COOKIE['lang']);
     } else if ($this->user) {
       $this->setLanguage($this->user->language);
+    } else {
+      $this->setLanguage(Language::fromHeader());
     }
   }
 

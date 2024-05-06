@@ -102,7 +102,7 @@ namespace Core\API {
       $sql = $this->context->getSQL();
 
       $user = new User();
-      $user->language = Language::DEFAULT_LANGUAGE(false);
+      $user->language = Language::DEFAULT_LANGUAGE();
       $user->registeredAt = new \DateTime();
       $user->password = $this->hashPassword($password);
       $user->name = $username;

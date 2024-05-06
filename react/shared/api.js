@@ -127,9 +127,9 @@ export default class API {
         return res;
     }
 
-    async editUser(id, username, email, password, groups, confirmed, active) {
+    async editUser(id, username, fullName, email, password, groups, confirmed, active) {
         return this.apiCall("user/edit", {
-            id: id, username: username, email: email,
+            id: id, fullName: fullName, username: username, email: email,
             password: password, groups: groups,
             confirmed: confirmed, active: active
         });

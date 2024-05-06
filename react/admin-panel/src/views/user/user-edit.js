@@ -123,7 +123,7 @@ export default function UserEditView(props) {
                 }
             } else {
                 api.editUser(
-                    userId, user.name, user.email, user.password,
+                    userId, user.name, user.fullName, user.email, user.password,
                     groupIds, user.confirmed, user.active
                 ).then(res => {
                     setSaving(false);

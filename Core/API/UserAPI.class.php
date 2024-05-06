@@ -930,7 +930,7 @@ namespace Core\API\User {
 
         if ($fullNameChanged) {
           $user->fullName = $fullName;
-          $columnsToUpdate[] = "full_name";
+          $columnsToUpdate[] = "fullName";
         }
 
         if ($emailChanged) {

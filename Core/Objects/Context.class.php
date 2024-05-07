@@ -139,7 +139,10 @@ class Context {
     } else if ($this->user) {
       $this->setLanguage($this->user->language);
     } else {
-      $this->setLanguage(Language::fromHeader());
+      $language = Language::fromHeader();
+      if ($language !== null) {
+        $this->setLanguage($language);
+      }
     }
   }
 
@@ -147,9 +150,9 @@ class Context {
     if ($this->sql) {
       $language = Language::findBy(Language::createBuilder($this->sql, true)
         ->where(new CondOr(
-            new CondLike(new Column("name"), "%$lang%"), // english
-            new Compare("code", $lang), // de_DE
-            new CondLike(new Column("code"), "{$lang}_%") // de -> de_%
+          new CondLike(new Column("name"), "%$lang%"), // english
+          new Compare("code", $lang), // de_DE
+          new CondLike(new Column("code"), "{$lang}_%") // de -> de_%
         ))
       );
       if ($language) {

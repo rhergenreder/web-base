@@ -13,10 +13,10 @@ use Core\Driver\SQL\Condition\Compare;
 use Core\Driver\SQL\Condition\CondIn;
 use Core\Driver\SQL\Expression\DateSub;
 use Core\Driver\SQL\SQL;
+use Core\Objects\Context;
 use Core\Objects\ConnectionData;
 
 // TODO: is this available in all installations?
-use Core\Objects\Context;
 use JetBrains\PhpStorm\NoReturn;
 
 function printLine(string $line = ""): void {
@@ -40,7 +40,7 @@ function getDatabaseConfig(): ConnectionData {
   return new $configClass();
 }
 
-$context = \Core\Objects\Context::instance();
+$context = Context::instance();
 if (!$context->isCLI()) {
   _exit("Can only be executed via CLI");
 }
@@ -302,7 +302,7 @@ function onMaintenance(array $argv): void {
     }
 
     printLine("$ git log HEAD..$pullBranch --oneline");
-    exec("git log HEAD..$pullBranch --oneline", $gitLog, $ret);
+    exec("git log HEAD..$pullBranch --oneline 2>&1", $gitLog, $ret);
     if ($ret !== 0) {
       $logger->warning("Update stopped. git log returned:\n" . implode("\n", $gitLog));
       die();
@@ -312,7 +312,7 @@ function onMaintenance(array $argv): void {
 
     printLine("Found updates, checking repository state");
     printLine("$ git diff-index --quiet HEAD --"); // check for any uncommitted changes
-    exec("git diff-index --quiet HEAD --", $gitDiff, $ret);
+    exec("git diff-index --quiet HEAD -- 2>&1", $gitDiff, $ret);
     if ($ret !== 0) {
       $logger->warning("Update stopped due to uncommitted changes");
       _exit("You have uncommitted changes. Please commit them before updating.");
@@ -328,7 +328,7 @@ function onMaintenance(array $argv): void {
 
     printLine("Ready to update, pulling and merging");
     printLine("$ git pull " . str_replace("/", " ", $pullBranch) . " --no-ff");
-    exec("git pull " . str_replace("/", " ", $pullBranch) . " --no-ff", $gitPull, $ret);
+    exec("git pull " . str_replace("/", " ", $pullBranch) . " --no-ff 2>&1", $gitPull, $ret);
     if ($ret !== 0) {
       printLine();
       printLine("Update could not be applied, check the git output.");

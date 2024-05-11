@@ -16,7 +16,7 @@ import * as React from "react";
 import ViewContent from "../../elements/view-content";
 import FormGroup from "../../elements/form-group";
 import ButtonBar from "../../elements/button-bar";
-import {RestartAlt, Save, Send} from "@mui/icons-material";
+import {Delete, RestartAlt, Save, Send} from "@mui/icons-material";
 import PasswordStrength from "shared/elements/password-strength";
 
 const initialUser = {
@@ -51,20 +51,20 @@ export default function UserEditView(props) {
     const [sendInvite, setSetInvite] = useState(isNewUser);
 
     useEffect(() => {
-        requestModules(props.api, ["general", "account"], currentLocale).then(data => {
+        requestModules(api, ["general", "account"], currentLocale).then(data => {
             if (!data.success) {
-                props.showDialog("Error fetching translations: " + data.msg);
+                showDialog("Error fetching translations: " + data.msg);
             }
         });
     }, [currentLocale]);
 
     const onFetchGroups = useCallback(() => {
         api.searchGroups(groupInput, user?.groups?.map(group => group.id)).then((res) => {
-           if (res.success) {
-               setGroups(res.groups);
-           } else {
-               showDialog(res.msg, L("account.search_groups_error"));
-           }
+            if (res.success) {
+                setGroups(res.groups);
+            } else {
+                showDialog(res.msg, L("account.search_groups_error"));
+            }
         });
     }, [api, showDialog, user?.groups, groupInput]);
 
@@ -110,7 +110,7 @@ export default function UserEditView(props) {
                     });
                 } else {
                     api.createUser(user.name, user.fullName, user.email, groupIds,
-                                   user.password, user.passwordConfirm
+                        user.password, user.passwordConfirm
                     ).then(res => {
                         setSaving(false);
                         if (res.success) {
@@ -143,6 +143,16 @@ export default function UserEditView(props) {
         setChanged(true);
     }, [user]);
 
+    const onDeleteUser = useCallback(() => {
+        api.deleteUser(userId).then(res => {
+           if (res.success) {
+               navigate("/admin/users");
+           } else {
+                showDialog(res.msg, L("account.delete_user_error"));
+           }
+        });
+    }, [api, showDialog, userId]);
+
     useEffect(() => {
         if (!isNewUser) {
             onFetchUser(true);
@@ -163,118 +173,132 @@ export default function UserEditView(props) {
         <span key={"action"}>{isNewUser ? L("general.new") : L("general.edit")}</span>
     ]}>
         <Grid container>
+            <Grid item xs={12} mt={1} mb={1}>
+                <Button variant={"outlined"} color={"error"} size={"small"}
+                        startIcon={<Delete />}
+                        disabled={isNewUser || !api.hasPermission("user/delete") || user.id === api.user.id}
+                        onClick={() => showDialog(
+                            L("account.delete_user_text"),
+                            L("account.delete_user_title"),
+                            [L("general.cancel"), L("general.confirm")],
+                            (buttonIndex) => buttonIndex === 1 ? onDeleteUser() : true)
+                        }
+                        >
+                    {L("general.delete")}
+                </Button>
+            </Grid>
             <Grid item xs={12} lg={6}>
-            <FormGroup>
-                <FormLabel>{L("account.name")}</FormLabel>
-                <FormControl>
-                    <TextField size={"small"} variant={"outlined"}
-                               value={user.name}
-                               onChange={e => onChangeValue("name", e.target.value)} />
-                </FormControl>
-            </FormGroup>
-            <FormGroup>
-                <FormLabel>{L("account.full_name")}</FormLabel>
-                <FormControl>
-                    <TextField size={"small"} variant={"outlined"}
-                               value={user.fullName}
-                               onChange={e => onChangeValue("fullName", e.target.value)} />
-                </FormControl>
-            </FormGroup>
-            <FormGroup>
-                <FormLabel>{L("account.email")}</FormLabel>
-                <FormControl>
-                    <TextField size={"small"} variant={"outlined"}
-                               value={user.email ?? ""}
-                               type={"email"}
-                               onChange={e => onChangeValue("email", e.target.value)} />
-                </FormControl>
-            </FormGroup>
-            <FormGroup>
-                <FormLabel>{L("account.groups")}</FormLabel>
-                <Autocomplete
-                    options={Object.values(groups || {})}
-                    getOptionLabel={group => group.name}
-                    getOptionKey={group => group.id}
-                    filterOptions={(options) => options}
-                    clearOnBlur={true}
-                    clearOnEscape
-                    freeSolo
-                    multiple
-                    value={user.groups}
-                    inputValue={groupInput}
-                    onChange={(e, v) => onChangeValue("groups", v)}
-                    onInputChange={e => setGroupInput((!e || e.target.value === 0) ? "" : e.target.value) }
-                    renderTags={(values, props) =>
-                        values.map((option, index) => {
-                            return <Chip label={option.name}
-                                         style={{backgroundColor: option.color}}
-                                         {...props({index})} />
-                        })
-                    }
-                    renderInput={(params) => <TextField {...params}
-                                                        onBlur={() => setGroupInput("")} />}
-                />
-            </FormGroup>
-            { !isNewUser ?
-                <>
-                    <FormGroup>
-                        <FormLabel>{L("account.password")}</FormLabel>
-                        <FormControl>
-                            <TextField size={"small"} variant={"outlined"}
-                                       value={user.password}
-                                       type={"password"}
-                                       placeholder={"(" + L("general.unchanged") + ")"}
-                                       onChange={e => onChangeValue("password", e.target.value)} />
-                        </FormControl>
-                    </FormGroup>
-                    <MuiFormGroup>
-                        <FormControlLabel
-                            control={<Checkbox
-                                checked={!!user.active}
-                                onChange={(e, v) => onChangeValue("active", v)} />}
-                            label={L("account.active")} />
-                    </MuiFormGroup>
-                    <FormGroup>
-                        <FormControlLabel
-                            control={<Checkbox
-                                checked={!!user.confirmed}
-                                onChange={(e, v) => onChangeValue("confirmed", v)} />}
-                            label={L("account.confirmed")} />
-                    </FormGroup>
-                </> : <>
-                    <FormGroup>
-                        <FormControlLabel
-                            control={<Checkbox
-                                checked={sendInvite}
-                                onChange={(e, v) => setSetInvite(v)} />}
-                            label={L("account.send_invite")} />
-                    </FormGroup>
-                    {!sendInvite && <>
+                <FormGroup>
+                    <FormLabel>{L("account.name")}</FormLabel>
+                    <FormControl>
+                        <TextField size={"small"} variant={"outlined"}
+                                   value={user.name}
+                                   onChange={e => onChangeValue("name", e.target.value)} />
+                    </FormControl>
+                </FormGroup>
+                <FormGroup>
+                    <FormLabel>{L("account.full_name")}</FormLabel>
+                    <FormControl>
+                        <TextField size={"small"} variant={"outlined"}
+                                   value={user.fullName}
+                                   onChange={e => onChangeValue("fullName", e.target.value)} />
+                    </FormControl>
+                </FormGroup>
+                <FormGroup>
+                    <FormLabel>{L("account.email")}</FormLabel>
+                    <FormControl>
+                        <TextField size={"small"} variant={"outlined"}
+                                   value={user.email ?? ""}
+                                   type={"email"}
+                                   onChange={e => onChangeValue("email", e.target.value)} />
+                    </FormControl>
+                </FormGroup>
+                <FormGroup>
+                    <FormLabel>{L("account.groups")}</FormLabel>
+                    <Autocomplete
+                        options={Object.values(groups || {})}
+                        getOptionLabel={group => group.name}
+                        getOptionKey={group => group.id}
+                        filterOptions={(options) => options}
+                        clearOnBlur={true}
+                        clearOnEscape
+                        freeSolo
+                        multiple
+                        value={user.groups}
+                        inputValue={groupInput}
+                        onChange={(e, v) => onChangeValue("groups", v)}
+                        onInputChange={e => setGroupInput((!e || e.target.value === 0) ? "" : e.target.value) }
+                        renderTags={(values, props) =>
+                            values.map((option, index) => {
+                                return <Chip label={option.name}
+                                             style={{backgroundColor: option.color}}
+                                             {...props({index})} />
+                            })
+                        }
+                        renderInput={(params) => <TextField {...params}
+                                                            onBlur={() => setGroupInput("")} />}
+                    />
+                </FormGroup>
+                { !isNewUser ?
+                    <>
                         <FormGroup>
                             <FormLabel>{L("account.password")}</FormLabel>
                             <FormControl>
                                 <TextField size={"small"} variant={"outlined"}
                                            value={user.password}
                                            type={"password"}
+                                           placeholder={"(" + L("general.unchanged") + ")"}
                                            onChange={e => onChangeValue("password", e.target.value)} />
                             </FormControl>
                         </FormGroup>
+                        <MuiFormGroup>
+                            <FormControlLabel
+                                control={<Checkbox
+                                    checked={!!user.active}
+                                    onChange={(e, v) => onChangeValue("active", v)} />}
+                                label={L("account.active")} />
+                        </MuiFormGroup>
                         <FormGroup>
-                            <FormLabel>{L("account.password_confirm")}</FormLabel>
-                            <FormControl>
-                                <TextField size={"small"} variant={"outlined"}
-                                           value={user.passwordConfirm}
-                                           type={"password"}
-                                           onChange={e => onChangeValue("passwordConfirm", e.target.value)} />
-                            </FormControl>
+                            <FormControlLabel
+                                control={<Checkbox
+                                    checked={!!user.confirmed}
+                                    onChange={(e, v) => onChangeValue("confirmed", v)} />}
+                                label={L("account.confirmed")} />
                         </FormGroup>
-                        <Box mb={2}>
-                            <PasswordStrength password={user.password} />
-                        </Box>
+                    </> : <>
+                        <FormGroup>
+                            <FormControlLabel
+                                control={<Checkbox
+                                    checked={sendInvite}
+                                    onChange={(e, v) => setSetInvite(v)} />}
+                                label={L("account.send_invite")} />
+                        </FormGroup>
+                        {!sendInvite && <>
+                            <FormGroup>
+                                <FormLabel>{L("account.password")}</FormLabel>
+                                <FormControl>
+                                    <TextField size={"small"} variant={"outlined"}
+                                               value={user.password}
+                                               type={"password"}
+                                               onChange={e => onChangeValue("password", e.target.value)} />
+                                </FormControl>
+                            </FormGroup>
+                            <FormGroup>
+                                <FormLabel>{L("account.password_confirm")}</FormLabel>
+                                <FormControl>
+                                    <TextField size={"small"} variant={"outlined"}
+                                               value={user.passwordConfirm}
+                                               type={"password"}
+                                               onChange={e => onChangeValue("passwordConfirm", e.target.value)} />
+                                </FormControl>
+                            </FormGroup>
+                            <Box mb={2}>
+                                <PasswordStrength password={user.password} />
+                            </Box>
+                        </>
+                        }
                     </>
-                    }
-                </>
-            }
+                }
             </Grid>
         </Grid>
         <ButtonBar>

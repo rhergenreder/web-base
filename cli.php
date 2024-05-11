@@ -96,8 +96,57 @@ function handleDatabase(array $argv): void {
   $action = $argv[2] ?? "";
 
   if ($action === "migrate") {
+    $fileName = $argv[3] ?? "";
+    if (empty($fileName)) {
+      _exit("Usage: cli.php db migrate <file>");
+    }
+
+    $filePath = realpath($fileName);
+    if (!$filePath) {
+      _exit("File not found: $fileName");
+    }
+
+    $corePatches = implode(DIRECTORY_SEPARATOR, [WEBROOT, "Core", "Configuration", "Patch", ""]);
+    $sitePatches = implode(DIRECTORY_SEPARATOR, [WEBROOT, "Site", "Configuration", "Patch", ""]);
+    if (!endsWith($filePath, ".php") || (!startsWith($filePath, $corePatches) && !startsWith($filePath, $sitePatches))) {
+      _exit("invalid patch file: $filePath. Must be located in either Core or Site patch folder and have '.php' as extension");
+    }
+
+
     $sql = connectSQL() or die();
-    _exit("Not implemented: migrate");
+    $queries = [];
+    @include_once $filePath;
+
+    if (empty($queries)) {
+      _exit("No queries loaded.");
+    }
+
+    $success = true;
+    $queryCount = count($queries);
+    $logger = new \Core\Driver\Logger\Logger("CLI", $sql);
+    $logger->info("Migrating DB with: " . $fileName);
+    printLine("Executing $queryCount queries");
+
+    $sql->startTransaction();
+    $queryIndex = 1;
+    foreach ($queries as $query) {
+      if ($query->execute() === false) {
+        $success = false;
+        printLine("Error executing query: " . $sql->getLastError());
+        $logger->error("Error while migrating db: " . $sql->getLastError());
+        $sql->rollback();
+        break;
+      } else {
+        printLine("$queryIndex/$queryCount: success!");
+        $queryIndex++;
+      }
+    }
+
+    if ($success) {
+      $sql->commit();
+    }
+
+    printLine("Done.");
   } else if (in_array($action, ["export", "import", "shell"])) {
 
     // database config
@@ -959,7 +1008,7 @@ class $apiName extends Request {
 $argv = $_SERVER['argv'];
 $registeredCommands = [
   "help" => ["handler" => "printHelp", "description" => "prints this help page"],
-  "db" => ["handler" => "handleDatabase", "description" => "database actions like importing, exporting and shell"],
+  "db" => ["handler" => "handleDatabase", "description" => "database actions like importing, exporting and shell", "requiresDocker" => ["migrate"]],
   "routes" => ["handler" => "onRoutes", "description" => "view and modify routes", "requiresDocker" => true],
   "maintenance" => ["handler" => "onMaintenance", "description" => "toggle maintenance mode", "requiresDocker" => true],
   "test" => ["handler" => "onTest", "description" => "run unit and integration tests", "requiresDocker" => true],

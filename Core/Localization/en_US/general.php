@@ -54,10 +54,11 @@ return [
   "sending" => "Sending",
 
   # file
-  "choose_file" => "Choose File",
+  "choose_file" => "Choose file",
   "download" => "Download",
   "download_all" => "Download All",
   "upload" => "Upload",
+  "upload_file" => "Upload file",
   "uploading" => "Uploading",
   "rename" => "Rename",
   "move" => "Move",

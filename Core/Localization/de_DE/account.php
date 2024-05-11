@@ -91,6 +91,11 @@ return [
   "add_group_member_title" => "Mitglied hinzufügen",
   "add_group_member_text" => "Einen Benutzer suchen um ihn der Gruppe hinzuzufügen",
   "edit_profile" => "Profil bearbeiten",
+  "delete_user_error" => "Fehler beim Löschen des Benutzers",
+  "delete_user_title" => "Benutzer löschen",
+  "delete_user_text" => "Möchten Sie wirklich diesen Benutzer löschen? Dies kann nicht rückgängig gemacht werden!",
+  "error_reading_file" => "Fehler beim Lesen der Datei",
+  "invalid_gpg_key" => "Die ausgewählte Datei ist kein GPG-Public Key im ASCII-Format",
 
   # GPG Key
   "gpg_key_placeholder_text" => "GPG-Key im ASCII format reinziehen oder einfügen...",

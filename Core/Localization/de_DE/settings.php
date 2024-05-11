@@ -24,11 +24,14 @@ return [
 
   # general settings
   "site_name" => "Seitenname",
+  "mail_contact" => "Kontakt E-Mailadresse",
   "base_url" => "Basis URL",
   "user_registration_enabled" => "Benutzerregistrierung erlauben",
   "allowed_extensions" => "Erlaubte Dateierweiterungen",
   "trusted_domains" => "Vertraute Ursprungs-Domains (* als Subdomain-Wildcard)",
   "time_zone" => "Zeitzone",
+  "mail_contact_gpg_key" => "Kontakt GPG-Schlüssel",
+  "no_gpg_key_configured" => "Noch kein GPG-Schlüssel konfiguriert",
 
   # mail settings
   "mail_enabled" => "E-Mail Versand aktiviert",
@@ -65,4 +68,8 @@ return [
   "save_settings_error" => "Fehler beim Speichern der Einstellungen",
   "send_test_email_error" => "Fehler beim Senden der Test E-Mail",
   "send_test_email_success" => "Test E-Mail erfolgreich versendet, überprüfen Sie Ihren Posteingang!",
+  "remove_gpg_key_error" => "Fehler beim Entfernen des GPG-Schlüssels",
+  "remove_gpg_key" => "GPG-Schlüssel entfernen",
+  "remove_gpg_key_text" => "Möchten Sie wirklich diesen GPG-Schlüssel entfernen?",
+  "import_gpg_key_error" => "Fehler beim Importieren des GPG-Schlüssels",
 ];

@@ -24,11 +24,14 @@ return [
 
   # general settings
   "site_name" => "Site Name",
+  "mail_contact" => "Contact mail address",
   "base_url" => "Base URL",
   "user_registration_enabled" => "Allow user registration",
   "allowed_extensions" => "Allowed file extensions",
   "trusted_domains" => "Trusted origin domains (* as subdomain-wildcard)",
   "time_zone" => "Time zone",
+  "mail_contact_gpg_key" => "Contact GPG key",
+  "no_gpg_key_configured" => "No GPG key configured yet",
 
   # mail settings
   "mail_enabled" => "Enable e-mail transport",
@@ -65,4 +68,8 @@ return [
   "save_settings_error" => "Error saving settings",
   "send_test_email_error" => "Error sending test email",
   "send_test_email_success" => "Test email successfully sent. Please check your inbox!",
+  "remove_gpg_key_error" => "Error removing GPG key",
+  "remove_gpg_key" => "Remove GPG key",
+  "remove_gpg_key_text" => "Do you really want to remove this gpg key?",
+  "import_gpg_key_error" => "Error importing GPG key",
 ];

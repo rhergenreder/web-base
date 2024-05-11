@@ -212,7 +212,7 @@ namespace Documents\Install {
           $step = self::FINISH_INSTALLATION;
 
           $req = new \Core\API\Settings\Set($context);
-          $success = $req->execute(["settings" => ["installation_completed" => "1"]]);
+          $success = $req->execute(["settings" => ["installation_completed" => true]]);
           if (!$success) {
             $this->errorString = $req->getLastError();
           }
@@ -633,12 +633,12 @@ namespace Documents\Install {
         }
 
         $items[] = html_tag("li", $attr, [
-            html_tag("div", [], [
-              html_tag("h6", ["class" => "my-0"], $title),
-              html_tag("small", ["class" => "text-$statusColor"], $statusText),
-            ], false),
-            html_tag("span", ["class" => "text-$statusColor"], $statusIcon, false)
-          ], false);
+          html_tag("div", [], [
+            html_tag("h6", ["class" => "my-0"], $title),
+            html_tag("small", ["class" => "text-$statusColor"], $statusText),
+          ], false),
+          html_tag("span", ["class" => "text-$statusColor"], $statusIcon, false)
+        ], false);
       }
 
       return $items;
@@ -956,7 +956,7 @@ namespace Documents\Install {
             html_tag("div", ["class" => "col-md-4 order-md-2 mb-4"], [
               html_tag("h4", ["class" => "d-flex justify-content-between align-items-center mb-3"],
                 html_tag("span", ["class" => "text-muted"], "Progress"),
-               false
+                false
               ),
               html_tag("ul", ["class" => "list-group mb-3"], $progressSidebar, false)
             ], false),
@@ -968,7 +968,7 @@ namespace Documents\Install {
             ], false)
 
           ], false),
-          
+
         ], false),
         false
       );

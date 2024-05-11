@@ -3,7 +3,7 @@ import {LocaleContext} from "shared/locale";
 import {
     Box, Button,
     CircularProgress, FormControl,
-    FormGroup, FormLabel, Grid, IconButton,
+    FormLabel, Grid, IconButton,
     Paper,
     Tab,
     Table,
@@ -23,7 +23,7 @@ import {
     RestartAlt,
     Save,
     Send,
-    SettingsApplications, SmartToy, Storage
+    SettingsApplications, SmartToy, Storage,
 } from "@mui/icons-material";
 import TIME_ZONES from "shared/time-zones";
 import ButtonBar from "../../elements/button-bar";
@@ -34,10 +34,12 @@ import SettingsPasswordInput from "./input-password";
 import SettingsTextInput from "./input-text";
 import SettingsSelection from "./input-selection";
 import ViewContent from "../../elements/view-content";
+import GpgKeyInput from "./input-gpg-key";
+import SpacedFormGroup from "../../elements/form-group";
 
 export default function SettingsView(props) {
 
-    // TODO: website-logo (?), mail_contact, mail_contact_gpg_key_id
+    // TODO: website-logo (?), mail_contact_gpg_key_id
 
     // meta
     const api = props.api;
@@ -47,6 +49,7 @@ export default function SettingsView(props) {
       "general": [
           "base_url",
           "site_name",
+          "mail_contact",
           "user_registration_enabled",
           "time_zone",
           "allowed_extensions",
@@ -75,6 +78,8 @@ export default function SettingsView(props) {
       ]
     };
 
+    const CUSTOM_KEYS = ["mail_contact_gpg_key"];
+
     // data
     const [fetchSettings, setFetchSettings] = useState(true);
     const [settings, setSettings] = useState(null);
@@ -94,8 +99,12 @@ export default function SettingsView(props) {
         }, [])).includes(key);
     }
 
+    const isCustom = (key) => {
+        return CUSTOM_KEYS.includes(key);
+    }
+
     useEffect(() => {
-        requestModules(props.api, ["general", "settings"], currentLocale).then(data => {
+        requestModules(props.api, ["general", "settings", "account"], currentLocale).then(data => {
             if (!data.success) {
                 showDialog("Error fetching translations: " + data.msg);
             }
@@ -115,7 +124,9 @@ export default function SettingsView(props) {
                             return obj;
                         }, {})
                     );
-                    setUncategorizedKeys(Object.keys(data.settings).filter(key => isUncategorized(key)));
+                    setUncategorizedKeys(Object.keys(data.settings)
+                        .filter(key => !isCustom(key))
+                        .filter(key => isUncategorized(key)));
                 }
             });
         }
@@ -132,7 +143,15 @@ export default function SettingsView(props) {
 
     const onSaveSettings = useCallback(() => {
         setSaving(true);
-        api.saveSettings(settings).then(data => {
+
+        let settingsToSave = {...settings};
+        for (const key of CUSTOM_KEYS) {
+            if (settingsToSave.hasOwnProperty(key)) {
+                delete settingsToSave[key];
+            }
+        }
+
+        api.saveSettings(settingsToSave).then(data => {
             setSaving(false);
             if (data.success) {
                 showDialog(L("settings.save_settings_success"), L("general.success"));
@@ -253,6 +272,13 @@ export default function SettingsView(props) {
         if (selectedTab === "general") {
             return [
                 renderTextInput("site_name"),
+                renderTextInput("mail_contact", false, {type: "email"}),
+                <SpacedFormGroup key={"mail-contact-gpg-key"}>
+                    <FormLabel>{L("settings.mail_contact_gpg_key")}</FormLabel>
+                    <GpgKeyInput value={settings.mail_contact_gpg_key} api={api}
+                                 showDialog={showDialog}
+                                 onChange={value => setSettings({...settings, mail_contact_gpg_key: value})}/>
+                </SpacedFormGroup>,
                 renderTextInput("base_url"),
                 renderTextValuesInput("trusted_domains"),
                 renderCheckBox("user_registration_enabled"),
@@ -269,7 +295,7 @@ export default function SettingsView(props) {
                 renderPasswordInput("mail_password", !settings.mail_enabled),
                 renderTextInput("mail_footer", !settings.mail_enabled),
                 renderCheckBox("mail_async", !settings.mail_enabled),
-                <FormGroup key={"mail-test"}>
+                <SpacedFormGroup key={"mail-test"}>
                     <FormLabel>{L("settings.send_test_email")}</FormLabel>
                     <FormControl disabled={!settings.mail_enabled}>
                         <Grid container spacing={1}>
@@ -292,7 +318,7 @@ export default function SettingsView(props) {
                             </Grid>
                         </Grid>
                     </FormControl>
-                </FormGroup>
+                </SpacedFormGroup>
             ];
         } else if (selectedTab === "captcha") {
             let captchaOptions = {};

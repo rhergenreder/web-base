@@ -19,6 +19,7 @@ namespace Core\API {
       // API parameters should be more configurable, e.g. allow regexes, min/max values for numbers, etc.
       $this->predefinedKeys = [
         "allowed_extensions" => new ArrayType("allowed_extensions", Parameter::TYPE_STRING),
+        "mail_contact" => new Parameter("mail_contact", Parameter::TYPE_EMAIL, true, ""),
         "trusted_domains" => new ArrayType("trusted_domains", Parameter::TYPE_STRING),
         "user_registration_enabled" => new Parameter("user_registration_enabled", Parameter::TYPE_BOOLEAN),
         "captcha_provider" => new StringType("captcha_provider", -1, true, "disabled", CaptchaProvider::PROVIDERS),
@@ -38,34 +39,50 @@ namespace Core\API\Settings {
   use Core\API\Parameter\RegexType;
   use Core\API\Parameter\StringType;
   use Core\API\SettingsAPI;
+  use Core\API\Traits\GpgKeyValidation;
   use Core\Configuration\Settings;
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\CondBool;
   use Core\Driver\SQL\Condition\CondIn;
   use Core\Driver\SQL\Strategy\UpdateStrategy;
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\GpgKey;
   use Core\Objects\DatabaseEntity\Group;
 
   class Get extends SettingsAPI {
+
+    private ?GpgKey $contactGpgKey;
 
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, array(
         'key' => new StringType('key', -1, true, NULL)
       ));
+      $this->contactGpgKey = null;
     }
 
     public function _execute(): bool {
        $key = $this->getParam("key");
        $sql = $this->context->getSQL();
+       $siteSettings = $this->context->getSettings();
 
        $settings = Settings::getAll($sql, $key, $this->isExternalCall());
        if ($settings !== null) {
          $this->result["settings"] = $settings;
+
+         // TODO: improve this custom key
+         $gpgKeyId = $this->result["settings"]["mail_contact_gpg_key_id"] ?? null;
+         $this->contactGpgKey = $gpgKeyId === null ? null : GpgKey::find($sql, $gpgKeyId);
+         unset($this->result["settings"]["mail_contact_gpg_key_id"]);
+         $this->result["settings"]["mail_contact_gpg_key"] = $this->contactGpgKey?->jsonSerialize();
        } else {
          return $this->createError("Error fetching settings: " . $sql->getLastError());
        }
 
        return $this->success;
+    }
+
+    public function getContactGpgKey(): ?GpgKey {
+      return $this->contactGpgKey;
     }
 
     public static function getDescription(): string {
@@ -138,7 +155,6 @@ namespace Core\API\Settings {
           ["value" => new Column("value")])
         );
 
-
         $this->success = ($query->execute() !== FALSE);
         $this->lastError = $sql->getLastError();
 
@@ -182,6 +198,92 @@ namespace Core\API\Settings {
 
     public static function getDescription(): string {
       return "Allows users to modify site settings";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
+    }
+  }
+
+  class ImportGPG extends SettingsAPI {
+
+    use GpgKeyValidation;
+
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        "publicKey" => new StringType("publicKey")
+      ]);
+
+      $this->forbidMethod("GET");
+    }
+
+    protected function _execute(): bool {
+
+      $sql = $this->context->getSQL();
+
+      // fix key first, enforce a newline after
+      $keyString = $this->formatKey($this->getParam("publicKey"));
+      $keyData = $this->testKey($keyString, null);
+      if ($keyData === false) {
+        return false;
+      }
+
+      $res = GpgKey::importKey($keyString);
+      if (!$res["success"]) {
+        return $this->createError($res["error"]);
+      }
+
+      // we will auto-confirm this key
+      $sql = $this->context->getSQL();
+      $gpgKey = new GpgKey($keyData["fingerprint"], $keyData["algorithm"], $keyData["expires"], true);
+      if (!$gpgKey->save($sql)) {
+        return $this->createError("Error creating gpg key: " . $sql->getLastError());
+      }
+
+      $this->success = $sql->insert("Settings", ["name", "value", "private", "readonly"])
+          ->addRow("mail_contact_gpg_key_id", $gpgKey->getId(), false, true)
+          ->onDuplicateKeyStrategy(new UpdateStrategy(
+              ["name"],
+              ["value" => new Column("value")])
+          )->execute() !== false;
+
+      $this->lastError = $sql->getLastError();
+      $this->result["gpgKey"] = $gpgKey->jsonSerialize();
+      return $this->success;
+    }
+
+    public static function getDescription(): string {
+      return "Allows administrators to import a GPG-key to use it as a contact key.";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [Group::ADMIN];
+    }
+  }
+
+  class RemoveGPG extends SettingsAPI {
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall);
+    }
+
+    protected function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $settings = $this->context->getSettings();
+      $gpgKey = $settings->getContactGPGKey();
+      if ($gpgKey === null) {
+        return $this->createError("No GPG-Key configured yet");
+      }
+
+      $this->success = $sql->update("Settings")
+        ->set("value", NULL)
+        ->whereEq("name", "mail_contact_gpg_key_id")
+        ->execute() !== false;
+      $this->lastError = $sql->getLastError();
+      return $this->success;
+    }
+
+    public static function getDescription(): string {
+      return "Allows administrators to remove the GPG-key used as a contact key.";
     }
 
     public static function getDefaultPermittedGroups(): array {

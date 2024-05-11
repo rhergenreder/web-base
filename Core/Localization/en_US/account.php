@@ -92,6 +92,11 @@ return [
   "remove_group_member_text" => "Do you really want to remove user '%s' from this group?",
   "add_group_member_title" => "Add member",
   "add_group_member_text" => "Search a user to add to the group",
+  "delete_user_error" => "Error deleting User",
+  "delete_user_title" => "Delete User",
+  "delete_user_text" => "Are you really sure you want to delete this user? This cannot be undone!",
+  "error_reading_file" => "Error reading file",
+  "invalid_gpg_key" => "Selected file is a not a GPG Public Key in ASCII format",
 
   # GPG Key
   "gpg_key" => "GPG Key",

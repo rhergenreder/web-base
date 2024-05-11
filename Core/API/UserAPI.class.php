@@ -1008,7 +1008,15 @@ namespace Core\API\User {
         } else {
           $this->success = ($user->delete($sql) !== FALSE);
           $this->lastError = $sql->getLastError();
+          $this->logger->info(sprintf(
+            "User '%s' (id=%d) deleted by %s",
+            $user->getDisplayName(),
+            $id,
+            $this->logUserId())
+          );
         }
+      } else {
+        $this->lastError = $sql->getLastError();
       }
 
       return $this->success;

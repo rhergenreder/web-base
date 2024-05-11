@@ -302,6 +302,14 @@ export default class API {
         return this.apiCall("settings/set", { settings: settings });
     }
 
+    async settingsImportGPG(publicKey) {
+        return this.apiCall("settings/importGPG", { publicKey: publicKey });
+    }
+
+    async settingsRemoveGPG() {
+        return this.apiCall("settings/removeGPG");
+    }
+
     /** MailAPI **/
     async sendTestMail(receiver) {
         return this.apiCall("mail/test", { receiver: receiver });
@@ -396,8 +404,8 @@ export default class API {
     }
 
     /** GPG API **/
-    async uploadGPG(pubkey) {
-        let res = await this.apiCall("gpgKey/import", { pubkey: pubkey });
+    async uploadGPG(publicKey) {
+        let res = await this.apiCall("gpgKey/import", { publicKey: publicKey });
         if (res.success) {
             this.user.gpgKey = res.gpgKey;
         }

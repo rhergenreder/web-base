@@ -10,7 +10,6 @@ namespace Core\API {
       $this->loginRequired = true;
     }
   }
-
 }
 
 namespace Core\API\GpgKey {
@@ -20,6 +19,7 @@ namespace Core\API\GpgKey {
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
   use Core\API\Template\Render;
+  use Core\API\Traits\GpgKeyValidation;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\GpgKey;
@@ -28,34 +28,14 @@ namespace Core\API\GpgKey {
 
   class Import extends GpgKeyAPI {
 
+    use GpgKeyValidation;
+
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, [
-        "pubkey" => new StringType("pubkey")
+        "publicKey" => new StringType("publicKey")
       ]);
       $this->loginRequired = true;
       $this->forbidMethod("GET");
-    }
-
-    private function testKey(string $keyString) {
-      $res = GpgKey::getKeyInfo($keyString);
-      if (!$res["success"]) {
-        return $this->createError($res["error"] ?? $res["msg"]);
-      }
-
-      $keyData = $res["data"];
-      $keyType = $keyData["type"];
-      $expires = $keyData["expires"];
-
-      if ($keyType === "sec#") {
-        return self::createError("ATTENTION! It seems like you've imported a PGP PRIVATE KEY instead of a public key. 
-            It is recommended to immediately revoke your private key and create a new key pair.");
-      } else if ($keyType !== "pub") {
-        return self::createError("Unknown key type: $keyType");
-      } else if (isInPast($expires)) {
-        return self::createError("It seems like the gpg key is already expired.");
-      } else {
-        return $keyData;
-      }
     }
 
     public function _execute(): bool {
@@ -69,8 +49,7 @@ namespace Core\API\GpgKey {
       }
 
       // fix key first, enforce a newline after
-      $keyString = $this->getParam("pubkey");
-      $keyString = preg_replace("/(-{2,})\n([^\n])/", "$1\n\n$2", $keyString);
+      $keyString = $this->formatKey($this->getParam("publicKey"));
       $keyData = $this->testKey($keyString);
       if ($keyData === false) {
         return false;

@@ -17,6 +17,7 @@ use Core\Objects\Captcha\GoogleRecaptchaProvider;
 use Core\Objects\Captcha\HCaptchaProvider;
 use Core\Objects\ConnectionData;
 use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\GpgKey;
 
 class Settings {
 
@@ -25,6 +26,11 @@ class Settings {
 
   // general settings
   private string $siteName;
+
+  private string $contactMail;
+
+  private ?GpgKey $contactGpgKey;
+
   private string $baseUrl;
   private array $trustedDomains;
   private bool $registrationAllowed;
@@ -101,6 +107,8 @@ class Settings {
 
     // General
     $settings->siteName = "WebBase";
+    $settings->contactMail = "webmaster@$hostname";
+    $settings->contactGpgKey = null;
     $settings->baseUrl = "$protocol://$hostname";
     $settings->trustedDomains = [$hostname];
     $settings->allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'htm', 'html'];
@@ -137,13 +145,15 @@ class Settings {
   }
 
   public function loadFromDatabase(Context $context): bool {
-    $this->logger = new Logger("Settings", $context->getSQL());
+    $sql = $context->getSQL();
+    $this->logger = new Logger("Settings", $sql);
     $req = new \Core\API\Settings\Get($context);
     $success = $req->execute();
 
     if ($success) {
       $result = $req->getResult()["settings"];
       $this->siteName = $result["site_name"] ?? $this->siteName;
+      $this->contactMail = $result["mail_contact"] ?? $this->contactMail;
       $this->baseUrl = $result["base_url"] ?? $this->baseUrl;
       $this->registrationAllowed = $result["user_registration_enabled"] ?? $this->registrationAllowed;
       $this->installationComplete = $result["installation_completed"] ?? $this->installationComplete;
@@ -162,13 +172,18 @@ class Settings {
       $this->redisPort = $result["redis_port"] ?? $this->redisPort;
       $this->redisPassword = $result["redis_password"] ?? $this->redisPassword;
       date_default_timezone_set($this->timeZone);
+
+      $this->contactGpgKey = $req->getContactGpgKey();
     }
 
     return false;
   }
 
   public function addRows(Insert $query): void {
+    // ["name", "value", "private", "readonly"]
     $query->addRow("site_name", json_encode($this->siteName), false, false)
+      ->addRow("mail_contact", json_encode($this->contactMail), false, false)
+      ->addRow("mail_contact_gpg_key_id", json_encode($this->contactGpgKey?->getId()), false, true)
       ->addRow("base_url", json_encode($this->baseUrl), false, false)
       ->addRow("trusted_domains", json_encode($this->trustedDomains), false, false)
       ->addRow("user_registration_enabled", json_encode($this->registrationAllowed), false, false)
@@ -194,6 +209,14 @@ class Settings {
 
   public function getSiteName(): string {
     return $this->siteName;
+  }
+
+  public function getContactMail(): string {
+    return $this->contactMail;
+  }
+
+  public function getContactGPGKey(): ?GpgKey {
+    return $this->contactGpgKey;
   }
 
   public function getTimeZone(): string {

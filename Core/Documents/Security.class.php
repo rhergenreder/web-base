@@ -28,7 +28,7 @@ class Security extends Document {
 
     $sql = $this->getContext()->getSQL();
     $settings = $this->getSettings();
-    $mailSettings = Settings::getAll($sql, "^mail_");
+    $gpgKey = $settings->getContactGPGKey();
 
     if ($activeRoute->getPattern() === "/.well-known/security.txt") {
 
@@ -39,7 +39,7 @@ class Security extends Document {
 
       $expires = (new \DateTime())->setTime(0, 0, 0)->modify("+3 months");
       $baseUrl = $settings->getBaseUrl();
-      $gpgKey = null;
+      // $gpgKey = null;
 
       $lines = [
         "# This project is based on the open-source framework hosted on https://github.com/rhergenreder/web-base",
@@ -53,19 +53,16 @@ class Security extends Document {
         "",
       ];
 
-      if (isset($mailSettings["mail_contact"])) {
-        $lines[] = "Contact: " . $mailSettings["mail_contact"];
+      $contactAddress = $settings->getContactMail();
+      if (!empty($contactAddress)) {
+        $lines[] = "Contact: " . $contactAddress;
+      }
 
-        if (isset($mailSettings["mail_contact_gpg_key_id"])) {
-          $gpgKey = GpgKey::find($sql, $mailSettings["mail_contact_gpg_key_id"]);
-          if ($gpgKey) {
-            $lines[] = "Encryption: $baseUrl/.well-known/gpg-key.txt";
-          }
-        }
+      if ($gpgKey !== null) {
+        $lines[] = "Encryption: $baseUrl/.well-known/gpg-key.txt";
       }
 
       $code = implode("\n", $lines);
-
       if ($gpgKey !== null) {
         $res = GpgKey::sign($code, $gpgKey->getFingerprint());
         if ($res["success"]) {
@@ -75,17 +72,14 @@ class Security extends Document {
 
       return $code;
     } else if ($activeRoute->getPattern() === "/.well-known/gpg-key.txt") {
-
-      if (isset($mailSettings["mail_contact_gpg_key_id"])) {
-        $gpgKey = GpgKey::find($sql, $mailSettings["mail_contact_gpg_key_id"]);
-        if ($gpgKey !== null) {
+      if ($gpgKey !== null) {
+        $res = $gpgKey->_export(true);
+        if ($res["success"]) {
           header("Content-Type: text/plain");
-          $res = $gpgKey->_export(true);
-          if ($res["success"]) {
-            return $res["data"];
-          } else {
-            return "Error exporting public key: " . $res["msg"];
-          }
+          return $res["data"];
+        } else {
+          http_response_code(500);
+          return "Error exporting public key: " . $res["msg"];
         }
       } else {
         http_response_code(412);

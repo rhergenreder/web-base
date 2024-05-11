@@ -100,7 +100,7 @@ class TemplateDocument extends Document {
             "query" => $urlParts["query"] ?? "",
             "fragment" => $urlParts["fragment"] ?? ""
           ],
-          "lastModified" => date(L('Y-m-d H:i:s'), @filemtime(self::getTemplatePath($name))),
+          "lastModified" => date(L('general.date_time_format'), @filemtime(self::getTemplatePath($name))),
           "registrationEnabled" => $settings->isRegistrationAllowed(),
           "title" => $this->title,
           "captcha" => [

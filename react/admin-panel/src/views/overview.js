@@ -39,6 +39,12 @@ const StyledStatBox = styled(Alert)((props) => ({
         },
         "& div:nth-of-type(1)": {
             padding: props.theme.spacing(2),
+            "& span": {
+                fontSize: "2.5em",
+            },
+            "& p": {
+                fontSize: "1em",
+            }
         },
         "& div:nth-of-type(2) > svg": {
             position: "absolute",
@@ -49,8 +55,18 @@ const StyledStatBox = styled(Alert)((props) => ({
         },
         "& div:nth-of-type(3)": {
             backdropFilter: "brightness(70%)",
-            textAlign: "right",
             padding: props.theme.spacing(0.5),
+            "& a": {
+                display: "grid",
+                gridTemplateColumns: "auto 30px",
+                alignItems: "center",
+                justifyContent: "end",
+                textDecoration: "none",
+                "& svg": {
+                    textAlign: "center",
+                    justifySelf: "center"
+                }
+            }
         }
     },
 }));
@@ -60,7 +76,7 @@ const StatBox = (props) => <StyledStatBox variant={"filled"} icon={false}
         <Box>
             {!isNaN(props.count) ?
                 <>
-                    <h2>{props.count}</h2>
+                    <span>{props.count}</span>
                     <p>{props.text}</p>
                 </> : <CircularProgress variant={"determinate"} />
             }
@@ -68,7 +84,8 @@ const StatBox = (props) => <StyledStatBox variant={"filled"} icon={false}
         <Box>{props.icon}</Box>
         <Box>
             <Link to={props.link}>
-                More info <ArrowCircleRight />
+                <span>{props.L("admin.more_info")}</span>
+                <ArrowCircleRight />
             </Link>
         </Box>
     </StyledStatBox>
@@ -131,25 +148,25 @@ export default function Overview(props) {
                 <StatBox color={"info"} count={stats?.userCount}
                          text={L("admin.users_registered")}
                          icon={<People/>}
-                         link={"/admin/users"}/>
+                         link={"/admin/users"} L={L}/>
             </Grid>
             <Grid item xs={6} lg={3}>
                 <StatBox color={"success"} count={stats?.groupCount}
                          text={L("admin.available_groups")}
                          icon={<Groups/>}
-                         link={"/admin/groups"}/>
+                         link={"/admin/groups"} L={L}/>
             </Grid>
             <Grid item xs={6} lg={3}>
                 <StatBox color={"warning"} count={stats?.pageCount}
                          text={L("admin.routes_defined")}
                          icon={<LibraryBooks/>}
-                         link={"/admin/routes"}/>
+                         link={"/admin/routes"} L={L}/>
             </Grid>
             <Grid item xs={6} lg={3}>
                 <StatBox color={"error"} count={stats?.errorCount}
                          text={L("admin.error_count")}
                          icon={<BugReport />}
-                         link={"/admin/logs"}/>
+                         link={"/admin/logs"} L={L}/>
             </Grid>
         </Grid>
         <Box m={2} p={2} component={Paper}>

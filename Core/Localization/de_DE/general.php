@@ -59,6 +59,7 @@ return [
   "choose_file" => "Datei auswählen",
   "download" => "Herunterladen",
   "download_all" => "Alles Herunterladen",
+  "upload_file" => "Datei hochladen",
   "upload" => "Hochladen",
   "uploading" => "Lade hoch",
   "overwrite" => "Überschreiben",

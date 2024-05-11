@@ -5,6 +5,7 @@ import {CheckCircle, CloudUpload, ErrorOutline, Remove, Upload, VpnKey} from "@m
 import SpacedFormGroup from "../../elements/form-group";
 import ButtonBar from "../../elements/button-bar";
 import CollapseBox from "./collapse-box";
+import VisuallyHiddenInput from "../../elements/hidden-file-upload";
 
 const GpgKeyField = styled(TextField)((props) => ({
     "& > div": {
@@ -23,18 +24,6 @@ const GpgFingerprintBox = styled(Box)((props) => ({
         cursor: "pointer"
     }
 }));
-
-const VisuallyHiddenInput = styled('input')({
-    clip: 'rect(0 0 0 0)',
-    clipPath: 'inset(50%)',
-    height: 1,
-    overflow: 'hidden',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    whiteSpace: 'nowrap',
-    width: 1,
-});
 
 export default function GpgBox(props) {
 
@@ -87,7 +76,7 @@ export default function GpgBox(props) {
             data += event.target.result;
             if (reader.readyState === 2) {
                 if (!data.match(/^-+\s*BEGIN/m)) {
-                    showDialog(L("Selected file is a not a GPG Public Key in ASCII format"), L("Error reading file"));
+                    showDialog(L("account.invalid_gpg_key"), L("account.error_reading_file"));
                     return false;
                 } else {
                     callback(data);
@@ -98,9 +87,7 @@ export default function GpgBox(props) {
         reader.readAsText(file);
     }, [showDialog]);
 
-    return <CollapseBox title={L("account.gpg_key")} {...other}
-
-                        icon={<VpnKey />}>
+    return <CollapseBox title={L("account.gpg_key")} icon={<VpnKey />} {...other}>
         {
             profile.gpgKey ? <Box>
                     <GpgFingerprintBox mb={2}>
@@ -150,8 +137,8 @@ export default function GpgBox(props) {
                                 variant="outlined"
                                 startIcon={<CloudUpload />}
                                 component={"label"}>
-                            Upload file
-                            <VisuallyHiddenInput type={"file"}  onChange={e => {
+                            {L("general.upload_file")}
+                            <VisuallyHiddenInput type={"file"} onChange={e => {
                                 let file = e.target.files[0];
                                 getFileContents(file, (data) => {
                                     setGpgKey(data);

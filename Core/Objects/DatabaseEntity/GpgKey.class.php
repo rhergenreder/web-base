@@ -18,9 +18,9 @@ class GpgKey extends DatabaseEntity {
   private \DateTime $expires;
   #[DefaultValue(CurrentTimeStamp::class)] private \DateTime $added;
 
-  public function __construct(string $fingerprint, string $algorithm, \DateTime $expires) {
+  public function __construct(string $fingerprint, string $algorithm, \DateTime $expires, bool $confirmed = false) {
     parent::__construct();
-    $this->confirmed = false;
+    $this->confirmed = $confirmed;
     $this->fingerprint = $fingerprint;
     $this->algorithm = $algorithm;
     $this->expires = $expires;

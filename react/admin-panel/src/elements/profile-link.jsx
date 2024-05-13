@@ -15,6 +15,6 @@ export default function ProfileLink(props) {
 
     return <Box display={"grid"} sx={newSx} gridTemplateColumns={size + "px auto"} alignItems={"center"} {...other}>
         <ProfilePicture user={user} size={size} />
-        {text ? text : (user.fullName || user.name)}
+        {typeof text === "string" ? text : (user.fullName || user.name)}
     </Box>
 }

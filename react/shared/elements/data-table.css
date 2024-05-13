@@ -32,7 +32,7 @@
 }
 
 .pagination-controls {
-    margin-top: 6px;
+    margin-top: 12px;
     display: grid;
     grid-template-columns: 75px auto;
     align-items: center;

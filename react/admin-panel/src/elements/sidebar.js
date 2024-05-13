@@ -23,8 +23,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
     padding: theme.spacing(0, 1),
     ...theme.mixins.toolbar,
     "& > button": {
-        display: 'flex',
-        marginLeft: "auto",
+        display: "flex",
     },
     "& > img": {
         width: 30,
@@ -122,22 +121,25 @@ export default function Sidebar(props) {
         onFetchLanguages();
     }, []);
 
-    const menuItems = {
+    const menuItems= {
         "dashboard": {
             "name": "admin.dashboard",
             "icon": <QueryStats />
         },
         "users": {
             "name": "admin.users",
-            "icon": <People />
+            "icon": <People />,
+            "match": /\/admin\/(users|user\/.*)/
         },
         "groups": {
             "name": "admin.groups",
-            "icon": <Groups />
+            "icon": <Groups />,
+            "match": /\/admin\/(groups|group\/.*)/
         },
         "routes": {
             "name": "admin.page_routes",
-            "icon": <Route />
+            "icon": <Route />,
+            "match": /\/admin\/(routes|route\/.*)/
         },
         "settings": {
             "name": "admin.settings",
@@ -172,8 +174,15 @@ export default function Sidebar(props) {
 
     let li = [];
     for (const [id, menuItem] of Object.entries(menuItems)) {
-        const match= /^\/admin\/(.*)$/.exec(currentPath);
-        const active = match?.length >= 2 && match[1] === id;
+
+        let active;
+        if (menuItem.hasOwnProperty("match")) {
+            active = !!menuItem.match.exec(currentPath);
+        } else {
+            const match= /^\/admin\/(.*)$/.exec(currentPath);
+            active = match?.length >= 2 && match[1] === id;
+        }
+
         li.push(<NavbarItem key={id} {...menuItem} active={active} onClick={() => navigate(`/admin/${id}`)} />);
     }
 
@@ -188,14 +197,16 @@ export default function Sidebar(props) {
                         <img src={"/img/icons/logo.png"} alt={"Logo"} />
                         <span>WebBase</span>
                     </>}
-                    <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
+                    <IconButton sx={{marginLeft: drawerOpen ? "auto" : 0}} onClick={() => setDrawerOpen(!drawerOpen)}>
                         {drawerOpen ? <ChevronLeftIcon/> : <ChevronRightIcon/>}
                     </IconButton>
                 </DrawerHeader>
                 <Divider/>
                 <ListItem sx={{display: 'block'}}>
                     <Box sx={{opacity: drawerOpen ? 1 : 0}}>{L("account.logged_in_as")}:</Box>
-                    <ProfileLink user={api.user} size={30} sx={{marginTop: 1, gridGap: 16, fontWeight: "bold" }}
+                    <ProfileLink text={drawerOpen ? null : ""}
+                                 user={api.user} size={30}
+                                 sx={{marginTop: 1, gridGap: 16, fontWeight: "bold" }}
                         onClick={() => navigate("/admin/profile")} />
                 </ListItem>
                 <Divider/>
@@ -216,7 +227,6 @@ export default function Sidebar(props) {
                         : <ListItemButton sx={{
                             minHeight: 48,
                             justifyContent: 'center',
-                            px: 2.5,
                         }}>
                             <Dropdown>
                                 <ListItemIcon onClick={e => setAnchorEl(e.currentTarget)} sx={{

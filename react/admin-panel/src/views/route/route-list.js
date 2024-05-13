@@ -131,7 +131,7 @@ export default function RouteListView(props) {
                 </Button>
                 <Button variant={"outlined"} color={"success"} startIcon={<Add />} size={"small"}
                         disabled={!props.api.hasPermission("routes/add")}
-                        onClick={() => navigate("/admin/routes/new")} >
+                        onClick={() => navigate("/admin/route/new")} >
                     {L("general.add")}
                 </Button>
                 <Button variant={"outlined"} color={"info"} startIcon={<Cached />} size={"small"}
@@ -173,7 +173,7 @@ export default function RouteListView(props) {
                                     <IconButton size={"small"} title={L("general.edit")}
                                                 disabled={!api.hasPermission("routes/add")}
                                                 color={"primary"}
-                                                onClick={() => navigate("/admin/routes/" + id)}>
+                                                onClick={() => navigate("/admin/route/" + id)}>
                                         <Edit />
                                     </IconButton>
                                     <IconButton size={"small"} title={L("general.delete")}

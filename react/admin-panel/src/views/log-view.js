@@ -3,7 +3,7 @@ import {LocaleContext} from "shared/locale";
 import {Link} from "react-router-dom";
 import usePagination from "shared/hooks/pagination";
 import {DataColumn, DataTable, DateTimeColumn, NumericColumn, StringColumn} from "shared/elements/data-table";
-import {Box, FormControl, FormGroup, FormLabel, Grid, IconButton, MenuItem, TextField} from "@mui/material";
+import {Box, FormControl, FormGroup, FormLabel, Grid, IconButton, MenuItem, styled, TextField} from "@mui/material";
 import {DateTimePicker} from "@mui/x-date-pickers";
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -12,12 +12,19 @@ import {format, toDate} from "date-fns";
 import {ExpandLess, ExpandMore} from "@mui/icons-material";
 import ViewContent from "../elements/view-content";
 
+const StyledLogMessage = styled(Box)(props => ({
+    alignSelf: "center",
+    "& pre": {
+        whiteSpace: "break-spaces"
+    }
+}));
+
 export default function LogView(props) {
 
     // meta
     const api = props.api;
     const showDialog = props.showDialog;
-    const {translate: L, requestModules, currentLocale} = useContext(LocaleContext);
+    const {translate: L, requestModules, currentLocale, toDateFns} = useContext(LocaleContext);
     const pagination = usePagination();
 
     // data
@@ -89,11 +96,11 @@ export default function LogView(props) {
                             </IconButton>
                         }
                     </Box>
-                    <Box alignSelf={"center"}>
+                    <StyledLogMessage>
                         <pre>
                             {entry.showDetails ? entry.message : lines[0]}
                         </pre>
-                    </Box>
+                    </StyledLogMessage>
                 </Box>
         }
         return column;
@@ -130,7 +137,7 @@ export default function LogView(props) {
                 <FormGroup>
                     <FormLabel>{L("logs.timestamp")}</FormLabel>
                     <FormControl>
-                        <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={toDateFns()}>
                             <DateTimePicker label={L("logs.timestamp_placeholder") + "…"}
                                             value={timestamp ? toDate(new Date()) : null}
                                             format={L("general.datefns_datetime_format_precise")}

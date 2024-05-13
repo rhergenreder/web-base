@@ -82,7 +82,8 @@ export default function GpgKeyInput(props) {
     }, [showDialog]);
 
     return <StyledGpgKeyInput {...other}>
-        <IconButton onClick={onOpenDialog}>
+        <IconButton onClick={onOpenDialog}
+                    disabled={!api.hasPermission(isConfigured ? "settings/removeGPG" : "settings/importGPG")}>
             { isConfigured ? <Delete color={"error"} /> : <Upload color={"success"} /> }
         </IconButton>
         <VisuallyHiddenInput ref={fileInputRef} type={"file"} onChange={e => {

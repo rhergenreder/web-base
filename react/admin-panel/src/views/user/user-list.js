@@ -73,6 +73,7 @@ export default function UserListView(props) {
         new StringColumn(L("account.email"), "email"),
         groupColumn,
         new DateTimeColumn(L("account.registered_at"), "registeredAt"),
+        new DateTimeColumn(L("account.last_online"), "lastOnline"),
         new BoolColumn(L("account.active"), "active", { align: "center" }),
         new BoolColumn(L("account.confirmed"), "confirmed", { align: "center" }),
         new ControlsColumn(L("general.controls"), [

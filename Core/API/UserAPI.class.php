@@ -237,7 +237,7 @@ namespace Core\API\User {
 
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall,
-        self::getPaginationParameters(['id', 'name', 'fullName', 'email', 'groups', 'registeredAt', 'active', 'confirmed'],
+        self::getPaginationParameters(['id', 'name', 'fullName', 'email', 'groups', 'lastOnline', 'registeredAt', 'active', 'confirmed'],
           'id', 'asc')
       );
     }
@@ -316,20 +316,17 @@ namespace Core\API\User {
       } else if ($user === null) {
         return $this->createError("User not found");
       } else {
-
-        $queriedUser = $user->jsonSerialize();
+        // allow access to unconfirmed users only when we have administrative privileges, or we are querying ourselves
         $currentUser = $this->context->getUser();
-
-        // full info only when we have administrative privileges, or we are querying ourselves
         $fullInfo = ($userId === $currentUser->getId() ||
           $currentUser->hasGroup(Group::ADMIN) ||
           $currentUser->hasGroup(Group::SUPPORT));
 
-        if (!$fullInfo && !$queriedUser["confirmed"]) {
+        if (!$fullInfo && !$user->isConfirmed()) {
           return $this->createError("No permissions to access this user");
         }
 
-        $this->result["user"] = $queriedUser;
+        $this->result["user"] = $user->jsonSerialize();
       }
 
       return $this->success;

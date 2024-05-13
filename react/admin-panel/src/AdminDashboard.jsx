@@ -88,7 +88,7 @@ export default function AdminDashboard(props) {
                         <Route path={"/admin/logs"} element={<LogView {...controlObj} />}/>
                         <Route path={"/admin/permissions"} element={<AccessControlList {...controlObj} />}/>
                         <Route path={"/admin/routes"} element={<RouteListView {...controlObj} />}/>
-                        <Route path={"/admin/routes/:routeId"} element={<RouteEditView {...controlObj} />}/>
+                        <Route path={"/admin/route/:routeId"} element={<RouteEditView {...controlObj} />}/>
                         <Route path={"/admin/settings"} element={<SettingsView {...controlObj} />}/>
                         <Route path={"/admin/profile"} element={<ProfileView {...controlObj} />}/>
                         <Route path={"*"} element={<View404 />} />

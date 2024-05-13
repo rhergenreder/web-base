@@ -88,7 +88,7 @@ export default function RouteEditView(props) {
                 api.addRoute(...args).then(res => {
                     setSaving(false);
                     if (res.success) {
-                        navigate("/admin/routes/" + res.routeId);
+                        navigate("/admin/route/" + res.routeId);
                     } else {
                         showDialog(res.msg, L("routes.save_route_error"));
                     }

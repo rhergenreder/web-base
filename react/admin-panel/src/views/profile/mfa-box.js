@@ -8,9 +8,8 @@ import MfaFido from "./mfa-fido";
 import CollapseBox from "./collapse-box";
 
 const MfaStatusBox = styled(Box)((props) => ({
-    "& > svg": {
-        marginRight: props.theme.spacing(1),
-    },
+    display: "grid",
+    gridTemplateColumns: "30px auto",
 }));
 
 const MFAOptions = styled(Box)((props) => ({
@@ -69,7 +68,7 @@ export default function MultiFactorBox(props) {
             <Box>
                 <MfaStatusBox mb={2}>
                     <CheckCircle color="info" title={L("account.two_factor_confirmed")} />
-                    {L("account.2fa_type_" + profile.twoFactorToken.type)}
+                    <span>{L("account.2fa_type_" + profile.twoFactorToken.type)}</span>
                 </MfaStatusBox>
                 <SpacedFormGroup>
                     <FormLabel>{L("account.password")}</FormLabel>
@@ -82,7 +81,7 @@ export default function MultiFactorBox(props) {
                     </FormControl>
                 </SpacedFormGroup>
                 <Button startIcon={is2FARemoving ? <CircularProgress size={12} /> : <Remove />}
-                        color="danger" onClick={onRemove2FA}
+                        color="error" onClick={onRemove2FA}
                         variant="outlined" size="small"
                         disabled={is2FARemoving || !api.hasPermission("tfa/remove")}>
                     {is2FARemoving ? L("general.removing") + "…" : L("general.remove")}

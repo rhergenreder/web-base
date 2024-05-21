@@ -6,7 +6,7 @@ use Core\Driver\SQL\Column\Column;
 use Core\Driver\SQL\MySQL;
 use Core\Driver\SQL\PostgreSQL;
 use Core\Driver\SQL\SQL;
-use Core\External\PHPMailer\Exception;
+use Exception;
 
 class DateAdd extends Expression {
 

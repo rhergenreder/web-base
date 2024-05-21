@@ -19,7 +19,6 @@ namespace Documents\Install {
 
   use Core\Configuration\Configuration;
   use Core\Configuration\CreateDatabase;
-  use Core\Driver\SQL\Expression\Count;
   use Core\Driver\SQL\SQL;
   use Core\Elements\Body;
   use Core\Elements\Head;
@@ -187,7 +186,7 @@ namespace Documents\Install {
       }
 
       $sql = $context->getSQL();
-      if (!$sql || !$sql->isConnected()) {
+      if (!$sql || !$sql->isConnected() || !$sql->tableExists(User::getHandler($sql)->getTableName())) {
         return self::DATABASE_CONFIGURATION;
       }
 
@@ -439,9 +438,12 @@ namespace Documents\Install {
       $context = $this->getDocument()->getContext();
       if ($this->getParameter("prev") === "true") {
         // TODO: drop the previous database here?
+        /*
         $success = $context->getConfig()->delete("\\Site\\Configuration\\Database");
         $msg = $success ? "" : error_get_last();
         return ["success" => $success, "msg" => $msg];
+        */
+        return ["success" => false, "msg" => "Cannot revert this installation step."];
       }
 
       $username = $this->getParameter("username");
@@ -755,7 +757,7 @@ namespace Documents\Install {
             ["title" => "Password", "name" => "password", "type" => "password", "required" => true],
             ["title" => "Confirm Password", "name" => "confirmPassword", "type" => "password", "required" => true],
           ],
-          "previousButton" => true
+          "previousButton" => false,
         ],
         self::ADD_MAIL_SERVICE => [
           "title" => "Optional: Add Mail Service",

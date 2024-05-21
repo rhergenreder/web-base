@@ -63,7 +63,6 @@ namespace Core\API\Settings {
     public function _execute(): bool {
        $key = $this->getParam("key");
        $sql = $this->context->getSQL();
-       $siteSettings = $this->context->getSettings();
 
        $settings = Settings::getAll($sql, $key, $this->isExternalCall());
        if ($settings !== null) {

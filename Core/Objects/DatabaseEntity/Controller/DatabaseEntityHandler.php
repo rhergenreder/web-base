@@ -713,13 +713,13 @@ class DatabaseEntityHandler implements Persistable {
     return $res;
   }
 
-  public function getCreateQueries(SQL $sql): array {
+  public function getCreateQueries(SQL $sql, bool $canExist = false): array {
 
     $queries = [];
     $table = $this->getTableName();
 
     // Create Table
-    $queries[] = $this->getTableQuery($sql);
+    $queries[] = $this->getTableQuery($sql, $canExist);
 
     // pre defined values
     $getPredefinedValues = $this->entityClass->getMethod("getPredefinedValues");
@@ -733,42 +733,63 @@ class DatabaseEntityHandler implements Persistable {
     $entityLogConfig = $entityLogConfig->getValue();
 
     if (isset($entityLogConfig["insert"]) && $entityLogConfig["insert"] === true) {
-      $queries[] = $sql->createTrigger("${table}_trg_insert")
+      $trigger = $sql->createTrigger("${table}_trg_insert")
         ->after()->insert($table)
         ->exec(new CreateProcedure($sql, "InsertEntityLog"), [
           "tableName" => new CurrentTable(),
           "entityId" => new CurrentColumn("id"),
           "lifetime" => $entityLogConfig["lifetime"] ?? 90,
         ]);
+
+      if ($canExist) {
+        $trigger->onlyIfNotExist();
+      }
+
+      $queries[] = $trigger;
     }
 
     if (isset($entityLogConfig["update"]) && $entityLogConfig["update"] === true) {
-      $queries[] = $sql->createTrigger("${table}_trg_update")
+      $trigger = $sql->createTrigger("${table}_trg_update")
         ->after()->update($table)
         ->exec(new CreateProcedure($sql, "UpdateEntityLog"), [
           "tableName" => new CurrentTable(),
           "entityId" => new CurrentColumn("id"),
         ]);
+
+      if ($canExist) {
+        $trigger->onlyIfNotExist();
+      }
+
+      $queries[] = $trigger;
     }
 
     if (isset($entityLogConfig["delete"]) && $entityLogConfig["delete"] === true) {
-      $queries[] = $sql->createTrigger("${table}_trg_delete")
+      $trigger = $sql->createTrigger("${table}_trg_delete")
         ->after()->delete($table)
         ->exec(new CreateProcedure($sql, "DeleteEntityLog"), [
           "tableName" => new CurrentTable(),
           "entityId" => new CurrentColumn("id"),
         ]);
+
+      if ($canExist) {
+        $trigger->onlyIfNotExist();
+      }
+
+      $queries[] = $trigger;
     }
 
 
     return $queries;
   }
 
-  public function getTableQuery(SQL $sql): CreateTable {
+  public function getTableQuery(SQL $sql, bool $canExist = false): CreateTable {
     $query = $sql->createTable($this->tableName)
-      ->onlyIfNotExists()
       ->addSerial("id")
       ->primaryKey("id");
+
+    if ($canExist) {
+      $query->onlyIfNotExists();
+    }
 
     foreach ($this->columns as $column) {
       $query->addColumn($column);

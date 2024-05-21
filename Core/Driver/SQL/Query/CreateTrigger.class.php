@@ -2,7 +2,10 @@
 
 namespace Core\Driver\SQL\Query;
 
+use Core\Driver\SQL\MySQL;
+use Core\Driver\SQL\PostgreSQL;
 use Core\Driver\SQL\SQL;
+use Exception;
 
 class CreateTrigger extends Query {
 
@@ -11,6 +14,9 @@ class CreateTrigger extends Query {
   private string $event;
   private string $tableName;
   private array $parameters;
+
+  private bool $ifNotExist;
+
   private ?CreateProcedure $procedure;
 
   public function __construct(SQL $sql, string $triggerName) {
@@ -21,10 +27,16 @@ class CreateTrigger extends Query {
     $this->event = "";
     $this->parameters = [];
     $this->procedure = null;
+    $this->ifNotExist = false;
   }
 
   public function before(): CreateTrigger {
     $this->time = "BEFORE";
+    return $this;
+  }
+
+  public function onlyIfNotExist(): CreateTrigger {
+    $this->ifNotExist = true;
     return $this;
   }
 
@@ -70,7 +82,20 @@ class CreateTrigger extends Query {
     $tableName = $this->sql->tableName($this->getTable());
 
     $params = array();
-    $query = "CREATE TRIGGER $name $time $event ON $tableName FOR EACH ROW ";
+
+    if ($this->sql instanceof MySQL) {
+      $query = "CREATE TRIGGER";
+      if ($this->ifNotExist) {
+        $query .= " IF NOT EXISTS";
+      }
+    } else if ($this->sql instanceof PostgreSQL) {
+      $ifNotExists = $this->ifNotExist ? " OR REPLACE" : "";
+      $query = "CREATE$ifNotExists TRIGGER";
+    } else {
+      throw new Exception("CreateTrigger Not implemented for driver type: " . get_class($this->sql));
+    }
+
+    $query .= " $name $time $event ON $tableName FOR EACH ROW ";
     $triggerBody = $this->sql->createTriggerBody($this, $this->parameters);
     if ($triggerBody === null) {
       return null;

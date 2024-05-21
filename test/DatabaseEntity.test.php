@@ -1,5 +1,7 @@
 <?php
 
+namespace {
+
 use Core\API\Parameter\Parameter;
 use Core\Driver\SQL\Query\CreateTable;
 use Core\Driver\SQL\SQL;
@@ -100,6 +102,28 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
   public function testDropTable() {
     $this->assertTrue(self::$SQL->drop(self::$HANDLER->getTableName())->execute());
   }
+
+  public function testTableNames() {
+    $sql = self::$SQL;
+    $this->assertEquals("TestEntity", TestEntity::getHandler($sql, null, true)->getTableName());
+    $this->assertEquals("TestEntityInherit", TestEntityInherit::getHandler($sql, null, true)->getTableName());
+    $this->assertEquals("TestEntityInherit", OverrideNameSpace\TestEntityInherit::getHandler($sql, null, true)->getTableName());
+  }
+
+  public function testCreateQueries() {
+    $queries = [];
+    $entities = [TestEntity::class, TestEntityInherit::class, OverrideNameSpace\TestEntityInherit::class];
+    \Core\Configuration\CreateDatabase::createEntityQueries(self::$SQL, $entities, $queries);
+    $this->assertCount(2, $queries);
+
+    $tables = [];
+    foreach ($queries as $query) {
+      $this->assertInstanceOf(CreateTable::class, $query);
+      $tables[] = $query->getTableName();
+    }
+
+    $this->assertEquals(["TestEntity", "TestEntityInherit"], $tables);
+  }
 }
 
 class TestEntity extends DatabaseEntity {
@@ -109,4 +133,16 @@ class TestEntity extends DatabaseEntity {
   public float $d;
   public \DateTime $e;
   public ?int $f;
+}
+
+class TestEntityInherit extends DatabaseEntity {
+  public TestEntity $rel;
+}
+
+}
+
+namespace OverrideNameSpace {
+  class TestEntityInherit extends \TestEntityInherit {
+    public int $new;
+  }
 }

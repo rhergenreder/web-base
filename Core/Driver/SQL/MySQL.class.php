@@ -375,7 +375,10 @@ class MySQL extends SQL {
         list ($name, $alias) = $parts;
         return "`$name` $alias";
       } else {
-        return "`$table`";
+        $parts = explode(".", $table);
+        return implode(".", array_map(function ($n) {
+          return "`$n`";
+        }, $parts));
       }
     }
   }
@@ -483,6 +486,27 @@ class MySQL extends SQL {
       ->execute();
 
     return $res && $res[0]["count"] > 0;
+  }
+
+  public function listTables(): ?array {
+    $tableSchema = $this->connectionData->getProperty("database");
+    $res = $this->select("TABLE_NAME")
+      ->from("information_schema.TABLES")
+      ->where(new Compare("TABLE_SCHEMA", $tableSchema, "=", true))
+      ->where(new CondLike(new Column("TABLE_TYPE"), "BASE TABLE"))
+      ->execute();
+
+    if ($res !== false) {
+      $tableNames = [];
+
+      foreach ($res as $row) {
+        $tableNames[] = $row["TABLE_NAME"];
+      }
+
+      return $tableNames;
+    }
+
+    return null;
   }
 }
 

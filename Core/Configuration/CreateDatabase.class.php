@@ -3,11 +3,23 @@
 namespace Core\Configuration;
 
 use Core\API\Request;
+use Core\Driver\Logger\Logger;
+use Core\Driver\SQL\Query\CreateTable;
 use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 use PHPUnit\Util\Exception;
 
 class CreateDatabase {
+
+  private static ?Logger $logger = null;
+
+  public static function getLogger(SQL $sql): Logger {
+    if (self::$logger === null) {
+      self::$logger = new Logger("CreateDatabase", $sql);
+    }
+
+    return self::$logger;
+  }
 
   public static function createQueries(SQL $sql): array {
     $queries = array();
@@ -51,35 +63,54 @@ class CreateDatabase {
     }
   }
 
-  private static function loadEntities(SQL $sql, array &$queries): void {
-    $persistables = [];
-    $baseDirs = ["Core", "Site"];
-    foreach ($baseDirs as $baseDir) {
-      $entityDirectory = "./$baseDir/Objects/DatabaseEntity/";
-      if (file_exists($entityDirectory) && is_dir($entityDirectory)) {
-        $scan_arr = scandir($entityDirectory);
-        $files_arr = array_diff($scan_arr, array('.', '..'));
-        foreach ($files_arr as $file) {
-          $suffix = ".class.php";
-          if (endsWith($file, $suffix)) {
-            $className = substr($file, 0, strlen($file) - strlen($suffix));
-            $className = "\\$baseDir\\Objects\\DatabaseEntity\\$className";
-            $reflectionClass = new \ReflectionClass($className);
-            if ($reflectionClass->isSubclassOf(DatabaseEntity::class)) {
-              $method = "$className::getHandler";
-              $handler = call_user_func($method, $sql, null, true);
-              $persistables[$handler->getTableName()] = $handler;
-              foreach ($handler->getNMRelations() as $nmTableName => $nmRelation) {
-                $persistables[$nmTableName] = $nmRelation;
-              }
-            }
+  private static function getCreatedTables(SQL $sql, array $queries): ?array {
+    $createdTables = $sql->listTables();
+
+    if ($createdTables !== null) {
+      foreach ($queries as $query) {
+        if ($query instanceof CreateTable) {
+          $tableName = $query->getTableName();
+          if (!in_array($tableName, $createdTables)) {
+            $createdTables[] = $tableName;
           }
         }
       }
+    } else {
+      self::getLogger($sql)->warning("Error querying existing tables: " . $sql->getLastError());
     }
 
+    return $createdTables;
+  }
+
+  public static function createEntityQueries(SQL $sql, array $entityClasses, array &$queries, bool $skipExisting = false): void {
+
+    if (empty($entityClasses)) {
+      return;
+    }
+
+    // first, check what tables are already created
+    $createdTables = self::getCreatedTables($sql, $queries);
+    if ($createdTables === null) {
+      throw new \Exception("Error querying existing tables");
+    }
+
+    // then collect all persistable entities (tables, relations, etc.)
+    $persistables = [];
+    foreach ($entityClasses as $className) {
+      $reflectionClass = new \ReflectionClass($className);
+      if ($reflectionClass->isSubclassOf(DatabaseEntity::class)) {
+        $handler = ("$className::getHandler")($sql, null, true);
+        $persistables[$handler->getTableName()] = $handler;
+        foreach ($handler->getNMRelations() as $nmTableName => $nmRelation) {
+          $persistables[$nmTableName] = $nmRelation;
+        }
+      } else {
+        throw new \Exception("Class '$className' is not a subclass of DatabaseEntity");
+      }
+    }
+
+    // now order the persistable entities so all dependencies are met.
     $tableCount = count($persistables);
-    $createdTables = [];
     while (!empty($persistables)) {
       $prevCount = $tableCount;
       $unmetDependenciesTotal = [];
@@ -88,7 +119,7 @@ class CreateDatabase {
         $dependsOn = $persistable->dependsOn();
         $unmetDependencies = array_diff($dependsOn, $createdTables);
         if (empty($unmetDependencies)) {
-          $queries = array_merge($queries, $persistable->getCreateQueries($sql));
+          $queries = array_merge($queries, $persistable->getCreateQueries($sql, $skipExisting));
           $createdTables[] = $tableName;
           unset($persistables[$tableName]);
         } else {
@@ -102,6 +133,32 @@ class CreateDatabase {
           . implode(", ", $unmetDependenciesTotal));
       }
     }
+  }
+
+  private static function loadEntities(SQL $sql, array &$queries): void {
+
+    $classes = [];
+    $baseDirs = ["Core", "Site"];
+    foreach ($baseDirs as $baseDir) {
+      $entityDirectory = "./$baseDir/Objects/DatabaseEntity/";
+      if (file_exists($entityDirectory) && is_dir($entityDirectory)) {
+        $scan_arr = scandir($entityDirectory);
+        $files_arr = array_diff($scan_arr, [".", ".."]);
+        foreach ($files_arr as $file) {
+          $suffix = ".class.php";
+          if (endsWith($file, $suffix)) {
+            $className = substr($file, 0, strlen($file) - strlen($suffix));
+            $className = "\\$baseDir\\Objects\\DatabaseEntity\\$className";
+            $reflectionClass = new \ReflectionClass($className);
+            if ($reflectionClass->isSubclassOf(DatabaseEntity::class)) {
+              $classes[] = $className;
+            }
+          }
+        }
+      }
+    }
+
+    self::createEntityQueries($sql, $classes, $queries);
   }
 
   public static function loadDefaultACL(SQL $sql, array &$queries): void {

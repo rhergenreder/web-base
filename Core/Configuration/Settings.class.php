@@ -62,7 +62,14 @@ class Settings {
   }
 
   public static function getAll(?SQL $sql, ?string $pattern = null, bool $external = false): ?array {
-    $query = $sql->select("name", "value")->from("Settings");
+
+    // We do not have a Settings table yet, we might still be in installation phase
+    if (!$sql->tableExists("Settings")) {
+      return null;
+    }
+
+    $query = $sql->select("name", "value")
+      ->from("Settings");
 
     if ($pattern) {
       $query->where(new CondRegex(new Column("name"), $pattern));

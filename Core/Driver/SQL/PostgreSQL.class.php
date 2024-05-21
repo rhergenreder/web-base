@@ -334,7 +334,10 @@ class PostgreSQL extends SQL {
         list ($name, $alias) = $parts;
         return "\"$name\" $alias";
       } else {
-        return "\"$table\"";
+        $parts = explode(".", $table);
+        return implode(".", array_map(function ($n) {
+          return "\"$n\"";
+        }, $parts));
       }
     }
   }
@@ -462,6 +465,28 @@ class PostgreSQL extends SQL {
       ->execute();
 
     return $res && $res[0]["count"] > 0;
+  }
+
+
+
+  public function listTables(): ?array {
+    $tableSchema = $this->connectionData->getProperty("database");
+    $res = $this->select("tablename")
+      ->from("pg_tables")
+      ->where(new Compare("schemaname", $tableSchema))
+      ->execute();
+
+    if ($res !== false) {
+      $tableNames = [];
+
+      foreach ($res as $row) {
+        $tableNames[] = $row["tablename"];
+      }
+
+      return $tableNames;
+    }
+
+    return null;
   }
 }
 

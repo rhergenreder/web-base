@@ -130,6 +130,8 @@ abstract class SQL {
   // Schema
   public abstract function tableExists(string $tableName): bool;
 
+  public abstract function listTables(): ?array;
+
   /**
    * @param Query $query
    * @param int $fetchType

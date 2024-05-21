@@ -125,10 +125,14 @@ class Context {
 
   public function parseCookies(): void {
 
-    if ($this->sql) {
-      if (isset($_COOKIE['session']) && is_string($_COOKIE['session']) && !empty($_COOKIE['session'])) {
-        $this->loadSession($_COOKIE['session']);
-      }
+    $settings = $this->getSettings();
+    if (!$settings->isInstalled()) {
+      // we cannot process user sessions or localization yet.
+      return;
+    }
+
+    if (isset($_COOKIE['session']) && is_string($_COOKIE['session']) && !empty($_COOKIE['session'])) {
+      $this->loadSession($_COOKIE['session']);
     }
 
     // set language by priority: 1. GET parameter, 2. cookie, 3. user's settings, 4. accept-language header

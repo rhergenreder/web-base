@@ -16,6 +16,7 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
   static SQL $SQL;
   static Context $CONTEXT;
   static DatabaseEntityHandler $HANDLER;
+  static DatabaseEntityHandler $HANDLER_RECURSIVE;
 
   public static function setUpBeforeClass(): void {
     parent::setUpBeforeClass();
@@ -26,7 +27,9 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
 
     self::$SQL = self::$CONTEXT->getSQL();
     self::$HANDLER = TestEntity::getHandler(self::$SQL);
+    self::$HANDLER_RECURSIVE = TestEntityRecursive::getHandler(self::$SQL);
     self::$HANDLER->getLogger()->unitTestMode();
+    self::$HANDLER_RECURSIVE->getLogger()->unitTestMode();
   }
 
   public function testCreateTable() {
@@ -101,6 +104,7 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
 
   public function testDropTable() {
     $this->assertTrue(self::$SQL->drop(self::$HANDLER->getTableName())->execute());
+    $this->assertTrue(self::$SQL->drop(self::$HANDLER_RECURSIVE->getTableName())->execute());
   }
 
   public function testTableNames() {
@@ -112,9 +116,15 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
 
   public function testCreateQueries() {
     $queries = [];
-    $entities = [TestEntity::class, TestEntityInherit::class, OverrideNameSpace\TestEntityInherit::class];
+    $entities = [
+      TestEntity::class,
+      TestEntityInherit::class,
+      OverrideNameSpace\TestEntityInherit::class,
+      TestEntityRecursive::class,
+    ];
+
     \Core\Configuration\CreateDatabase::createEntityQueries(self::$SQL, $entities, $queries);
-    $this->assertCount(2, $queries);
+    $this->assertCount(3, $queries);
 
     $tables = [];
     foreach ($queries as $query) {
@@ -122,7 +132,37 @@ class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
       $tables[] = $query->getTableName();
     }
 
-    $this->assertEquals(["TestEntity", "TestEntityInherit"], $tables);
+    $this->assertEquals(["TestEntity", "TestEntityInherit", "TestEntityRecursive"], $tables);
+  }
+
+  public function testRecursive() {
+
+    $query = self::$HANDLER_RECURSIVE->getTableQuery(self::$CONTEXT->getSQL());
+    $this->assertInstanceOf(CreateTable::class, $query);
+    $this->assertTrue($query->execute());
+
+    // ID: 1
+    $entityA = new TestEntityRecursive();
+    $entityA->recursive = null;
+
+    // ID: 2
+    $entityB = new TestEntityRecursive();
+    $entityB->recursive = $entityA;
+
+    // ID: 3
+    $entityC = new TestEntityRecursive();
+    $entityC->recursive = $entityB;
+
+    $this->assertTrue($entityA->save(self::$SQL));
+    $this->assertTrue($entityB->save(self::$SQL));
+    $this->assertTrue($entityC->save(self::$SQL));
+
+    $fetchedEntity = TestEntityRecursive::find(self::$SQL, 3, true, true);
+    $this->assertInstanceOf(TestEntityRecursive::class, $fetchedEntity);
+    $this->assertEquals(3, $fetchedEntity->getId());
+    $this->assertEquals(2, $fetchedEntity->recursive->getId());
+    $this->assertEquals(1, $fetchedEntity->recursive->recursive->getId());
+    $this->assertNull($fetchedEntity->recursive->recursive->recursive);
   }
 }
 
@@ -137,6 +177,10 @@ class TestEntity extends DatabaseEntity {
 
 class TestEntityInherit extends DatabaseEntity {
   public TestEntity $rel;
+}
+
+class TestEntityRecursive extends DatabaseEntity {
+  public ?TestEntityRecursive $recursive;
 }
 
 }

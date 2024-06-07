@@ -14,7 +14,7 @@ abstract class View extends StaticView {
   public function __construct(Document $document, bool $loadView = true) {
     $this->document = $document;
     $this->title = "Untitled View";
-    $this->langModules = array();
+    $this->langModules = [];
     $this->loadView = $loadView;
   }
 

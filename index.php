@@ -30,7 +30,10 @@ $context->parseCookies();
 $currentHostName = getCurrentHostName();
 
 $installation = !$sql || ($sql->isConnected() && !$settings->isInstalled());
-$requestedUri = $_GET["site"] ?? $_GET["api"] ?? $_SERVER["REQUEST_URI"];
+$requestedUri = $_GET["site"] ?? $_GET["api"] ?? null;
+if (!is_string($requestedUri)) {
+  $requestedUri = $_SERVER["REQUEST_URI"];
+}
 
 if ($installation) {
   $requestedUri = Router::cleanURL($requestedUri);

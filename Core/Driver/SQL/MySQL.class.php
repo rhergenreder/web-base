@@ -475,7 +475,6 @@ class MySQL extends SQL {
     return $query;
   }
 
-  // FIXME: access mysql database instead of configured one
   public function tableExists(string $tableName): bool {
     $tableSchema = $this->connectionData->getProperty("database");
     $res = $this->select(new Count())

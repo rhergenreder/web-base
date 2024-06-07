@@ -96,7 +96,7 @@ class TemplateDocument extends Document {
           "name" => $settings->getSiteName(),
           "url" => [
             "base" => $settings->getBaseUrl(),
-            "path" => $urlParts["path"],
+            "path" => $urlParts["path"] ?? "" ,
             "query" => $urlParts["query"] ?? "",
             "fragment" => $urlParts["fragment"] ?? ""
           ],

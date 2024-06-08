@@ -41,7 +41,10 @@ class Router {
   }
 
   public function run(string $url, array &$pathParams): ?Route {
-    $this->requestedUri = $url;
+    // replace multiple leading slashes with one, otherwise parse_url() might interpret path as domain
+    // e.g. //index.php --> /index.php
+    $this->requestedUri = preg_replace("/^\/{2,}/", "/", $url);
+
     $url = strtok($url, "?");
     foreach ($this->routes as $route) {
       $match = $route->match($url);

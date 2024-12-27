@@ -161,18 +161,23 @@ class CreateDatabase {
     self::createEntityQueries($sql, $classes, $queries);
   }
 
-  public static function loadDefaultACL(SQL $sql, array &$queries): void {
+  public static function loadDefaultACL(SQL $sql, array &$queries, ?array $classes = NULL): void {
     $query = $sql->insert("ApiPermission", ["method", "groups", "description", "is_core"]);
 
-    foreach (Request::getApiEndpoints() as $reflectionClass) {
-      $className = $reflectionClass->getName();
-      if (("$className::hasConfigurablePermissions")()) {
-        $method = ("$className::getEndpoint")();
-        $groups = ("$className::getDefaultPermittedGroups")();
-        $description = ("$className::getDescription")();
-        $isCore = startsWith($className, "Core\\API\\");
-        $query->addRow($method, $groups, $description, $isCore);
+    if ($classes === NULL) {
+      $classes = Request::getApiEndpoints();
+    }
+
+    foreach ($classes as $class) {
+      if ($class instanceof \ReflectionClass) {
+        $className = $class->getName();
+      } else if (!is_string($class)) {
+        throw new \Exception("Cannot call loadDefaultACL() for type: " . get_class($class));
+      } else {
+        $className = $class;
       }
+
+      ("$className::loadDefaultACL")($query);
     }
 
     if ($query->hasRows()) {

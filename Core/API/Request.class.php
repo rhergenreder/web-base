@@ -3,6 +3,7 @@
 namespace Core\API;
 
 use Core\Driver\Logger\Logger;
+use Core\Driver\SQL\Query\Insert;
 use Core\Objects\Context;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
 use Core\Objects\RateLimiting;
@@ -134,6 +135,7 @@ abstract class Request {
   protected abstract function _execute(): bool;
 
   public static abstract function getDescription(): string;
+
   public static function getDefaultPermittedGroups(): array {
     return [];
   }
@@ -627,6 +629,16 @@ abstract class Request {
       return $string;
     } else {
       return "the next $count {$string}s";
+    }
+  }
+
+  public static function loadDefaultACL(Insert $query): void {
+    if (static::hasConfigurablePermissions()) {
+      $method = static::getEndpoint();
+      $groups = static::getDefaultPermittedGroups();
+      $description = static::getDescription();
+      $isCore = startsWith(get_class(), "Core\\API\\");
+      $query->addRow($method, $groups, $description, $isCore);
     }
   }
 }

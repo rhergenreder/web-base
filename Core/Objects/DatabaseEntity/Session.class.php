@@ -2,6 +2,7 @@
 
 namespace Core\Objects\DatabaseEntity;
 
+use Core\Driver\SQL\Expression\CurrentTimeStamp;
 use DateTime;
 use Exception;
 use Core\Objects\Context;
@@ -20,6 +21,7 @@ class Session extends DatabaseEntity {
   private User $user;
   private DateTime $expires;
   #[MaxLength(45)] private string $ipAddress;
+
   #[MaxLength(36)] protected string $uuid;
   #[DefaultValue(true)] private bool $active;
   #[MaxLength(64)] private ?string $os;
@@ -27,6 +29,9 @@ class Session extends DatabaseEntity {
   #[DefaultValue(true)] public bool $stayLoggedIn;
   #[MaxLength(16)] private string $csrfToken;
   #[Json] private mixed $data;
+
+  #[DefaultValue(CurrentTimeStamp::class)]
+  private DateTime $lastOnline;
 
   public function __construct(Context $context, User $user, ?string $csrfToken = null) {
     parent::__construct();
@@ -81,7 +86,7 @@ class Session extends DatabaseEntity {
       $userAgent = @get_browser($_SERVER['HTTP_USER_AGENT'], true);
       $this->os = $userAgent['platform'] ?? "Unknown";
       $this->browser = $userAgent['parent'] ?? "Unknown";
-    } catch (Exception $ex) {
+    } catch (Exception) {
       $this->os = "Unknown";
       $this->browser = "Unknown";
     }
@@ -112,7 +117,6 @@ class Session extends DatabaseEntity {
   }
 
   public function destroy(): bool {
-    session_destroy();
     $this->active = false;
     return $this->save($this->context->getSQL(), ["active"]);
   }
@@ -120,6 +124,7 @@ class Session extends DatabaseEntity {
   public function update(): bool {
     $this->updateMetaData();
 
+    $this->lastOnline = new DateTime();
     $this->expires = (new DateTime())->modify(sprintf("+%d second", Session::DURATION));
     $this->data = json_encode($_SESSION ?? []);
 

@@ -21,7 +21,7 @@ class UserToken extends DatabaseEntity {
     self::TYPE_INVITE, self::TYPE_GPG_CONFIRM
   ];
 
-  #[MaxLength(36)]
+  #[MaxLength(128)]
   #[Visibility(Visibility::NONE)]
   private string $token;
 
@@ -37,7 +37,7 @@ class UserToken extends DatabaseEntity {
   public function __construct(User $user, string $token, string $type, int $validHours) {
     parent::__construct();
     $this->user = $user;
-    $this->token = $token;
+    $this->token = hash("sha512", $token, false);
     $this->tokenType = $type;
     $this->validUntil = (new \DateTime())->modify("+$validHours HOUR");
     $this->used = false;
@@ -54,14 +54,5 @@ class UserToken extends DatabaseEntity {
 
   public function getUser(): User {
     return $this->user;
-  }
-
-  public function updateDurability(SQL $sql, int $validHours): bool {
-    $this->validUntil = (new \DateTime())->modify("+$validHours HOURS");
-    return $this->save($sql, ["validUntil"]);
-  }
-
-  public function getToken(): string {
-    return $this->token;
   }
 }

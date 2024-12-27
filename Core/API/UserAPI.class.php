@@ -124,7 +124,7 @@ namespace Core\API {
     protected function checkToken(string $token) : UserToken|bool {
       $sql = $this->context->getSQL();
       $userToken = UserToken::findBy(UserToken::createBuilder($sql, true)
-        ->whereEq("UserToken.token", $token)
+        ->whereEq("UserToken.token", hash("sha512", $token, false))
         ->whereGt("UserToken.valid_until", $sql->now())
         ->whereFalse("UserToken.used")
         ->fetchEntities());
@@ -157,6 +157,7 @@ namespace Core\API\User {
   use Core\Driver\SQL\Condition\CondOr;
   use Core\Driver\SQL\Expression\Alias;
   use Core\Objects\DatabaseEntity\Group;
+  use Core\Objects\DatabaseEntity\Session;
   use Core\Objects\DatabaseEntity\UserToken;
   use Core\Driver\SQL\Column\Column;
   use Core\Driver\SQL\Condition\Compare;
@@ -727,6 +728,7 @@ namespace Core\API\User {
         return $this->createError("You are not logged in.");
       }
 
+      session_destroy();
       $this->success = $session->destroy();
       $this->lastError = $this->context->getSQL()->getLastError();
       return $this->success;
@@ -1153,23 +1155,11 @@ namespace Core\API\User {
         return true;
       }
 
-      $userToken = UserToken::findBy(UserToken::createBuilder($sql, true)
-        ->whereFalse("used")
-        ->whereEq("token_type", UserToken::TYPE_EMAIL_CONFIRM)
-        ->whereEq("user_id", $user->getId()));
-
       $validHours = 48;
-      if ($userToken === false) {
-        return $this->createError("Error retrieving token details: " . $sql->getLastError());
-      } else if ($userToken === null) {
-        // no token generated yet, let's generate one
-        $token = generateRandomString(36);
-        $userToken = new UserToken($user, $token, UserToken::TYPE_EMAIL_CONFIRM, $validHours);
-        if (!$userToken->save($sql)) {
-          return $this->createError("Error generating new token: " . $sql->getLastError());
-        }
-      } else {
-        $userToken->updateDurability($sql, $validHours);
+      $token = generateRandomString(36);
+      $userToken = new UserToken($user, $token, UserToken::TYPE_EMAIL_CONFIRM, $validHours);
+      if (!$userToken->save($sql)) {
+        return $this->createError("Error generating new token: " . $sql->getLastError());
       }
 
       $username = $user->name;
@@ -1180,7 +1170,7 @@ namespace Core\API\User {
       $this->success = $req->execute([
         "file" => "mail/confirm_email.twig",
         "parameters" => [
-          "link" => "$baseUrl/confirmEmail?token=" . $userToken->getToken(),
+          "link" => "$baseUrl/confirmEmail?token=" . $token,
           "site_name" => $siteName,
           "base_url" => $baseUrl,
           "username" => $username,
@@ -1493,6 +1483,92 @@ namespace Core\API\User {
 
     public static function getDescription(): string {
       return "Allows users to validate a token received in an e-mail for various purposes";
+    }
+  }
+
+  class GetSessions extends UserAPI {
+
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        "active" => new Parameter("active", Parameter::TYPE_BOOLEAN, true, true)
+      ]);
+      $this->loginRequired = true;
+    }
+
+    protected function _execute(): bool {
+
+      $sql = $this->context->getSQL();
+      $currentUser = $this->context->getUser();
+      $activeOnly = $this->getParam("active");
+
+      $query = Session::createBuilder($sql, false)
+        ->whereEq("user_id", $currentUser->getId());
+
+      if ($activeOnly) {
+        $query->whereTrue("active")
+          ->whereGt("expires", $sql->now());
+      }
+
+      $sessions = Session::findBy($query);
+      if ($sessions === false) {
+        return $this->createError("Error fetching sessions:" . $sql->getLastError());
+      }
+
+      $this->result["sessions"] = Session::toJsonArray($sessions, [
+        "id", "expires", "ipAddress", "os", "browser", "lastOnline"
+      ]);
+
+      return true;
+    }
+
+
+    public static function getDescription(): string {
+      return "Shows logged-in sessions for a users account";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [];
+    }
+  }
+
+  class DestroySession extends UserAPI {
+    public function __construct(Context $context, bool $externalCall = false) {
+      parent::__construct($context, $externalCall, [
+        "id" => new Parameter("id", Parameter::TYPE_INT)
+      ]);
+      $this->loginRequired = true;
+    }
+
+    protected function _execute(): bool {
+      $sql = $this->context->getSQL();
+      $id = $this->getParam("id");
+      $currentUser = $this->context->getUser();
+
+      $query = Session::createBuilder($sql, true)
+        ->whereEq("id", $id)
+        ->whereEq("user_id", $currentUser->getId());
+
+      $session = Session::findBy($query);
+      if ($session === false) {
+        return $this->createError("Error fetching session:" . $sql->getLastError());
+      } else if ($session === null) {
+        return $this->createError("Invalid session");
+      }
+
+      $session->destroy();
+      if ($session->getId() === $this->context->getSession()->getId()) {
+        session_destroy();
+      }
+
+      return true;
+    }
+
+    public static function getDescription(): string {
+      return "Terminates a given user session";
+    }
+
+    public static function getDefaultPermittedGroups(): array {
+      return [];
     }
   }
 }

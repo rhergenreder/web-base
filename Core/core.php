@@ -10,7 +10,7 @@ if (is_file($autoLoad)) {
   require_once $autoLoad;
 }
 
-const WEBBASE_VERSION = "2.4.4";
+const WEBBASE_VERSION = "2.4.5";
 
 spl_autoload_extensions(".php");
 spl_autoload_register(function ($class) {

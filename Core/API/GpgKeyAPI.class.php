@@ -167,7 +167,7 @@ namespace Core\API\GpgKey {
       $currentUser = $this->context->getUser();
       $gpgKey = $currentUser->getGPG();
       if (!$gpgKey) {
-        return $this->createError("You have not added a GPG key yet.");
+        return $this->createError("You have not added a GPG key yet");
       } else if ($gpgKey->isConfirmed()) {
         return $this->createError("Your GPG key is already confirmed");
       }
@@ -176,7 +176,7 @@ namespace Core\API\GpgKey {
       $sql = $this->context->getSQL();
 
       $userToken = UserToken::findBy(UserToken::createBuilder($sql, true)
-        ->whereEq("token", $token)
+        ->whereEq("token", hash("sha512", $token, false))
         ->where(new Compare("valid_until", $sql->now(), ">="))
         ->whereEq("user_id", $currentUser->getId())
         ->whereEq("token_type", UserToken::TYPE_GPG_CONFIRM));
@@ -186,7 +186,7 @@ namespace Core\API\GpgKey {
           return $this->createError("Invalid token");
         } else {
           if (!$gpgKey->confirm($sql)) {
-            return $this->createError("Error updating gpg key: " . $sql->getLastError());
+            return $this->createError("Error updating GPG key: " . $sql->getLastError());
           }
 
           $userToken->invalidate($sql);

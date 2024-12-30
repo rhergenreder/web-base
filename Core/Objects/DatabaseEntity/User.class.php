@@ -18,11 +18,13 @@ use Core\Objects\DatabaseEntity\Controller\DatabaseEntityHandler;
 
 class User extends DatabaseEntity {
 
-  #[MaxLength(32)] #[Unique] public string $name;
+  #[MaxLength(32)]
+  #[Unique]
+  public string $name;
 
   #[MaxLength(128)]
   #[Visibility(Visibility::NONE)]
-  public string $password;
+  public ?string $password;
 
   #[MaxLength(64)]
   public string $fullName;
@@ -60,8 +62,12 @@ class User extends DatabaseEntity {
   #[Multiple(Group::class)]
   public array $groups;
 
+  public ?SsoProvider $ssoProvider;
+
   public function __construct(?int $id = null) {
     parent::__construct($id);
+    $this->twoFactorToken = null;
+    $this->gpgKey = null;
   }
 
   public function getUsername(): string {
@@ -165,5 +171,9 @@ class User extends DatabaseEntity {
             new NullIf(new Column("User.name"), ""))
         )->from("User")->whereEq("User.id", new Column($joinColumn)),
       $alias);
+  }
+
+  public function isNativeAccount(): bool {
+    return $this->ssoProvider === null;
   }
 }

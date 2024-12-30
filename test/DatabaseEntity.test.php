@@ -10,6 +10,7 @@ use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntityHandler;
 use Core\Objects\DatabaseEntity\User;
 
+// FIXME: Tests must be run in specific order (create, insert, drop)
 class DatabaseEntityTest extends \PHPUnit\Framework\TestCase {
 
   static User $USER;

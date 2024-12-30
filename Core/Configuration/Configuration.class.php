@@ -15,12 +15,8 @@ class Configuration {
     $this->settings = Settings::loadDefaults();
 
     $className = self::className;
-    $path = getClassPath($className, ".class");
-    if (file_exists($path) && is_readable($path)) {
-      include_once $path;
-      if (class_exists($className)) {
-        $this->database = new $className();
-      }
+    if (isClass($className)) {
+      $this->database = new $className();
     }
   }
 
@@ -32,7 +28,7 @@ class Configuration {
     return $this->settings;
   }
 
-  public static function create(string $className, $data) {
+  public static function create(string $className, $data): bool {
     $path = getClassPath($className);
     $classNameShort = explode("\\", $className);
     $classNameShort = end($classNameShort);
@@ -86,7 +82,7 @@ class Configuration {
       $code = "<?php";
     }
 
-    return @file_put_contents($path, $code);
+    return @file_put_contents($path, $code) !== false;
   }
 
   public function delete(string $className): bool {

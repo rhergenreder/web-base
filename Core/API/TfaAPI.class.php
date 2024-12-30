@@ -148,6 +148,8 @@ namespace Core\API\TFA {
       $twoFactorToken = $currentUser->getTwoFactorToken();
       if ($twoFactorToken && $twoFactorToken->isConfirmed()) {
         return $this->createError("You already added a two factor token");
+      } else if (!$currentUser->isNativeAccount()) {
+        return $this->createError("Cannot add a 2FA token: Your account is managed by an external identity provider (SSO)");
       } else if (!($twoFactorToken instanceof TimeBasedTwoFactorToken)) {
         $sql = $this->context->getSQL();
         $twoFactorToken = new TimeBasedTwoFactorToken(generateRandomString(32, "base32"));
@@ -259,6 +261,10 @@ namespace Core\API\TFA {
     public function _execute(): bool {
 
       $currentUser = $this->context->getUser();
+      if (!$currentUser->isNativeAccount()) {
+        return $this->createError("Cannot add a 2FA token: Your account is managed by an external identity provider (SSO)");
+      }
+
       $clientDataJSON = json_decode($this->getParam("clientDataJSON"), true);
       $attestationObjectRaw = base64_decode($this->getParam("attestationObject"));
       $twoFactorToken = $currentUser->getTwoFactorToken();

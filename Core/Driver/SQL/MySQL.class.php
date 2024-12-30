@@ -507,6 +507,18 @@ class MySQL extends SQL {
 
     return null;
   }
+
+  public function startTransaction(): bool {
+    return $this->connection->begin_transaction();
+  }
+
+  public function commit(): bool {
+    return $this->connection->commit();
+  }
+
+  public function rollback(): bool {
+    return $this->connection->rollback();
+  }
 }
 
 class RowIteratorMySQL extends RowIterator {

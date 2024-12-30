@@ -6,6 +6,7 @@ use Core\Driver\Logger\Logger;
 use Core\Driver\SQL\Query\Insert;
 use Core\Objects\Context;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
+use Core\Objects\DatabaseEntity\User;
 use Core\Objects\RateLimiting;
 use Core\Objects\TwoFactor\KeyBasedTwoFactorToken;
 use PhpMqtt\Client\MqttClient;
@@ -142,6 +143,22 @@ abstract class Request {
 
   public static function hasConfigurablePermissions(): bool {
     return true;
+  }
+
+  protected function createSession(User $user, bool $stayLoggedIn = true): bool {
+    $sql = $this->context->getSQL();
+    if (!($session = $this->context->createSession($user, $stayLoggedIn))) {
+      return $this->createError("Error creating Session: " . $sql->getLastError());
+    } else {
+      $tfaToken = $user->getTwoFactorToken();
+      $this->result["loggedIn"] = true;
+      $this->result["user"] = $user->jsonSerialize();
+      $this->result["session"] = $session->jsonSerialize(["expires", "csrfToken"]);
+      $this->result["logoutIn"] = $session->getExpiresSeconds();
+      $this->check2FA($tfaToken);
+      $this->success = true;
+      return true;
+    }
   }
 
   protected function check2FA(?TwoFactorToken $tfaToken = null): bool {

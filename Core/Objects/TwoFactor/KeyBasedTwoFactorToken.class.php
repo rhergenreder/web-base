@@ -6,7 +6,6 @@ use Core\Driver\SQL\SQL;
 use Core\Objects\DatabaseEntity\Attribute\Transient;
 use Cose\Algorithm\Signature\ECDSA\ECSignature;
 use Core\Objects\DatabaseEntity\TwoFactorToken;
-use Cose\Key\Key;
 
 class KeyBasedTwoFactorToken extends TwoFactorToken {
 

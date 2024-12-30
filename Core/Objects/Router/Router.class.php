@@ -176,4 +176,9 @@ class RouterCache extends Router {
 
     return $this->routes;
   }
+
+  public function redirect(int $code, string $location): void {
+    header("Location: " . $location);
+    http_response_code($code);
+  }
 }

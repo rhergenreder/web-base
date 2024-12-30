@@ -21,8 +21,7 @@ class RedirectRoute extends Route {
   }
 
   public function call(Router $router, array $params): string {
-    header("Location: " . $this->getDestination());
-    http_response_code($this->code);
+    $router->redirect($this->code, $this->getDestination());
     return "";
   }
 

@@ -670,6 +670,7 @@ namespace Core\API\User {
       $sql = $this->context->getSQL();
       $user = User::findBy(User::createBuilder($sql, true)
         ->where(new Compare("User.name", $username), new Compare("User.email", $username))
+        ->whereEq("User.sso_provider", NULL)
         ->fetchEntities());
 
       if ($user !== false) {
@@ -681,17 +682,8 @@ namespace Core\API\User {
           if (!$user->confirmed) {
             $this->result["emailConfirmed"] = false;
             return $this->createError("Your email address has not been confirmed yet.");
-          } else if (!($session = $this->context->createSession($user, $stayLoggedIn))) {
-            return $this->createError("Error creating Session: " . $sql->getLastError());
           } else {
-            $tfaToken = $user->getTwoFactorToken();
-
-            $this->result["loggedIn"] = true;
-            $this->result["user"] = $user->jsonSerialize();
-            $this->result["session"] = $session->jsonSerialize(["expires", "csrfToken"]);
-            $this->result["logoutIn"] = $session->getExpiresSeconds();
-            $this->check2FA($tfaToken);
-            $this->success = true;
+            return $this->createSession($user, $stayLoggedIn);
           }
         } else {
           return $this->createError(L('Wrong username or password'));
@@ -1068,6 +1060,9 @@ namespace Core\API\User {
       } else if ($user !== null) {
         if (!$user->isActive()) {
           return $this->createError("This user is currently disabled. Contact the server administrator, if you believe this is a mistake.");
+        } else if (!$user->isNativeAccount()) {
+          // TODO: this allows user enumeration for SSO accounts
+          return $this->createError("Cannot request a password reset: Account is managed by an external identity provider (SSO)");
         } else {
           $validHours = 1;
           $token = generateRandomString(36);
@@ -1234,7 +1229,9 @@ namespace Core\API\User {
       }
 
       $user = $token->getUser();
-      if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
+      if (!$user->isNativeAccount()) {
+        return $this->createError("Cannot reset password: Your account is managed by an external identity provider (SSO)");
+      } else if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
         return false;
       } else {
         $user->password = $this->hashPassword($password);
@@ -1301,7 +1298,9 @@ namespace Core\API\User {
       }
 
       if ($newPassword !== null || $newPasswordConfirm !== null) {
-        if (!$this->checkPasswordRequirements($newPassword, $newPasswordConfirm)) {
+        if (!$currentUser->isNativeAccount()) {
+          return $this->createError("Cannot change password: Your account is managed by an external identity provider (SSO)");
+        } else if (!$this->checkPasswordRequirements($newPassword, $newPasswordConfirm)) {
           return false;
         } else {
           if (!password_verify($oldPassword, $currentUser->password)) {

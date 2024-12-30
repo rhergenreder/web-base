@@ -10,13 +10,13 @@ use Core\Objects\DatabaseEntity\Controller\NMRelation;
 class Group extends DatabaseEntity {
 
   const ADMIN = 1;
-  const MODERATOR = 3;
   const SUPPORT = 2;
+  const MODERATOR = 3;
 
   const GROUPS = [
     self::ADMIN => "Administrator",
-    self::MODERATOR => "Moderator",
     self::SUPPORT => "Support",
+    self::MODERATOR => "Moderator",
   ];
 
   #[MaxLength(32)] public string $name;

@@ -18,7 +18,6 @@ namespace Core\Documents {
 namespace Documents\Install {
 
   use Core\Configuration\Configuration;
-  use Core\Configuration\CreateDatabase;
   use Core\Driver\SQL\SQL;
   use Core\Elements\Body;
   use Core\Elements\Head;
@@ -384,7 +383,14 @@ namespace Documents\Install {
 
           $msg = "";
           $success = true;
-          $queries = CreateDatabase::createQueries($sql);
+
+          // create site specific database scheme if present
+          if (isClass(\Site\Configuration\CreateDatabase::class)) {
+            $queries = \Site\Configuration\CreateDatabase::createQueries($sql);
+          } else {
+            $queries = \Core\Configuration\CreateDatabase::createQueries($sql);
+          }
+
           try {
             $sql->startTransaction();
             foreach ($queries as $query) {

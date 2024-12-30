@@ -116,8 +116,17 @@ class AlterTable extends Query {
           }
         }
       } else if ($action === "ADD") {
-        $query .= "CONSTRAINT ";
-        $query .= $this->sql->getConstraintDefinition($constraint);
+        $constraintName = $constraint->getName();
+
+        if ($constraintName) {
+          $query .= "CONSTRAINT ";
+          $query .= $constraintName;
+          $query .= " ";
+          $query .= $this->sql->getConstraintDefinition($constraint);
+        } else {
+          $this->sql->setLastError("Cannot ADD CONSTRAINT without a constraint name.");
+          return null;
+        }
       } else if ($action === "MODIFY") {
         $this->sql->setLastError("MODIFY CONSTRAINT foreign key is not supported.");
         return null;

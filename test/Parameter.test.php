@@ -152,5 +152,12 @@ class ParameterTest extends \PHPUnit\Framework\TestCase {
     $this->assertTrue($integerRegex->parseParam(12));
     $this->assertFalse($integerRegex->parseParam("012"));
     $this->assertFalse($integerRegex->parseParam("1.2"));
+
+    $uuidRegex = new \Core\API\Parameter\UuidType("uuid_regex");
+    $this->assertTrue($uuidRegex->parseParam("e3ad46da-556d-4c61-9d9a-ef85ba7b4053"));
+    $this->assertTrue($uuidRegex->parseParam("00000000-0000-0000-0000-000000000000"));
+    $this->assertFalse($uuidRegex->parseParam("e3ad46da-556d-4c61-9d9a-ef85ba7b4053123"));
+    $this->assertFalse($uuidRegex->parseParam("e3ad46da-556d-4c61-9d9a-ef85ba7"));
+    $this->assertFalse($uuidRegex->parseParam("not-a-valid-uuid"));
   }
 }

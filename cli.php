@@ -122,19 +122,27 @@ function handleDatabase(array $argv): void {
     }
 
     $success = true;
+    $autoCommit = false;
     $queryCount = count($queries);
     $logger = new \Core\Driver\Logger\Logger("CLI", $sql);
     $logger->info("Migrating DB with: " . $fileName);
     printLine("Executing $queryCount queries");
 
-    $sql->startTransaction();
+    if (!$sql->startTransaction()) {
+      $logger->warning("Could not start transaction: " . $sql->getLastError());
+      $autoCommit = true;
+    }
+
     $queryIndex = 1;
     foreach ($queries as $query) {
       if ($query->execute() === false) {
         $success = false;
-        printLine("Error executing query: " . $sql->getLastError());
         $logger->error("Error while migrating db: " . $sql->getLastError());
-        $sql->rollback();
+        if (!$autoCommit) {
+          if (!$sql->rollback()) {
+            $logger->warning("Could not roll back: " . $sql->getLastError());
+          }
+        }
         break;
       } else {
         printLine("$queryIndex/$queryCount: success!");
@@ -142,8 +150,10 @@ function handleDatabase(array $argv): void {
       }
     }
 
-    if ($success) {
-      $sql->commit();
+    if ($success && !$autoCommit) {
+      if (!$sql->commit()) {
+        $logger->warning("Could not commit: " . $sql->getLastError());
+      }
     }
 
     printLine("Done.");
@@ -964,7 +974,7 @@ namespace Site\API {
 namespace Site\API\\$apiName {
 
   use Core\Objects\Context;
-  use Site\API\TestAPI;
+  use Site\API\${apiName}API;
   
 $methods
 }";

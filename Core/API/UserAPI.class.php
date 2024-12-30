@@ -148,6 +148,7 @@ namespace Core\API\User {
   use Core\API\Parameter\IntegerType;
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\StringType;
+  use Core\API\Request;
   use Core\API\Template\Render;
   use Core\API\Traits\Captcha;
   use Core\API\Traits\Pagination;
@@ -184,7 +185,7 @@ namespace Core\API\User {
         'groups' => new ArrayType("groups", Parameter::TYPE_INT, true, true, [])
       ));
 
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
     }
 
     public function _execute(): bool {
@@ -304,7 +305,7 @@ namespace Core\API\User {
       parent::__construct($context, $externalCall, array(
         'id' => new Parameter('id', Parameter::TYPE_INT)
       ));
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
     }
 
     public function _execute(): bool {
@@ -447,7 +448,7 @@ namespace Core\API\User {
         'groups' => new ArrayType("groups", Parameter::TYPE_INT, true, true, [])
       ));
 
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
     }
 
     public function _execute(): bool {
@@ -545,14 +546,10 @@ namespace Core\API\User {
         'confirmPassword' => new StringType('confirmPassword'),
       ));
       $this->csrfTokenRequired = false;
+      $this->loginRequirements = Request::NOT_LOGGED_IN;
     }
 
     public function _execute(): bool {
-
-      if ($this->context->getUser()) {
-        return $this->createError("You are already logged in.");
-      }
-
       $sql = $this->context->getSQL();
       $token = $this->getParam("token");
       $password = $this->getParam("password");
@@ -593,17 +590,13 @@ namespace Core\API\User {
         'token' => new StringType('token', 36)
       ));
       $this->csrfTokenRequired = false;
+      $this->loginRequirements = Request::NOT_LOGGED_IN;
       $this->rateLimiting = new RateLimiting(
         new RateLimitRule(5, 1, RateLimitRule::MINUTE)
       );
     }
 
     public function _execute(): bool {
-
-      if ($this->context->getUser()) {
-        return $this->createError("You are already logged in.");
-      }
-
       $sql = $this->context->getSQL();
       $token = $this->getParam("token");
       $userToken = $this->checkToken($token);
@@ -708,7 +701,6 @@ namespace Core\API\User {
 
     public function __construct(Context $context, $externalCall = false) {
       parent::__construct($context, $externalCall);
-      $this->loginRequired = false;
       $this->apiKeyAllowed = false;
       $this->forbidMethod("GET");
     }
@@ -750,14 +742,10 @@ namespace Core\API\User {
       $this->addCaptchaParameters($context, $parameters);
       parent::__construct($context, $externalCall, $parameters);
       $this->csrfTokenRequired = false;
+      $this->loginRequirements = Request::NOT_LOGGED_IN;
     }
 
     public function _execute(): bool {
-
-      if ($this->context->getUser()) {
-        return $this->createError(L('You are already logged in'));
-      }
-
       $settings = $this->context->getSettings();
       $registrationAllowed = $settings->isRegistrationAllowed();
       if (!$registrationAllowed) {
@@ -848,7 +836,7 @@ namespace Core\API\User {
   class Edit extends UserAPI {
 
     public function __construct(Context $context, bool $externalCall = false) {
-      parent::__construct($context, $externalCall, array(
+      parent::__construct($context, $externalCall, [
         'id' => new Parameter('id', Parameter::TYPE_INT),
         'username' => new StringType('username', 32, true, NULL),
         'fullName' => new StringType('fullName', 64, true, NULL),
@@ -857,10 +845,10 @@ namespace Core\API\User {
         'groups' => new ArrayType('groups', Parameter::TYPE_INT, true, true, NULL),
         'confirmed' => new Parameter('confirmed', Parameter::TYPE_BOOLEAN, true, NULL),
         'active' => new Parameter('active', Parameter::TYPE_BOOLEAN, true, NULL)
-      ));
+      ]);
 
-      $this->loginRequired = true;
       $this->forbidMethod("GET");
+      $this->loginRequirements = Request::LOGGED_IN;
     }
 
     public function _execute(): bool {
@@ -980,7 +968,7 @@ namespace Core\API\User {
         'id' => new Parameter('id', Parameter::TYPE_INT)
       ));
 
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
     }
 
     public function _execute(): bool {
@@ -1060,7 +1048,7 @@ namespace Core\API\User {
       } else if ($user !== null) {
         if (!$user->isActive()) {
           return $this->createError("This user is currently disabled. Contact the server administrator, if you believe this is a mistake.");
-        } else if (!$user->isNativeAccount()) {
+        } else if (!$user->isLocalAccount()) {
           // TODO: this allows user enumeration for SSO accounts
           return $this->createError("Cannot request a password reset: Account is managed by an external identity provider (SSO)");
         } else {
@@ -1206,17 +1194,13 @@ namespace Core\API\User {
       $this->forbidMethod("GET");
       $this->csrfTokenRequired = false;
       $this->apiKeyAllowed = false;
+      $this->loginRequirements = Request::NOT_LOGGED_IN;
       $this->rateLimiting = new RateLimiting(
         new RateLimitRule(5, 1, RateLimitRule::MINUTE)
       );
     }
 
     public function _execute(): bool {
-
-      if ($this->context->getUser()) {
-        return $this->createError("You are already logged in.");
-      }
-
       $sql = $this->context->getSQL();
       $token = $this->getParam("token");
       $password = $this->getParam("password");
@@ -1228,8 +1212,8 @@ namespace Core\API\User {
         return $this->createError("Invalid token type");
       }
 
-      $user = $token->getUser();
-      if (!$user->isNativeAccount()) {
+      $user = $userToken->getUser();
+      if (!$user->isLocalAccount()) {
         return $this->createError("Cannot reset password: Your account is managed by an external identity provider (SSO)");
       } else if (!$this->checkPasswordRequirements($password, $confirmPassword)) {
         return false;
@@ -1261,7 +1245,7 @@ namespace Core\API\User {
         'confirmPassword' => new StringType('confirmPassword', -1, true, NULL),
         'oldPassword' => new StringType('oldPassword', -1, true, NULL),
       ));
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
       $this->csrfTokenRequired = true;
       $this->apiKeyAllowed = false; // prevent account takeover when an API-key is stolen
       $this->forbidMethod("GET");
@@ -1298,7 +1282,7 @@ namespace Core\API\User {
       }
 
       if ($newPassword !== null || $newPasswordConfirm !== null) {
-        if (!$currentUser->isNativeAccount()) {
+        if (!$currentUser->isLocalAccount()) {
           return $this->createError("Cannot change password: Your account is managed by an external identity provider (SSO)");
         } else if (!$this->checkPasswordRequirements($newPassword, $newPasswordConfirm)) {
           return false;
@@ -1338,7 +1322,7 @@ namespace Core\API\User {
         "y" => new FloatType("y", 0, PHP_FLOAT_MAX, true, NULL),
         "size" => new FloatType("size", self::MIN_SIZE, self::MAX_SIZE, true, NULL),
       ]);
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
       $this->forbidMethod("GET");
     }
 
@@ -1415,7 +1399,7 @@ namespace Core\API\User {
   class RemovePicture extends UserAPI {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall, []);
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
     }
 
     public function _execute(): bool {
@@ -1491,7 +1475,7 @@ namespace Core\API\User {
       parent::__construct($context, $externalCall, [
         "active" => new Parameter("active", Parameter::TYPE_BOOLEAN, true, true)
       ]);
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
     }
 
     protected function _execute(): bool {
@@ -1535,7 +1519,7 @@ namespace Core\API\User {
       parent::__construct($context, $externalCall, [
         "id" => new Parameter("id", Parameter::TYPE_INT)
       ]);
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
     }
 
     protected function _execute(): bool {

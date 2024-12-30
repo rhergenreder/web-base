@@ -173,7 +173,7 @@ class User extends DatabaseEntity {
       $alias);
   }
 
-  public function isNativeAccount(): bool {
+  public function isLocalAccount(): bool {
     return $this->ssoProvider === null;
   }
 }

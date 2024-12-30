@@ -18,6 +18,7 @@ namespace Core\API\Language {
   use Core\API\Parameter\Parameter;
   use Core\API\Parameter\RegexType;
   use Core\API\Parameter\StringType;
+  use Core\API\Request;
   use Core\Driver\SQL\Condition\Compare;
   use Core\Driver\SQL\Condition\CondOr;
   use Core\Objects\Context;
@@ -126,7 +127,7 @@ namespace Core\API\Language {
         "modules" => new ArrayType("modules", Parameter::TYPE_STRING, true, false),
         "compression" => new StringType("compression", -1, true, NULL, ["gzip", "zlib"])
       ]);
-      $this->loginRequired = false;
+      $this->loginRequirements = Request::NONE;
       $this->csrfTokenRequired = false;
     }
 

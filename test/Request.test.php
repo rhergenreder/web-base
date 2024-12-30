@@ -199,6 +199,6 @@ class RequestDisabled extends TestRequest {
 class RequestLoginRequired extends TestRequest {
   public function __construct(Context $context, bool $externalCall = false) {
     parent::__construct($context, $externalCall, []);
-    $this->loginRequired = true;
+    $this->loginRequirements = Request::LOGGED_IN;
   }
 }

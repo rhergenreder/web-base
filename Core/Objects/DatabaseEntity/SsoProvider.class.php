@@ -72,5 +72,4 @@ abstract class SsoProvider extends DatabaseEntity {
   }
 
   public abstract function login(Context $context, ?string $redirectUrl);
-  public abstract function parseResponse(Context $context, string $response) : ?User;
 }

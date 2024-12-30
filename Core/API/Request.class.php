@@ -14,6 +14,11 @@ use PhpMqtt\Client\MqttClient;
 // TODO: many things are only checked for external calls, e.g. loginRequired. If we call the API internally, we might get null-pointers for $context->user
 abstract class Request {
 
+  // Login Requirements
+  const NONE = 0;
+  const LOGGED_IN = 1;
+  const NOT_LOGGED_IN = 2;
+
   protected Context $context;
   protected Logger $logger;
   protected array $params;
@@ -21,7 +26,7 @@ abstract class Request {
   protected array $result;
   protected bool $success;
   protected bool $isPublic;
-  protected bool $loginRequired;
+  protected int $loginRequirements;
   protected bool $variableParamCount;
   protected bool $isDisabled;
   protected bool $apiKeyAllowed;
@@ -47,9 +52,9 @@ abstract class Request {
     // restrictions
     $this->isPublic = true;
     $this->isDisabled = false;
-    $this->loginRequired = false;
+    $this->loginRequirements = self::NONE;
     $this->apiKeyAllowed = true;
-    $this->allowedMethods = array("GET", "POST");
+    $this->allowedMethods = ["GET", "POST"];
     $this->csrfTokenRequired = true;
     $this->rateLimiting = null;
   }
@@ -270,8 +275,8 @@ abstract class Request {
         }
       }
 
-      // Logged in or api key authorized?
-      if ($this->loginRequired) {
+      if ($this->loginRequirements === self::LOGGED_IN) {
+        // Logged in or api key authorized?
         if (!$session && !$apiKeyAuthorized) {
           $this->lastError = 'You are not logged in.';
           $this->result["loggedIn"] = false;
@@ -279,6 +284,12 @@ abstract class Request {
           return false;
         } else if ($session && !$this->check2FA()) {
           http_response_code(401);
+          return false;
+        }
+      } else if ($this->loginRequirements === self::NOT_LOGGED_IN) {
+        // Request only for unauthenticated users, e.g. login endpoint
+        if ($session || $apiKeyAuthorized) {
+          $this->lastError = "You are already logged in.";
           return false;
         }
       }
@@ -383,7 +394,7 @@ abstract class Request {
   }
 
   public function loginRequired(): bool {
-    return $this->loginRequired;
+    return $this->loginRequirements === self::LOGGED_IN;
   }
 
   public function isExternalCall(): bool {

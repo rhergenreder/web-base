@@ -112,7 +112,7 @@ php cli.php api add
 
 By default, and if not further specified or restricted, all endpoints have the following access rules:
 1. Allowed methods: GET and POST (`$this->allowedMethods`)
-2. No login is required (`$this->loginRequired`)
+2. No login is required (`$this->loginRequirements`)
 3. CSRF-Token is required, if the user is logged in (`$this->csrfTokenRequired`)
 4. The function can be called from outside (`$this->isPublic`)
 5. An API-Key can be used to access this method (`$this->apiKeyAllowed`)

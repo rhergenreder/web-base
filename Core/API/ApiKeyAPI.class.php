@@ -9,7 +9,7 @@ namespace Core\API {
 
     public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
       parent::__construct($context, $externalCall, $params);
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
     }
 
     protected function fetchAPIKey(int $apiKeyId): ApiKey|bool {

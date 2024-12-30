@@ -7,7 +7,7 @@ namespace Core\API {
   abstract class GpgKeyAPI extends \Core\API\Request {
     public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
       parent::__construct($context, $externalCall, $params);
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
     }
   }
 }
@@ -34,7 +34,6 @@ namespace Core\API\GpgKey {
       parent::__construct($context, $externalCall, [
         "publicKey" => new StringType("publicKey")
       ]);
-      $this->loginRequired = true;
       $this->forbidMethod("GET");
     }
 
@@ -125,7 +124,6 @@ namespace Core\API\GpgKey {
       parent::__construct($context, $externalCall, array(
         "password" => new StringType("password")
       ));
-      $this->loginRequired = true;
       $this->forbidMethod("GET");
     }
 
@@ -159,7 +157,6 @@ namespace Core\API\GpgKey {
       parent::__construct($context, $externalCall, [
         "token" => new StringType("token", 36)
       ]);
-      $this->loginRequired = true;
     }
 
     public function _execute(): bool {
@@ -209,7 +206,6 @@ namespace Core\API\GpgKey {
         "id" => new Parameter("id", Parameter::TYPE_INT, true, null),
         "format" => new StringType("format", 16, true, "ascii")
       ));
-      $this->loginRequired = true;
       $this->csrfTokenRequired = false;
     }
 

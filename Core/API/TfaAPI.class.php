@@ -12,7 +12,7 @@ namespace Core\API {
 
     public function __construct(Context $context, bool $externalCall = false, array $params = array()) {
       parent::__construct($context, $externalCall, $params);
-      $this->loginRequired = true;
+      $this->loginRequirements = Request::LOGGED_IN;
       $this->apiKeyAllowed = false;
       $this->userVerificationRequired = false;
     }
@@ -148,7 +148,7 @@ namespace Core\API\TFA {
       $twoFactorToken = $currentUser->getTwoFactorToken();
       if ($twoFactorToken && $twoFactorToken->isConfirmed()) {
         return $this->createError("You already added a two factor token");
-      } else if (!$currentUser->isNativeAccount()) {
+      } else if (!$currentUser->isLocalAccount()) {
         return $this->createError("Cannot add a 2FA token: Your account is managed by an external identity provider (SSO)");
       } else if (!($twoFactorToken instanceof TimeBasedTwoFactorToken)) {
         $sql = $this->context->getSQL();
@@ -179,7 +179,6 @@ namespace Core\API\TFA {
   class ConfirmTotp extends VerifyTotp {
     public function __construct(Context $context, bool $externalCall = false) {
       parent::__construct($context, $externalCall);
-      $this->loginRequired = true;
     }
 
     public function _execute(): bool {
@@ -216,7 +215,6 @@ namespace Core\API\TFA {
       parent::__construct($context, $externalCall, [
         "code" => new StringType("code", 6)
       ]);
-      $this->loginRequired = true;
       $this->csrfTokenRequired = false;
       $this->rateLimiting = new RateLimiting(
         null,
@@ -255,13 +253,12 @@ namespace Core\API\TFA {
         "clientDataJSON" => new StringType("clientDataJSON", 0, true, "{}"),
         "attestationObject" => new StringType("attestationObject", 0, true, "")
       ]);
-      $this->loginRequired = true;
     }
 
     public function _execute(): bool {
 
       $currentUser = $this->context->getUser();
-      if (!$currentUser->isNativeAccount()) {
+      if (!$currentUser->isLocalAccount()) {
         return $this->createError("Cannot add a 2FA token: Your account is managed by an external identity provider (SSO)");
       }
 
@@ -357,7 +354,6 @@ namespace Core\API\TFA {
         "authData" => new StringType("authData"),
         "signature" => new StringType("signature"),
       ]);
-      $this->loginRequired = true;
       $this->csrfTokenRequired = false;
       $this->rateLimiting = new RateLimiting(
         null,

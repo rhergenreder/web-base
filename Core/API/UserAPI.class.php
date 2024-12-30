@@ -879,12 +879,12 @@ namespace Core\API\User {
             return $this->createError("Cannot remove Administrator group from own user.");
           } else if (in_array(Group::ADMIN, $groupIds) && !$currentUser->hasGroup(Group::ADMIN)) {
             return $this->createError("You cannot add the administrator group to other users.");
-          }
-
-          $availableGroups = Group::findAll($sql, new CondIn(new Column("id"), $groupIds));
-          foreach ($groupIds as $groupId) {
-            if (!isset($availableGroups[$groupId])) {
-              return $this->createError("Group with id=$groupId does not exist.");
+          } else if (!empty($groups)) {
+            $availableGroups = Group::findAll($sql, new CondIn(new Column("id"), $groupIds));
+            foreach ($groupIds as $groupId) {
+              if (!isset($availableGroups[$groupId])) {
+                return $this->createError("Group with id=$groupId does not exist.");
+              }
             }
           }
 
@@ -918,8 +918,12 @@ namespace Core\API\User {
         }
 
         if (!is_null($password)) {
-          $user->password = $this->hashPassword($password);
-          $columnsToUpdate[] = "password";
+          if ($user->isLocalAccount()) {
+            $user->password = $this->hashPassword($password);
+            $columnsToUpdate[] = "password";
+          } else {
+            return $this->createError("Cannot change password of an externally managed user account.");
+          }
         }
 
         if (!is_null($confirmed)) {

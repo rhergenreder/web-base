@@ -2,6 +2,7 @@
 
 namespace Core\Objects\SSO;
 
+use Core\Driver\Logger\Logger;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Objects\Context;
 use Core\Objects\DatabaseEntity\SsoProvider;
@@ -15,6 +16,9 @@ class SAMLResponse {
   private string $error;
   private ?User $user;
   private ?SsoRequest $request;
+
+  private function __construct() {
+  }
 
   private static function createSuccess(SsoRequest $request, User $user) : SAMLResponse {
     $response = new SAMLResponse();
@@ -34,6 +38,7 @@ class SAMLResponse {
 
   public static function parseResponse(Context $context, string $response) : SAMLResponse {
     $sql = $context->getSQL();
+    $logger = new Logger("SAML", $sql);
     $xml = new DOMDocument();
     $xml->loadXML($response);
 
@@ -90,6 +95,7 @@ class SAMLResponse {
     $issuer = $xml->getElementsByTagName('Issuer')->item(0)->nodeValue;
     // TODO: validate issuer
 
+    // TODO: create a possibility to map attribute values to user properties
     $username = $xml->getElementsByTagName('NameID')->item(0)->nodeValue;
     $attributes = [];
     foreach ($xml->getElementsByTagName('Attribute') as $attribute) {
@@ -111,7 +117,8 @@ class SAMLResponse {
 
     $fullName = implode(" ", $fullName);
     $user = User::findBy(User::createBuilder($context->getSQL(), true)
-      ->where(new Compare("email", $email), new Compare("name", $username)));
+      ->where(new Compare("email", $email), new Compare("name", $username))
+      ->fetchEntities());
 
     if ($user === false) {
       return self::createError($ssoRequest, "Error fetching user: " . $sql->getLastError());
@@ -144,6 +151,10 @@ class SAMLResponse {
 
   public function getRedirectURL() : ?string {
     return $this->request->getRedirectUrl();
+  }
+
+  public function getProvider(): SSOProvider {
+    return $this->request->getProvider();
   }
 
 }

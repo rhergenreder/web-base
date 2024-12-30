@@ -3,6 +3,7 @@
 namespace Core\API {
   
   use Core\Objects\Context;
+  use Core\Objects\DatabaseEntity\SsoProvider;
   use Core\Objects\DatabaseEntity\User;
 
   abstract class SsoAPI extends Request {
@@ -10,16 +11,18 @@ namespace Core\API {
       parent::__construct($context, $externalCall, $params);
     }
 
-    protected function processLogin(User $user, ?string $redirectUrl): bool {
+    protected function processLogin(SsoProvider $provider, User $user, ?string $redirectUrl): bool {
       $sql = $this->context->getSQL();
       if ($user->getId() === null) {
         // user didn't exit yet. try to insert into database
         if (!$user->save($sql)) {
           return $this->createError("Could not create user: " . $sql->getLastError());
         }
-      }
-
-      if (!$this->createSession($user)) {
+      } else if (!$user->isActive()) {
+        return $this->createError("This user is currently disabled. Contact the server administrator, if you believe this is a mistake.");
+      } else if ($user->getSsoProvider()?->getIdentifier() !== $provider->getIdentifier()) {
+        return $this->createError("An existing user is not managed by the used identity provider");
+      } else if (!$this->createSession($user)) {
         return false;
       }
 
@@ -221,7 +224,7 @@ namespace Core\API\Sso {
       if (!$parsedResponse->wasSuccessful()) {
         return $this->createError("Error parsing SAMLResponse: " . $parsedResponse->getError());
       } else {
-        return $this->processLogin($parsedResponse->getUser(), $parsedResponse->getRedirectURL());
+        return $this->processLogin($parsedResponse->getProvider(), $parsedResponse->getUser(), $parsedResponse->getRedirectURL());
       }
 
       $sql = $this->context->getSQL();

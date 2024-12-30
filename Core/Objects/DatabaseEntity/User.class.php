@@ -176,4 +176,8 @@ class User extends DatabaseEntity {
   public function isLocalAccount(): bool {
     return $this->ssoProvider === null;
   }
+
+  public function getSsoProvider(): ?SsoProvider {
+    return $this->ssoProvider;
+  }
 }

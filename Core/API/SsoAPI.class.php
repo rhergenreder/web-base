@@ -4,6 +4,7 @@ namespace Core\API {
   
   use Core\Objects\Context;
   use Core\Objects\DatabaseEntity\SsoProvider;
+  use Core\Objects\DatabaseEntity\SsoRequest;
   use Core\Objects\DatabaseEntity\User;
 
   abstract class SsoAPI extends Request {
@@ -11,8 +12,9 @@ namespace Core\API {
       parent::__construct($context, $externalCall, $params);
     }
 
-    protected function processLogin(SsoProvider $provider, User $user, ?string $redirectUrl): bool {
+    protected function processLogin(SsoRequest $ssoRequest, User $user): bool {
       $sql = $this->context->getSQL();
+      $provider = $ssoRequest->getProvider();
       if ($user->getId() === null) {
         // user didn't exit yet. try to insert into database
         if (!$user->save($sql)) {
@@ -29,6 +31,8 @@ namespace Core\API {
         return false;
       }
 
+      $ssoRequest->invalidate($sql, $this->context->getSession());
+      $redirectUrl = $ssoRequest->getRedirectUrl();
       if (!empty($redirectUrl)) {
         $this->context->router->redirect(302, $redirectUrl);
       }
@@ -230,37 +234,18 @@ namespace Core\API\Sso {
     }
 
     protected function _execute(): bool {
-
+      $sql = $this->context->getSQL();
       $samlResponse = base64_decode($this->getParam("SAMLResponse"));
       $parsedResponse = SAMLResponse::parseResponse($this->context, $samlResponse);
+      $ssoRequest = $parsedResponse->getRequest();
       if (!$parsedResponse->wasSuccessful()) {
+        $ssoRequest?->invalidate($sql);
         return $this->createError("Error parsing SAMLResponse: " . $parsedResponse->getError());
+      } else if (!$this->processLogin($ssoRequest, $parsedResponse->getUser())) {
+        $ssoRequest->invalidate($sql);
+        return false;
       } else {
-        return $this->processLogin($parsedResponse->getProvider(), $parsedResponse->getUser(), $parsedResponse->getRedirectURL());
-      }
-
-      $sql = $this->context->getSQL();
-      $ssoProviderIdentifier = $this->getParam("provider");
-      $ssoProvider = SsoProvider::findBy(SsoProvider::createBuilder($sql, true)
-        ->whereEq("identifier", $ssoProviderIdentifier)
-        ->whereTrue("active")
-      );
-      if ($ssoProvider === false) {
-        return $this->createError("Error fetching SSO Provider: " . $sql->getLastError());
-      } else if ($ssoProvider === null) {
-        return $this->createError("SSO Provider not found");
-      }
-
-      $samlResponseEncoded = $this->getParam("SAMLResponse");
-      if (($samlResponse = @gzinflate(base64_decode($samlResponseEncoded))) === false) {
-        $samlResponse = base64_decode($samlResponseEncoded);
-      }
-
-      $parsedUser = $ssoProvider->parseResponse($this->context, $samlResponse);
-      if ($parsedUser === null) {
-        return $this->createError("Invalid SAMLResponse");
-      } else {
-        return $this->processLogin($parsedUser, $redirectUrl);
+        return true;
       }
     }
 

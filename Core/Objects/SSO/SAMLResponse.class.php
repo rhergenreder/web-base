@@ -57,7 +57,7 @@ class SAMLResponse {
     };
   }
 
-  private static function verifyNodeSignature(SsoProvider $provider, \DOMNode $signatureNode) {
+  private static function verifyNodeSignature(SsoProvider $provider, \DOMNode $signatureNode): void {
     $signedInfoNode = $signatureNode->getElementsByTagName('SignedInfo')->item(0);
     if (!$signedInfoNode) {
       throw new \Exception("SignedInfo not found in the Signature element.");
@@ -108,8 +108,6 @@ class SAMLResponse {
       return self::createError($ssoRequest, "SAMLResponse already processed");
     } else if (!$ssoRequest->isValid()) {
       return self::createError($ssoRequest, "Authentication request expired");
-    } else {
-      $ssoRequest->invalidate($sql);
     }
 
     try {
@@ -197,6 +195,10 @@ class SAMLResponse {
 
   public function getProvider(): SSOProvider {
     return $this->request->getProvider();
+  }
+
+  public function getRequest() : ?SsoRequest {
+    return $this->request;
   }
 
 }

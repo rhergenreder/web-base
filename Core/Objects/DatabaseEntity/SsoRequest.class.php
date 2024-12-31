@@ -12,11 +12,21 @@ class SsoRequest extends DatabaseEntity {
 
   const SSO_REQUEST_DURABILITY = 15; // in minutes
 
+  // auto-delete sso requests after 30 days after creation
+  protected static array $entityLogConfig = [
+    "update" => false,
+    "delete" => true,
+    "insert" => true,
+    "lifetime" => 30
+  ];
+
   #[MaxLength(128)]
   #[Unique]
   private string $identifier;
 
   private SsoProvider $ssoProvider;
+
+  private ?Session $session;
 
   private \DateTime $validUntil;
 
@@ -30,6 +40,7 @@ class SsoRequest extends DatabaseEntity {
     $request->identifier = uuidv4();
     $request->ssoProvider = $ssoProvider;
     $request->used = false;
+    $request->session = null;
     $request->validUntil = (new \DateTime())->modify(sprintf('+%d minutes', self::SSO_REQUEST_DURABILITY));
     $request->redirectUrl = $redirectUrl;
     if ($request->save($sql)) {
@@ -59,9 +70,14 @@ class SsoRequest extends DatabaseEntity {
     return $this->ssoProvider;
   }
 
-  public function invalidate(SQL $sql) : bool {
+  public function invalidate(SQL $sql, ?Session $session = null) : bool {
     $this->used = true;
-    return $this->save($sql, ["used"]);
+    if ($session) {
+      $this->session = $session;
+      return $this->save($sql, ["used", "session"]);
+    } else {
+      return $this->save($sql, ["used"]);
+    }
   }
 
 }

@@ -109,7 +109,7 @@ class SAMLResponse {
     } else if (!$ssoRequest->isValid()) {
       return self::createError($ssoRequest, "Authentication request expired");
     } else {
-      // $ssoRequest->invalidate($sql);
+      $ssoRequest->invalidate($sql);
     }
 
     try {

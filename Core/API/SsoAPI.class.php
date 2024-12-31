@@ -22,7 +22,10 @@ namespace Core\API {
         return $this->createError("This user is currently disabled. Contact the server administrator, if you believe this is a mistake.");
       } else if ($user->getSsoProvider()?->getIdentifier() !== $provider->getIdentifier()) {
         return $this->createError("An existing user is not managed by the used identity provider");
-      } else if (!$this->createSession($user)) {
+      }
+
+      // Create the session and log them in
+      if (!$this->createSession($user)) {
         return false;
       }
 
@@ -33,7 +36,7 @@ namespace Core\API {
       return true;
     }
 
-    protected function validateRedirectURL(string $url): bool {
+    protected function validateRedirectURL(?string $url): bool {
       // allow only relative paths
       return empty($url) || startsWith($url, "/");
     }
@@ -64,13 +67,27 @@ namespace Core\API\Sso {
 
       $sql = $this->context->getSQL();
       $query = SsoProvider::createBuilder($sql, false);
+      $user = $this->context->getUser();
+      $canEdit = false;
 
-      if (!$this->context->getUser()) {
+      if (!$user) {
+        // only show active providers, when not logged in
         $query->whereTrue("active");
+      } else {
+        $req = new \Core\API\Permission\Check($this->context);
+        $canEdit = $req->execute(["method" => "sso/editProvider"]);
       }
 
+      // show all properties, if a user is allowed to edit them
       $providers = SsoProvider::findBy($query);
-      $this->result["providers"] = SsoProvider::toJsonArray($providers);
+      $properties = $canEdit ? null : [
+        "id",
+        "identifier",
+        "name",
+        "protocol"
+      ];
+
+      $this->result["providers"] = SsoProvider::toJsonArray($providers, $properties);
       return true;
     }
 
@@ -214,12 +231,7 @@ namespace Core\API\Sso {
 
     protected function _execute(): bool {
 
-
-      $samlResponseEncoded = $this->getParam("SAMLResponse");
-      if (($samlResponse = @gzinflate(base64_decode($samlResponseEncoded))) === false) {
-        $samlResponse = base64_decode($samlResponseEncoded);
-      }
-
+      $samlResponse = base64_decode($this->getParam("SAMLResponse"));
       $parsedResponse = SAMLResponse::parseResponse($this->context, $samlResponse);
       if (!$parsedResponse->wasSuccessful()) {
         return $this->createError("Error parsing SAMLResponse: " . $parsedResponse->getError());

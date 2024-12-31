@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="{{ user.lang }}">
+<head>
+    <meta charset="utf-8" />
+    <script>
+        window.onload = () => {
+          document.forms["sso"].submit();
+        };
+    </script>
+</head>
+<body>
+    <form method="POST" action="{{ sso.url }}" id="sso">
+        {% for key, value in sso.data %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}" />
+        {% endfor %}
+        You will be automatically redirected. If that doesn't work, click <button type="submit">here</button>.
+    </form>
+</body>
+</html>

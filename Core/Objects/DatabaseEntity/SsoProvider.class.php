@@ -2,8 +2,13 @@
 
 namespace Core\Objects\DatabaseEntity;
 
+use Core\Driver\Logger\Logger;
+use Core\Driver\SQL\Column\Column;
+use Core\Driver\SQL\Condition\CondIn;
 use Core\Objects\Context;
+use Core\Objects\DatabaseEntity\Attribute\DefaultValue;
 use Core\Objects\DatabaseEntity\Attribute\ExtendingEnum;
+use Core\Objects\DatabaseEntity\Attribute\Json;
 use Core\Objects\DatabaseEntity\Attribute\MaxLength;
 use Core\Objects\DatabaseEntity\Attribute\Unique;
 use Core\Objects\DatabaseEntity\Controller\DatabaseEntity;
@@ -31,7 +36,17 @@ abstract class SsoProvider extends DatabaseEntity {
   #[ExtendingEnum(self::PROTOCOLS)]
   private string $protocol;
 
+  #[MaxLength(256)]
   protected string $ssoUrl;
+
+  #[MaxLength(128)]
+  protected string $clientId;
+
+  #[Json]
+  #[DefaultValue('{}')]
+  protected array $groupMapping;
+
+  protected string $certificate;
 
   public function __construct(string $protocol, ?int $id = null) {
     parent::__construct($id);
@@ -69,6 +84,43 @@ abstract class SsoProvider extends DatabaseEntity {
 
   public function getIdentifier(): string {
     return $this->identifier;
+  }
+
+  public function getGroupMapping(): array {
+    return $this->groupMapping;
+  }
+
+  public function createUser(Context $context, string $email, array $groupNames) : User {
+    $sql = $context->getSQL();
+    $loggerName = "SSO-" . strtoupper($this->protocol);
+    $logger = new Logger($loggerName, $sql);
+
+    if (empty($groupNames)) {
+      $groups = [];
+    } else {
+      $groups = Group::findAll($sql, new CondIn(new Column("name"), $groupNames));
+      if ($groups === false) {
+        throw new \Exception("Error fetching available groups: " . $sql->getLastError());
+      } else if (count($groups) !== count($groupNames)) {
+        $availableGroups = array_map(function (Group $group) {
+          return $group->getName();
+        }, $groups);
+        $nonExistentGroups = array_diff($groupNames, $availableGroups);
+        $logger->warning("Could not resolve group names: " . implode(', ', $nonExistentGroups));
+      }
+    }
+
+    // TODO: create a possibility to map attribute values to user properties
+    $user = new User();
+    $user->email = $email;
+    $user->name = $email;
+    $user->password = null;
+    $user->fullName = "";
+    $user->ssoProvider = $this;
+    $user->confirmed = true;
+    $user->active = true;
+    $user->groups = $groups;
+    return $user;
   }
 
   public abstract function login(Context $context, ?string $redirectUrl);

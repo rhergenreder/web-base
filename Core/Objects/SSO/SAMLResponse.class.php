@@ -2,7 +2,6 @@
 
 namespace Core\Objects\SSO;
 
-use Core\Driver\Logger\Logger;
 use Core\Driver\SQL\Condition\Compare;
 use Core\Objects\Context;
 use Core\Objects\DatabaseEntity\SsoProvider;
@@ -36,14 +35,59 @@ class SAMLResponse {
     return $response;
   }
 
+  private static function findSignatureNode(\DOMNode $node) : ?\DOMNode {
+    foreach ($node->childNodes as $child) {
+      if ($child->nodeName === 'dsig:Signature') {
+        return $child;
+      }
+    }
+
+    return null;
+  }
+
+  private static function parseSignatureAlgorithm($name) : ?int {
+    return match ($name) {
+      'http://www.w3.org/2000/09/xmldsig#sha1' => OPENSSL_ALGO_SHA1,
+      'http://www.w3.org/2001/04/xmlenc#sha256' => OPENSSL_ALGO_SHA256,
+      'http://www.w3.org/2001/04/xmldsig-more#sha384' => OPENSSL_ALGO_SHA384,
+      'http://www.w3.org/2001/04/xmlenc#sha512' => OPENSSL_ALGO_SHA512,
+      'http://www.w3.org/2001/04/xmlenc#ripemd160' => OPENSSL_ALGO_RMD160,
+      'http://www.w3.org/2001/04/xmldsig-more#md5' => OPENSSL_ALGO_MD5,
+        default => throw new \Exception("Unsupported digest algorithm: $name"),
+    };
+  }
+
+  private static function verifyNodeSignature(SsoProvider $provider, \DOMNode $signatureNode) {
+    $signedInfoNode = $signatureNode->getElementsByTagName('SignedInfo')->item(0);
+    if (!$signedInfoNode) {
+      throw new \Exception("SignedInfo not found in the Signature element.");
+    }
+
+    $signedInfo = $signedInfoNode->C14N(true, false);
+    $signatureValueNode = $signatureNode->getElementsByTagName('SignatureValue')->item(0);
+    if (!$signatureValueNode) {
+      throw new \Exception("SignatureValue not found in the Signature element.");
+    }
+
+    $digestMethodNode = $signatureNode->getElementsByTagName('DigestMethod')->item(0);
+    if (!$digestMethodNode) {
+      throw new \Exception("DigestMethod not found in the Signature element.");
+    }
+
+    $algorithm = self::parseSignatureAlgorithm($digestMethodNode->getAttribute("Algorithm"));
+    $signatureValue = base64_decode($signatureValueNode->nodeValue);
+    if (!$provider->validateSignature($signedInfo, $signatureValue, $algorithm)) {
+      throw new \Exception("Invalid Signature.");
+    }
+  }
+
   public static function parseResponse(Context $context, string $response) : SAMLResponse {
     $sql = $context->getSQL();
-    $logger = new Logger("SAML", $sql);
     $xml = new DOMDocument();
     $xml->loadXML($response);
 
     if ($xml->documentElement->nodeName !== "samlp:Response") {
-      return self::createError(null, "Invalid root node");
+      return self::createError(null, "Invalid root node, expected: 'samlp:Response'");
     }
 
     $requestId = $xml->documentElement->getAttribute("InResponseTo");
@@ -65,76 +109,74 @@ class SAMLResponse {
     } else if (!$ssoRequest->isValid()) {
       return self::createError($ssoRequest, "Authentication request expired");
     } else {
-      $ssoRequest->invalidate($sql);
+      // $ssoRequest->invalidate($sql);
     }
 
-    $provider = $ssoRequest->getProvider();
-    if (!($provider instanceof SSOProviderSAML)) {
-      return self::createError(null, "Authentication request was not a SAML request");
+    try {
+      $provider = $ssoRequest->getProvider();
+      if (!($provider instanceof SSOProviderSAML)) {
+        return self::createError($ssoRequest, "Authentication request was not a SAML request");
+      }
+
+      // Validate XML and extract user info
+      if (!$xml->getElementsByTagName("Assertion")->length) {
+        return self::createError($ssoRequest, "Assertion tag missing");
+      }
+
+      $assertion = $xml->getElementsByTagName('Assertion')->item(0);
+
+      //// <-- Signature Validation
+      $rootSignature = self::findSignatureNode($xml->documentElement);
+      $assertionSignature = self::findSignatureNode($assertion);
+      if ($rootSignature === null && $assertionSignature === null) {
+        return self::createError($ssoRequest, "Neither a document nor an assertion signature was present.");
+      }
+
+      if ($rootSignature !== null) {
+        self::verifyNodeSignature($provider, $rootSignature);
+      }
+
+      if ($assertionSignature !== null) {
+        self::verifyNodeSignature($provider, $assertionSignature);
+      }
+      //// Signature Validation -->
+
+      // Check status code
+      $statusCode = $xml->getElementsByTagName('StatusCode')->item(0);
+      if ($statusCode->getAttribute("Value") !== "urn:oasis:names:tc:SAML:2.0:status:Success") {
+        return self::createError(null, "StatusCode was not successful");
+      }
+
+      $groupMapping = $provider->getGroupMapping();
+      $email = $xml->getElementsByTagName('NameID')->item(0)->nodeValue;
+      $attributes = [];
+      $groupNames = [];
+      foreach ($xml->getElementsByTagName('Attribute') as $attribute) {
+        $name = $attribute->getAttribute('Name');
+        $value = $attribute->getElementsByTagName('AttributeValue')->item(0)->nodeValue;
+        if ($name === "Role") {
+          if (isset($groupMapping[$value])) {
+            $groupNames[] = $groupMapping[$value];
+          }
+        } else {
+          $attributes[$name] = $value;
+        }
+      }
+
+      $user = User::findBy(User::createBuilder($context->getSQL(), true)
+        ->where(new Compare("User.email", $email), new Compare("User.name", $email))
+        ->fetchEntities());
+
+      if ($user === false) {
+        return self::createError($ssoRequest, "Error fetching user: " . $sql->getLastError());
+      } else if ($user === null) {
+        $user = $ssoRequest->getProvider()->createUser($context, $email, $groupNames);
+      }
+
+      return self::createSuccess($ssoRequest, $user);
+    } catch (\Exception $ex) {
+      return self::createError($ssoRequest, $ex->getMessage());
     }
-
-    // Validate XML and extract user info
-    if (!$xml->getElementsByTagName("Assertion")->length) {
-      return self::createError(null, "Assertion tag missing");
-    }
-
-
-    $assertion = $xml->getElementsByTagName('Assertion')->item(0);
-    if (!$assertion->getElementsByTagName("Signature")->length) {
-      return self::createError(null, "Signature tag missing");
-    }
-
-    $signature = $assertion->getElementsByTagName("Signature")->item(0);
-    // TODO: parse and validate signature
-
-    $statusCode = $xml->getElementsByTagName('StatusCode')->item(0);
-    if ($statusCode->getAttribute("Value") !== "urn:oasis:names:tc:SAML:2.0:status:Success") {
-      return self::createError(null, "StatusCode was not successful");
-    }
-
-    $issuer = $xml->getElementsByTagName('Issuer')->item(0)->nodeValue;
-    // TODO: validate issuer
-
-    // TODO: create a possibility to map attribute values to user properties
-    $username = $xml->getElementsByTagName('NameID')->item(0)->nodeValue;
-    $attributes = [];
-    foreach ($xml->getElementsByTagName('Attribute') as $attribute) {
-      $name = $attribute->getAttribute('Name');
-      $value = $attribute->getElementsByTagName('AttributeValue')->item(0)->nodeValue;
-      $attributes[$name] = $value;
-    }
-
-    $email = $attributes["email"];
-    $fullName = [];
-
-    if (isset($attributes["firstName"])) {
-      $fullName[] = $attributes["firstName"];
-    }
-
-    if (isset($attributes["lastName"])) {
-      $fullName[] = $attributes["lastName"];
-    }
-
-    $fullName = implode(" ", $fullName);
-    $user = User::findBy(User::createBuilder($context->getSQL(), true)
-      ->where(new Compare("email", $email), new Compare("name", $username))
-      ->fetchEntities());
-
-    if ($user === false) {
-      return self::createError($ssoRequest, "Error fetching user: " . $sql->getLastError());
-    } else if ($user === null) {
-      $user = new User();
-      $user->fullName = $fullName;
-      $user->email = $email;
-      $user->name = $username;
-      $user->password = null;
-      $user->ssoProvider = $ssoRequest->getProvider();
-      $user->confirmed = true;
-      $user->active = true;
-      $user->groups = []; // TODO: create a possibility to set auto-groups for SSO registered users
-    }
-
-    return self::createSuccess($ssoRequest, $user);
   }
 
   public function wasSuccessful() : bool {

@@ -34,16 +34,42 @@ class SSOProviderSAML extends SSOProvider {
       "Destination" => $this->ssoUrl,
       "ProtocolBinding" => "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
       "AssertionConsumerServiceURL" => $acsUrl
-    ], html_tag("saml:Issuer", [], $baseUrl), false);
+    ], html_tag("saml:Issuer", [], $this->clientId), false);
 
-    $samlRequest = base64_encode(gzdeflate($samlp));
-    $samlUrl = $this->buildUrl($this->ssoUrl, [ "SAMLRequest" => $samlRequest ]);
+    $samlRequest = base64_encode($samlp);
+    $req = new \Core\API\Template\Render($context);
+    $success = $req->execute([
+      "file" => "sso.twig",
+      "parameters" => [
+        "sso" => [
+          "url" => $this->ssoUrl,
+          "data" => [
+            "SAMLRequest" => $samlRequest
+          ]
+        ]
+      ]
+    ]);
 
-    if ($samlUrl === null) {
-      throw new \Exception("SSO Provider has an invalid URL configured");
+    if (!$success) {
+      throw new \Exception("Could not redirect: " . $req->getLastError());
     }
 
-    $context->router->redirect(302, $samlUrl);
-    die();
+    die($req->getResult()["html"]);
+  }
+
+  public function validateSignature(string $what, string $signature, int $algorithm) : bool {
+    $publicKey = openssl_pkey_get_public($this->certificate);
+    if (!$publicKey) {
+      throw new \Exception("Failed to load certificate: " . openssl_error_string());
+    }
+
+    $result = openssl_verify($what, $signature, $publicKey, $algorithm);
+    if ($result === 1) {
+      return true;
+    } else if ($result === 0) {
+      return false;
+    } else {
+      throw new \Exception("Failed to validate signature: " . openssl_error_string());
+    }
   }
 }

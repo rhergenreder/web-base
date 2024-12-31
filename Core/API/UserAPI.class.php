@@ -663,7 +663,7 @@ namespace Core\API\User {
       $sql = $this->context->getSQL();
       $user = User::findBy(User::createBuilder($sql, true)
         ->where(new Compare("User.name", $username), new Compare("User.email", $username))
-        ->whereEq("User.sso_provider", NULL)
+        ->whereEq("User.sso_provider_id", NULL)
         ->fetchEntities());
 
       if ($user !== false) {

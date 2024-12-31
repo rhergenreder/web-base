@@ -168,7 +168,7 @@ abstract class DatabaseEntity implements ArrayAccess, JsonSerializable {
     return $dbQuery->execute();
   }
 
-  public static function findAll(SQL $sql, ?Condition $condition = null): ?array {
+  public static function findAll(SQL $sql, ?Condition $condition = null): array|bool|null {
 
     $query = self::createBuilder($sql, false);
     if ($condition) {

@@ -92,7 +92,7 @@ class Logger {
     // database logging failed, try to log to file
     $module = preg_replace("/[^a-zA-Z0-9-]/", "-", $this->module);
     $date = (\DateTime::createFromFormat('U.u', microtime(true)))->format(self::LOG_FILE_DATE_FORMAT);
-    $logFile = implode("_", [$module, $severity, $date]) . ".log";
+    $logFile = implode("_", [$date, $module, $severity]) . ".log";
     $logPath = implode(DIRECTORY_SEPARATOR, [WEBROOT, "Site", "Logs", $logFile]);
     @file_put_contents($logPath, $message);
   }

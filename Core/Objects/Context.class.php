@@ -89,13 +89,12 @@ class Context {
       if ($this->sql->isConnected()) {
         $settings = $this->configuration->getSettings();
         $settings->loadFromDatabase($this);
-        return $this->sql;
       }
     } else {
       $this->sql = null;
     }
 
-    return null;
+    return $this->sql;
   }
 
   public function getSQL(): ?SQL {

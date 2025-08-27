@@ -229,7 +229,7 @@ function html_tag_ex(string $tag, array $attributes, $content = "", bool $escape
     $content = htmlspecialchars($content);
   }
 
-  return ($short && !empty($content)) ? "<$tag$attrs/>" : "<$tag$attrs>$content</$tag>";
+  return ($short && empty($content)) ? "<$tag$attrs/>" : "<$tag$attrs>$content</$tag>";
 }
 
 function getClassPath($class, string $suffix = ".class"): string {

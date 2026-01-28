@@ -58,8 +58,19 @@ class TimeBasedTwoFactorToken extends TwoFactorToken {
     return substr(str_pad(strval($code), $length, "0", STR_PAD_LEFT), -1 * $length);
   }
 
-  public function verify(string $code): bool {
-    return $this->generate() === $code;
+  public function verify(string $code, int $numCodes = 2): bool {
+    $now = time();
+    $length = 6;
+    $period = 30;
+
+    // verify the last $numCodes codes
+    for ($i = 0; $i < max(1, $numCodes); $i++) {
+      if ($this->generate($now - $period * i, $length, $period) === $code) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public function getData(): string {

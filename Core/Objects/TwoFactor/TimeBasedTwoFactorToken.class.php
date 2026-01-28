@@ -65,7 +65,7 @@ class TimeBasedTwoFactorToken extends TwoFactorToken {
 
     // verify the last $numCodes codes
     for ($i = 0; $i < max(1, $numCodes); $i++) {
-      if ($this->generate($now - $period * i, $length, $period) === $code) {
+      if ($this->generate($now - $period * $i, $length, $period) === $code) {
         return true;
       }
     }

@@ -178,7 +178,7 @@ function intendCode($code, $escape = true): string {
     if ($escape) $line = htmlspecialchars($line);
     $line = trim($line);
 
-    if (count($brackets) > 0 && startsWith($line, current($brackets))) {
+    if (count($brackets) > 0 && startsWith($line, end($brackets))) {
       $intend = max(0, $intend - 2);
       array_pop($brackets);
     }
@@ -193,6 +193,9 @@ function intendCode($code, $escape = true): string {
     } else if (endsWith($line, "(")) {
       $intend += 2;
       $brackets[] = ")";
+    } else if (endsWith($line, "[")) {
+      $intend += 2;
+      $brackets[] = "]";
     }
   }
 

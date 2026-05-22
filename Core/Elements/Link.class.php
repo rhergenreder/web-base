@@ -17,7 +17,7 @@ class Link extends StaticView {
   private string $href;
   private ?string $nonce;
 
-  function __construct($rel, $href, $type = "") {
+  function __construct(string $rel, string $href, string $type = "") {
     $this->href = $href;
     $this->type = $type;
     $this->rel = $rel;

@@ -7,15 +7,15 @@ use Core\Objects\Context;
 abstract class View extends StaticView {
 
   private Document $document;
-  private bool $loadView;
+  private bool $autoload;
   protected string $title;
   protected array $langModules;
 
-  public function __construct(Document $document, bool $loadView = true) {
+  public function __construct(Document $document, bool $autoload = true) {
     $this->document = $document;
     $this->title = "Untitled View";
     $this->langModules = [];
-    $this->loadView = $loadView;
+    $this->autoload = $autoload;
   }
 
   public function getTitle(): string { return $this->title; }
@@ -52,7 +52,7 @@ abstract class View extends StaticView {
   public function getCode(): string {
 
     // Load metadata + head (title, scripts, includes, ...)
-    if ($this->loadView) {
+    if ($this->autoload) {
       $this->loadView();
     }
 

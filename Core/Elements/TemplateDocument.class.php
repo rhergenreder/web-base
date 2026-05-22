@@ -8,6 +8,7 @@ use Core\Objects\Router\Router;
 use Core\Objects\Search\Searchable;
 use Core\Objects\Search\SearchQuery;
 use Core\Objects\Search\SearchResult;
+use Core\Elements\View;
 use Twig\Environment;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
@@ -126,13 +127,13 @@ class TemplateDocument extends Document {
     }
   }
 
-  protected function loadView(string $class): array {
+  protected function loadView(string $class): View {
     $view = new $class($this);
     $view->loadParameters($this->parameters);
     if ($view->getTitle()) {
       $this->title = $view->getTitle();
     }
-    return $this->parameters;
+    return $view;
   }
 
   public function doSearch(SearchQuery $query, DocumentRoute $route): array {

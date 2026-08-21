@@ -67,7 +67,7 @@ class MySQL extends SQL {
         return false;
       }
 
-      mysqli_set_charset($this->connection, $this->connectionData->getProperty('encoding', 'UTF8'));
+      mysqli_set_charset($this->connection, $this->connectionData->getProperty('encoding', 'utf8mb4'));
       return true;
     } catch (\Exception $ex) {
       $this->lastError = $this->logger->severe("Failed to connect to MySQL: " . mysqli_connect_error());

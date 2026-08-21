@@ -317,7 +317,7 @@ namespace Documents\Install {
       $password = $this->getParameter("password");
       $database = $this->getParameter("database");
       $type = $this->getParameter("type");
-      $encoding = $this->getParameter("encoding") ?? "UTF8";
+      $encoding = $this->getParameter("encoding") ?? "utf8mb4";
       $success = true;
 
       $missingInputs = [];
@@ -745,7 +745,7 @@ namespace Documents\Install {
             ]],
             [
               "title" => "Encoding", "name" => "encoding", "type" => "text", "required" => false,
-              "value" => "UTF8"
+              "value" => "utf8mb4"
             ],
           ]
         ],
